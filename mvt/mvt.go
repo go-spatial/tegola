@@ -5,17 +5,17 @@ package mvt
 //	version
 const Version = 2.1
 
-//	command integers
+//	CommandIntegers
 const (
-	CommandMoveTo uint32 = 1
-	CommandLineTo        = 2
-	CommandClose         = 7
+	CommandMoveTo    uint32 = 1
+	CommandLineTo           = 2
+	CommandClosePath        = 7
 )
 
 //	geometry types
 const (
 	GeoPoint      string = "POINT"
-	GeoLineString        = "LINESTRING"
+	GeoLinestring        = "LINESTRING"
 	GeoPolygon           = "POLYGON"
 	GeoUnknown           = "UNKNOWN"
 )
@@ -25,12 +25,17 @@ type Geometry interface {
 	Type() string
 }
 
-//	encode an integer to a parameter integer
+//	encode a CommandInteger
+func EncodeCommandInt(id uint32, count uint32) uint32 {
+	return (id & 0x7) | (count << 3)
+}
+
+//	encode a ParameterInteger
 func EncodeParamInt(val int32) int32 {
 	return (val << 1) ^ (val >> 31)
 }
 
-//	decode a parameter integer to integer
+//	decode a ParameterInteger
 func DecodeParamInt(val uint32) uint32 {
 	return ((val >> 1) ^ (-(val & 1)))
 }
