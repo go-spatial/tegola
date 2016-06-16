@@ -6,8 +6,22 @@ import (
 )
 
 type Point struct {
-	X float64
-	Y float64
+	x float64
+	y float64
+}
+
+func (p *Point) X() float64 {
+	if p == nil {
+		return 0
+	}
+	return p.x
+}
+
+func (p *Point) Y() float64 {
+	if p == nil {
+		return 0
+	}
+	return p.y
 }
 
 func (_ *Point) Type() uint32 {
@@ -15,11 +29,18 @@ func (_ *Point) Type() uint32 {
 }
 
 func (p *Point) Decode(bom binary.ByteOrder, r io.Reader) error {
-	if err := binary.Read(r, bom, &p.X); err != nil {
+	if err := binary.Read(r, bom, &p.x); err != nil {
 		return err
 	}
-	if err := binary.Read(r, bom, &p.Y); err != nil {
+	if err := binary.Read(r, bom, &p.y); err != nil {
 		return err
 	}
 	return nil
+}
+
+func NewPoint(x, y float64) Point {
+	return Point{
+		x: x,
+		y: y,
+	}
 }
