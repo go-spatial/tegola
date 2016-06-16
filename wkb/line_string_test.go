@@ -18,14 +18,8 @@ func TestLineString(t *testing.T) {
 			bytes: []byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240, 63, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 8, 64, 0, 0, 0, 0, 0, 0, 16, 64},
 			bom:   binary.LittleEndian,
 			expected: wkb.LineString{
-				wkb.Point{
-					X: 1,
-					Y: 2,
-				},
-				wkb.Point{
-					X: 3,
-					Y: 4,
-				},
+				wkb.NewPoint(1, 2),
+				wkb.NewPoint(3, 4),
 			},
 		},
 	}
@@ -53,16 +47,16 @@ func TestLineString(t *testing.T) {
 			)
 		} else {
 			for j := range ls {
-				if ls[j].X != test.expected[j].X ||
-					ls[j].Y != test.expected[j].Y {
+				if ls[j].X() != test.expected[j].X() ||
+					ls[j].Y() != test.expected[j].Y() {
 					t.Errorf(
 						"Failed test %v, For Point(%v) Expected (%v,%v) Got (%v,%v)",
 						i,
 						j,
-						test.expected[j].X,
-						test.expected[j].Y,
-						ls[j].X,
-						ls[j].Y,
+						test.expected[j].X(),
+						test.expected[j].Y(),
+						ls[j].X(),
+						ls[j].Y(),
 					)
 				}
 			}
