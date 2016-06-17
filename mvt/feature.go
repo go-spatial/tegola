@@ -30,6 +30,23 @@ type Feature struct {
 	Geometry tegola.Geometry
 }
 
+//NewFeatures returns one or more features for the given Geometry
+// TODO: Should we consider supporting validation of polygons and multiple polygons here?
+func NewFeatures(geo tegola.Geometry, tag map[string]interface{}) (f []Feature) {
+	if g, ok := geo.(tegola.Collection); ok {
+		geos := g.Geometries()
+		for i := range geos {
+			f = append(f, NewFeatures(geos[i], tag)...)
+		}
+		return f
+	}
+	f = append(f, Feature{
+		Tags:     tag,
+		Geometry: geo,
+	})
+	return f
+}
+
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
 func (f *Feature) VTileFeature(keyMap []string, valMap []interface{}) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
