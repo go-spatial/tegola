@@ -143,7 +143,6 @@ func vectorTileValue(i interface{}) *vectorTile.Tile_Value {
 		tv.StringValue = &t
 
 	case fmt.Stringer:
-
 		str := t.String()
 		tv.StringValue = &str
 

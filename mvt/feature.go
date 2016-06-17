@@ -9,11 +9,13 @@ import (
 )
 
 // errors
+var (
+	ErrNilFeature = fmt.Errorf("Feature is nil")
+	// ErrUnknownGeometryType is the error retuned when the geometry is unknown.
+	ErrUnknownGeometryType = fmt.Errorf("Unknown geometry type")
+)
 
-// ErrUnknownGeometryType is the error retuned when the geometry is unknown.
-var ErrUnknownGeometryType = fmt.Errorf("Unknown geometry type.")
-
-//TODO: Need to put in validation for the Geometry, at current the system
+// TODO: Need to put in validation for the Geometry, at current the system
 // does not check to make sure that the geometry is following the rules as
 // laided out by the spec. It just assumes the user is good.
 
@@ -68,13 +70,23 @@ func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
 	if len(points) == 0 {
 		return []uint32{}
 	}
+
+	//	new slice to hold our encode bytes
 	g := make([]uint32, 0, (2*len(points))+1)
+	//	compute command integere
 	g = append(g, (cmdMoveTo&0x7)|(uint32(len(points))<<3))
+
+	//	range through our points
 	for _, p := range points {
+		//	computer our point delta
 		dx := int64(p.X()) - c.X
 		dy := int64(p.Y()) - c.Y
+
+		//	update our cursor
 		c.X = int64(p.X())
 		c.Y = int64(p.Y())
+
+		//	encode our delta point
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
 	}
 	return g
@@ -380,7 +392,7 @@ func keyvalMapsFromFeatures(features []Feature) (keyMap []string, valMap []inter
 func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []uint32, err error) {
 
 	if f == nil {
-		return nil, fmt.Errorf("Feature is nil")
+		return nil, ErrNilFeature
 	}
 
 	var kidx, vidx int64

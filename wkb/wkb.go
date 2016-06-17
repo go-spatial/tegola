@@ -26,7 +26,6 @@ type Geometry interface {
 }
 
 func Decode(r io.Reader) (Geometry, error) {
-
 	var byteOrder binary.ByteOrder
 	var bom = make([]byte, 1, 1)
 	var typ uint32

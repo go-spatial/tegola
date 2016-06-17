@@ -12,7 +12,6 @@ import (
 
 // TileExample is a quick example of how to use the interface to marshal a tile.
 func TileExample() {
-
 	// We have our point in wkb format.
 	var point = []byte{0, 0, 0, 0, 1, 70, 129, 246, 35, 46, 74, 93, 192, 3, 70, 27, 60, 175, 91, 64, 64}
 	pointReader := bytes.NewReader(point)
@@ -27,30 +26,43 @@ func TileExample() {
 
 	// First we create the feature. A feature has a set of name value pairs. Most
 	// base types, and any types that implements a Stringer interfaces are supported.
-	feature := mvt.Feature{
+	feature1 := mvt.Feature{
 		Tags: map[string]interface{}{
 			"Name": "Point Item",
+			"Foo":  "Point Item",
 		},
 		Geometry: geo,
 	}
 	// Create a new Layer, a Layer requires a name. This name should be unique within a tile.
-	layer := mvt.Layer{
+	layer1 := mvt.Layer{
 		Name: "Layer 1",
 	}
-	layer.AddFeatures(feature)
+
+	feature2 := mvt.Feature{
+		Tags: map[string]interface{}{
+			"Name": "Point Item",
+			"Foo":  "Point Item",
+		},
+		Geometry: geo,
+	}
+
+	layer1.AddFeatures(feature1, feature2)
 
 	var tile mvt.Tile
 	// Add the layer to the tile
-	if err = tile.AddLayer(&layer); err != nil {
-		panic(err)
-	}
-	layer1 := mvt.Layer{
-		Name: "Layer 2",
-	}
 	if err = tile.AddLayer(&layer1); err != nil {
 		panic(err)
 	}
-	log.Println(tile)
+
+	layer2 := mvt.Layer{
+		Name: "Layer 2",
+	}
+
+	layer2.AddFeatures(feature1)
+
+	if err = tile.AddLayer(&layer2); err != nil {
+		panic(err)
+	}
 
 	// VTile is the protobuff representation of the tile. This is what you can
 	// send to the protobuff Marshal functions.
