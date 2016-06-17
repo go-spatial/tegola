@@ -12,7 +12,7 @@ type Point interface {
 	Y() float64
 }
 
-// Point3 is a point with three dimentions; at current is just converted and treated as a point.
+// Point3 is a point with three dimensions; at current is just converted and treated as a point.
 type Point3 interface {
 	Point
 	Z() float64
