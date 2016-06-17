@@ -47,7 +47,8 @@ func (l *Layer) VTileLayer() (*vectorTile.Tile_Layer, error) {
 	version := uint32(l.Version())
 	vtl := new(vectorTile.Tile_Layer)
 	vtl.Version = &version
-	vtl.Name = &l.Name
+	name := l.Name // Need to make a copy of the string.
+	vtl.Name = &name
 	vtl.Features = features
 	vtl.Keys = kmap
 	vtl.Values = valmap
@@ -147,6 +148,7 @@ func vectorTileValue(i interface{}) *vectorTile.Tile_Value {
 		tv.StringValue = &str
 
 	case bool:
+		tv.BoolValue = &t
 
 	case int8:
 		intv := int64(t)

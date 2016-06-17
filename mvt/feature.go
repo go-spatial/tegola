@@ -2,6 +2,7 @@ package mvt
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -377,184 +378,122 @@ func keyvalMapsFromFeatures(features []Feature) (keyMap []string, valMap []inter
 // a keyMap and a valueMap that list the the order of the expected keys and values. It will
 // return a vector map that refers to these two maps.
 func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []uint32, err error) {
+
 	if f == nil {
 		return nil, fmt.Errorf("Feature is nil")
 	}
 
 	var kidx, vidx int64
+
 	for key, val := range f.Tags {
-		kidx = -1
-		vidx = -1
+
+		kidx, vidx = -1, -1 // Set to known not found value.
+
 		for i, k := range keyMap {
-			if k == key {
-				kidx = int64(i)
-				break
+			if k != key {
+				continue // move to the next key
 			}
+			kidx = int64(i)
+			break // we found a match
 		}
+
 		if kidx == -1 {
+			log.Println("We go an error")
 			return tags, fmt.Errorf("Did not find key: %v in keymap.", key)
 		}
-		switch tv := val.(type) {
-		default:
-			return tags, fmt.Errorf("Value(%[1]v) type of %[1]t is not supported.", tv)
 
-		case string:
-			for i, v := range valueMap {
-				if vmt, ok := v.(string); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+		for i, v := range valueMap {
+			switch tv := val.(type) {
+			default:
+				return tags, fmt.Errorf("Value(%[1]v) type of %[1]t is not supported.", tv)
+
+			case string:
+				vmt, ok := v.(string) // Make sure the type of the Value map matches the type of the Tag's value
+				if !ok || vmt != tv { // and that the values match
+					continue // if they don't match move to the next value.
 				}
-			}
-
-		case fmt.Stringer:
-			for i, v := range valueMap {
-				if vmt, ok := v.(fmt.Stringer); ok {
-					if vmt.String() == tv.String() {
-						vidx = int64(i)
-						break
-					}
+			case fmt.Stringer:
+				vmt, ok := v.(fmt.Stringer)
+				if !ok || vmt.String() != tv.String() {
+					continue
 				}
-			}
-
-		case int:
-			for i, v := range valueMap {
-				if vmt, ok := v.(int); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case int:
+				vmt, ok := v.(int)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case int8:
-			for i, v := range valueMap {
-				if vmt, ok := v.(int8); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case int8:
+				vmt, ok := v.(int8)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case int16:
-			for i, v := range valueMap {
-				if vmt, ok := v.(int16); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case int16:
+				vmt, ok := v.(int16)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case int32:
-			for i, v := range valueMap {
-				if vmt, ok := v.(int32); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case int32:
+				vmt, ok := v.(int32)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case int64:
-			for i, v := range valueMap {
-				if vmt, ok := v.(int64); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case int64:
+				vmt, ok := v.(int64)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case uint:
-			for i, v := range valueMap {
-				if vmt, ok := v.(uint); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case uint:
+				vmt, ok := v.(uint)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case uint8:
-			for i, v := range valueMap {
-				if vmt, ok := v.(uint8); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case uint8:
+				vmt, ok := v.(uint8)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case uint16:
-			for i, v := range valueMap {
-				if vmt, ok := v.(uint16); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case uint16:
+				vmt, ok := v.(uint16)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case uint32:
-			for i, v := range valueMap {
-				if vmt, ok := v.(uint32); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case uint32:
+				vmt, ok := v.(uint32)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case uint64:
-			for i, v := range valueMap {
-				if vmt, ok := v.(uint64); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case uint64:
+				vmt, ok := v.(uint64)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
 
-		case float32:
-			for i, v := range valueMap {
-				if vmt, ok := v.(float32); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case float32:
+				vmt, ok := v.(float32)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case float64:
-			for i, v := range valueMap {
-				if vmt, ok := v.(float64); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case float64:
+				vmt, ok := v.(float64)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
-
-		case bool:
-			for i, v := range valueMap {
-				if vmt, ok := v.(bool); ok {
-					if vmt == tv {
-						vidx = int64(i)
-						break
-					}
+			case bool:
+				vmt, ok := v.(bool)
+				if !ok || vmt != tv {
+					continue
 				}
-			}
+			} // Values Switch Statement
+			// if the values match let's record the index.
+			vidx = int64(i)
+			break // we found our value no need to continue on.
+		} // range on value
 
-		} // Values Switch Statement
-		if vidx == -1 {
+		if vidx == -1 { // None of the values matched.
 			return tags, fmt.Errorf("Did not find a value: %v in valuemap.", val)
 		}
-
-	} // KeyVal For
-	tags = append(tags, uint32(kidx), uint32(vidx))
+		tags = append(tags, uint32(kidx), uint32(vidx))
+	} // Move to the next tag key and value.
 
 	return tags, nil
 }
