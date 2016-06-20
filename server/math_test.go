@@ -1,7 +1,6 @@
 package server_test
 
 import (
-	"log"
 	"testing"
 
 	"github.com/terranodo/tegola/server"
@@ -26,9 +25,6 @@ func TestTileNum2Deg(t *testing.T) {
 
 	for i, test := range testcases {
 		lat, lng := test.tile.Num2Deg()
-
-		log.Println(lat, lng)
-
 		if lat != test.expectedLat {
 			t.Errorf(
 				"Failed test %v. Expected lat (%v), got (%v)",
