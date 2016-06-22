@@ -11,15 +11,18 @@ type Tile struct {
 	layers []Layer
 }
 
-//AddLayer adds a Layer to the tile
-func (t *Tile) AddLayer(nl *Layer) error {
+//AddLayers adds a Layer to the tile
+func (t *Tile) AddLayers(layers ...*Layer) error {
 	// Need to make sure that all layer names are unique.
-	for i, l := range t.layers {
-		if l.Name == nl.Name {
-			return fmt.Errorf("Layer %v, already is named %v, new layer not added.", i, l.Name)
+	for i := range layers {
+		nl := layers[i]
+		for i, l := range t.layers {
+			if l.Name == nl.Name {
+				return fmt.Errorf("Layer %v, already is named %v, new layer not added.", i, l.Name)
+			}
 		}
+		t.layers = append(t.layers, *nl)
 	}
-	t.layers = append(t.layers, *nl)
 	return nil
 }
 

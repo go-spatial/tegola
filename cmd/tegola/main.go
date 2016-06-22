@@ -39,7 +39,7 @@ func exampleTile() {
 	var tile mvt.Tile
 	var err error
 	// Add the layer to the tile
-	if err = tile.AddLayer(&layer1); err != nil {
+	if err = tile.AddLayers(&layer1); err != nil {
 		panic(err)
 	}
 
