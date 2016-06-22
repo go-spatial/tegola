@@ -109,3 +109,29 @@ func TestEncodeGeometry(t *testing.T) {
 		}
 	}
 }
+
+func TestNewFeature(t *testing.T) {
+	testcases := []struct {
+		geo      tegola.Geometry
+		tags     map[string]interface{}
+		expected []Feature
+	}{
+		{
+			geo:      nil,
+			tags:     nil,
+			expected: []Feature{},
+		},
+	}
+	for i, tcase := range testcases {
+		got := NewFeatures(tcase.geo, tcase.tags)
+		if len(tcase.expected) != len(got) {
+			t.Errorf("Test %v: Expected to get %v features got %v features.", i, len(tcase.expected), len(got))
+			continue
+		}
+		if len(tcase.expected) <= 0 {
+			continue
+		}
+		// TOOD test to make sure we got the correct feature
+
+	}
+}
