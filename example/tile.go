@@ -50,7 +50,7 @@ func TileExample() {
 
 	var tile mvt.Tile
 	// Add the layer to the tile
-	if err = tile.AddLayer(&layer1); err != nil {
+	if err = tile.AddLayers(&layer1); err != nil {
 		panic(err)
 	}
 
@@ -60,7 +60,7 @@ func TileExample() {
 
 	layer2.AddFeatures(feature1)
 
-	if err = tile.AddLayer(&layer2); err != nil {
+	if err = tile.AddLayers(&layer2); err != nil {
 		panic(err)
 	}
 

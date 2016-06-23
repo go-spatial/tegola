@@ -2,7 +2,10 @@ package wkb
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
+
+	"github.com/terranodo/tegola"
 )
 
 type Point struct {
@@ -43,4 +46,39 @@ func NewPoint(x, y float64) Point {
 		x: x,
 		y: y,
 	}
+}
+
+type MultiPoint []Point
+
+func (MultiPoint) Type() uint32 {
+	return GeoMultiPoint
+}
+
+func (mp *MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
+	var num uint32 // Number of points.
+	if err := binary.Read(r, bom, &num); err != nil {
+		return err
+	}
+	for i := uint32(0); i < num; i++ {
+		p := new(Point)
+		byteOrder, typ, err := decodeByteOrderType(r)
+		if err != nil {
+			return err
+		}
+		if typ != GeoPoint {
+			return fmt.Errorf("Expect Multipoint to contains points; did not find a point.")
+		}
+		if err := p.Decode(byteOrder, r); err != nil {
+			return err
+		}
+		*mp = append(*mp, *p)
+	}
+	return nil
+}
+
+func (mp *MultiPoint) Points() (pts []tegola.Point) {
+	for i := range *mp {
+		pts = append(pts, &(*mp)[i])
+	}
+	return pts
 }

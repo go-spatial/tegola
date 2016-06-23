@@ -1,4 +1,4 @@
-//	package for decoding ESRI's Well Known Binary (WKB) format for OGC geometry (WKBGeometry)
+//	Package wkb is for decoding ESRI's Well Known Binary (WKB) format for OGC geometry (WKBGeometry)
 //	sepcification at http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm
 package wkb
 
@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+
+	"github.com/terranodo/tegola"
 )
 
 //  geometry types
@@ -25,15 +27,11 @@ type Geometry interface {
 	Type() uint32
 }
 
-func Decode(r io.Reader) (Geometry, error) {
-	var byteOrder binary.ByteOrder
+func decodeByteOrderType(r io.Reader) (byteOrder binary.ByteOrder, typ uint32, err error) {
 	var bom = make([]byte, 1, 1)
-	var typ uint32
-	var geo Geometry
-
 	// the bom is the first byte
 	if _, err := r.Read(bom); err != nil {
-		return nil, err
+		return byteOrder, typ, err
 	}
 
 	if bom[0] == 0 {
@@ -43,15 +41,38 @@ func Decode(r io.Reader) (Geometry, error) {
 	}
 
 	// Reading the type which is 4 bytes
-	if err := binary.Read(r, byteOrder, &typ); err != nil {
+	err = binary.Read(r, byteOrder, &typ)
+	return byteOrder, typ, err
+
+}
+
+// TODO
+func Encode(w io.Writer, bom binary.ByteOrder, geometry tegola.Geometry) error {
+	// TODO
+	return nil
+}
+func WKB(geometry tegola.Geometry) (geo Geometry, err error) {
+	// TODO
+	return nil, nil
+}
+func Decode(r io.Reader) (geo Geometry, err error) {
+
+	byteOrder, typ, err := decodeByteOrderType(r)
+
+	if err != nil {
 		return nil, err
 	}
-
 	switch typ {
 	case GeoPoint:
 		geo = new(Point)
+	case GeoMultiPoint:
+		geo = new(MultiPoint)
 	case GeoLineString:
 		geo = new(LineString)
+	case GeoMultiLineString:
+		geo = new(MultiLineString)
+	case GeoMultiPolygon:
+		geo = new(MultiPolygon)
 	default:
 		return nil, fmt.Errorf("Unknown Geometry! %v", typ)
 	}

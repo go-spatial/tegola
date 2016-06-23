@@ -32,16 +32,20 @@ type Feature struct {
 
 //NewFeatures returns one or more features for the given Geometry
 // TODO: Should we consider supporting validation of polygons and multiple polygons here?
-func NewFeatures(geo tegola.Geometry, tag map[string]interface{}) (f []Feature) {
+func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature) {
+	if geo == nil {
+		return f // return empty feature set for a nil geometry
+	}
+
 	if g, ok := geo.(tegola.Collection); ok {
 		geos := g.Geometries()
 		for i := range geos {
-			f = append(f, NewFeatures(geos[i], tag)...)
+			f = append(f, NewFeatures(geos[i], tags)...)
 		}
 		return f
 	}
 	f = append(f, Feature{
-		Tags:     tag,
+		Tags:     tags,
 		Geometry: geo,
 	})
 	return f
