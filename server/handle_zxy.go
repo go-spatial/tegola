@@ -26,10 +26,20 @@ func exampleTile() (*vectorTile.Tile, error) {
 	var err error
 	var tile mvt.Tile
 
-	// We have our point in wkb format.
-	geo := &basic.Line{
+	//	create a line
+	line1 := &basic.Line{
 		basic.Point{0, 0},
-		basic.Point{2048, 2048},
+		basic.Point{2048, 0},
+	}
+
+	//	create a polygon
+	poly1 := &basic.Polygon{
+		basic.Line{
+			basic.Point{0, 250},
+			basic.Point{2048, 259},
+			basic.Point{2048, 1000},
+			basic.Point{0, 1000},
+		},
 	}
 
 	// Now we need to crate a feature. The way Tiles work, is that each tiles is
@@ -43,17 +53,37 @@ func exampleTile() (*vectorTile.Tile, error) {
 		Tags: map[string]interface{}{
 			"class": "path",
 		},
-		Geometry: geo,
+		Geometry: line1,
 	}
+
 	// Create a new Layer, a Layer requires a name. This name should be unique within a tile.
 	layer1 := mvt.Layer{
 		Name: "tunnel",
 	}
 
+	//	add feature to layer
 	layer1.AddFeatures(feature1)
 
 	// Add the layer to the tile
 	if err = tile.AddLayer(&layer1); err != nil {
+		return nil, err
+	}
+
+	feature2 := mvt.Feature{
+		Tags: map[string]interface{}{
+			"class": "park",
+		},
+		Geometry: poly1,
+	}
+
+	// Create a new Layer, a Layer requires a name. This name should be unique within a tile.
+	layer2 := mvt.Layer{
+		Name: "landuse",
+	}
+
+	layer2.AddFeatures(feature2)
+
+	if err = tile.AddLayer(&layer2); err != nil {
 		return nil, err
 	}
 
@@ -64,16 +94,22 @@ func exampleTile() (*vectorTile.Tile, error) {
 
 //	URI scheme: /maps/:map_id/:z/:x/:y
 //		map_id - id in the config file with an accompanying data source
-//		z, x, y - tile coordinates as described in the Slippy Map Tilenames specification:
-//			{z} zoom level
-//			{x} row
-//			{y} column
+//		z, x, y - tile coordinates as described in the Slippy Map Tilenames specification
+//			z - zoom level
+//			x - row
+//			y - column
 func handleZXY(w http.ResponseWriter, r *http.Request) {
 	//	check http verb
 	switch r.Method {
-	//	case OPTION: preflight check for CORS request
+	//	preflight check for CORS request
 	case "OPTIONS":
+		//	TODO: how configurable do we want the CORS policy to be?
+		//	set CORS header
+		w.Header().Add("Access-Control-Allow-Origin", "*")
 
+		//	options call does not have a body
+		w.Write(nil)
+		return
 	//	tile request
 	case "GET":
 		//	TODO: look up layer data source provided by config
@@ -128,10 +164,11 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	TODO: calculate the web mercator bounding box with the slippy math function
-		lat, lng := tile.Deg2Num()
-		log.Printf("tile %+v\n", tile)
-		log.Printf("lat: %v, lng: %v\n", lat, lng)
-
+		/*
+			lat, lng := tile.Deg2Num()
+			log.Printf("tile %+v\n", tile)
+			log.Printf("lat: %v, lng: %v\n", lat, lng)
+		*/
 		//	generate a tile
 		vtile, err := exampleTile()
 		if err != nil {
@@ -155,6 +192,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
 		w.Header().Add("Access-Control-Allow-Origin", "*")
+
 		//	mimetype for protocol buffers
 		w.Header().Add("Content-Type", "application/x-protobuf")
 
