@@ -22,24 +22,17 @@ const (
 )
 
 //	encode an example tile for demo purposes
-func exampleTile() (*vectorTile.Tile, error) {
+func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 	var err error
 	var tile mvt.Tile
 
 	//	create a line
 	line1 := &basic.Line{
 		basic.Point{0, 0},
-		basic.Point{2048, 0},
-	}
-
-	//	create a polygon
-	poly1 := &basic.Polygon{
-		basic.Line{
-			basic.Point{0, 250},
-			basic.Point{2048, 259},
-			basic.Point{2048, 1000},
-			basic.Point{0, 1000},
-		},
+		basic.Point{4096, 0},
+		basic.Point{4096, 4096},
+		basic.Point{0, 4096},
+		basic.Point{0, 0},
 	}
 
 	// Now we need to crate a feature. The way Tiles work, is that each tiles is
@@ -64,11 +57,17 @@ func exampleTile() (*vectorTile.Tile, error) {
 	//	add feature to layer
 	layer1.AddFeatures(feature1)
 
-	// Add the layer to the tile
-	if err = tile.AddLayer(&layer1); err != nil {
-		return nil, err
+	//	create a polygon
+	poly1 := &basic.Polygon{
+		basic.Line{
+			basic.Point{1024, 250},
+			basic.Point{3072, 250},
+			basic.Point{3072, 1000},
+			basic.Point{1024, 1000},
+		},
 	}
 
+	//	add polygon to our feature
 	feature2 := mvt.Feature{
 		Tags: map[string]interface{}{
 			"class": "park",
@@ -83,7 +82,26 @@ func exampleTile() (*vectorTile.Tile, error) {
 
 	layer2.AddFeatures(feature2)
 
-	if err = tile.AddLayer(&layer2); err != nil {
+	point1 := &basic.Point{2048, 2048}
+
+	//	new feature
+	feature3 := mvt.Feature{
+		Tags: map[string]interface{}{
+			"type":    "city",
+			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
+		},
+		Geometry: point1,
+	}
+
+	//	create a new layer
+	layer3 := mvt.Layer{
+		Name: "place_label",
+	}
+
+	layer3.AddFeatures(feature3)
+
+	//	multiple layers can be added to a tile at once
+	if err = tile.AddLayers(&layer1, &layer2, &layer3); err != nil {
 		return nil, err
 	}
 
@@ -112,8 +130,6 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		return
 	//	tile request
 	case "GET":
-		//	TODO: look up layer data source provided by config
-
 		//	pop off URI prefix
 		uri := r.URL.Path[len("/maps/"):]
 
@@ -125,6 +141,8 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "uri requires four params: /:map_id/:z/:x/:y", http.StatusBadRequest)
 			return
 		}
+
+		//	TODO: look up layer data source provided by config
 
 		//	trim the "y" param in the url in case it has an extension
 		yparts := strings.Split(uriParts[3], ".")
@@ -143,7 +161,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		y, err := strconv.Atoi(uriParts[2])
+		y, err := strconv.Atoi(uriParts[3])
 		if err != nil {
 			http.Error(w, "invalid y value: "+uriParts[3], http.StatusBadRequest)
 			return
@@ -170,7 +188,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			log.Printf("lat: %v, lng: %v\n", lat, lng)
 		*/
 		//	generate a tile
-		vtile, err := exampleTile()
+		vtile, err := exampleTile(z, x, y)
 		if err != nil {
 			http.Error(w, "error generating tile tile", http.StatusInternalServerError)
 			return
