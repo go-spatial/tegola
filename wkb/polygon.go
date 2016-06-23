@@ -36,12 +36,16 @@ func (p *Polygon) Sublines() (lns []tegola.LineString) {
 	return lns
 }
 
+// MultiPolygon holds multiple polygons.
 type MultiPolygon []Polygon
 
+// Type of the Geometry
 func (MultiPolygon) Type() uint32 {
 	return GeoMultiPolygon
 }
 
+// Decode decodes the binary representation of a Multipolygon and decodes it into
+// a Multipolygon object.
 func (mp *MultiPolygon) Decode(bom binary.ByteOrder, r io.Reader) error {
 	var num uint32
 
@@ -67,6 +71,7 @@ func (mp *MultiPolygon) Decode(bom binary.ByteOrder, r io.Reader) error {
 	return nil
 }
 
+// Polygons return the sub polygons of a Multipolygon.
 func (mp *MultiPolygon) Polygons() (pls []tegola.Polygon) {
 	if mp == nil || len(*mp) == 0 {
 		return pls

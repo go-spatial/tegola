@@ -1,4 +1,4 @@
-//	package for decoding ESRI's Well Known Binary (WKB) format for OGC geometry (WKBGeometry)
+//	Package wkb is for decoding ESRI's Well Known Binary (WKB) format for OGC geometry (WKBGeometry)
 //	sepcification at http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm
 package wkb
 
@@ -66,8 +66,13 @@ func Decode(r io.Reader) (geo Geometry, err error) {
 	case GeoPoint:
 		geo = new(Point)
 	case GeoMultiPoint:
+		geo = new(MultiPoint)
 	case GeoLineString:
 		geo = new(LineString)
+	case GeoMultiLineString:
+		geo = new(MultiLineString)
+	case GeoMultiPolygon:
+		geo = new(MultiPolygon)
 	default:
 		return nil, fmt.Errorf("Unknown Geometry! %v", typ)
 	}
