@@ -1,4 +1,4 @@
-package server_test
+package tegola_test
 
 import (
 	"testing"

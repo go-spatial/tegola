@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -168,7 +169,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	new tile
-		tile := Tile{
+		tile := tegola.Tile{
 			Z: z,
 			X: x,
 			Y: y,
