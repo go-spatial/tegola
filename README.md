@@ -12,4 +12,4 @@ Tegola aims to be a high performance vector tile server delivering [Mapbox Vecto
 - [Mapbox Vector Tile (MVT) 2.1](https://github.com/mapbox/vector-tile-spec/tree/master/2.1)
 
 ## License
-See license file in repo.
+See (license)[LICENSE.md] file in repo.

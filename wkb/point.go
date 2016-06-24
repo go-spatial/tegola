@@ -8,11 +8,13 @@ import (
 	"github.com/terranodo/tegola"
 )
 
+//Point is a basic type, this describes a 2D point.
 type Point struct {
 	x float64
 	y float64
 }
 
+//X returns the x coordinate of the point.
 func (p *Point) X() float64 {
 	if p == nil {
 		return 0
@@ -20,6 +22,7 @@ func (p *Point) X() float64 {
 	return p.x
 }
 
+//Y returns the y coordinate of the point.
 func (p *Point) Y() float64 {
 	if p == nil {
 		return 0
@@ -27,10 +30,12 @@ func (p *Point) Y() float64 {
 	return p.y
 }
 
-func (_ *Point) Type() uint32 {
+//Type returns the type constant for this Geometry.
+func (*Point) Type() uint32 {
 	return GeoPoint
 }
 
+//Decode decodes the byte stream into the object.
 func (p *Point) Decode(bom binary.ByteOrder, r io.Reader) error {
 	if err := binary.Read(r, bom, &p.x); err != nil {
 		return err
@@ -45,6 +50,7 @@ func (p *Point) String() string {
 	return s
 }
 
+//NewPoint creates a new point structure.
 func NewPoint(x, y float64) Point {
 	return Point{
 		x: x,
@@ -52,12 +58,15 @@ func NewPoint(x, y float64) Point {
 	}
 }
 
+//MultiPoint holds one or more independent points in a group
 type MultiPoint []Point
 
+//Type returns the type constant for a Mulipoint geometry
 func (MultiPoint) Type() uint32 {
 	return GeoMultiPoint
 }
 
+//Decode decodes the byte stream in the a grouping of points.
 func (mp *MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
 	var num uint32 // Number of points.
 	if err := binary.Read(r, bom, &num); err != nil {
@@ -80,6 +89,7 @@ func (mp *MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
 	return nil
 }
 
+//Points returns a copy of the points in the group.
 func (mp *MultiPoint) Points() (pts []tegola.Point) {
 	for i := range *mp {
 		pts = append(pts, &(*mp)[i])
@@ -87,6 +97,7 @@ func (mp *MultiPoint) Points() (pts []tegola.Point) {
 	return pts
 }
 
+//String returns the WTK version of the geometry.
 func (mp *MultiPoint) String() string {
 	s, _ := WKT(mp) // If we have a failure we don't care
 	return s

@@ -1,5 +1,9 @@
-//	Package wkb is for decoding ESRI's Well Known Binary (WKB) format for OGC geometry (WKBGeometry)
+//Package wkb is for decoding ESRI's Well Known Binary (WKB) format for OGC geometry (WKBGeometry)
 //	sepcification at http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm
+// There are a few types supported by the specification. Each general type is in it's own file.
+// So, to find the implementation of Point (and MultiPoint) it will be located in the point.go
+// file. Each of the basic type here adhere to the tegola.Geometry interface. So, a wkb point
+// is, also, a tegola.Point
 package wkb
 
 import (
@@ -22,6 +26,7 @@ const (
 	GeoGeometryCollection        = 7
 )
 
+// Geometry describes a basic Geometry type that can decode it's self.
 type Geometry interface {
 	Decode(bom binary.ByteOrder, r io.Reader) error
 	Type() uint32
@@ -30,7 +35,7 @@ type Geometry interface {
 func decodeByteOrderType(r io.Reader) (byteOrder binary.ByteOrder, typ uint32, err error) {
 	var bom = make([]byte, 1, 1)
 	// the bom is the first byte
-	if _, err := r.Read(bom); err != nil {
+	if _, err = r.Read(bom); err != nil {
 		return byteOrder, typ, err
 	}
 
@@ -134,6 +139,8 @@ func encode(bom binary.ByteOrder, geometry tegola.Geometry) (data []interface{})
 	}
 }
 
+// Encode will encode the given Geometry as a binary representation with the given
+// byte order, and write it to the provided io.Writer.
 func Encode(w io.Writer, bom binary.ByteOrder, geometry tegola.Geometry) error {
 	data := encode(bom, geometry)
 	if data == nil {
@@ -142,6 +149,10 @@ func Encode(w io.Writer, bom binary.ByteOrder, geometry tegola.Geometry) error {
 	return binary.Write(w, bom, data)
 }
 
+// WKB casts a tegola.Geometry to a wkb.Geometry type.
+// NOTE: Not sure if this is needed. I'm actually wondering if wkb types are even
+// needed, It seems like they could just be aliases to basic types, with additional
+// methods on them. -gdey
 func WKB(geometry tegola.Geometry) (geo Geometry, err error) {
 	switch geo := geometry.(type) {
 	case tegola.Point:
@@ -214,6 +225,8 @@ func WKB(geometry tegola.Geometry) (geo Geometry, err error) {
 	return nil, fmt.Errorf("Not supported")
 }
 
+// Decode is the main function that given a io.Reader will attempt to decode the
+// Geometry from the byte stream.
 func Decode(r io.Reader) (geo Geometry, err error) {
 
 	byteOrder, typ, err := decodeByteOrderType(r)

@@ -56,6 +56,8 @@ func wkt(geo tegola.Geometry) string {
 	panic("Don't know the geometry type!")
 }
 
+//WKT returns a WKT representation of the Geometry if possible.
+// the Error will be non-nil if geometry is unknown.
 func WKT(geo tegola.Geometry) (string, error) {
 	switch g := geo.(type) {
 	case tegola.Point:

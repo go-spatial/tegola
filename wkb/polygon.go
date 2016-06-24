@@ -8,12 +8,18 @@ import (
 	"github.com/terranodo/tegola"
 )
 
+//Polygon is a Geometry of one or more rings. The first ring is assumed to be the
+// outer bounding ringer, and traversed in a clockwise manner. The remaining rings
+// should be within the bounding area of the first ring, and is traversed in a counterclockwise
+// manner, these represent holes in the polygon.
 type Polygon []LineString
 
+//Type returns the type constant for this Geometry
 func (Polygon) Type() uint32 {
 	return GeoPolygon
 }
 
+//Decode decodes the byte stream into the Geometry.
 func (p *Polygon) Decode(bom binary.ByteOrder, r io.Reader) error {
 	var num uint32
 	if err := binary.Read(r, bom, &num); err != nil {
@@ -29,6 +35,7 @@ func (p *Polygon) Decode(bom binary.ByteOrder, r io.Reader) error {
 	return nil
 }
 
+//Sublines returns a copy of the rings that make up the polygon.
 func (p *Polygon) Sublines() (lns []tegola.LineString) {
 	for i := range *p {
 		lns = append(lns, &((*p)[i]))
@@ -36,6 +43,7 @@ func (p *Polygon) Sublines() (lns []tegola.LineString) {
 	return lns
 }
 
+//String returns a WKT representation of the Geometry
 func (p *Polygon) String() string {
 	s, _ := WKT(p) // If we have a failure we don't care
 	return s
