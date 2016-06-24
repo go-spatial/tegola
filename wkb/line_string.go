@@ -38,6 +38,10 @@ func (ls *LineString) Subpoints() (pts []tegola.Point) {
 	}
 	return pts
 }
+func (l *LineString) String() string {
+	s, _ := WKT(l) // If we have a failure we don't care
+	return s
+}
 
 type MultiLineString []LineString
 
@@ -54,6 +58,7 @@ func (ml *MultiLineString) Lines() (lns []tegola.LineString) {
 	}
 	return lns
 }
+
 func (ml *MultiLineString) Decode(bom binary.ByteOrder, r io.Reader) error {
 	var num uint32
 	if err := binary.Read(r, bom, &num); err != nil {
@@ -74,4 +79,9 @@ func (ml *MultiLineString) Decode(bom binary.ByteOrder, r io.Reader) error {
 		*ml = append(*ml, *l)
 	}
 	return nil
+}
+
+func (ml *MultiLineString) String() string {
+	s, _ := WKT(ml) // If we have a failure we don't care
+	return s
 }

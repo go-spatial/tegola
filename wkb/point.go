@@ -40,6 +40,10 @@ func (p *Point) Decode(bom binary.ByteOrder, r io.Reader) error {
 	}
 	return nil
 }
+func (p *Point) String() string {
+	s, _ := WKT(p) // If we have a failure we don't care
+	return s
+}
 
 func NewPoint(x, y float64) Point {
 	return Point{
@@ -81,4 +85,9 @@ func (mp *MultiPoint) Points() (pts []tegola.Point) {
 		pts = append(pts, &(*mp)[i])
 	}
 	return pts
+}
+
+func (mp *MultiPoint) String() string {
+	s, _ := WKT(mp) // If we have a failure we don't care
+	return s
 }

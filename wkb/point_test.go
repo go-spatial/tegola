@@ -26,7 +26,11 @@ func TestPoint(t *testing.T) {
 		expected wkb.Point
 	}{
 		{
-			bytes:    []byte{70, 129, 246, 35, 46, 74, 93, 192, 3, 70, 27, 60, 175, 91, 64, 64},
+			bytes: []byte{
+				//01    02    03    04    05    06    07    08
+				0x46, 0x81, 0xF6, 0x23, 0x2E, 0x4A, 0x5D, 0xC0,
+				0x03, 0x46, 0x1B, 0x3C, 0xAF, 0x5B, 0x40, 0x40,
+			},
 			bom:      binary.LittleEndian,
 			expected: wkb.NewPoint(-117.15906619141342, 32.71628524142945),
 		},

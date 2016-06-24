@@ -36,6 +36,11 @@ func (p *Polygon) Sublines() (lns []tegola.LineString) {
 	return lns
 }
 
+func (p *Polygon) String() string {
+	s, _ := WKT(p) // If we have a failure we don't care
+	return s
+}
+
 // MultiPolygon holds multiple polygons.
 type MultiPolygon []Polygon
 
@@ -80,4 +85,9 @@ func (mp *MultiPolygon) Polygons() (pls []tegola.Polygon) {
 		pls = append(pls, &((*mp)[i]))
 	}
 	return pls
+}
+
+func (mp *MultiPolygon) String() string {
+	s, _ := WKT(mp) // If we have a failure we don't care
+	return s
 }

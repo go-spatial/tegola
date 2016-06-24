@@ -38,3 +38,8 @@ func (col *Collection) Decode(bom binary.ByteOrder, r io.Reader) error {
 	}
 	return nil
 }
+
+func (col *Collection) String() string {
+	s, _ := WKT(col) // If we have a failure we don't care
+	return s
+}
