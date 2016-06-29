@@ -29,3 +29,25 @@ func (t *Tile) Num2Deg() (lat, lng float64) {
 
 	return lat, lng
 }
+
+//	returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
+//	in web mercator projection
+func (t *Tile) BBox() (ulx, uly, llx, lly float64) {
+	max := 20037508.34
+
+	//	resolution
+	res := (max * 2) / math.Exp2(float64(t.Z))
+
+	//	upper left point
+	ulx = -max + (float64(t.X) * res)
+	uly = max - (float64(t.Y) * res)
+	//	lower left point
+	llx = -max + (float64(t.X) * res) + res
+	lly = max - (float64(t.Y) * res) - res
+
+	return
+}
+
+func (t *Tile) ZRes() float64 {
+	return 40075016.6855785 / (256 * math.Exp2(float64(t.Z)))
+}
