@@ -32,6 +32,7 @@ func (t *Tile) Num2Deg() (lat, lng float64) {
 
 //	returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
 //	in web mercator projection
+//	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
 func (t *Tile) BBox() (ulx, uly, llx, lly float64) {
 	max := 20037508.34
 
@@ -48,6 +49,9 @@ func (t *Tile) BBox() (ulx, uly, llx, lly float64) {
 	return
 }
 
+//	takes a web mercator zoom level and returns the pixel resolution for that
+//	scale, assuming 256x256 pixel tiles. Non-integer zoom levels are accepted.
+//	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
 func (t *Tile) ZRes() float64 {
 	return 40075016.6855785 / (256 * math.Exp2(float64(t.Z)))
 }
