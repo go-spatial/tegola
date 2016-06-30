@@ -1,0 +1,21 @@
+# register data providers
+[providers]
+
+	[providers.test_postgis]
+	type = "postgis"
+	connStr = "foobarconnstr"
+
+# maps are made up of layers
+[maps]
+
+	[maps.rio]
+
+		[maps.rio.rio_buildings]
+		zoom = [0,18]
+
+# layers define data providers
+[layers]
+	
+	[layers.rio_buildings]
+	provider = "test_postgis"
+	config = "rio_buildings_config"
