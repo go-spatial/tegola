@@ -46,8 +46,7 @@ func (p *Point) Decode(bom binary.ByteOrder, r io.Reader) error {
 	return nil
 }
 func (p *Point) String() string {
-	s, _ := WKT(p) // If we have a failure we don't care
-	return s
+	return WKT(p) // If we have a failure we don't care
 }
 
 //NewPoint creates a new point structure.
@@ -99,6 +98,5 @@ func (mp *MultiPoint) Points() (pts []tegola.Point) {
 
 //String returns the WTK version of the geometry.
 func (mp *MultiPoint) String() string {
-	s, _ := WKT(mp) // If we have a failure we don't care
-	return s
+	return WKT(mp) // If we have a failure we don't care
 }

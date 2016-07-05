@@ -8,7 +8,8 @@ import "github.com/terranodo/tegola"
 type Line []Point
 
 // Just to make basic collection only usable with basic types.
-func (Line) basicType() {}
+func (Line) basicType()     {}
+func (Line) String() string { return "Line" }
 
 // Subpoints return the points in a line.
 func (l *Line) Subpoints() (points []tegola.Point) {
@@ -21,6 +22,8 @@ func (l *Line) Subpoints() (points []tegola.Point) {
 
 // MultiLine is a set of lines.
 type MultiLine []Line
+
+func (MultiLine) String() string { return "Line" }
 
 // Just to make basic collection only usable with basic types.
 func (MultiLine) basicType() {}

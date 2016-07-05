@@ -13,6 +13,7 @@ import (
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/vector_tile"
+	"github.com/terranodo/tegola/provider/postgis"
 )
 
 const (
@@ -108,7 +109,27 @@ func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 
 	// VTile is the protobuff representation of the tile. This is what you can
 	// send to the protobuff Marshal functions.
-	return tile.VTile()
+	return tile.VTile(0, 0)
+}
+
+var postgisProvider *postgis.Provider
+
+func init() {
+	config := postgis.Config{
+		Host:     "localhost",
+		Port:     5432,
+		Database: "gdey",
+		User:     "gdey",
+		Layers: map[string]string{
+			"landuse": "gis.rio_buildings",
+		},
+	}
+	var err error
+	postgisProvider, err = postgis.NewProvider(config)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create a new provider. %v", err))
+	}
+
 }
 
 //	URI scheme: /maps/:map_id/:z/:x/:y
@@ -174,6 +195,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			X: x,
 			Y: y,
 		}
+		log.Printf("Tile %+v\n", tile)
 
 		//	check for the max zoom level
 		if tile.Z > MaxZoom {
@@ -189,12 +211,27 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			log.Printf("lat: %v, lng: %v\n", lat, lng)
 		*/
 		//	generate a tile
-		vtile, err := exampleTile(z, x, y)
+		var mvtTile mvt.Tile
+		mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
 		if err != nil {
-			http.Error(w, "error generating tile tile", http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
 			return
 		}
-
+		mvtTile.AddLayers(mvtLayer)
+		ulx, uly, _, _ := tile.BBox()
+		vtile, err := mvtTile.VTile(ulx, uly)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
+			return
+		}
+		/*
+			vtile, err := exampleTile(z, x, y)
+			if err != nil {
+				http.Error(w, "error generating tile tile", http.StatusInternalServerError)
+				return
+			}
+		*/
+		log.Printf("Vtile: %v", proto.MarshalTextString(vtile))
 		//	fetch tile from datasource
 		//	marshal our tile into a protocol buffer
 		pbyte, err := proto.Marshal(vtile)

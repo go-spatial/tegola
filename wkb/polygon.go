@@ -45,8 +45,7 @@ func (p *Polygon) Sublines() (lns []tegola.LineString) {
 
 //String returns a WKT representation of the Geometry
 func (p *Polygon) String() string {
-	s, _ := WKT(p) // If we have a failure we don't care
-	return s
+	return WKT(p) // If we have a failure we don't care
 }
 
 // MultiPolygon holds multiple polygons.
@@ -96,6 +95,5 @@ func (mp *MultiPolygon) Polygons() (pls []tegola.Polygon) {
 }
 
 func (mp *MultiPolygon) String() string {
-	s, _ := WKT(mp) // If we have a failure we don't care
-	return s
+	return WKT(mp) // If we have a failure we don't care
 }

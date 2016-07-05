@@ -6,6 +6,7 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt/vector_tile"
+	"github.com/terranodo/tegola/wkb"
 )
 
 // errors
@@ -30,6 +31,14 @@ type Feature struct {
 	Geometry tegola.Geometry
 }
 
+func (f Feature) String() string {
+	g := wkb.WKT(f.Geometry)
+	if f.ID != nil {
+		return fmt.Sprintf("{Feature: %v, GEO: %v, Tags: %+v}", *f.ID, g, f.Tags)
+	}
+	return fmt.Sprintf("{Feature: GEO: %v, Tags: %+v}", g, f.Tags)
+}
+
 //NewFeatures returns one or more features for the given Geometry
 // TODO: Should we consider supporting validation of polygons and multiple polygons here?
 func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature) {
@@ -52,14 +61,14 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(keyMap []string, valMap []interface{}) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(keyMap []string, valMap []interface{}, trx, try float64, extent int) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keyMap, valMap, f); err != nil {
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(f.Geometry)
+	geo, gtype, err := encodeGeometry(f.Geometry, trx, try, extent)
 	if err != nil {
 		return tf, err
 	}
@@ -68,6 +77,7 @@ func (f *Feature) VTileFeature(keyMap []string, valMap []interface{}) (tf *vecto
 	return tf, nil
 }
 
+// These values came from: https://github.com/mapbox/vector-tile-spec/tree/master/2.1
 const (
 	cmdMoveTo    uint32 = 1
 	cmdLineTo    uint32 = 2
@@ -81,10 +91,28 @@ const (
 type cursor struct {
 	X int64
 	Y int64
+	// This is the upper left coord for the X coordinate. This value will be substracted
+	// from each point, before applying it to the movement commands
+	TLX float64
+	// This is the upper left coord for the Y coordinate. This value will be substracted
+	// from each point, before applying it to the movement commands
+	TLY    float64
+	extent int
 }
 
 func encodeZigZag(i int64) uint32 {
 	return uint32((i << 1) ^ (i >> 31))
+}
+func (c *cursor) NormalizePoint(p tegola.Point) (nx, ny int64) {
+	nx = int64(p.X() - c.TLX)
+	ny = int64(p.Y() - c.TLY)
+	if nx > int64(c.extent) {
+		log.Printf("Point is greater then extent: %v — %v", nx, c.extent)
+	}
+	if ny > int64(c.extent) {
+		log.Printf("Point is greater then extent: %v — %v", ny, c.extent)
+	}
+	return nx, ny
 }
 
 func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
@@ -99,13 +127,14 @@ func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
 
 	//	range through our points
 	for _, p := range points {
+		ix, iy := c.NormalizePoint(p)
 		//	computer our point delta
-		dx := int64(p.X()) - c.X
-		dy := int64(p.Y()) - c.Y
+		dx := ix - c.X
+		dy := iy - c.Y
 
 		//	update our cursor
-		c.X = int64(p.X())
-		c.Y = int64(p.Y())
+		c.X = ix
+		c.Y = iy
 
 		//	encode our delta point
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
@@ -119,10 +148,11 @@ func (c *cursor) LineTo(points ...tegola.Point) []uint32 {
 	g := make([]uint32, 0, (2*len(points))+1)
 	g = append(g, (cmdLineTo&0x7)|(uint32(len(points))<<3))
 	for _, p := range points {
-		dx := int64(p.X()) - c.X
-		dy := int64(p.Y()) - c.Y
-		c.X = int64(p.X())
-		c.Y = int64(p.Y())
+		ix, iy := c.NormalizePoint(p)
+		dx := ix - c.X
+		dy := iy - c.Y
+		c.X = ix
+		c.Y = iy
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
 	}
 	return g
@@ -134,8 +164,12 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geo tegola.Geometry) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
-	var c cursor
+func encodeGeometry(geo tegola.Geometry, tlx, tly float64, extent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+	c := cursor{
+		TLX:    tlx,
+		TLY:    tly,
+		extent: extent,
+	}
 	switch t := geo.(type) {
 	case tegola.Point:
 		g = append(g, c.MoveTo(t)...)
@@ -188,6 +222,7 @@ func encodeGeometry(geo tegola.Geometry) (g []uint32, vtyp vectorTile.Tile_GeomT
 		return g, vectorTile.Tile_POLYGON, nil
 
 	default:
+		log.Printf("Geo: %v : %T", wkb.WKT(geo), geo)
 		return nil, vectorTile.Tile_UNKNOWN, ErrUnknownGeometryType
 	}
 }

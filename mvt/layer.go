@@ -26,7 +26,7 @@ func valMapToVTileValue(valMap []interface{}) (vt []*vectorTile.Tile_Value) {
 }
 
 // VTileLayer returns a vectorTile Tile_Layer object that represents this Layer.
-func (l *Layer) VTileLayer() (*vectorTile.Tile_Layer, error) {
+func (l *Layer) VTileLayer(tlx, tly float64) (*vectorTile.Tile_Layer, error) {
 	kmap, vmap, err := keyvalMapsFromFeatures(l.features)
 	if err != nil {
 		return nil, err
@@ -34,14 +34,11 @@ func (l *Layer) VTileLayer() (*vectorTile.Tile_Layer, error) {
 	valmap := valMapToVTileValue(vmap)
 	var features = make([]*vectorTile.Tile_Feature, 0, len(l.features))
 	for _, f := range l.features {
-		vtf, err := f.VTileFeature(kmap, vmap)
+		vtf, err := f.VTileFeature(kmap, vmap, tlx, tly, l.Extent())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
 		}
 		features = append(features, vtf)
-		if err != nil {
-			return nil, err
-		}
 	}
 	ext := uint32(l.Extent())
 	version := uint32(l.Version())

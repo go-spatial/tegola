@@ -51,7 +51,7 @@ func TestLayer(t *testing.T) {
 		},
 	}
 	for i, tcase := range testcases {
-		vt, err := tcase.layer.VTileLayer()
+		vt, err := tcase.layer.VTileLayer(0, 0)
 		if err != tcase.eerr {
 			t.Errorf("For Test %v: Got unexpected error. Expected %v Got %v", i, tcase.eerr, err)
 		}

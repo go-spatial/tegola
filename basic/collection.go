@@ -15,3 +15,7 @@ func (c *Collection) Geometeries() (geometeries []tegola.Geometry) {
 	}
 	return geometeries
 }
+
+func (Collection) String() string {
+	return "Collectioin"
+}

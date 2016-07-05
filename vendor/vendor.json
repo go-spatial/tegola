@@ -7,6 +7,12 @@
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0",
 			"revisionTime": "2016-06-14T22:31:40Z"
+		},
+		{
+			"checksumSHA1": "GCQCsO9zW6F6QmIdGuW5PJAMnNo=",
+			"path": "github.com/jackc/pgx",
+			"revision": "30cb421551a46adf91f5078bc6ea9fb18609ea0a",
+			"revisionTime": "2016-06-21T20:00:47Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"

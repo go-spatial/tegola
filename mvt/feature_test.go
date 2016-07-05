@@ -90,7 +90,7 @@ func TestEncodeGeometry(t *testing.T) {
 		},
 	}
 	for _, tcase := range testcases {
-		g, gtype, err := encodeGeometry(tcase.geo)
+		g, gtype, err := encodeGeometry(tcase.geo, 0, 0, 4096)
 		if tcase.eerr != err {
 			t.Errorf("Expected error (%v) got (%v) instead", tcase.eerr, err)
 		}

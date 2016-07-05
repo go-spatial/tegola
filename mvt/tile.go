@@ -34,12 +34,12 @@ func (t *Tile) Layers() (l []Layer) {
 
 // VTile returns a tile object according to the Google Protobuff def. This function
 // does the hard work of converting everthing to the standard.
-func (t *Tile) VTile() (vt *vectorTile.Tile, err error) {
+func (t *Tile) VTile(ulx, uly float64) (vt *vectorTile.Tile, err error) {
 	vt = new(vectorTile.Tile)
 	for _, l := range t.layers {
-		vtl, err := l.VTileLayer()
+		vtl, err := l.VTileLayer(ulx, uly)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error Getting VTileLayer: %v", err)
 		}
 		vt.Layers = append(vt.Layers, vtl)
 	}

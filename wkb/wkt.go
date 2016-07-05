@@ -22,33 +22,33 @@ func wkt(geo tegola.Geometry) string {
 		return fmt.Sprintf("%v %v %v", g.X(), g.Y(), g.Z())
 	case tegola.MultiPoint:
 		var points []string
-		for p := range g.Points() {
+		for _, p := range g.Points() {
 			points = append(points, wkt(p))
 		}
 		return "(" + strings.Join(points, ",") + ")"
 	case tegola.LineString:
 		var points []string
-		for p := range g.Subpoints() {
+		for _, p := range g.Subpoints() {
 			points = append(points, wkt(p))
 		}
 		return "(" + strings.Join(points, ",") + ")"
 
 	case tegola.MultiLine:
 		var lines []string
-		for l := range g.Lines() {
+		for _, l := range g.Lines() {
 			lines = append(lines, wkt(l))
 		}
 		return "(" + strings.Join(lines, ",") + ")"
 
 	case tegola.Polygon:
 		var lines []string
-		for l := range g.Sublines() {
+		for _, l := range g.Sublines() {
 			lines = append(lines, wkt(l))
 		}
 		return "(" + strings.Join(lines, ",") + ")"
 	case tegola.MultiPolygon:
 		var polygons []string
-		for p := range g.Polygons() {
+		for _, p := range g.Polygons() {
 			polygons = append(polygons, wkt(p))
 		}
 		return "(" + strings.Join(polygons, ",") + ")"
@@ -58,59 +58,57 @@ func wkt(geo tegola.Geometry) string {
 
 //WKT returns a WKT representation of the Geometry if possible.
 // the Error will be non-nil if geometry is unknown.
-func WKT(geo tegola.Geometry) (string, error) {
+func WKT(geo tegola.Geometry) string {
 	switch g := geo.(type) {
+	default:
+		return ""
 	case tegola.Point:
 		// POINT( 10 10)
 		if g == nil {
-			return "POINT EMPTY", nil
+			return "POINT EMPTY"
 		}
-		return "POINT (" + wkt(g) + ")", nil
+		return "POINT (" + wkt(g) + ")"
 	case tegola.Point3:
 		// POINT M ( 10 10 10 )
 		if g == nil {
-			return "POINT M EMPTY", nil
+			return "POINT M EMPTY"
 		}
-		return "POINT M (" + wkt(g) + ")", nil
+		return "POINT M (" + wkt(g) + ")"
 	case tegola.MultiPoint:
 		if g == nil {
-			return "MULTIPOINT EMPTY", nil
+			return "MULTIPOINT EMPTY"
 		}
-		return "MULTIPOINT " + wkt(g), nil
+		return "MULTIPOINT " + wkt(g)
 	case tegola.LineString:
 		if g == nil {
-			return "LINESTRING EMPTY", nil
+			return "LINESTRING EMPTY"
 		}
-		return "LINESTRING " + wkt(g), nil
+		return "LINESTRING " + wkt(g)
 	case tegola.MultiLine:
 		if g == nil {
-			return "MULTILINE EMPTY", nil
+			return "MULTILINE EMPTY"
 		}
-		return "MULTILINE " + wkt(g), nil
+		return "MULTILINE " + wkt(g)
 	case tegola.Polygon:
 		if g == nil {
-			return "POLYGON EMPTY", nil
+			return "POLYGON EMPTY"
 		}
-		return "POLYGON " + wkt(g), nil
+		return "POLYGON " + wkt(g)
 	case tegola.MultiPolygon:
 		if g == nil {
-			return "MULTIPOLYGON EMPTY", nil
+			return "MULTIPOLYGON EMPTY"
 		}
-		return "MULTIPOLYGON " + wkt(g), nil
+		return "MULTIPOLYGON " + wkt(g)
 	case tegola.Collection:
 		if g == nil {
-			return "GEOMETRYCOLLECTION EMPTY", nil
+			return "GEOMETRYCOLLECTION EMPTY"
 
 		}
 		var geometries []string
 		for sg := range g.Geometries() {
-			s, err := WKT(sg)
-			if err != nil {
-				return "", err
-			}
+			s := WKT(sg)
 			geometries = append(geometries, s)
 		}
-		return "GEOMETRYCOLLECTION (" + strings.Join(geometries, ",") + ")", nil
+		return "GEOMETRYCOLLECTION (" + strings.Join(geometries, ",") + ")"
 	}
-	return "UNKNOWN Type", fmt.Errorf("Unknow Geometry Type %v", geo)
 }

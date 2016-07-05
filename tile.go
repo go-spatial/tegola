@@ -4,7 +4,7 @@ import (
 	"math"
 )
 
-//	slippy map tilenames
+//Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
 	Z    int
@@ -30,9 +30,9 @@ func (t *Tile) Num2Deg() (lat, lng float64) {
 	return lat, lng
 }
 
-//	returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
-//	in web mercator projection
-//	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
+//BBox returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
+// in web mercator projection
+// ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
 func (t *Tile) BBox() (ulx, uly, llx, lly float64) {
 	max := 20037508.34
 
@@ -49,7 +49,7 @@ func (t *Tile) BBox() (ulx, uly, llx, lly float64) {
 	return
 }
 
-//	takes a web mercator zoom level and returns the pixel resolution for that
+//ZRes takes a web mercator zoom level and returns the pixel resolution for that
 //	scale, assuming 256x256 pixel tiles. Non-integer zoom levels are accepted.
 //	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
 func (t *Tile) ZRes() float64 {
