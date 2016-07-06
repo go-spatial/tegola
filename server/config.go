@@ -23,15 +23,17 @@ type Config struct {
 }
 
 type Provider struct {
-	Type string
-	//	TODO: this is specific to Postgres. Need to consider polymorphic association
-	ConnStr string
+	Type     string
+	Host     string
+	Port     int
+	Database string
+	User     string
+	Password string
 }
 
-type Map map[string]MapLayer
-
-type MapLayer struct {
-	Zoom []int
+type Map struct {
+	MinZoom int
+	MaxZoom int
 }
 
 type Layer struct {
@@ -39,4 +41,11 @@ type Layer struct {
 	Config   string
 }
 
-var Conf Config
+//	holds the instantiated config
+var conf Config
+
+//	look up a map
+func (c *Config) Map(name string) {}
+
+//	fetch layer
+func (c *Config) Layer(name string) {}

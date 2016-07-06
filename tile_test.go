@@ -26,10 +26,10 @@ func TestTileNum2Deg(t *testing.T) {
 	for i, test := range testcases {
 		lat, lng := test.tile.Num2Deg()
 		if lat != test.expectedLat {
-			t.Errorf("Failed test %v. Expected lat (%v), got (%v)", i, lat, lat)
+			t.Errorf("Failed test %v. Expected lat (%v), got (%v)", i, test.expectedLat, lat)
 		}
 		if lng != test.expectedLng {
-			t.Errorf("Failed test %v. Expected lng (%v), got (%v)", i, lng, lng)
+			t.Errorf("Failed test %v. Expected lng (%v), got (%v)", i, test.expectedLng, lng)
 		}
 	}
 }
