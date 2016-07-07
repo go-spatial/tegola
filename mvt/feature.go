@@ -107,10 +107,10 @@ func (c *cursor) NormalizePoint(p tegola.Point) (nx, ny int64) {
 	nx = int64(p.X() - c.TLX)
 	ny = int64(p.Y() - c.TLY)
 	if nx > int64(c.extent) {
-		log.Printf("Point is greater then extent: %v — %v", nx, c.extent)
+		//log.Printf("Point is greater then extent: %v — %v", nx, c.extent)
 	}
 	if ny > int64(c.extent) {
-		log.Printf("Point is greater then extent: %v — %v", ny, c.extent)
+		//log.Printf("Point is greater then extent: %v — %v", ny, c.extent)
 	}
 	return nx, ny
 }

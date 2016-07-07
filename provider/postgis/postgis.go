@@ -79,10 +79,7 @@ func NewProvider(config Config) (*Provider, error) {
 				SELECT 
 					ST_AsBinary(
 						ST_Transform(
-							ST_Intersection(
-								geom,
-								ST_Transform({{.BBox}}, 4326)
-							),
+							geom,
 							%[2]v
 						)
 					) AS geom, 
@@ -91,7 +88,7 @@ func NewProvider(config Config) (*Provider, error) {
 				FROM 
 					%[1]v 
 				WHERE 
-					geom && ST_Transform({{.BBox}}, 4326) `, tplStr, p.srid)
+					geom && ST_Transform({{.BBox}}, 4326)`, tplStr, p.srid)
 		}
 
 		_, err := tpl.Parse(tplStr)

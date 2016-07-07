@@ -250,8 +250,12 @@ func Decode(r io.Reader) (geo Geometry, err error) {
 		geo = new(LineString)
 	case GeoMultiLineString:
 		geo = new(MultiLineString)
+	case GeoPolygon:
+		geo = new(Polygon)
 	case GeoMultiPolygon:
 		geo = new(MultiPolygon)
+	case GeoGeometryCollection:
+		geo = new(Collection)
 	default:
 		return nil, fmt.Errorf("Unknown Geometry! %v", typ)
 	}
