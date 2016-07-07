@@ -69,11 +69,31 @@ func NewProvider(config Config) (*Provider, error) {
 		srid:   srid,
 		layers: map[string]*template.Template{},
 	}
+
 	for name, tplStr := range config.Layers {
 		tpl := template.New(name)
+		//	check for template
 		if !(strings.Contains(tplStr, "{{") && strings.Contains(tplStr, "}}")) {
-			tplStr = fmt.Sprintf(`SELECT ST_AsBinary(ST_TRANSFORM("geom",%[2]v)) AS geom,"name","gid" FROM %[1]v WHERE "geom" && ST_TRANSFORM({{.BBox}}, 4326) LIMIT 5`, tplStr, p.srid)
+
+			tplStr = fmt.Sprintf(`
+				SELECT 
+					ST_AsBinary(
+						ST_Transform(
+							ST_Intersection(
+								geom,
+								ST_Transform({{.BBox}}, 4326)
+							),
+							%[2]v
+						)
+					) AS geom, 
+					zone_name AS "name",
+					gid 
+				FROM 
+					%[1]v 
+				WHERE 
+					geom && ST_Transform({{.BBox}}, 4326) `, tplStr, p.srid)
 		}
+
 		_, err := tpl.Parse(tplStr)
 		if err != nil {
 			return nil, fmt.Errorf("Layer %v template( %v ) had an error: %v", name, tplStr, err)
@@ -103,15 +123,20 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
 	t.Execute(&sr, tpl)
+
 	sql := sr.String()
+
 	log.Printf("Running sql:\n%v\n", sql)
+
 	rows, err := p.pool.Query(sql)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	layer = new(mvt.Layer)
 	layer.Name = layerName
+
 	// Iterate through the result set
 	for rows.Next() {
 		var rgeom []byte
@@ -149,6 +174,6 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 			Geometry: geom,
 		})
 	}
-	log.Printf("Layer looks like %+v\n", layer)
+	//	log.Printf("Layer looks like %+v\n", layer)
 	return layer, nil
 }

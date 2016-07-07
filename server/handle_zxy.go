@@ -23,6 +23,24 @@ const (
 	MaxZoom = 18
 )
 
+func init() {
+	config := postgis.Config{
+		Host:     "localhost",
+		Port:     5432,
+		Database: "ARolek",
+		User:     "ARolek",
+		Layers: map[string]string{
+			"landuse": "gis.zoning_base",
+		},
+	}
+	var err error
+	postgisProvider, err = postgis.NewProvider(config)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create a new provider. %v", err))
+	}
+
+}
+
 //	encode an example tile for demo purposes
 func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 	var err error
@@ -113,24 +131,6 @@ func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 }
 
 var postgisProvider *postgis.Provider
-
-func init() {
-	config := postgis.Config{
-		Host:     "localhost",
-		Port:     5432,
-		Database: "gdey",
-		User:     "gdey",
-		Layers: map[string]string{
-			"landuse": "gis.rio_buildings",
-		},
-	}
-	var err error
-	postgisProvider, err = postgis.NewProvider(config)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create a new provider. %v", err))
-	}
-
-}
 
 //	URI scheme: /maps/:map_id/:z/:x/:y
 //		map_id - id in the config file with an accompanying data source
@@ -231,7 +231,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		*/
-		log.Printf("Vtile: %v", proto.MarshalTextString(vtile))
+		//	log.Printf("Vtile: %v", proto.MarshalTextString(vtile))
 		//	fetch tile from datasource
 		//	marshal our tile into a protocol buffer
 		pbyte, err := proto.Marshal(vtile)
