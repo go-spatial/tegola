@@ -89,31 +89,33 @@ const (
 // cursor reprsents the current position, this is needed to encode the geometry.
 // 0,0 is the origin, it which is the top-left most part of the tile.
 type cursor struct {
-	X int64
-	Y int64
+	X float64
+	Y float64
 	// This is the upper left coord for the X coordinate. This value will be substracted
 	// from each point, before applying it to the movement commands
-	TLX float64
+	//	TLX float64
 	// This is the upper left coord for the Y coordinate. This value will be substracted
 	// from each point, before applying it to the movement commands
-	TLY    float64
+	// TLY    float64
 	extent int
 }
 
 func encodeZigZag(i int64) uint32 {
 	return uint32((i << 1) ^ (i >> 31))
 }
-func (c *cursor) NormalizePoint(p tegola.Point) (nx, ny int64) {
+func (c *cursor) NormalizePoint(p tegola.Point) (nx, ny float64) {
 
-	nx = int64(p.X())
-	ny = int64(p.Y())
-	if nx > int64(c.extent) {
-		//log.Printf("Point is greater then extent: %v — %v", nx, c.extent)
-	}
-	if ny > int64(c.extent) {
-		//log.Printf("Point is greater then extent: %v — %v", ny, c.extent)
-	}
-	return nx, ny
+	/*
+		nx = int64(p.X())
+		ny = int64(p.Y())
+		if nx > int64(c.extent) {
+			//log.Printf("Point is greater then extent: %v — %v", nx, c.extent)
+		}
+		if ny > int64(c.extent) {
+			//log.Printf("Point is greater then extent: %v — %v", ny, c.extent)
+		}
+	*/
+	return p.X(), p.Y()
 }
 
 func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
@@ -130,8 +132,8 @@ func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
 	for _, p := range points {
 		ix, iy := c.NormalizePoint(p)
 		//	computer our point delta
-		dx := ix - c.X
-		dy := iy - c.Y
+		dx := int64(ix - c.X)
+		dy := int64(iy - c.Y)
 
 		//	update our cursor
 		c.X = ix
@@ -150,8 +152,8 @@ func (c *cursor) LineTo(points ...tegola.Point) []uint32 {
 	g = append(g, (cmdLineTo&0x7)|(uint32(len(points))<<3))
 	for _, p := range points {
 		ix, iy := c.NormalizePoint(p)
-		dx := ix - c.X
-		dy := iy - c.Y
+		dx := int64(ix - c.X)
+		dy := int64(iy - c.Y)
 		c.X = ix
 		c.Y = iy
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
@@ -167,8 +169,8 @@ func (c *cursor) ClosePath() uint32 {
 // mapbox vector_tile spec.
 func encodeGeometry(geo tegola.Geometry, tlx, tly float64, extent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 	c := cursor{
-		X:      int64(tlx),
-		Y:      int64(tly),
+		X:      tlx,
+		Y:      tly,
 		extent: extent,
 	}
 	switch t := geo.(type) {

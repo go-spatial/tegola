@@ -140,11 +140,11 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 
 	//	create a line
 	line1 := &basic.Line{
-		basic.Point{int(minx) + 0, int(miny) + 0},
-		basic.Point{int(minx) + 4096, int(miny) + 0},
-		basic.Point{int(minx) + 4096, int(miny) + 4096},
-		basic.Point{int(minx) + 0, int(miny) + 4096},
-		basic.Point{int(minx) + 0, int(miny) + 0},
+		basic.Point{minx + 0, miny + 0},
+		basic.Point{minx + 4096, miny + 0},
+		basic.Point{minx + 4096, miny + 4096},
+		basic.Point{minx + 0, miny + 4096},
+		basic.Point{minx + 0, miny + 0},
 	}
 
 	//	tile outlines
@@ -156,7 +156,7 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 	}
 
 	//	middle of tile
-	point1 := &basic.Point{int(minx) + 2048, int(miny) + 2048}
+	point1 := &basic.Point{minx + 2048, miny + 2048}
 
 	//	new feature
 	zxy := mvt.Feature{

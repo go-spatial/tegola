@@ -49,6 +49,36 @@ func TestLayer(t *testing.T) {
 			// But for now it's okay.
 			vtlayer: newTileLayer("onefeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag")}, []*vectorTile.Tile_Feature{nil}),
 		},
+		{
+			layer: &Layer{
+				Name: "twofeature",
+				features: []Feature{
+					{
+						Geometry: &basic.Polygon{
+							basic.Line{
+								basic.Point{3, 6},
+								basic.Point{8, 12},
+								basic.Point{20, 34},
+							},
+						},
+						Tags: map[string]interface{}{
+							"tag1": "tag",
+							"tag2": "tag",
+						},
+					},
+					{
+						Geometry: &basic.Point{1, 1},
+						Tags: map[string]interface{}{
+							"tag1": "tag",
+							"tag2": "tag",
+						},
+					},
+				},
+			},
+			// features should not be nil, when we start comparing features this will fail.
+			// But for now it's okay.
+			vtlayer: newTileLayer("onefeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag")}, []*vectorTile.Tile_Feature{nil}),
+		},
 	}
 	for i, tcase := range testcases {
 		vt, err := tcase.layer.VTileLayer(0, 0)

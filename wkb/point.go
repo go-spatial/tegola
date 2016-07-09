@@ -6,8 +6,14 @@ import (
 	"io"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 )
 
+type Point struct {
+	basic.Point
+}
+
+/*
 //Point is a basic type, this describes a 2D point.
 type Point struct {
 	x float64
@@ -29,7 +35,7 @@ func (p *Point) Y() float64 {
 	}
 	return p.y
 }
-
+*/
 //Type returns the type constant for this Geometry.
 func (*Point) Type() uint32 {
 	return GeoPoint
@@ -37,10 +43,10 @@ func (*Point) Type() uint32 {
 
 //Decode decodes the byte stream into the object.
 func (p *Point) Decode(bom binary.ByteOrder, r io.Reader) error {
-	if err := binary.Read(r, bom, &p.x); err != nil {
+	if err := binary.Read(r, bom, &p.Point[0]); err != nil {
 		return err
 	}
-	if err := binary.Read(r, bom, &p.y); err != nil {
+	if err := binary.Read(r, bom, &p.Point[1]); err != nil {
 		return err
 	}
 	return nil
@@ -51,10 +57,7 @@ func (p *Point) String() string {
 
 //NewPoint creates a new point structure.
 func NewPoint(x, y float64) Point {
-	return Point{
-		x: x,
-		y: y,
-	}
+	return Point{basic.Point{x, y}}
 }
 
 //MultiPoint holds one or more independent points in a group

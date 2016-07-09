@@ -6,24 +6,25 @@ import (
 	"github.com/terranodo/tegola"
 )
 
+// RehomeGeometry will make sure to normalize all points to the ulx and uly coordinates.
 func RehomeGeometry(geometery tegola.Geometry, ulx, uly float64) (tegola.Geometry, error) {
 	switch geo := geometery.(type) {
 	default:
 		return nil, fmt.Errorf("Unknown Geometry: %+v", geometery)
 	case tegola.Point:
-		return &Point{int(geo.X() - ulx), int(geo.Y() - uly)}, nil
+		return &Point{geo.X() - ulx, geo.Y() - uly}, nil
 	case tegola.Point3:
-		return &Point3{int(geo.X() - ulx), int(geo.Y() - uly), int(geo.Z())}, nil
+		return &Point3{geo.X() - ulx, geo.Y() - uly, geo.Z()}, nil
 	case tegola.MultiPoint:
 		var pts MultiPoint
 		for _, pt := range geo.Points() {
-			pts = append(pts, Point{int(pt.X() - ulx), int(pt.Y() - uly)})
+			pts = append(pts, Point{pt.X() - ulx, pt.Y() - uly})
 		}
 		return pts, nil
 	case tegola.LineString:
 		var line Line
 		for _, ptGeo := range geo.Subpoints() {
-			line = append(line, Point{int(ptGeo.X() - ulx), int(ptGeo.Y() - uly)})
+			line = append(line, Point{ptGeo.X() - ulx, ptGeo.Y() - uly})
 		}
 		return &line, nil
 	case tegola.MultiLine:
