@@ -84,7 +84,8 @@ func NewProvider(config Config) (*Provider, error) {
 				FROM 
 					%[1]v 
 				WHERE 
-					geom && {{.BBox}}`, tplStr)
+					geom && {{.BBox}}
+				LIMIT 1`, tplStr)
 		}
 
 		_, err := tpl.Parse(tplStr)

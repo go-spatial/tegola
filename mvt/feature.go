@@ -104,8 +104,9 @@ func encodeZigZag(i int64) uint32 {
 	return uint32((i << 1) ^ (i >> 31))
 }
 func (c *cursor) NormalizePoint(p tegola.Point) (nx, ny int64) {
-	nx = int64(p.X() - c.TLX)
-	ny = int64(p.Y() - c.TLY)
+
+	nx = int64(p.X())
+	ny = int64(p.Y())
 	if nx > int64(c.extent) {
 		//log.Printf("Point is greater then extent: %v — %v", nx, c.extent)
 	}
@@ -166,8 +167,8 @@ func (c *cursor) ClosePath() uint32 {
 // mapbox vector_tile spec.
 func encodeGeometry(geo tegola.Geometry, tlx, tly float64, extent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 	c := cursor{
-		TLX:    tlx,
-		TLY:    tly,
+		X:      int64(tlx),
+		Y:      int64(tly),
 		extent: extent,
 	}
 	switch t := geo.(type) {

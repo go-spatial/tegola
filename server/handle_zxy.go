@@ -136,6 +136,7 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 
 	//	tile bbox
 	minx, miny, _, _ := tile.BBox()
+	minx, miny = 0, 0
 
 	//	create a line
 	line1 := &basic.Line{
@@ -264,6 +265,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		}
 
 		minx, miny, _, _ := tile.BBox()
+		minx, miny = 0, 0
 		vtile, err := mvtTile.VTile(minx, miny)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
