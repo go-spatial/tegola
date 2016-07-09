@@ -12,7 +12,6 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/mvt/vector_tile"
 	"github.com/terranodo/tegola/provider/postgis"
 )
 
@@ -41,6 +40,7 @@ func init() {
 
 }
 
+/*
 //	encode an example tile for demo purposes
 func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 	var err error
@@ -129,27 +129,50 @@ func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 	// send to the protobuff Marshal functions.
 	return tile.VTile(0, 0)
 }
+*/
 
 //	creates a debug layer with z/x/y encoded as a point
-func debugLayer(z, x, y int) *mvt.Layer {
-	layer := new(mvt.Layer)
-	layer.Name = "place_label"
+func debugLayer(tile tegola.Tile) *mvt.Layer {
+
+	//	tile bbox
+	minx, miny, _, _ := tile.BBox()
+
+	//	create a line
+	line1 := &basic.Line{
+		basic.Point{int(minx) + 0, int(miny) + 0},
+		basic.Point{int(minx) + 4096, int(miny) + 0},
+		basic.Point{int(minx) + 4096, int(miny) + 4096},
+		basic.Point{int(minx) + 0, int(miny) + 4096},
+		basic.Point{int(minx) + 0, int(miny) + 0},
+	}
+
+	//	tile outlines
+	outline := mvt.Feature{
+		Tags: map[string]interface{}{
+			"type": "debug_outline",
+		},
+		Geometry: line1,
+	}
 
 	//	middle of tile
-	point1 := &basic.Point{2048, 2048}
+	point1 := &basic.Point{int(minx) + 2048, int(miny) + 2048}
 
 	//	new feature
-	debugFeature := mvt.Feature{
+	zxy := mvt.Feature{
 		Tags: map[string]interface{}{
-			"type":    "city",
-			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
+			"type":    "debug_text",
+			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.Z, tile.Y),
 		},
 		Geometry: point1,
 	}
 
-	layer.AddFeatures(debugFeature)
+	layer := mvt.Layer{
+		Name: "debug",
+	}
 
-	return layer
+	layer.AddFeatures(zxy, outline)
+
+	return &layer
 }
 
 var postgisProvider *postgis.Provider
@@ -236,18 +259,18 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			mvtTile.AddLayers(mvtLayer)
 
 			//	add debug layer
-			debugLayer := debugLayer(tile.Z, tile.X, tile.Y)
+			debugLayer := debugLayer(tile)
 			mvtTile.AddLayers(debugLayer)
 		}
 
-		//	log.Printf("Vtile: %v", proto.MarshalTextString(vtile))
-
-		ulx, uly, _, _ := tile.BBox()
-		vtile, err := mvtTile.VTile(ulx, uly)
+		minx, miny, _, _ := tile.BBox()
+		vtile, err := mvtTile.VTile(minx, miny)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}
+
+		//	log.Printf("Vtile: %v", proto.MarshalTextString(vtile))
 
 		//	marshal our tile into a protocol buffer
 		pbyte, err = proto.Marshal(vtile)

@@ -150,7 +150,6 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 		//	tags
 		gtags := map[string]interface{}{
 			"class": "park",
-			"type":  "city",
 		}
 
 		//	scan data returned from database
@@ -186,8 +185,6 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 			Tags:     gtags,
 			Geometry: geom,
 		})
-
-		log.Println("gid", gid)
 	}
 
 	log.Printf("# of rows for tile /%v/%v/%v: %v\n", tile.Z, tile.X, tile.Y, rowsCount)
