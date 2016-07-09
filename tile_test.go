@@ -36,8 +36,8 @@ func TestTileNum2Deg(t *testing.T) {
 
 func TestTileBBox(t *testing.T) {
 	testcases := []struct {
-		tile               tegola.Tile
-		ulx, uly, llx, lly float64
+		tile                   tegola.Tile
+		minx, miny, maxx, maxy float64
 	}{
 		{
 			tile: tegola.Tile{
@@ -45,27 +45,38 @@ func TestTileBBox(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			ulx: -10018754.17,
-			uly: 10018754.17,
-			llx: 0,
-			lly: 0,
+			minx: -10018754.17,
+			miny: 10018754.17,
+			maxx: 0,
+			maxy: 0,
+		},
+		{
+			tile: tegola.Tile{
+				Z: 16,
+				X: 11436,
+				Y: 26461,
+			},
+			minx: -13044437.497219238996,
+			miny: 3856706.6986199953,
+			maxx: -13043826.000993041,
+			maxy: 3856095.202393799,
 		},
 	}
 
 	for i, test := range testcases {
-		ulx, uly, llx, lly := test.tile.BBox()
+		minx, miny, maxx, maxy := test.tile.BBox()
 
-		if ulx != test.ulx {
-			t.Errorf("Failed test %v. Expected ulx (%v), got (%v)", i, test.ulx, ulx)
+		if minx != test.minx {
+			t.Errorf("Failed test %v. Expected minx (%v), got (%v)", i, test.minx, minx)
 		}
-		if uly != test.uly {
-			t.Errorf("Failed test %v. Expected uly (%v), got (%v)", i, test.uly, uly)
+		if miny != test.miny {
+			t.Errorf("Failed test %v. Expected miny (%v), got (%v)", i, test.miny, miny)
 		}
-		if llx != test.llx {
-			t.Errorf("Failed test %v. Expected llx (%v), got (%v)", i, test.llx, llx)
+		if maxx != test.maxx {
+			t.Errorf("Failed test %v. Expected maxx (%v), got (%v)", i, test.maxx, maxx)
 		}
-		if lly != test.lly {
-			t.Errorf("Failed test %v. Expected lly (%v), got (%v)", i, test.lly, lly)
+		if maxy != test.maxy {
+			t.Errorf("Failed test %v. Expected maxy (%v), got (%v)", i, test.maxy, maxy)
 		}
 	}
 }

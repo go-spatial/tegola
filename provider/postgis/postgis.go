@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/jackc/pgx"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/wkb"
@@ -77,18 +78,13 @@ func NewProvider(config Config) (*Provider, error) {
 
 			tplStr = fmt.Sprintf(`
 				SELECT 
-					ST_AsBinary(
-						ST_Transform(
-							geom,
-							%[2]v
-						)
-					) AS geom, 
+					ST_AsBinary(geom) AS geom, 
 					zone_name AS "name",
 					gid 
 				FROM 
 					%[1]v 
 				WHERE 
-					geom && ST_Transform({{.BBox}}, 4326)`, tplStr, p.srid)
+					geom && {{.BBox}}`, tplStr)
 		}
 
 		_, err := tpl.Parse(tplStr)
@@ -105,26 +101,32 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 	if p == nil {
 		return nil, fmt.Errorf("Provider is nil")
 	}
-	ulx, uly, llx, lly := tile.BBox()
+	//	fetch bbox coordinates
+	minx, miny, maxx, maxy := tile.BBox()
+
+	//	build out our template bbox template
 	tpl := struct {
 		Name string
 		BBox string
 	}{
 		Name: layerName,
-		BBox: fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", ulx, uly, llx, lly, p.srid),
+		BBox: fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minx, miny, maxx, maxy, p.srid),
 	}
+
 	var sr bytes.Buffer
 
 	t, ok := p.layers[layerName]
 	if !ok {
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
+	//	execute our template
 	t.Execute(&sr, tpl)
 
 	sql := sr.String()
 
 	log.Printf("Running sql:\n%v\n", sql)
 
+	//	execute query
 	rows, err := p.pool.Query(sql)
 	if err != nil {
 		return nil, err
@@ -134,19 +136,29 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 	layer = new(mvt.Layer)
 	layer.Name = layerName
 
+	//	used for debugging
+	var rowsCount int
 	// Iterate through the result set
 	for rows.Next() {
+		//	for logging
+		rowsCount++
+
 		var rgeom []byte
 		gname := new(*string)
+
 		var gid uint64
+		//	tags
 		gtags := map[string]interface{}{
 			"class": "park",
 			"type":  "city",
 		}
-		err = rows.Scan(&rgeom, &gname, &gid)
-		if err != nil {
+
+		//	scan data returned from database
+		if err = rows.Scan(&rgeom, &gname, &gid); err != nil {
 			return nil, err
 		}
+
+		//	gecode our geometry
 		geom, err := wkb.DecodeBytes(rgeom)
 		if err != nil {
 			return nil, err
@@ -156,21 +168,30 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 				gtags["name"] = *gname
 			}
 		*/
-		//TODO: Need to support collection geometries.
+
+		//	TODO: Need to support collection geometries.
 		if _, ok := geom.(tegola.Collection); ok {
 			return nil, fmt.Errorf("For Layer (%v) and geometry name(%v); Geometry collections are not supported.", layerName, gname)
 		}
-		// rehgeom, err := basic.RehomeGeometry(geom, ulx, uly)
+
+		// rehgeom, err := basic.RehomeGeometry(geom, minx, miny)
 		if err != nil {
 			geostr := wkb.WKT(geom)
 			return nil, fmt.Errorf("Error trying to rehome %v : %v", geostr, err)
 		}
+
+		//	add features to layer
 		layer.AddFeatures(mvt.Feature{
 			ID:       &gid,
 			Tags:     gtags,
 			Geometry: geom,
 		})
+
+		log.Println("gid", gid)
 	}
+
+	log.Printf("# of rows for tile /%v/%v/%v: %v\n", tile.Z, tile.X, tile.Y, rowsCount)
+
 	//	log.Printf("Layer looks like %+v\n", layer)
 	return layer, nil
 }

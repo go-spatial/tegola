@@ -30,7 +30,7 @@ func init() {
 		Database: "ARolek",
 		User:     "ARolek",
 		Layers: map[string]string{
-			"landuse": "gis.zoning_base",
+			"landuse": "gis.zoning_base_3857",
 		},
 	}
 	var err error
@@ -130,6 +130,28 @@ func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 	return tile.VTile(0, 0)
 }
 
+//	creates a debug layer with z/x/y encoded as a point
+func debugLayer(z, x, y int) *mvt.Layer {
+	layer := new(mvt.Layer)
+	layer.Name = "place_label"
+
+	//	middle of tile
+	point1 := &basic.Point{2048, 2048}
+
+	//	new feature
+	debugFeature := mvt.Feature{
+		Tags: map[string]interface{}{
+			"type":    "city",
+			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
+		},
+		Geometry: point1,
+	}
+
+	layer.AddFeatures(debugFeature)
+
+	return layer
+}
+
 var postgisProvider *postgis.Provider
 
 //	URI scheme: /maps/:map_id/:z/:x/:y
@@ -197,44 +219,38 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Tile %+v\n", tile)
 
-		//	check for the max zoom level
-		if tile.Z > MaxZoom {
-			msg := fmt.Sprintf("zoom level %v is great than max supported zoom of %v", tile.Z, MaxZoom)
-			http.Error(w, msg, http.StatusBadRequest)
-			return
-		}
-
-		//	TODO: calculate the web mercator bounding box with the slippy math function
-		/*
-			lat, lng := tile.Deg2Num()
-			log.Printf("tile %+v\n", tile)
-			log.Printf("lat: %v, lng: %v\n", lat, lng)
-		*/
 		//	generate a tile
 		var mvtTile mvt.Tile
-		mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
-			return
+		var pbyte []byte
+
+		//	check that our request is below max zoom
+		if tile.Z < MaxZoom {
+			//	fetch requested layer from our data provider
+			mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+				return
+			}
+
+			//	add layers
+			mvtTile.AddLayers(mvtLayer)
+
+			//	add debug layer
+			debugLayer := debugLayer(tile.Z, tile.X, tile.Y)
+			mvtTile.AddLayers(debugLayer)
 		}
-		mvtTile.AddLayers(mvtLayer)
+
+		//	log.Printf("Vtile: %v", proto.MarshalTextString(vtile))
+
 		ulx, uly, _, _ := tile.BBox()
 		vtile, err := mvtTile.VTile(ulx, uly)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}
-		/*
-			vtile, err := exampleTile(z, x, y)
-			if err != nil {
-				http.Error(w, "error generating tile tile", http.StatusInternalServerError)
-				return
-			}
-		*/
-		//	log.Printf("Vtile: %v", proto.MarshalTextString(vtile))
-		//	fetch tile from datasource
+
 		//	marshal our tile into a protocol buffer
-		pbyte, err := proto.Marshal(vtile)
+		pbyte, err = proto.Marshal(vtile)
 		if err != nil {
 			http.Error(w, "error marshalling tile", http.StatusInternalServerError)
 			return
