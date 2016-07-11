@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 )
 
@@ -26,7 +27,7 @@ func valMapToVTileValue(valMap []interface{}) (vt []*vectorTile.Tile_Value) {
 }
 
 // VTileLayer returns a vectorTile Tile_Layer object that represents this Layer.
-func (l *Layer) VTileLayer(tlx, tly float64) (*vectorTile.Tile_Layer, error) {
+func (l *Layer) VTileLayer(extent tegola.Extent) (*vectorTile.Tile_Layer, error) {
 	kmap, vmap, err := keyvalMapsFromFeatures(l.features)
 	if err != nil {
 		return nil, err
@@ -34,7 +35,7 @@ func (l *Layer) VTileLayer(tlx, tly float64) (*vectorTile.Tile_Layer, error) {
 	valmap := valMapToVTileValue(vmap)
 	var features = make([]*vectorTile.Tile_Feature, 0, len(l.features))
 	for _, f := range l.features {
-		vtf, err := f.VTileFeature(kmap, vmap, tlx, tly, l.Extent())
+		vtf, err := f.VTileFeature(kmap, vmap, extent)
 		if err != nil {
 			return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
 		}

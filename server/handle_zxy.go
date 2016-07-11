@@ -40,12 +40,8 @@ func init() {
 
 }
 
-/*
-//	encode an example tile for demo purposes
-func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
-	var err error
-	var tile mvt.Tile
-
+//	creates a debug layer with z/x/y encoded as a point
+func debugLayer(tile tegola.Tile) *mvt.Layer {
 	//	create a line
 	line1 := &basic.Line{
 		basic.Point{0, 0},
@@ -53,98 +49,6 @@ func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 		basic.Point{4096, 4096},
 		basic.Point{0, 4096},
 		basic.Point{0, 0},
-	}
-
-	// Now we need to crate a feature. The way Tiles work, is that each tiles is
-	// made up of a set of layers. Each layer contains more or more features, which
-	// are geometeries with some meta data. So, first we must construct the feature
-	// then we can create a layer, which we will add to a tile.
-
-	// First we create the feature. A feature has a set of name value pairs. Most
-	// base types, and any types that implements a Stringer interfaces are supported.
-	feature1 := mvt.Feature{
-		Tags: map[string]interface{}{
-			"class": "path",
-		},
-		Geometry: line1,
-	}
-
-	// Create a new Layer, a Layer requires a name. This name should be unique within a tile.
-	layer1 := mvt.Layer{
-		Name: "tunnel",
-	}
-
-	//	add feature to layer
-	layer1.AddFeatures(feature1)
-
-	//	create a polygon
-	poly1 := &basic.Polygon{
-		basic.Line{
-			basic.Point{1024, 250},
-			basic.Point{3072, 250},
-			basic.Point{3072, 1000},
-			basic.Point{1024, 1000},
-		},
-	}
-
-	//	add polygon to our feature
-	feature2 := mvt.Feature{
-		Tags: map[string]interface{}{
-			"class": "park",
-		},
-		Geometry: poly1,
-	}
-
-	// Create a new Layer, a Layer requires a name. This name should be unique within a tile.
-	layer2 := mvt.Layer{
-		Name: "landuse",
-	}
-
-	layer2.AddFeatures(feature2)
-
-	point1 := &basic.Point{2048, 2048}
-
-	//	new feature
-	feature3 := mvt.Feature{
-		Tags: map[string]interface{}{
-			"type":    "city",
-			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
-		},
-		Geometry: point1,
-	}
-
-	//	create a new layer
-	layer3 := mvt.Layer{
-		Name: "place_label",
-	}
-
-	layer3.AddFeatures(feature3)
-
-	//	multiple layers can be added to a tile at once
-	if err = tile.AddLayers(&layer1, &layer2, &layer3); err != nil {
-		return nil, err
-	}
-
-	// VTile is the protobuff representation of the tile. This is what you can
-	// send to the protobuff Marshal functions.
-	return tile.VTile(0, 0)
-}
-*/
-
-//	creates a debug layer with z/x/y encoded as a point
-func debugLayer(tile tegola.Tile) *mvt.Layer {
-
-	//	tile bbox
-	minx, miny, _, _ := tile.BBox()
-	minx, miny = 0, 0
-
-	//	create a line
-	line1 := &basic.Line{
-		basic.Point{minx + 0, miny + 0},
-		basic.Point{minx + 4096, miny + 0},
-		basic.Point{minx + 4096, miny + 4096},
-		basic.Point{minx + 0, miny + 4096},
-		basic.Point{minx + 0, miny + 0},
 	}
 
 	//	tile outlines
@@ -156,7 +60,7 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 	}
 
 	//	middle of tile
-	point1 := &basic.Point{minx + 2048, miny + 2048}
+	point1 := &basic.Point{2048, 2048}
 
 	//	new feature
 	zxy := mvt.Feature{
@@ -241,7 +145,6 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			X: x,
 			Y: y,
 		}
-		log.Printf("Tile %+v\n", tile)
 
 		//	generate a tile
 		var mvtTile mvt.Tile
@@ -264,15 +167,11 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			mvtTile.AddLayers(debugLayer)
 		}
 
-		minx, miny, _, _ := tile.BBox()
-		minx, miny = 0, 0
-		vtile, err := mvtTile.VTile(minx, miny)
+		vtile, err := mvtTile.VTile(tile.Extent())
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}
-
-		//	log.Printf("Vtile: %v", proto.MarshalTextString(vtile))
 
 		//	marshal our tile into a protocol buffer
 		pbyte, err = proto.Marshal(vtile)
@@ -283,7 +182,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		//	check for tile size warnings
 		if len(pbyte) > MaxTileSize {
-			log.Println("tile is too large!", len(pbyte))
+			log.Printf("tile is rather large - %v", len(pbyte))
 		}
 
 		//	TODO: how configurable do we want the CORS policy to be?

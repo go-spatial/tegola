@@ -3,6 +3,7 @@ package mvt
 import (
 	"fmt"
 
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 )
 
@@ -32,12 +33,12 @@ func (t *Tile) Layers() (l []Layer) {
 	return l
 }
 
-// VTile returns a tile object according to the Google Protobuff def. This function
+//VTile returns a tile object according to the Google Protobuff def. This function
 // does the hard work of converting everthing to the standard.
-func (t *Tile) VTile(ulx, uly float64) (vt *vectorTile.Tile, err error) {
+func (t *Tile) VTile(extent tegola.Extent) (vt *vectorTile.Tile, err error) {
 	vt = new(vectorTile.Tile)
 	for _, l := range t.layers {
-		vtl, err := l.VTileLayer(ulx, uly)
+		vtl, err := l.VTileLayer(extent)
 		if err != nil {
 			return nil, fmt.Errorf("Error Getting VTileLayer: %v", err)
 		}
