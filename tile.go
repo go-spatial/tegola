@@ -1,9 +1,6 @@
 package tegola
 
-import (
-	"log"
-	"math"
-)
+import "math"
 
 //Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
@@ -47,9 +44,21 @@ func (t *Tile) BBox() (minx, miny, maxx, maxy float64) {
 	maxx = -max + (float64(t.X) * res) + res
 	maxy = max - (float64(t.Y) * res) - res
 
-	log.Println(minx, miny, maxx, maxy)
-
 	return
+}
+
+func (t *Tile) Extent() Extent {
+	max := 20037508.34
+
+	//	resolution
+	res := (max * 2) / math.Exp2(float64(t.Z))
+
+	return Extent{
+		Minx: -max + (float64(t.X) * res),
+		Miny: max - (float64(t.Y) * res),
+		Maxx: -max + (float64(t.X) * res) + res,
+		Maxy: max - (float64(t.Y) * res) - res,
+	}
 }
 
 //ZRes takes a web mercator zoom level and returns the pixel resolution for that

@@ -3,7 +3,6 @@ package postgis
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"text/template"
 
@@ -84,8 +83,7 @@ func NewProvider(config Config) (*Provider, error) {
 				FROM 
 					%[1]v 
 				WHERE 
-					geom && {{.BBox}}
-				LIMIT 1`, tplStr)
+					geom && {{.BBox}}`, tplStr)
 		}
 
 		_, err := tpl.Parse(tplStr)
@@ -124,8 +122,6 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 	t.Execute(&sr, tpl)
 
 	sql := sr.String()
-
-	log.Printf("Running sql:\n%v\n", sql)
 
 	//	execute query
 	rows, err := p.pool.Query(sql)
@@ -188,8 +184,5 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 		})
 	}
 
-	log.Printf("# of rows for tile /%v/%v/%v: %v\n", tile.Z, tile.X, tile.Y, rowsCount)
-
-	//	log.Printf("Layer looks like %+v\n", layer)
 	return layer, nil
 }

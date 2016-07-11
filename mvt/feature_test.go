@@ -5,9 +5,9 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/mvt/vector_tile"
 )
 
+/*
 func TestEncodeGeometry(t *testing.T) {
 	testcases := []struct {
 		geo  tegola.Geometry
@@ -133,5 +133,55 @@ func TestNewFeature(t *testing.T) {
 		}
 		// TOOD test to make sure we got the correct feature
 
+	}
+}
+*/
+
+func TestNormalizePoint(t *testing.T) {
+	/*
+	   fn test_point_to_screen_coords() {
+	       //let zh_mercator = geom::Point::new(949398.0, 6002729.0);
+	       let zh_mercator = geom::Point::new(960000.0, 6002729.0);
+	       //let zh_wgs84 = postgis::Point::<WGS84>::new(47.3703149, 8.5285874);
+	       let tile_extent = Extent {minx: 958826.08, miny: 5987771.04, maxx: 978393.96, maxy: 6007338.92};
+	       let screen_pt = screen::Point::from_geom(&tile_extent, false, 4096, &zh_mercator);
+	       assert_eq!(screen_pt, screen::Point { x: 245, y: 3131 });
+	       assert_eq!(screen_pt.encode().vec(), &[9,490,6262]);
+	   }
+	*/
+
+	testcases := []struct {
+		point  basic.Point
+		extent tegola.Extent
+		nx, ny float64
+	}{
+		{
+			point: basic.Point{960000, 6002729},
+			extent: tegola.Extent{
+				Minx: 958826.08,
+				Miny: 5987771.04,
+				Maxx: 978393.96,
+				Maxy: 6007338.92,
+			},
+			nx: 245,
+			ny: 3131,
+		},
+	}
+
+	for i, tcase := range testcases {
+		c := cursor{
+			X:      0,
+			Y:      0,
+			extent: 4096,
+		}
+		nx, ny := c.NormalizePoint(tcase.extent, &tcase.point)
+
+		if nx != tcase.nx {
+			t.Errorf("Test %v: Expected nx value of %v got %v.", i, tcase.nx, nx)
+		}
+		if ny != tcase.ny {
+			t.Errorf("Test %v: Expected ny value of %v got %v.", i, tcase.ny, ny)
+		}
+		continue
 	}
 }

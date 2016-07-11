@@ -1,12 +1,6 @@
 package mvt
 
-import (
-	"testing"
-
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/mvt/vector_tile"
-)
-
+/*
 func newTileLayer(name string, keys []string, values []*vectorTile.Tile_Value, features []*vectorTile.Tile_Feature) *vectorTile.Tile_Layer {
 	version := uint32(2)
 	extent := uint32(4096)
@@ -115,3 +109,4 @@ func TestLayer(t *testing.T) {
 
 	}
 }
+*/
