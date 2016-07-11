@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/wkb"
 )
@@ -66,7 +67,11 @@ func TileExample() {
 
 	// VTile is the protobuff representation of the tile. This is what you can
 	// send to the protobuff Marshal functions.
-	vtile, err := tile.VTile()
+	extent := tegola.Extent{
+		Maxx: 4096,
+		Maxy: 4096,
+	}
+	vtile, err := tile.VTile(extent)
 	if err != nil {
 		panic(err)
 	}
