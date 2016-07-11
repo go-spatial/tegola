@@ -61,14 +61,14 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(keyMap []string, valMap []interface{}, extent tegola.Extent, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(keyMap []string, valMap []interface{}, extent tegola.Extent) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keyMap, valMap, f); err != nil {
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(f.Geometry, extent, layerExtent)
+	geo, gtype, err := encodeGeometry(f.Geometry, extent)
 	if err != nil {
 		return tf, err
 	}
@@ -91,13 +91,6 @@ const (
 type cursor struct {
 	X float64
 	Y float64
-	// This is the upper left coord for the X coordinate. This value will be substracted
-	// from each point, before applying it to the movement commands
-	//	TLX float64
-	// This is the upper left coord for the Y coordinate. This value will be substracted
-	// from each point, before applying it to the movement commands
-	// TLY    float64
-	extent int
 }
 
 func encodeZigZag(i int64) uint32 {
@@ -168,13 +161,9 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geo tegola.Geometry, extent tegola.Extent, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(geo tegola.Geometry, extent tegola.Extent) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 	//	new cursor
-	c := cursor{
-		X:      0,
-		Y:      0,
-		extent: layerExtent,
-	}
+	var c cursor
 
 	switch t := geo.(type) {
 	case tegola.Point:

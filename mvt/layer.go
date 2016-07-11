@@ -35,7 +35,7 @@ func (l *Layer) VTileLayer(extent tegola.Extent) (*vectorTile.Tile_Layer, error)
 	valmap := valMapToVTileValue(vmap)
 	var features = make([]*vectorTile.Tile_Feature, 0, len(l.features))
 	for _, f := range l.features {
-		vtf, err := f.VTileFeature(kmap, vmap, extent, l.Extent())
+		vtf, err := f.VTileFeature(kmap, vmap, extent)
 		if err != nil {
 			return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
 		}

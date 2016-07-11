@@ -182,7 +182,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		//	check for tile size warnings
 		if len(pbyte) > MaxTileSize {
-			log.Println("tile is rather large - ", len(pbyte))
+			log.Printf("tile is rather large - %v", len(pbyte))
 		}
 
 		//	TODO: how configurable do we want the CORS policy to be?
