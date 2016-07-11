@@ -5,40 +5,71 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/mvt/vector_tile"
 )
 
-/*
 func TestEncodeGeometry(t *testing.T) {
 	testcases := []struct {
-		geo  tegola.Geometry
-		typ  vectorTile.Tile_GeomType
-		egeo []uint32
-		eerr error
+		geo    tegola.Geometry
+		typ    vectorTile.Tile_GeomType
+		extent tegola.Extent
+		egeo   []uint32
+		eerr   error
 	}{
 		{
-			geo:  nil,
-			typ:  vectorTile.Tile_UNKNOWN,
+			geo: nil,
+			typ: vectorTile.Tile_UNKNOWN,
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 			egeo: []uint32{},
 			eerr: ErrUnknownGeometryType,
 		},
 		{
-			geo:  &basic.Point{1, 1},
-			typ:  vectorTile.Tile_POINT,
+			geo: &basic.Point{1, 1},
+			typ: vectorTile.Tile_POINT,
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 			egeo: []uint32{9, 2, 2},
 		},
 		{
-			geo:  &basic.Point{25, 17},
-			typ:  vectorTile.Tile_POINT,
+			geo: &basic.Point{25, 17},
+			typ: vectorTile.Tile_POINT,
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 			egeo: []uint32{9, 50, 34},
 		},
 		{
-			geo:  &basic.MultiPoint{basic.Point{5, 7}, basic.Point{3, 2}},
-			typ:  vectorTile.Tile_POINT,
+			geo: &basic.MultiPoint{basic.Point{5, 7}, basic.Point{3, 2}},
+			typ: vectorTile.Tile_POINT,
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 			egeo: []uint32{17, 10, 14, 3, 9},
 		},
 		{
-			geo:  &basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
-			typ:  vectorTile.Tile_LINESTRING,
+			geo: &basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
+			typ: vectorTile.Tile_LINESTRING,
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 			egeo: []uint32{9, 4, 4, 18, 0, 16, 16, 0},
 		},
 		{
@@ -46,7 +77,13 @@ func TestEncodeGeometry(t *testing.T) {
 				basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
 				basic.Line{basic.Point{1, 1}, basic.Point{3, 5}},
 			},
-			typ:  vectorTile.Tile_LINESTRING,
+			typ: vectorTile.Tile_LINESTRING,
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 			egeo: []uint32{9, 4, 4, 18, 0, 16, 16, 0, 9, 17, 17, 10, 4, 8},
 		},
 		{
@@ -57,7 +94,13 @@ func TestEncodeGeometry(t *testing.T) {
 					basic.Point{20, 34},
 				},
 			},
-			typ:  vectorTile.Tile_POLYGON,
+			typ: vectorTile.Tile_POLYGON,
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 			egeo: []uint32{9, 6, 12, 18, 10, 12, 24, 44, 15},
 		},
 		{
@@ -85,12 +128,18 @@ func TestEncodeGeometry(t *testing.T) {
 					},
 				},
 			},
-			typ:  vectorTile.Tile_POLYGON,
+			typ: vectorTile.Tile_POLYGON,
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 			egeo: []uint32{9, 0, 0, 26, 20, 0, 0, 20, 19, 0, 15, 9, 22, 2, 26, 18, 0, 0, 18, 17, 0, 15, 9, 4, 13, 26, 0, 8, 8, 0, 0, 7, 15},
 		},
 	}
 	for _, tcase := range testcases {
-		g, gtype, err := encodeGeometry(tcase.geo, 0, 0, 4096)
+		g, gtype, err := encodeGeometry(tcase.geo, tcase.extent)
 		if tcase.eerr != err {
 			t.Errorf("Expected error (%v) got (%v) instead", tcase.eerr, err)
 		}
@@ -135,21 +184,8 @@ func TestNewFeature(t *testing.T) {
 
 	}
 }
-*/
 
 func TestNormalizePoint(t *testing.T) {
-	/*
-	   fn test_point_to_screen_coords() {
-	       //let zh_mercator = geom::Point::new(949398.0, 6002729.0);
-	       let zh_mercator = geom::Point::new(960000.0, 6002729.0);
-	       //let zh_wgs84 = postgis::Point::<WGS84>::new(47.3703149, 8.5285874);
-	       let tile_extent = Extent {minx: 958826.08, miny: 5987771.04, maxx: 978393.96, maxy: 6007338.92};
-	       let screen_pt = screen::Point::from_geom(&tile_extent, false, 4096, &zh_mercator);
-	       assert_eq!(screen_pt, screen::Point { x: 245, y: 3131 });
-	       assert_eq!(screen_pt.encode().vec(), &[9,490,6262]);
-	   }
-	*/
-
 	testcases := []struct {
 		point  basic.Point
 		extent tegola.Extent
@@ -163,19 +199,16 @@ func TestNormalizePoint(t *testing.T) {
 				Maxx: 978393.96,
 				Maxy: 6007338.92,
 			},
-			nx: 245,
-			ny: 3131,
+			nx: 245.7280155029656,
+			ny: 3131.0394462762547,
 		},
 	}
 
 	for i, tcase := range testcases {
-		c := cursor{
-			X:      0,
-			Y:      0,
-			extent: 4096,
-		}
-		nx, ny := c.NormalizePoint(tcase.extent, &tcase.point)
+		//	new cursor
+		var c cursor
 
+		nx, ny := c.NormalizePoint(tcase.extent, &tcase.point)
 		if nx != tcase.nx {
 			t.Errorf("Test %v: Expected nx value of %v got %v.", i, tcase.nx, nx)
 		}

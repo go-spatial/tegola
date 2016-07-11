@@ -13,7 +13,7 @@ import (
 	"github.com/terranodo/tegola/wkb"
 )
 
-//Provider provides the postgis data provider.
+// Provider provides the postgis data provider.
 type Provider struct {
 	config pgx.ConnPoolConfig
 	pool   *pgx.ConnPool
@@ -95,13 +95,13 @@ func NewProvider(config Config) (*Provider, error) {
 	return &p, nil
 }
 
-//MVTLayer returns a mvt.Layer
+// MVTLayer returns a mvt.Layer
 func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Layer, err error) {
 	if p == nil {
 		return nil, fmt.Errorf("Provider is nil")
 	}
-	//	fetch bbox coordinates
-	minx, miny, maxx, maxy := tile.BBox()
+
+	extent := tile.Extent()
 
 	//	build out our template bbox template
 	tpl := struct {
@@ -109,7 +109,7 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 		BBox string
 	}{
 		Name: layerName,
-		BBox: fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minx, miny, maxx, maxy, p.srid),
+		BBox: fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", extent.Minx, extent.Miny, extent.Maxx, extent.Maxy, p.srid),
 	}
 
 	var sr bytes.Buffer
