@@ -9,6 +9,16 @@ import (
 )
 
 func TestEncodeGeometry(t *testing.T) {
+	/*
+		complexGemo := basic.Polygon{
+			basic.Line{
+				basic.Point{8, 8.5},
+				basic.Point{9, 9},
+				basic.Point{20, 20},
+				basic.Point{11, 20},
+			},
+		}
+	*/
 	testcases := []struct {
 		geo  tegola.Geometry
 		typ  vectorTile.Tile_GeomType

@@ -5,5 +5,5 @@ import "github.com/terranodo/tegola/server"
 
 func main() {
 	//	TODO: move port to conifg file
-	server.Start(":8080")
+	server.Start(":9090")
 }

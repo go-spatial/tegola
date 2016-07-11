@@ -86,6 +86,32 @@ const (
 	maxCmdCount uint32 = 0x1FFFFFFF
 )
 
+type Command uint32
+
+func NewCommand(cmd uint32, count int) Command {
+	return Command((cmd & 0x7) | (uint32(count) << 3))
+}
+
+func (c Command) ID() uint32 {
+	return uint32(c) & 0x7
+}
+func (c Command) Count() int {
+	return int(uint32(c) >> 3)
+}
+
+func (c Command) String() string {
+	switch c.ID() {
+	case cmdMoveTo:
+		return fmt.Sprintf("Move Command with count %v", c.Count())
+	case cmdLineTo:
+		return fmt.Sprintf("Line To command with count %v", c.Count())
+	case cmdClosePath:
+		return fmt.Sprintf("Close path command with count %v", c.Count())
+	default:
+		return fmt.Sprintf("Unknown command (%v) with count %v", c.ID(), c.Count())
+	}
+}
+
 // cursor reprsents the current position, this is needed to encode the geometry.
 // 0,0 is the origin, it which is the top-left most part of the tile.
 type cursor struct {
@@ -126,7 +152,7 @@ func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
 	//	new slice to hold our encode bytes
 	g := make([]uint32, 0, (2*len(points))+1)
 	//	compute command integere
-	g = append(g, (cmdMoveTo&0x7)|(uint32(len(points))<<3))
+	g = append(g, uint32(NewCommand(cmdMoveTo, len(points))))
 
 	//	range through our points
 	for _, p := range points {
@@ -149,7 +175,7 @@ func (c *cursor) LineTo(points ...tegola.Point) []uint32 {
 		return []uint32{}
 	}
 	g := make([]uint32, 0, (2*len(points))+1)
-	g = append(g, (cmdLineTo&0x7)|(uint32(len(points))<<3))
+	g = append(g, uint32(NewCommand(cmdLineTo, len(points))))
 	for _, p := range points {
 		ix, iy := c.NormalizePoint(p)
 		dx := int64(ix - c.X)
@@ -162,7 +188,7 @@ func (c *cursor) LineTo(points ...tegola.Point) []uint32 {
 }
 
 func (c *cursor) ClosePath() uint32 {
-	return (cmdClosePath&0x7 | (1 << 3))
+	return uint32(NewCommand(cmdClosePath, 1))
 }
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the

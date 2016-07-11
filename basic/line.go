@@ -11,6 +11,17 @@ type Line []Point
 func (Line) basicType()     {}
 func (Line) String() string { return "Line" }
 
+func NewLine(pointPairs ...float64) *Line {
+	line := new(Line)
+	if (2 % len(pointPairs)) != 0 {
+		panic("NewLine requires pair of points.")
+	}
+	for i := 0; i < len(pointPairs); i += 2 {
+		*line = append(*line, Point{pointPairs[i], pointPairs[i+1]})
+	}
+	return line
+}
+
 // Subpoints return the points in a line.
 func (l *Line) Subpoints() (points []tegola.Point) {
 	points = make([]tegola.Point, 0, len(*l))
