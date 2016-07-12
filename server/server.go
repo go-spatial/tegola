@@ -11,35 +11,14 @@ import (
 	"github.com/terranodo/tegola/provider/postgis"
 )
 
-//	requests come in looking for a map name.
-
+//	incoming requests are associated with a map
 var maps = map[string][]*mapLayer{}
 
+//	map layers point to a provider
 type mapLayer struct {
 	Name     string
 	Provider mvt.Provider
 }
-
-/*
-func init() {
-	config := postgis.Config{
-		Host:     "localhost",
-		Port:     5432,
-		Database: "gdey",
-		User:     "gdey",
-		Layers: map[string]string{
-			"landuse": "gis.zoning_base_3857",
-		},
-	}
-	var err error
-	postgisProvider, err = postgis.NewProvider(config)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create a new provider. %v", err))
-	}
-}
-*/
-
-//	config
 
 //Init maps sets up our data providers and builds out the
 //	map and layer associations
@@ -63,8 +42,6 @@ func Init(conf Config) error {
 
 		//	add the layer to the provider and include it's SQL
 		providerLayers[providerName][layer.Name] = layer.SQL
-
-		log.Printf("providerLayers %+v", providerLayers)
 	}
 
 	//	init our providers
@@ -87,8 +64,6 @@ func Init(conf Config) error {
 				Password: provider.Password,
 				Layers:   postgisLayers,
 			}
-
-			log.Printf("provider conf %v", c)
 
 			//	init our provider
 			p, err := postgis.NewProvider(c)
@@ -126,8 +101,6 @@ func Init(conf Config) error {
 		//	add our layer to the maps layer slice
 		maps[m.Name] = append(maps[m.Name], layer)
 	}
-
-	log.Printf("conf %+v\n", conf)
 
 	return nil
 }

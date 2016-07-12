@@ -51,8 +51,6 @@ func main() {
 		log.Fatal("config file error:", err)
 	}
 
-	log.Printf("config %+v\n", conf)
-
 	//	setup our providers, maps and layers
 	if err = server.Init(mapServerConf(conf)); err != nil {
 		log.Fatal("server init error:", err)

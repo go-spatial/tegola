@@ -24,18 +24,12 @@ const (
 
 //	creates a debug layer with z/x/y encoded as a point
 func debugLayer(tile tegola.Tile) *mvt.Layer {
-
+	//	get tile extent
 	ext := tile.Extent()
+
+	//	create a new layer and name it
 	layer := mvt.Layer{
 		Name: "debug",
-	}
-
-	//	create a line
-	line1 := &basic.Line{
-		basic.Point{ext.Minx, ext.Miny},
-		basic.Point{ext.Maxx, ext.Miny},
-		basic.Point{ext.Maxx, ext.Maxy},
-		basic.Point{ext.Minx, ext.Maxy},
 	}
 
 	//	tile outlines
@@ -43,11 +37,13 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 		Tags: map[string]interface{}{
 			"type": "debug_outline",
 		},
-		Geometry: line1,
+		Geometry: &basic.Line{ //	tile outline
+			basic.Point{ext.Minx, ext.Miny},
+			basic.Point{ext.Maxx, ext.Miny},
+			basic.Point{ext.Maxx, ext.Maxy},
+			basic.Point{ext.Minx, ext.Maxy},
+		},
 	}
-
-	//	middle of tile
-	point1 := &basic.Point{ext.Minx + ((ext.Maxx - ext.Minx) / 2), ext.Miny + ((ext.Maxy - ext.Miny) / 2)}
 
 	//	new feature
 	zxy := mvt.Feature{
@@ -55,7 +51,10 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 			"type":    "debug_text",
 			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
 		},
-		Geometry: point1,
+		Geometry: &basic.Point{ //	middle of the tile
+			ext.Minx + ((ext.Maxx - ext.Minx) / 2),
+			ext.Miny + ((ext.Maxy - ext.Miny) / 2),
+		},
 	}
 
 	layer.AddFeatures(zxy, outline)
@@ -149,18 +148,15 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 				}
 				//	add layers
 				mvtTile.AddLayers(mvtLayer)
+				/*
+					//	fetch requested layer from our data provider
+					mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
+					if err != nil {
+						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+						return
+					}
+				*/
 			}
-			/*
-				//	fetch requested layer from our data provider
-				mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
-				if err != nil {
-					http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
-					return
-				}
-			*/
-
-			//	add layers
-			mvtTile.AddLayers(mvtLayer)
 		}
 		//	TODO: make debugging a config toggle
 		//	add debug layer

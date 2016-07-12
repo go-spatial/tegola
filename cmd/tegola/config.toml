@@ -14,11 +14,11 @@ password = ""
 # maps are made up of layers
 [[maps]]
 name = "zoning"
-layer = "sd_zoning"
+layer = "landuse"
 
 # layers define data providers
 [[layers]]
-name = "sd_zoning"
+name = "landuse"
 provider = "test_postgis"
 table_name = "gis.zoning_base_3857"
 sql = "gis.zoning_base_3857"

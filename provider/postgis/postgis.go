@@ -3,7 +3,6 @@ package postgis
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"text/template"
 
@@ -124,7 +123,7 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 
 	sql := sr.String()
 
-	log.Println("sql", sql)
+	//	log.Println("sql", sql)
 
 	//	execute query
 	rows, err := p.pool.Query(sql)
@@ -136,13 +135,8 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 	layer = new(mvt.Layer)
 	layer.Name = layerName
 
-	//	used for debugging
-	var rowsCount int
 	// Iterate through the result set
 	for rows.Next() {
-		//	for logging
-		rowsCount++
-
 		var rgeom []byte
 		gname := new(*string)
 
