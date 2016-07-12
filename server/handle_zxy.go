@@ -12,7 +12,7 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/mvt/vector_tile"
+	"github.com/terranodo/tegola/provider/postgis"
 )
 
 const (
@@ -22,11 +22,26 @@ const (
 	MaxZoom = 18
 )
 
-//	encode an example tile for demo purposes
-func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
+func init() {
+	config := postgis.Config{
+		Host:     "localhost",
+		Port:     5432,
+		Database: "ARolek",
+		User:     "ARolek",
+		Layers: map[string]string{
+			"landuse": "gis.zoning_base_3857",
+		},
+	}
 	var err error
-	var tile mvt.Tile
+	postgisProvider, err = postgis.NewProvider(config)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create a new provider. %v", err))
+	}
 
+}
+
+//	creates a debug layer with z/x/y encoded as a point
+func debugLayer(tile tegola.Tile) *mvt.Layer {
 	//	create a line
 	line1 := &basic.Line{
 		basic.Point{0, 0},
@@ -36,80 +51,36 @@ func exampleTile(z, x, y int) (*vectorTile.Tile, error) {
 		basic.Point{0, 0},
 	}
 
-	// Now we need to crate a feature. The way Tiles work, is that each tiles is
-	// made up of a set of layers. Each layer contains more or more features, which
-	// are geometeries with some meta data. So, first we must construct the feature
-	// then we can create a layer, which we will add to a tile.
-
-	// First we create the feature. A feature has a set of name value pairs. Most
-	// base types, and any types that implements a Stringer interfaces are supported.
-	feature1 := mvt.Feature{
+	//	tile outlines
+	outline := mvt.Feature{
 		Tags: map[string]interface{}{
-			"class": "path",
+			"type": "debug_outline",
 		},
 		Geometry: line1,
 	}
 
-	// Create a new Layer, a Layer requires a name. This name should be unique within a tile.
-	layer1 := mvt.Layer{
-		Name: "tunnel",
-	}
-
-	//	add feature to layer
-	layer1.AddFeatures(feature1)
-
-	//	create a polygon
-	poly1 := &basic.Polygon{
-		basic.Line{
-			basic.Point{1024, 250},
-			basic.Point{3072, 250},
-			basic.Point{3072, 1000},
-			basic.Point{1024, 1000},
-		},
-	}
-
-	//	add polygon to our feature
-	feature2 := mvt.Feature{
-		Tags: map[string]interface{}{
-			"class": "park",
-		},
-		Geometry: poly1,
-	}
-
-	// Create a new Layer, a Layer requires a name. This name should be unique within a tile.
-	layer2 := mvt.Layer{
-		Name: "landuse",
-	}
-
-	layer2.AddFeatures(feature2)
-
+	//	middle of tile
 	point1 := &basic.Point{2048, 2048}
 
 	//	new feature
-	feature3 := mvt.Feature{
+	zxy := mvt.Feature{
 		Tags: map[string]interface{}{
-			"type":    "city",
-			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
+			"type":    "debug_text",
+			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
 		},
 		Geometry: point1,
 	}
 
-	//	create a new layer
-	layer3 := mvt.Layer{
-		Name: "place_label",
+	layer := mvt.Layer{
+		Name: "debug",
 	}
 
-	layer3.AddFeatures(feature3)
+	layer.AddFeatures(zxy, outline)
 
-	//	multiple layers can be added to a tile at once
-	if err = tile.AddLayers(&layer1, &layer2, &layer3); err != nil {
-		return nil, err
-	}
-
-	// VTile is the protobuff representation of the tile. This is what you can
-	// send to the protobuff Marshal functions.
-	return tile.VTile()
+	return &layer
 }
+
+var postgisProvider *postgis.Provider
 
 //	URI scheme: /maps/:map_id/:z/:x/:y
 //		map_id - id in the config file with an accompanying data source
@@ -175,29 +146,35 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			Y: y,
 		}
 
-		//	check for the max zoom level
-		if tile.Z > MaxZoom {
-			msg := fmt.Sprintf("zoom level %v is great than max supported zoom of %v", tile.Z, MaxZoom)
-			http.Error(w, msg, http.StatusBadRequest)
-			return
-		}
-
-		//	TODO: calculate the web mercator bounding box with the slippy math function
-		/*
-			lat, lng := tile.Deg2Num()
-			log.Printf("tile %+v\n", tile)
-			log.Printf("lat: %v, lng: %v\n", lat, lng)
-		*/
 		//	generate a tile
-		vtile, err := exampleTile(z, x, y)
+		var mvtTile mvt.Tile
+		var pbyte []byte
+
+		//	check that our request is below max zoom
+		if tile.Z < MaxZoom {
+			//	fetch requested layer from our data provider
+			mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+				return
+			}
+
+			//	add layers
+			mvtTile.AddLayers(mvtLayer)
+
+			//	add debug layer
+			debugLayer := debugLayer(tile)
+			mvtTile.AddLayers(debugLayer)
+		}
+
+		vtile, err := mvtTile.VTile(tile.Extent())
 		if err != nil {
-			http.Error(w, "error generating tile tile", http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}
 
-		//	fetch tile from datasource
 		//	marshal our tile into a protocol buffer
-		pbyte, err := proto.Marshal(vtile)
+		pbyte, err = proto.Marshal(vtile)
 		if err != nil {
 			http.Error(w, "error marshalling tile", http.StatusInternalServerError)
 			return
@@ -205,7 +182,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		//	check for tile size warnings
 		if len(pbyte) > MaxTileSize {
-			log.Println("tile is too large!", len(pbyte))
+			log.Printf("tile is rather large - %v", len(pbyte))
 		}
 
 		//	TODO: how configurable do we want the CORS policy to be?

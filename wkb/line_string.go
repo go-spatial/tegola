@@ -45,8 +45,7 @@ func (ls *LineString) Subpoints() (pts []tegola.Point) {
 
 //String returns the WKT representation of the Geometry
 func (ls *LineString) String() string {
-	s, _ := WKT(ls) // If we have a failure we don't care
-	return s
+	return WKT(ls) // If we have a failure we don't care
 }
 
 //MultiLineString represents one or more independent lines.
@@ -93,6 +92,5 @@ func (ml *MultiLineString) Decode(bom binary.ByteOrder, r io.Reader) error {
 
 //String returns the WKT representation of the Geometry.
 func (ml *MultiLineString) String() string {
-	s, _ := WKT(ml) // If we have a failure we don't care
-	return s
+	return WKT(ml)
 }

@@ -1,10 +1,8 @@
 package tegola
 
-import (
-	"math"
-)
+import "math"
 
-//	slippy map tilenames
+//Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
 	Z    int
@@ -30,26 +28,24 @@ func (t *Tile) Num2Deg() (lat, lng float64) {
 	return lat, lng
 }
 
-//	returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
-//	in web mercator projection
-//	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
-func (t *Tile) BBox() (ulx, uly, llx, lly float64) {
+//Extent returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
+// in web mercator projection
+// ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
+func (t *Tile) Extent() Extent {
 	max := 20037508.34
 
 	//	resolution
 	res := (max * 2) / math.Exp2(float64(t.Z))
 
-	//	upper left point
-	ulx = -max + (float64(t.X) * res)
-	uly = max - (float64(t.Y) * res)
-	//	lower left point
-	llx = -max + (float64(t.X) * res) + res
-	lly = max - (float64(t.Y) * res) - res
-
-	return
+	return Extent{
+		Minx: -max + (float64(t.X) * res),
+		Miny: max - (float64(t.Y) * res),
+		Maxx: -max + (float64(t.X) * res) + res,
+		Maxy: max - (float64(t.Y) * res) - res,
+	}
 }
 
-//	takes a web mercator zoom level and returns the pixel resolution for that
+//ZRes takes a web mercator zoom level and returns the pixel resolution for that
 //	scale, assuming 256x256 pixel tiles. Non-integer zoom levels are accepted.
 //	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
 func (t *Tile) ZRes() float64 {

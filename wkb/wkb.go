@@ -7,6 +7,7 @@
 package wkb
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -225,6 +226,12 @@ func WKB(geometry tegola.Geometry) (geo Geometry, err error) {
 	return nil, fmt.Errorf("Not supported")
 }
 
+// DecodeBytes will decode the type into a Geometry
+func DecodeBytes(b []byte) (geo Geometry, err error) {
+	buff := bytes.NewReader(b)
+	return Decode(buff)
+}
+
 // Decode is the main function that given a io.Reader will attempt to decode the
 // Geometry from the byte stream.
 func Decode(r io.Reader) (geo Geometry, err error) {
@@ -243,8 +250,12 @@ func Decode(r io.Reader) (geo Geometry, err error) {
 		geo = new(LineString)
 	case GeoMultiLineString:
 		geo = new(MultiLineString)
+	case GeoPolygon:
+		geo = new(Polygon)
 	case GeoMultiPolygon:
 		geo = new(MultiPolygon)
+	case GeoGeometryCollection:
+		geo = new(Collection)
 	default:
 		return nil, fmt.Errorf("Unknown Geometry! %v", typ)
 	}

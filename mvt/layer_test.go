@@ -3,6 +3,7 @@ package mvt
 import (
 	"testing"
 
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 )
@@ -24,6 +25,7 @@ func TestLayer(t *testing.T) {
 	testcases := []struct {
 		layer   *Layer
 		vtlayer *vectorTile.Tile_Layer
+		extent  tegola.Extent
 		eerr    error
 	}{
 		{
@@ -31,6 +33,12 @@ func TestLayer(t *testing.T) {
 				Name: "nofeatures",
 			},
 			vtlayer: newTileLayer("nofeatures", nil, nil, nil),
+			extent: tegola.Extent{
+				Minx: 0,
+				Miny: 0,
+				Maxx: 4096,
+				Maxy: 4096,
+			},
 		},
 		{
 			layer: &Layer{
@@ -49,9 +57,39 @@ func TestLayer(t *testing.T) {
 			// But for now it's okay.
 			vtlayer: newTileLayer("onefeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag")}, []*vectorTile.Tile_Feature{nil}),
 		},
+		{
+			layer: &Layer{
+				Name: "twofeature",
+				features: []Feature{
+					{
+						Geometry: &basic.Polygon{
+							basic.Line{
+								basic.Point{3, 6},
+								basic.Point{8, 12},
+								basic.Point{20, 34},
+							},
+						},
+						Tags: map[string]interface{}{
+							"tag1": "tag",
+							"tag2": "tag",
+						},
+					},
+					{
+						Geometry: &basic.Point{1, 1},
+						Tags: map[string]interface{}{
+							"tag1": "tag",
+							"tag2": "tag",
+						},
+					},
+				},
+			},
+			// features should not be nil, when we start comparing features this will fail.
+			// But for now it's okay.
+			vtlayer: newTileLayer("twofeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag1")}, []*vectorTile.Tile_Feature{nil}),
+		},
 	}
 	for i, tcase := range testcases {
-		vt, err := tcase.layer.VTileLayer()
+		vt, err := tcase.layer.VTileLayer(tcase.extent)
 		if err != tcase.eerr {
 			t.Errorf("For Test %v: Got unexpected error. Expected %v Got %v", i, tcase.eerr, err)
 		}

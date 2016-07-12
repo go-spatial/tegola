@@ -16,6 +16,9 @@ func (p *Polygon) Sublines() (slines []tegola.LineString) {
 	}
 	return slines
 }
+func (Polygon) String() string {
+	return "Polygon"
+}
 
 // MultiPolygon describes a set of polygons.
 type MultiPolygon []Polygon
@@ -30,4 +33,7 @@ func (mp *MultiPolygon) Polygons() (polygons []tegola.Polygon) {
 		polygons = append(polygons, &((*mp)[i]))
 	}
 	return polygons
+}
+func (MultiPolygon) String() string {
+	return "Polygon"
 }
