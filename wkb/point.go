@@ -9,33 +9,11 @@ import (
 	"github.com/terranodo/tegola/basic"
 )
 
+//Point is a basic type, this describes a 2D point.
 type Point struct {
 	basic.Point
 }
 
-/*
-//Point is a basic type, this describes a 2D point.
-type Point struct {
-	x float64
-	y float64
-}
-
-//X returns the x coordinate of the point.
-func (p *Point) X() float64 {
-	if p == nil {
-		return 0
-	}
-	return p.x
-}
-
-//Y returns the y coordinate of the point.
-func (p *Point) Y() float64 {
-	if p == nil {
-		return 0
-	}
-	return p.y
-}
-*/
 //Type returns the type constant for this Geometry.
 func (*Point) Type() uint32 {
 	return GeoPoint

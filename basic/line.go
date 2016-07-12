@@ -11,6 +11,7 @@ type Line []Point
 func (Line) basicType()     {}
 func (Line) String() string { return "Line" }
 
+// NewLine creates a line given pairs for floats.
 func NewLine(pointPairs ...float64) *Line {
 	line := new(Line)
 	if (2 % len(pointPairs)) != 0 {
