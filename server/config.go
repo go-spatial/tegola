@@ -25,7 +25,7 @@ type Config struct {
 type Provider struct {
 	Type     string
 	Host     string
-	Port     int
+	Port     uint16
 	Database string
 	User     string
 	Password string

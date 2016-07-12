@@ -11,24 +11,30 @@ import (
 )
 
 type Config struct {
-	Server struct {
+	Webserver struct {
 		Port string
 	}
-	Providers map[string]struct {
+	Providers []struct {
+		Name     string
 		Type     string
 		Host     string
-		Port     int
+		Port     uint16
 		Database string
 		User     string
 		Password string
 	}
-	Maps map[string]struct {
+	Maps []struct {
+		Name    string
 		MinZoom int
 		MaxZoom int
+		layer   string
 	}
-	Layers map[string]struct {
-		Provider string
-		Config   string
+	Layers []struct {
+		Name      string
+		Provider  string
+		TableName string
+		GeomFiled string
+		FIDField  string
 	}
 }
 
@@ -53,7 +59,7 @@ func main() {
 	server.Init(mapServerConf(conf))
 
 	//	TODO: move port to conifg file
-	server.Start(conf.Server.Port)
+	server.Start(conf.Webserver.Port)
 }
 
 //	map our config file to our server config
@@ -65,28 +71,27 @@ func mapServerConf(conf Config) server.Config {
 	}
 
 	//	provider mapping
-	for i := range conf.Providers {
-		c.Providers[i] = server.Provider{
-			Type:     conf.Providers[i].Type,
-			Host:     conf.Providers[i].Host,
-			Port:     conf.Providers[i].Port,
-			Database: conf.Providers[i].Database,
-			User:     conf.Providers[i].User,
-			Password: conf.Providers[i].Password,
+	for _, provider := range conf.Providers {
+		c.Providers[provider.Name] = server.Provider{
+			Type:     provider.Type,
+			Host:     provider.Host,
+			Port:     provider.Port,
+			Database: provider.Database,
+			User:     provider.User,
+			Password: provider.Password,
 		}
 	}
 
-	for i := range conf.Maps {
-		c.Maps[i] = server.Map{
-			MinZoom: conf.Maps[i].MinZoom,
-			MaxZoom: conf.Maps[i].MaxZoom,
+	for _, m := range conf.Maps {
+		c.Maps[m.Name] = server.Map{
+			MinZoom: m.MinZoom,
+			MaxZoom: m.MaxZoom,
 		}
 	}
 
-	for i := range conf.Layers {
-		c.Layers[i] = server.Layer{
-			Provider: conf.Layers[i].Provider,
-			Config:   conf.Layers[i].Config,
+	for _, layer := range conf.Layers {
+		c.Layers[layer.Name] = server.Layer{
+			Provider: layer.Provider,
 		}
 	}
 

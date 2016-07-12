@@ -8,6 +8,7 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/provider/postgis"
 )
 
 //	mapping for layers
@@ -54,7 +55,7 @@ func Init(conf Config) error {
 				return errors.New("missing provider: " + i)
 			}
 
-			c := postgis.Conf{
+			c := postgis.Config{
 				Host:     provider.Host,
 				Port:     provider.Port,
 				Database: provider.Database,
@@ -66,7 +67,7 @@ func Init(conf Config) error {
 			log.Println("provider conf", c)
 
 			//	init our provider
-			provider, err := postgis.NewProvider(c)
+			p, err := postgis.NewProvider(c)
 			if err != nil {
 				return err
 			}
@@ -75,21 +76,22 @@ func Init(conf Config) error {
 			for i := range postgisLayers {
 				l := layer{
 					Name:     i,
-					Provider: provider,
+					Provider: p,
 				}
 				//	add the layer to our layers map
-				layers[postgisLayers] = &l
+				layers[strings.ToLower(provider.Type)] = &l
 			}
 		}
 
 	}
 
-	//	setup our maps
-	for i := range conf.Maps {
-		//	look up map layer
+	/*
+		//	setup our maps
+		for i := range conf.Maps {
+			//	look up map layer
 
-	}
-
+		}
+	*/
 	log.Printf("conf %+v\n", conf)
 
 	return nil

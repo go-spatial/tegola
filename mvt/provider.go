@@ -1,7 +1,7 @@
 package mvt
 
-import "github.com/gdey/tegola/mvt"
+import "github.com/terranodo/tegola"
 
 type Provider interface {
-	MVTLayer(layerName string, tile Tile) (*mvt.Tile, error)
+	MVTLayer(layerName string, tile tegola.Tile) (*Layer, error)
 }
