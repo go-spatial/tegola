@@ -42,13 +42,18 @@ func init() {
 
 //	creates a debug layer with z/x/y encoded as a point
 func debugLayer(tile tegola.Tile) *mvt.Layer {
+
+	ext := tile.Extent()
+	layer := mvt.Layer{
+		Name: "debug",
+	}
+
 	//	create a line
 	line1 := &basic.Line{
-		basic.Point{0, 0},
-		basic.Point{4096, 0},
-		basic.Point{4096, 4096},
-		basic.Point{0, 4096},
-		basic.Point{0, 0},
+		basic.Point{ext.Minx, ext.Miny},
+		basic.Point{ext.Maxx, ext.Miny},
+		basic.Point{ext.Maxx, ext.Maxy},
+		basic.Point{ext.Minx, ext.Maxy},
 	}
 
 	//	tile outlines
@@ -60,7 +65,7 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 	}
 
 	//	middle of tile
-	point1 := &basic.Point{2048, 2048}
+	point1 := &basic.Point{ext.Minx + ((ext.Maxx - ext.Minx) / 2), ext.Miny + ((ext.Maxy - ext.Miny) / 2)}
 
 	//	new feature
 	zxy := mvt.Feature{
@@ -69,10 +74,6 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
 		},
 		Geometry: point1,
-	}
-
-	layer := mvt.Layer{
-		Name: "debug",
 	}
 
 	layer.AddFeatures(zxy, outline)
@@ -159,12 +160,12 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			//	add layers
-			mvtTile.AddLayers(mvtLayer)
-
 			//	add debug layer
 			debugLayer := debugLayer(tile)
 			mvtTile.AddLayers(debugLayer)
+			//	add layers
+			mvtTile.AddLayers(mvtLayer)
+
 		}
 
 		vtile, err := mvtTile.VTile(tile.Extent())
