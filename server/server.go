@@ -11,16 +11,33 @@ import (
 	"github.com/terranodo/tegola/provider/postgis"
 )
 
-<<<<<<< HEAD
-//	mapping for layers
-var maps map[string][]Layer
+//	requests come in looking for a map name.
 
-type layer struct {
+var maps = map[string][]*mapLayer{}
+
+type mapLayer struct {
 	Name     string
-	MinZoom  int
-	MaxZoom  int
 	Provider mvt.Provider
 }
+
+/*
+func init() {
+	config := postgis.Config{
+		Host:     "localhost",
+		Port:     5432,
+		Database: "gdey",
+		User:     "gdey",
+		Layers: map[string]string{
+			"landuse": "gis.zoning_base_3857",
+		},
+	}
+	var err error
+	postgisProvider, err = postgis.NewProvider(config)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create a new provider. %v", err))
+	}
+}
+*/
 
 //	config
 
@@ -28,32 +45,38 @@ type layer struct {
 //	map and layer associations
 func Init(conf Config) error {
 	//	var providers map[string]tegola.Provider
-	var layers map[string]*layer
+	layers := map[string]*mapLayer{}
 	//	group our layers by provider
-	var providerLayers map[string]map[string]string
+	providerLayers := map[string]map[string]string{}
 
 	//	group our layers by providers
-	for i, layer := range conf.Layers {
+	for _, layer := range conf.Layers {
+		//	get layer provider name
+		providerName := strings.ToLower(layer.Provider)
+
 		//	lookup our provider
-		_, ok := providerLayers[strings.ToLower(layer.Provider)]
+		_, ok := providerLayers[providerName]
 		if !ok {
-			providerLayers[layer.Provider] = map[string]string{}
+			//	provider not found, create an entry
+			providerLayers[providerName] = map[string]string{}
 		}
 
-		//	add the layer to the provider and include it's config
-		providerLayers[strings.ToLower(layer.Provider)][i] = layer.Config
+		//	add the layer to the provider and include it's SQL
+		providerLayers[providerName][layer.Name] = layer.SQL
+
+		log.Printf("providerLayers %+v", providerLayers)
 	}
 
 	//	init our providers
-	for i, provider := range conf.Providers {
+	for _, provider := range conf.Providers {
 		//	switch on our various provider types
 		switch strings.ToLower(provider.Type) {
 		case tegola.ProviderPostGIS:
 
 			//	lookup our layers for the provider
-			postgisLayers, ok := providerLayers[strings.ToLower(i)]
+			postgisLayers, ok := providerLayers[strings.ToLower(provider.Name)]
 			if !ok {
-				return errors.New("missing provider: " + i)
+				return errors.New("missing provider: " + provider.Name)
 			}
 
 			c := postgis.Config{
@@ -65,7 +88,7 @@ func Init(conf Config) error {
 				Layers:   postgisLayers,
 			}
 
-			log.Println("provider conf", c)
+			log.Printf("provider conf %v", c)
 
 			//	init our provider
 			p, err := postgis.NewProvider(c)
@@ -74,25 +97,36 @@ func Init(conf Config) error {
 			}
 
 			//	associate our layers with our instantiated provider
-			for i := range postgisLayers {
-				l := layer{
+			for i, _ := range postgisLayers {
+				//	add the layer to our layers map
+				layers[i] = &mapLayer{
 					Name:     i,
 					Provider: p,
 				}
-				//	add the layer to our layers map
-				layers[strings.ToLower(provider.Type)] = &l
 			}
 		}
 
 	}
 
-	/*
-		//	setup our maps
-		for i := range conf.Maps {
-			//	look up map layer
-
+	//	setup our maps
+	for _, m := range conf.Maps {
+		//	look up map layer
+		layer, ok := layers[m.Layer]
+		if !ok {
+			return errors.New("missing layer: " + m.Layer)
 		}
-	*/
+
+		//	check if our map key exists
+		_, ok = maps[m.Name]
+		if !ok {
+			//	provider not found, create an entry
+			maps[m.Name] = []*mapLayer{}
+		}
+
+		//	add our layer to the maps layer slice
+		maps[m.Name] = append(maps[m.Name], layer)
+	}
+
 	log.Printf("conf %+v\n", conf)
 
 	return nil

@@ -24,19 +24,19 @@ type Config struct {
 		Password string
 	}
 	Maps []struct {
-		Name    string
-		MinZoom int
-		MaxZoom int
-		layer   string
+		Name  string
+		Layer string
 	}
 	Layers []struct {
 		Name      string
 		Provider  string
 		TableName string
-		GeomFiled string
-		FIDField  string
+		SQL       string
 	}
 }
+
+//	hold parsed config from config file
+var conf Config
 
 func main() {
 	//	open our config file
@@ -46,18 +46,19 @@ func main() {
 	}
 	defer f.Close()
 
-	//	hold parsed config from config file
-	var conf Config
-
 	//	unmarshal to our server config
 	if err := toml.NewDecoder(f).Decode(&conf); err != nil {
-		log.Fatal("config file error: ", err)
+		log.Fatal("config file error:", err)
 	}
 
 	log.Printf("config %+v\n", conf)
 
-	server.Init(mapServerConf(conf))
+	//	setup our providers, maps and layers
+	if err = server.Init(mapServerConf(conf)); err != nil {
+		log.Fatal("server init error:", err)
+	}
 
+	//	bind our webserver
 	server.Start(conf.Webserver.Port)
 }
 
@@ -72,6 +73,7 @@ func mapServerConf(conf Config) server.Config {
 	//	provider mapping
 	for _, provider := range conf.Providers {
 		c.Providers[provider.Name] = server.Provider{
+			Name:     provider.Name,
 			Type:     provider.Type,
 			Host:     provider.Host,
 			Port:     provider.Port,
@@ -83,14 +85,16 @@ func mapServerConf(conf Config) server.Config {
 
 	for _, m := range conf.Maps {
 		c.Maps[m.Name] = server.Map{
-			MinZoom: m.MinZoom,
-			MaxZoom: m.MaxZoom,
+			Name:  m.Name,
+			Layer: m.Layer,
 		}
 	}
 
 	for _, layer := range conf.Layers {
 		c.Layers[layer.Name] = server.Layer{
+			Name:     layer.Name,
 			Provider: layer.Provider,
+			SQL:      layer.SQL,
 		}
 	}
 

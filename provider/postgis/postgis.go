@@ -3,6 +3,7 @@ package postgis
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"strings"
 	"text/template"
 
@@ -122,6 +123,8 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 	t.Execute(&sr, tpl)
 
 	sql := sr.String()
+
+	log.Println("sql", sql)
 
 	//	execute query
 	rows, err := p.pool.Query(sql)

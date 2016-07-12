@@ -27,7 +27,8 @@
 								format: new ol.format.MVT(),
 								tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
 								tilePixelRatio: 16,
-								url: '/maps/basic-example/{z}/{x}/{y}.vector.pbf'
+								url: '/maps/zoning/{z}/{x}/{y}.vector.pbf'
+//								url: '/maps/basic-example/{z}/{x}/{y}.vector.pbf'
 							}),
 							style: createMapboxStreetsV6Style()
 						})

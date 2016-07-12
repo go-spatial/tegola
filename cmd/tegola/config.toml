@@ -5,7 +5,7 @@ port = ":8080"
 [[providers]]
 name = "test_postgis"
 type = "postgis"
-host = "host"
+host = "localhost"
 port = 5432
 database = "ARolek" 
 user = "ARolek"
@@ -14,8 +14,6 @@ password = ""
 # maps are made up of layers
 [[maps]]
 name = "zoning"
-minZoom = 0
-maxZoom = 18
 layer = "sd_zoning"
 
 # layers define data providers
@@ -23,5 +21,4 @@ layer = "sd_zoning"
 name = "sd_zoning"
 provider = "test_postgis"
 table_name = "gis.zoning_base_3857"
-geometry_field = "geom"
-fid_field = "gid"
+sql = "gis.zoning_base_3857"

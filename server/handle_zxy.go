@@ -22,24 +22,6 @@ const (
 	MaxZoom = 18
 )
 
-func init() {
-	config := postgis.Config{
-		Host:     "localhost",
-		Port:     5432,
-		Database: "gdey",
-		User:     "gdey",
-		Layers: map[string]string{
-			"landuse": "gis.zoning_base_3857",
-		},
-	}
-	var err error
-	postgisProvider, err = postgis.NewProvider(config)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create a new provider. %v", err))
-	}
-
-}
-
 //	creates a debug layer with z/x/y encoded as a point
 func debugLayer(tile tegola.Tile) *mvt.Layer {
 	//	create a line
@@ -114,7 +96,12 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//	TODO: look up layer data source provided by config
+		//	lookup our map layers
+		layers, ok := maps[uriParts[0]]
+		if !ok {
+			http.Error(w, "no map configured: "+uriParts[0], http.StatusBadRequest)
+			return
+		}
 
 		//	trim the "y" param in the url in case it has an extension
 		yparts := strings.Split(uriParts[3], ".")
@@ -152,21 +139,31 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		//	check that our request is below max zoom
 		if tile.Z < MaxZoom {
-			//	fetch requested layer from our data provider
-			mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
-				return
+			//	iterate our layers and fetch data from their providers
+			for i := range layers {
+				mvtLayer, err := layers[i].Provider.MVTLayer(layers[i].Name, tile)
+				if err != nil {
+					http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+					return
+				}
+				//	add layers
+				mvtTile.AddLayers(mvtLayer)
 			}
-
-			//	add layers
-			mvtTile.AddLayers(mvtLayer)
-
-			//	add debug layer
-			debugLayer := debugLayer(tile)
-			mvtTile.AddLayers(debugLayer)
+			/*
+				//	fetch requested layer from our data provider
+				mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
+				if err != nil {
+					http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+					return
+				}
+			*/
 		}
+		//	TODO: make debugging a config toggle
+		//	add debug layer
+		debugLayer := debugLayer(tile)
+		mvtTile.AddLayers(debugLayer)
 
+		//	generate our vector tile
 		vtile, err := mvtTile.VTile(tile.Extent())
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
