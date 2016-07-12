@@ -14,6 +14,7 @@ var (
 	ErrNilFeature = fmt.Errorf("Feature is nil")
 	// ErrUnknownGeometryType is the error retuned when the geometry is unknown.
 	ErrUnknownGeometryType = fmt.Errorf("Unknown geometry type")
+	ErrNilGeometryType     = fmt.Errorf("Nil geometry passed")
 )
 
 // TODO: Need to put in validation for the Geometry, at current the system
@@ -61,14 +62,14 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(keyMap []string, valMap []interface{}, extent tegola.Extent) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(keys []string, vals []interface{}, extent tegola.Extent, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
-	if tf.Tags, err = keyvalTagsMap(keyMap, valMap, f); err != nil {
+	if tf.Tags, err = keyvalTagsMap(keys, vals, f); err != nil {
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(f.Geometry, extent)
+	geo, gtype, err := encodeGeometry(f.Geometry, extent, layerExtent)
 	if err != nil {
 		return tf, err
 	}
@@ -112,70 +113,88 @@ func (c Command) String() string {
 	}
 }
 
-// cursor reprsents the current position, this is needed to encode the geometry.
-// 0,0 is the origin, it which is the top-left most part of the tile.
-type cursor struct {
-	X float64
-	Y float64
-}
-
+// encodeZigZag does the ZigZag encoding for small ints.
 func encodeZigZag(i int64) uint32 {
 	return uint32((i << 1) ^ (i >> 31))
 }
 
-//	converts a point to a screen resolution point
-func (c *cursor) NormalizePoint(extent tegola.Extent, p tegola.Point) (nx, ny float64) {
-	xspan := extent.Maxx - extent.Minx
-	yspan := extent.Maxy - extent.Miny
+// cursor reprsents the current position, this is needed to encode the geometry.
+// 0,0 is the origin, it which is the top-left most part of the tile.
+type cursor struct {
+	// The coordinates
+	x float64
+	y float64
 
-	nx = ((p.X() - extent.Minx) * 4096 / xspan)
-	ny = ((p.Y() - extent.Miny) * 4096 / yspan)
+	// The diamentions for the screen tile.
+	tile tegola.Extent
 
-	return
+	// The extent — it is an int, but to make computations easier and not lose precision
+	// Untill we convert the ∆'s to int32.
+	extent float64
+
+	// These values are cached
+	xspan float64
+	yspan float64
 }
 
-func (c *cursor) MoveTo(tile tegola.Extent, points ...tegola.Point) []uint32 {
+func newCursor(tile tegola.Extent, layerExtent int) *cursor {
+	xspan := tile.Maxx - tile.Minx
+	yspan := tile.Maxy - tile.Miny
+	return &cursor{
+		extent: float64(layerExtent),
+		tile:   tile,
+		xspan:  xspan,
+		yspan:  yspan,
+	}
+}
+
+//	converts a point to a screen resolution point
+func (c *cursor) ScalePoint(p tegola.Point) (nx, ny float64) {
+
+	nx = ((p.X() - c.tile.Minx) * c.extent / c.xspan)
+	ny = ((p.Y() - c.tile.Miny) * c.extent / c.yspan)
+
+	return nx, ny
+}
+
+func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
+	ix, iy := c.ScalePoint(p)
+	//	computer our point delta
+	dx = int64(ix - c.x)
+	dy = int64(iy - c.y)
+
+	//	update our cursor
+	c.x = ix
+	c.y = iy
+	return dx, dy
+}
+
+func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
 
 	if len(points) == 0 {
 		return []uint32{}
 	}
-
-	//	new slice to hold our encode bytes
+	//	new slice to hold our encode bytes. 2 bytes for each point pluse a command byte.
 	g := make([]uint32, 0, (2*len(points))+1)
 	//	compute command integere
 	g = append(g, uint32(NewCommand(cmdMoveTo, len(points))))
 
 	//	range through our points
 	for _, p := range points {
-		ix, iy := c.NormalizePoint(tile, p)
-		//	computer our point delta
-		dx := int64(ix - c.X)
-		dy := int64(iy - c.Y)
-
-		//	update our cursor
-		c.X = ix
-		c.Y = iy
-
+		dx, dy := c.GetDeltaPointAndUpdate(p)
 		//	encode our delta point
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
 	}
 	return g
 }
-func (c *cursor) LineTo(tile tegola.Extent, points ...tegola.Point) []uint32 {
+func (c *cursor) LineTo(points ...tegola.Point) []uint32 {
 	if len(points) == 0 {
 		return []uint32{}
 	}
 	g := make([]uint32, 0, (2*len(points))+1)
 	g = append(g, uint32(NewCommand(cmdLineTo, len(points))))
 	for _, p := range points {
-		ix, iy := c.NormalizePoint(tile, p)
-		dx := int64(ix - c.X)
-		dy := int64(iy - c.Y)
-
-		//	update our cursor
-		c.X = ix
-		c.Y = iy
-
+		dx, dy := c.GetDeltaPointAndUpdate(p)
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
 	}
 	return g
@@ -187,35 +206,38 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geo tegola.Geometry, extent tegola.Extent) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(geo tegola.Geometry, extent tegola.Extent, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 	//	new cursor
-	var c cursor
+	c := newCursor(extent, layerExtent)
+	if geo == nil {
+		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
+	}
 
 	switch t := geo.(type) {
 	case tegola.Point:
-		g = append(g, c.MoveTo(extent, t)...)
+		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.Point3:
-		g = append(g, c.MoveTo(extent, t)...)
+		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.MultiPoint:
-		g = append(g, c.MoveTo(extent, t.Points()...)...)
+		g = append(g, c.MoveTo(t.Points()...)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.LineString:
 		points := t.Subpoints()
-		g = append(g, c.MoveTo(extent, points[0])...)
-		g = append(g, c.LineTo(extent, points[1:]...)...)
+		g = append(g, c.MoveTo(points[0])...)
+		g = append(g, c.LineTo(points[1:]...)...)
 		return g, vectorTile.Tile_LINESTRING, nil
 
 	case tegola.MultiLine:
 		lines := t.Lines()
 		for _, l := range lines {
 			points := l.Subpoints()
-			g = append(g, c.MoveTo(extent, points[0])...)
-			g = append(g, c.LineTo(extent, points[1:]...)...)
+			g = append(g, c.MoveTo(points[0])...)
+			g = append(g, c.LineTo(points[1:]...)...)
 		}
 		return g, vectorTile.Tile_LINESTRING, nil
 
@@ -223,8 +245,8 @@ func encodeGeometry(geo tegola.Geometry, extent tegola.Extent) (g []uint32, vtyp
 		lines := t.Sublines()
 		for _, l := range lines {
 			points := l.Subpoints()
-			g = append(g, c.MoveTo(extent, points[0])...)
-			g = append(g, c.LineTo(extent, points[1:]...)...)
+			g = append(g, c.MoveTo(points[0])...)
+			g = append(g, c.LineTo(points[1:]...)...)
 			g = append(g, c.ClosePath())
 		}
 		return g, vectorTile.Tile_POLYGON, nil
@@ -235,8 +257,8 @@ func encodeGeometry(geo tegola.Geometry, extent tegola.Extent) (g []uint32, vtyp
 			lines := p.Sublines()
 			for _, l := range lines {
 				points := l.Subpoints()
-				g = append(g, c.MoveTo(extent, points[0])...)
-				g = append(g, c.LineTo(extent, points[1:]...)...)
+				g = append(g, c.MoveTo(points[0])...)
+				g = append(g, c.LineTo(points[1:]...)...)
 				g = append(g, c.ClosePath())
 			}
 		}

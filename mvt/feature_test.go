@@ -36,7 +36,7 @@ func TestEncodeGeometry(t *testing.T) {
 				Maxy: 4096,
 			},
 			egeo: []uint32{},
-			eerr: ErrUnknownGeometryType,
+			eerr: ErrNilGeometryType,
 		},
 		{
 			geo: &basic.Point{1, 1},
@@ -149,7 +149,7 @@ func TestEncodeGeometry(t *testing.T) {
 		},
 	}
 	for _, tcase := range testcases {
-		g, gtype, err := encodeGeometry(tcase.geo, tcase.extent)
+		g, gtype, err := encodeGeometry(tcase.geo, tcase.extent, 4096)
 		if tcase.eerr != err {
 			t.Errorf("Expected error (%v) got (%v) instead", tcase.eerr, err)
 		}
@@ -197,9 +197,10 @@ func TestNewFeature(t *testing.T) {
 
 func TestNormalizePoint(t *testing.T) {
 	testcases := []struct {
-		point  basic.Point
-		extent tegola.Extent
-		nx, ny float64
+		point       basic.Point
+		extent      tegola.Extent
+		nx, ny      float64
+		layerExtent int
 	}{
 		{
 			point: basic.Point{960000, 6002729},
@@ -209,16 +210,17 @@ func TestNormalizePoint(t *testing.T) {
 				Maxx: 978393.96,
 				Maxy: 6007338.92,
 			},
-			nx: 245.7280155029656,
-			ny: 3131.0394462762547,
+			nx:          245.7280155029656,
+			ny:          3131.0394462762547,
+			layerExtent: 4096,
 		},
 	}
 
 	for i, tcase := range testcases {
 		//	new cursor
-		var c cursor
+		c := newCursor(tcase.extent, tcase.layerExtent)
 
-		nx, ny := c.NormalizePoint(tcase.extent, &tcase.point)
+		nx, ny := c.ScalePoint(&tcase.point)
 		if nx != tcase.nx {
 			t.Errorf("Test %v: Expected nx value of %v got %v.", i, tcase.nx, nx)
 		}
