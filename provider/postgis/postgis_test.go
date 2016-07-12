@@ -15,7 +15,7 @@ func TestNewProvider(t *testing.T) {
 		Database: "gdey",
 		User:     "gdey",
 		Layers: map[string]string{
-			"buildings": "gis.rio_buildings",
+			"buildings": "gis.zoning_base_3857",
 		},
 	}
 	p, err := postgis.NewProvider(config)

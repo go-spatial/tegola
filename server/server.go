@@ -11,6 +11,7 @@ import (
 	"github.com/terranodo/tegola/provider/postgis"
 )
 
+<<<<<<< HEAD
 //	mapping for layers
 var maps map[string][]Layer
 
@@ -97,14 +98,16 @@ func Init(conf Config) error {
 	return nil
 }
 
-//	starts the tile server binding to the provided port
+// Start starts the tile server binding to the provided port
 func Start(port string) {
 	//	notify the user the server is starting
-	log.Printf("starting tegola server on port %v\n", port)
+	log.Printf("Starting tegola server on port %v\n", port)
 
-	//	setup routes
+	// Main page.
+	http.Handle("/", http.FileServer(http.Dir("static")))
+	// setup routes
 	http.HandleFunc("/maps/", handleZXY)
 
-	//	TODO: make http port configurable
+	// TODO: make http port configurable
 	log.Fatal(http.ListenAndServe(port, nil))
 }

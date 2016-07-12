@@ -7,6 +7,7 @@ import (
 )
 
 // RehomeGeometry will make sure to normalize all points to the ulx and uly coordinates.
+//TODO I don't think this is needed anymore. Marking for Cleanup. — gdey
 func RehomeGeometry(geometery tegola.Geometry, ulx, uly float64) (tegola.Geometry, error) {
 	switch geo := geometery.(type) {
 	default:

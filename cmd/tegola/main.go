@@ -58,7 +58,6 @@ func main() {
 
 	server.Init(mapServerConf(conf))
 
-	//	TODO: move port to conifg file
 	server.Start(conf.Webserver.Port)
 }
 

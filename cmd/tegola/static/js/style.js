@@ -51,8 +51,12 @@ function createMapboxStreetsV6Style() {
 
     //	default mapbox v6 open streets styles
     if (layer == 'landuse' && cls == 'park') {
-      fill.setColor('#d8e8c8');
-      styles[length++] = polygon;
+      fill.setColor('#f2eae2');
+      stroke.setColor('#dfdbd7');
+      stroke.setWidth(1);
+      styles[length++] = strokedPolygon;
+//      fill.setColor('#d8e8c8');
+//      styles[length++] = polygon;
     } else if (layer == 'landuse' && cls == 'cemetery') {
       fill.setColor('#e0e4dd');
       styles[length++] = polygon;

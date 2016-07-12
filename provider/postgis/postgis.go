@@ -33,6 +33,17 @@ type Config struct {
 	SRID           *int // Defaults to 3857
 }
 
+// DEFAULT sql for get geometeries,
+const stdSQL = `
+SELECT
+	ST_AsBinary(geom) AS geom,
+	zone_name AS "name",
+	gid
+FROM
+	%[1]v
+WHERE
+	geom && {{.BBox}}`
+
 // NewProvider Setups and returns a new postgis provider that can be used to get
 // tiles for layers.
 // name is the name for this Provider.
@@ -74,20 +85,9 @@ func NewProvider(config Config) (*Provider, error) {
 		tpl := template.New(name)
 		//	check for template
 		if !(strings.Contains(tplStr, "{{") && strings.Contains(tplStr, "}}")) {
-
-			tplStr = fmt.Sprintf(`
-				SELECT 
-					ST_AsBinary(geom) AS geom, 
-					zone_name AS "name",
-					gid 
-				FROM 
-					%[1]v 
-				WHERE 
-					geom && {{.BBox}}`, tplStr)
+			tplStr = fmt.Sprintf(stdSQL, tplStr)
 		}
-
-		_, err := tpl.Parse(tplStr)
-		if err != nil {
+		if _, err := tpl.Parse(tplStr); err != nil {
 			return nil, fmt.Errorf("Layer %v template( %v ) had an error: %v", name, tplStr, err)
 		}
 		p.layers[name] = tpl

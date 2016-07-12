@@ -22,6 +22,12 @@ func newTileLayer(name string, keys []string, values []*vectorTile.Tile_Value, f
 }
 
 func TestLayer(t *testing.T) {
+	baseExtent := tegola.Extent{
+		Minx: 0,
+		Miny: 0,
+		Maxx: 4096,
+		Maxy: 4096,
+	}
 	testcases := []struct {
 		layer   *Layer
 		vtlayer *vectorTile.Tile_Layer
@@ -33,12 +39,7 @@ func TestLayer(t *testing.T) {
 				Name: "nofeatures",
 			},
 			vtlayer: newTileLayer("nofeatures", nil, nil, nil),
-			extent: tegola.Extent{
-				Minx: 0,
-				Miny: 0,
-				Maxx: 4096,
-				Maxy: 4096,
-			},
+			extent:  baseExtent,
 		},
 		{
 			layer: &Layer{
@@ -56,6 +57,7 @@ func TestLayer(t *testing.T) {
 			// features should not be nil, when we start comparing features this will fail.
 			// But for now it's okay.
 			vtlayer: newTileLayer("onefeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag")}, []*vectorTile.Tile_Feature{nil}),
+			extent:  baseExtent,
 		},
 		{
 			layer: &Layer{
@@ -85,7 +87,8 @@ func TestLayer(t *testing.T) {
 			},
 			// features should not be nil, when we start comparing features this will fail.
 			// But for now it's okay.
-			vtlayer: newTileLayer("twofeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag1")}, []*vectorTile.Tile_Feature{nil}),
+			vtlayer: newTileLayer("twofeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag1")}, []*vectorTile.Tile_Feature{nil, nil}),
+			extent:  baseExtent,
 		},
 	}
 	for i, tcase := range testcases {

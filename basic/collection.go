@@ -17,5 +17,8 @@ func (c *Collection) Geometeries() (geometeries []tegola.Geometry) {
 }
 
 func (Collection) String() string {
-	return "Collectioin"
+	return "Collection"
 }
+
+// private this is for membership to basic types.
+func (Collection) basicType() {}

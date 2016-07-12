@@ -1,4 +1,4 @@
-//tegola server
+//Package server implements the http frontend
 package server
 
 import (
@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	//	500k
+	//MaxTileSize is	500k
 	MaxTileSize = 500000
-	//	suggested as max by Slippy Map Tilenames spec
+	//MaxZoom is the suggested max by Slippy Map Tilenames spec
 	MaxZoom = 18
 )
 
@@ -26,8 +26,8 @@ func init() {
 	config := postgis.Config{
 		Host:     "localhost",
 		Port:     5432,
-		Database: "ARolek",
-		User:     "ARolek",
+		Database: "gdey",
+		User:     "gdey",
 		Layers: map[string]string{
 			"landuse": "gis.zoning_base_3857",
 		},
