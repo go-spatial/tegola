@@ -24,8 +24,7 @@ type Config struct {
 		Password string
 	}
 	Maps []struct {
-		Name string
-		//		Layer  string
+		Name   string
 		Layers []struct {
 			Name      string
 			Provider  string
@@ -35,14 +34,6 @@ type Config struct {
 			SQL       string
 		}
 	}
-	/*
-		Layers []struct {
-			Name      string
-			Provider  string
-			TableName string
-			SQL       string
-		}
-	*/
 }
 
 //	hold parsed config from config file
@@ -107,17 +98,6 @@ func mapServerConf(conf Config) server.Config {
 
 		c.Maps = append(c.Maps, serverMap)
 	}
-
-	/*
-		//	layer mapping
-		for _, layer := range conf.Layers {
-			c.Layers = append(c.Layers, server.Layer{
-				Name:     layer.Name,
-				Provider: layer.Provider,
-				SQL:      layer.SQL,
-			})
-		}
-	*/
 
 	return c
 }
