@@ -13,6 +13,12 @@
 			"path": "github.com/jackc/pgx",
 			"revision": "30cb421551a46adf91f5078bc6ea9fb18609ea0a",
 			"revisionTime": "2016-06-21T20:00:47Z"
+		},
+		{
+			"checksumSHA1": "MUYxtCY95dt/b/5cmzP0x1b9d/E=",
+			"path": "github.com/naoina/toml",
+			"revision": "751171607256bb66e64c9f0220c00662420c38e9",
+			"revisionTime": "2015-07-27T12:48:37Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"
