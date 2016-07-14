@@ -24,15 +24,25 @@ type Config struct {
 		Password string
 	}
 	Maps []struct {
-		Name  string
-		Layer string
+		Name string
+		//		Layer  string
+		Layers []struct {
+			Name      string
+			Provider  string
+			Minzoom   int
+			Maxzoom   int
+			TableName string
+			SQL       string
+		}
 	}
-	Layers []struct {
-		Name      string
-		Provider  string
-		TableName string
-		SQL       string
-	}
+	/*
+		Layers []struct {
+			Name      string
+			Provider  string
+			TableName string
+			SQL       string
+		}
+	*/
 }
 
 //	hold parsed config from config file
@@ -60,17 +70,13 @@ func main() {
 	server.Start(conf.Webserver.Port)
 }
 
-//	map our config file to our server config
+//	map our config file to our web server config
 func mapServerConf(conf Config) server.Config {
-	c := server.Config{
-		Providers: map[string]server.Provider{},
-		Maps:      map[string]server.Map{},
-		Layers:    map[string]server.Layer{},
-	}
+	var c server.Config
 
-	//	provider mapping
+	//	iterate providers
 	for _, provider := range conf.Providers {
-		c.Providers[provider.Name] = server.Provider{
+		c.Providers = append(c.Providers, server.Provider{
 			Name:     provider.Name,
 			Type:     provider.Type,
 			Host:     provider.Host,
@@ -78,23 +84,40 @@ func mapServerConf(conf Config) server.Config {
 			Database: provider.Database,
 			User:     provider.User,
 			Password: provider.Password,
-		}
+		})
 	}
 
+	//	iterate maps
 	for _, m := range conf.Maps {
-		c.Maps[m.Name] = server.Map{
-			Name:  m.Name,
-			Layer: m.Layer,
+		serverMap := server.Map{
+			Name: m.Name,
 		}
+
+		//	iterate layers
+		for _, l := range m.Layers {
+			serverMap.Layers = append(serverMap.Layers, server.Layer{
+				Name:      l.Name,
+				Provider:  l.Provider,
+				Minzoom:   l.Minzoom,
+				Maxzoom:   l.Maxzoom,
+				TableName: l.TableName,
+				SQL:       l.SQL,
+			})
+		}
+
+		c.Maps = append(c.Maps, serverMap)
 	}
 
-	for _, layer := range conf.Layers {
-		c.Layers[layer.Name] = server.Layer{
-			Name:     layer.Name,
-			Provider: layer.Provider,
-			SQL:      layer.SQL,
+	/*
+		//	layer mapping
+		for _, layer := range conf.Layers {
+			c.Layers = append(c.Layers, server.Layer{
+				Name:     layer.Name,
+				Provider: layer.Provider,
+				SQL:      layer.SQL,
+			})
 		}
-	}
+	*/
 
 	return c
 }

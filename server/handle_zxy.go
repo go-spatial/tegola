@@ -12,64 +12,21 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/provider/postgis"
 )
 
 const (
-	//MaxTileSize is	500k
+	// MaxTileSize is 500k
 	MaxTileSize = 500000
-	//MaxZoom is the suggested max by Slippy Map Tilenames spec
+	// MaxZoom is the suggested max by Slippy Map Tilenames spec
 	MaxZoom = 18
 )
 
-//	creates a debug layer with z/x/y encoded as a point
-func debugLayer(tile tegola.Tile) *mvt.Layer {
-	//	get tile extent
-	ext := tile.Extent()
-
-	//	create a new layer and name it
-	layer := mvt.Layer{
-		Name: "debug",
-	}
-
-	//	tile outlines
-	outline := mvt.Feature{
-		Tags: map[string]interface{}{
-			"type": "debug_outline",
-		},
-		Geometry: &basic.Line{ //	tile outline
-			basic.Point{ext.Minx, ext.Miny},
-			basic.Point{ext.Maxx, ext.Miny},
-			basic.Point{ext.Maxx, ext.Maxy},
-			basic.Point{ext.Minx, ext.Maxy},
-		},
-	}
-
-	//	new feature
-	zxy := mvt.Feature{
-		Tags: map[string]interface{}{
-			"type":    "debug_text",
-			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
-		},
-		Geometry: &basic.Point{ //	middle of the tile
-			ext.Minx + ((ext.Maxx - ext.Minx) / 2),
-			ext.Miny + ((ext.Maxy - ext.Miny) / 2),
-		},
-	}
-
-	layer.AddFeatures(zxy, outline)
-
-	return &layer
-}
-
-var postgisProvider *postgis.Provider
-
-//	URI scheme: /maps/:map_id/:z/:x/:y
-//		map_id - id in the config file with an accompanying data source
-//		z, x, y - tile coordinates as described in the Slippy Map Tilenames specification
-//			z - zoom level
-//			x - row
-//			y - column
+//	URI scheme: /maps/:map_name/:z/:x/:y
+//	map_name - map name in the config file
+//	z, x, y - tile coordinates as described in the Slippy Map Tilenames specification
+//		z - zoom level
+//		x - row
+//		y - column
 func handleZXY(w http.ResponseWriter, r *http.Request) {
 	//	check http verb
 	switch r.Method {
@@ -140,22 +97,16 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		//	check that our request is below max zoom
 		if tile.Z < MaxZoom {
 			//	iterate our layers and fetch data from their providers
-			for i := range layers {
-				mvtLayer, err := layers[i].Provider.MVTLayer(layers[i].Name, tile)
-				if err != nil {
-					http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
-					return
-				}
-				//	add layers
-				mvtTile.AddLayers(mvtLayer)
-				/*
-					//	fetch requested layer from our data provider
-					mvtLayer, err := postgisProvider.MVTLayer("landuse", tile)
+			for _, l := range layers {
+				if l.Minzoom <= tile.Z && l.Maxzoom >= tile.Z {
+					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile)
 					if err != nil {
 						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
 						return
 					}
-				*/
+					//	add layers
+					mvtTile.AddLayers(mvtLayer)
+				}
 			}
 		}
 		//	TODO: make debugging a config toggle
@@ -179,7 +130,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		//	check for tile size warnings
 		if len(pbyte) > MaxTileSize {
-			log.Printf("tile is rather large - %v", len(pbyte))
+			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
 		}
 
 		//	TODO: how configurable do we want the CORS policy to be?
@@ -195,4 +146,44 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
+}
+
+//	creates a debug layer with z/x/y encoded as a point
+func debugLayer(tile tegola.Tile) *mvt.Layer {
+	//	get tile extent
+	ext := tile.Extent()
+
+	//	create a new layer and name it
+	layer := mvt.Layer{
+		Name: "debug",
+	}
+
+	//	tile outlines
+	outline := mvt.Feature{
+		Tags: map[string]interface{}{
+			"type": "debug_outline",
+		},
+		Geometry: &basic.Line{ //	tile outline
+			basic.Point{ext.Minx, ext.Miny},
+			basic.Point{ext.Maxx, ext.Miny},
+			basic.Point{ext.Maxx, ext.Maxy},
+			basic.Point{ext.Minx, ext.Maxy},
+		},
+	}
+
+	//	new feature
+	zxy := mvt.Feature{
+		Tags: map[string]interface{}{
+			"type":    "debug_text",
+			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
+		},
+		Geometry: &basic.Point{ //	middle of the tile
+			ext.Minx + ((ext.Maxx - ext.Minx) / 2),
+			ext.Miny + ((ext.Maxy - ext.Miny) / 2),
+		},
+	}
+
+	layer.AddFeatures(zxy, outline)
+
+	return &layer
 }

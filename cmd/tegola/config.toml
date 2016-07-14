@@ -13,12 +13,11 @@ password = ""
 
 # maps are made up of layers
 [[maps]]
-name = "zoning"
-layer = "landuse"
+name = "zoning"					# used in the URL to reference this map
 
-# layers define data providers
-[[layers]]
-name = "landuse"
-provider = "test_postgis"
-table_name = "gis.zoning_base_3857"
-sql = "gis.zoning_base_3857"
+	[[maps.layers]]
+	name = "landuse" 			# will be encoded as the layer name in the tile
+	provider = "test_postgis"	# must match a data provider
+	minzoom = 12
+	maxzoom = 16
+	sql = "gis.zoning_base_3857"
