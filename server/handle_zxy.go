@@ -17,8 +17,7 @@ import (
 const (
 	// MaxTileSize is 500k
 	MaxTileSize = 500000
-	// MaxZoom is the suggested max by Slippy Map Tilenames spec
-	MaxZoom = 18
+	MaxZoom     = 20
 )
 
 //	URI scheme: /maps/:map_name/:z/:x/:y
@@ -95,7 +94,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		var pbyte []byte
 
 		//	check that our request is below max zoom
-		if tile.Z < MaxZoom {
+		if tile.Z <= MaxZoom {
 			//	iterate our layers and fetch data from their providers
 			for _, l := range layers {
 				if l.Minzoom <= tile.Z && l.Maxzoom >= tile.Z {
