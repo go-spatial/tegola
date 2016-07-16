@@ -108,10 +108,14 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		//	TODO: make debugging a config toggle
-		//	add debug layer
-		debugLayer := debugLayer(tile)
-		mvtTile.AddLayers(debugLayer)
+
+		//	check for the debug query string
+		debug := r.URL.Query().Get("debug")
+		if debug == "true" {
+			//	add debug layer
+			debugLayer := debugLayer(tile)
+			mvtTile.AddLayers(debugLayer)
+		}
 
 		//	generate our vector tile
 		vtile, err := mvtTile.VTile(tile.Extent())
