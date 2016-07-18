@@ -121,9 +121,10 @@ func encodeZigZag(i int64) uint32 {
 // cursor reprsents the current position, this is needed to encode the geometry.
 // 0,0 is the origin, it which is the top-left most part of the tile.
 type cursor struct {
-	// The coordinates
-	x float64
-	y float64
+	// The coordinates — these should be int64, when they were float64 they
+	// introduced a slight drift in the coordinates.
+	x int64
+	y int64
 
 	// The diamentions for the screen tile.
 	tile tegola.Extent
@@ -149,10 +150,10 @@ func newCursor(tile tegola.Extent, layerExtent int) *cursor {
 }
 
 //	converts a point to a screen resolution point
-func (c *cursor) ScalePoint(p tegola.Point) (nx, ny float64) {
+func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
 
-	nx = ((p.X() - c.tile.Minx) * c.extent / c.xspan)
-	ny = ((p.Y() - c.tile.Miny) * c.extent / c.yspan)
+	nx = int64((p.X() - c.tile.Minx) * c.extent / c.xspan)
+	ny = int64((p.Y() - c.tile.Miny) * c.extent / c.yspan)
 
 	return nx, ny
 }
@@ -160,8 +161,8 @@ func (c *cursor) ScalePoint(p tegola.Point) (nx, ny float64) {
 func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	ix, iy := c.ScalePoint(p)
 	//	computer our point delta
-	dx = int64(ix - c.x)
-	dy = int64(iy - c.y)
+	dx = ix - int64(c.x)
+	dy = iy - int64(c.y)
 
 	//	update our cursor
 	c.x = ix
@@ -169,15 +170,14 @@ func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	return dx, dy
 }
 
-func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
-
+func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
 	if len(points) == 0 {
 		return []uint32{}
 	}
 	//	new slice to hold our encode bytes. 2 bytes for each point pluse a command byte.
 	g := make([]uint32, 0, (2*len(points))+1)
-	//	compute command integere
-	g = append(g, uint32(NewCommand(cmdMoveTo, len(points))))
+	//	add the command integer
+	g = append(g, cmd)
 
 	//	range through our points
 	for _, p := range points {
@@ -187,19 +187,13 @@ func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
 	}
 	return g
 }
-func (c *cursor) LineTo(points ...tegola.Point) []uint32 {
-	if len(points) == 0 {
-		return []uint32{}
-	}
-	g := make([]uint32, 0, (2*len(points))+1)
-	g = append(g, uint32(NewCommand(cmdLineTo, len(points))))
-	for _, p := range points {
-		dx, dy := c.GetDeltaPointAndUpdate(p)
-		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
-	}
-	return g
-}
 
+func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
+	return c.encodeCmd(uint32(NewCommand(cmdMoveTo, len(points))), points)
+}
+func (c *cursor) LineTo(points ...tegola.Point) []uint32 {
+	return c.encodeCmd(uint32(NewCommand(cmdLineTo, len(points))), points)
+}
 func (c *cursor) ClosePath() uint32 {
 	return uint32(NewCommand(cmdClosePath, 1))
 }
@@ -260,6 +254,7 @@ func encodeGeometry(geo tegola.Geometry, extent tegola.Extent, layerExtent int) 
 				g = append(g, c.MoveTo(points[0])...)
 				g = append(g, c.LineTo(points[1:]...)...)
 				g = append(g, c.ClosePath())
+				// g = append(g, c.MoveTo(&basic.Point{extent.Minx, extent.Miny})...)
 			}
 		}
 		return g, vectorTile.Tile_POLYGON, nil

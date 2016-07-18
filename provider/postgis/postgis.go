@@ -42,7 +42,8 @@ SELECT
 FROM
 	%[1]v
 WHERE
-	geom && {{.BBox}}`
+	geom && {{.BBox}}
+`
 
 // NewProvider Setups and returns a new postgis provider that can be used to get
 // tiles for layers.
@@ -156,18 +157,13 @@ func (p *Provider) MVTLayer(layerName string, tile tegola.Tile) (layer *mvt.Laye
 		if err != nil {
 			return nil, err
 		}
-		/*
-			if gname != nil {
-				gtags["name"] = *gname
-			}
-		*/
+		//		log.Printf("Got geo: %v", wkb.WKT(geom))
 
 		//	TODO: Need to support collection geometries.
 		if _, ok := geom.(tegola.Collection); ok {
 			return nil, fmt.Errorf("For Layer (%v) and geometry name(%v); Geometry collections are not supported.", layerName, gname)
 		}
 
-		// rehgeom, err := basic.RehomeGeometry(geom, minx, miny)
 		if err != nil {
 			geostr := wkb.WKT(geom)
 			return nil, fmt.Errorf("Error trying to rehome %v : %v", geostr, err)

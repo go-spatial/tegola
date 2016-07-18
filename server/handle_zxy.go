@@ -160,6 +160,8 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 	layer := mvt.Layer{
 		Name: "debug",
 	}
+	xlen := ext.Maxx - ext.Minx
+	ylen := ext.Maxy - ext.Miny
 
 	//	tile outlines
 	outline := mvt.Feature{
@@ -181,12 +183,12 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
 		},
 		Geometry: &basic.Point{ //	middle of the tile
-			ext.Minx + ((ext.Maxx - ext.Minx) / 2),
-			ext.Miny + ((ext.Maxy - ext.Miny) / 2),
+			ext.Minx + (xlen / 2),
+			ext.Miny + (ylen / 2),
 		},
 	}
 
-	layer.AddFeatures(zxy, outline)
+	layer.AddFeatures(outline, zxy)
 
 	return &layer
 }
