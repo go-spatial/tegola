@@ -28,7 +28,6 @@ func Log(item logItem) {
 	if logFile == nil {
 		return
 	}
-	log.Println("Logging something")
 	var l string
 	if item.Time.IsZero() {
 		item.Time = time.Now()
@@ -45,7 +44,11 @@ func Log(item logItem) {
 		b = append(b, '\n')
 	}
 	// Don't care about the error.
-	logFile.Write(b)
+	if _, err := logFile.Write(b); err != nil {
+		// Don't care about the error.
+		log.Println("Error writing log to log file.", err)
+		return
+	}
 }
 
 //	map layers point to a provider
