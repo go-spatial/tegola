@@ -2,8 +2,10 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
+	"text/template"
 
 	"github.com/naoina/toml"
 
@@ -12,7 +14,9 @@ import (
 
 type Config struct {
 	Webserver struct {
-		Port string
+		Port      string
+		LogFile   string
+		LogFormat string
 	}
 	Providers []struct {
 		Name     string
@@ -40,6 +44,7 @@ type Config struct {
 var conf Config
 
 func main() {
+	flag.Parse()
 	//	open our config file
 	f, err := os.Open("config.toml")
 	if err != nil {
@@ -48,8 +53,17 @@ func main() {
 	defer f.Close()
 
 	//	unmarshal to our server config
-	if err := toml.NewDecoder(f).Decode(&conf); err != nil {
+	if err = toml.NewDecoder(f).Decode(&conf); err != nil {
 		log.Fatal("config file error:", err)
+	}
+
+	// Command line logfile overrides config file.
+	if logFile != "" {
+		conf.Webserver.LogFile = logFile
+		// Need to make sure that the log file exists.
+	}
+	if server.DefaultLogFormat != logFormat || conf.Webserver.LogFormat == "" {
+		conf.Webserver.LogFormat = logFormat
 	}
 
 	//	setup our providers, maps and layers
@@ -64,6 +78,23 @@ func main() {
 //	map our config file to our web server config
 func mapServerConf(conf Config) server.Config {
 	var c server.Config
+	var err error
+
+	if conf.Webserver.LogFile != "" {
+		if c.LogFile, err = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
+			log.Printf("Unable to open logfile (%v) for writing: %v", logFile, err)
+			os.Exit(2)
+		}
+
+	}
+	if conf.Webserver.LogFormat == "" {
+		conf.Webserver.LogFormat = server.DefaultLogFormat
+	}
+	c.LogTemplate = template.New("logfile")
+	if _, err := c.LogTemplate.Parse(conf.Webserver.LogFormat); err != nil {
+		log.Printf("Could not parse log template: %v error: %v", conf.Webserver.LogFormat, err)
+		os.Exit(3)
+	}
 
 	//	iterate providers
 	for _, provider := range conf.Providers {

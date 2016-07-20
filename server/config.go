@@ -2,16 +2,21 @@ package server
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"strings"
+	"text/template"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/provider/postgis"
 )
 
 type Config struct {
-	Providers []Provider
-	Maps      []Map
-	Layers    []Layer
+	Providers   []Provider
+	Maps        []Map
+	Layers      []Layer
+	LogFile     *os.File
+	LogTemplate *template.Template
 }
 
 type Provider struct {
@@ -38,9 +43,24 @@ type Layer struct {
 	SQL       string
 }
 
+const DefaultLogFormat = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
+
 //Init maps sets up our data providers and builds out the
 //	map and layer associations
 func Init(conf Config) error {
+
+	if conf.LogFile != nil {
+		logFile = conf.LogFile
+	}
+	if conf.LogTemplate == nil {
+		logTemplate = template.New("logfile")
+		if _, err := logTemplate.Parse(DefaultLogFormat); err != nil {
+			panic(fmt.Sprintf("Could not parse default template: %v error: %v", DefaultLogFormat, err))
+		}
+	} else {
+		logTemplate = conf.LogTemplate
+	}
+
 	//	instantiated layer holder
 	layers := map[string]*mapLayer{}
 

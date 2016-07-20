@@ -98,7 +98,8 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			//	iterate our layers and fetch data from their providers
 			for _, l := range layers {
 				if l.Minzoom <= tile.Z && l.Maxzoom >= tile.Z {
-					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile)
+					var mvtLayer *mvt.Layer
+					mvtLayer, err = l.Provider.MVTLayer(l.Name, tile)
 					if err != nil {
 						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
 						return
@@ -135,6 +136,12 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		if len(pbyte) > MaxTileSize {
 			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
 		}
+		Log(logItem{
+			X:         tile.X,
+			Y:         tile.Y,
+			Z:         tile.Z,
+			RequestIP: r.RemoteAddr,
+		})
 
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
