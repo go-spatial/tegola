@@ -11,13 +11,13 @@ database = "ARolek"
 user = "ARolek"
 password = ""
 
+
 # maps are made up of layers
 [[maps]]
-name = "zoning"					# used in the URL to reference this map
+name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
 
 	[[maps.layers]]
-	name = "landuse" 			# will be encoded as the layer name in the tile
-	provider = "test_postgis"	# must match a data provider
+	name = "landuse" 					# will be encoded as the layer name in the tile
+	provider = "test_postgis.landuse"	# must match a data provider query
 	minzoom = 12
 	maxzoom = 16
-	sql = "gis.zoning_base_3857"

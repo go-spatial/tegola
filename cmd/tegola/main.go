@@ -14,26 +14,44 @@ type Config struct {
 	Webserver struct {
 		Port string
 	}
-	Providers []struct {
-		Name     string
-		Type     string
-		Host     string
-		Port     uint16
-		Database string
-		User     string
-		Password string
-	}
+	Providers []Provider
+
+	/*
+		Providers []struct {
+			Name     string
+			Type     string
+			Host     string
+			Port     uint16
+			Database string
+			User     string
+			Password string
+
+		}
+	*/
 	Maps []struct {
 		Name   string
 		Layers []struct {
-			Name      string
-			Provider  string
-			Minzoom   int
-			Maxzoom   int
-			TableName string
-			SQL       string
+			Name     string
+			Provider string
+			Minzoom  int
+			Maxzoom  int
 		}
 	}
+}
+
+type Provider struct {
+	Type string
+	Name string
+
+	Queries []Query
+}
+
+type Query struct {
+	Name      string
+	TableName string
+	GeomField string
+	IDField   string
+	SQL       string
 }
 
 //	hold parsed config from config file
@@ -67,37 +85,41 @@ func mapServerConf(conf Config) server.Config {
 
 	//	iterate providers
 	for _, provider := range conf.Providers {
-		c.Providers = append(c.Providers, server.Provider{
-			Name:     provider.Name,
-			Type:     provider.Type,
-			Host:     provider.Host,
-			Port:     provider.Port,
-			Database: provider.Database,
-			User:     provider.User,
-			Password: provider.Password,
-		})
-	}
-
-	//	iterate maps
-	for _, m := range conf.Maps {
-		serverMap := server.Map{
-			Name: m.Name,
-		}
-
-		//	iterate layers
-		for _, l := range m.Layers {
-			serverMap.Layers = append(serverMap.Layers, server.Layer{
-				Name:      l.Name,
-				Provider:  l.Provider,
-				Minzoom:   l.Minzoom,
-				Maxzoom:   l.Maxzoom,
-				TableName: l.TableName,
-				SQL:       l.SQL,
+		log.Printf("provider %+v", provider)
+		/*
+			c.Providers = append(c.Providers, server.Provider{
+				Name:     provider.Name,
+				Type:     provider.Type,
+				Host:     provider.Host,
+				Port:     provider.Port,
+				Database: provider.Database,
+				User:     provider.User,
+				Password: provider.Password,
 			})
-		}
-
-		c.Maps = append(c.Maps, serverMap)
+		*/
 	}
 
+	/*
+		//	iterate maps
+		for _, m := range conf.Maps {
+			serverMap := server.Map{
+				Name: m.Name,
+			}
+
+			//	iterate layers
+			for _, l := range m.Layers {
+				serverMap.Layers = append(serverMap.Layers, server.Layer{
+					Name:      l.Name,
+					Provider:  l.Provider,
+					Minzoom:   l.Minzoom,
+					Maxzoom:   l.Maxzoom,
+					TableName: l.TableName,
+					SQL:       l.SQL,
+				})
+			}
+
+			c.Maps = append(c.Maps, serverMap)
+		}
+	*/
 	return c
 }
