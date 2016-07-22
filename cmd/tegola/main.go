@@ -2,10 +2,12 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
+	"strings"
 
-	"github.com/naoina/toml"
+	"github.com/BurntSushi/toml"
 
 	"github.com/terranodo/tegola/server"
 )
@@ -14,21 +16,8 @@ type Config struct {
 	Webserver struct {
 		Port string
 	}
-	Providers []Provider
-
-	/*
-		Providers []struct {
-			Name     string
-			Type     string
-			Host     string
-			Port     uint16
-			Database string
-			User     string
-			Password string
-
-		}
-	*/
-	Maps []struct {
+	Providers []map[string]interface{}
+	Maps      []struct {
 		Name   string
 		Layers []struct {
 			Name     string
@@ -39,87 +28,74 @@ type Config struct {
 	}
 }
 
-type Provider struct {
-	Type string
-	Name string
-
-	Queries []Query
-}
-
-type Query struct {
-	Name      string
-	TableName string
-	GeomField string
-	IDField   string
-	SQL       string
-}
-
 //	hold parsed config from config file
 var conf Config
 
+//	flags
+var (
+	confPath = flag.String("conf", "config.toml", "path to a toml config file")
+)
+
 func main() {
-	//	open our config file
-	f, err := os.Open("config.toml")
-	if err != nil {
-		log.Fatal("unable to open config file: ", err)
-	}
-	defer f.Close()
+	var err error
 
-	//	unmarshal to our server config
-	if err := toml.NewDecoder(f).Decode(&conf); err != nil {
-		log.Fatal("config file error:", err)
+	//	parse our command line flags
+	flag.Parse()
+
+	//	check the conf file exists
+	if _, err := os.Stat(*confPath); os.IsNotExist(err) {
+		log.Fatal("config.toml file not found!")
 	}
 
-	//	setup our providers, maps and layers
-	if err = server.Init(mapServerConf(conf)); err != nil {
-		log.Fatal("server init error:", err)
+	//	decode conf file
+	if _, err := toml.DecodeFile(*confPath, &conf); err != nil {
+		log.Fatal(err)
 	}
 
-	//	bind our webserver
-	server.Start(conf.Webserver.Port)
-}
-
-//	map our config file to our web server config
-func mapServerConf(conf Config) server.Config {
-	var c server.Config
+	//	holder for registered providers
+	var registeredProviders map[string]*mvt.Proivder
 
 	//	iterate providers
 	for _, provider := range conf.Providers {
 		log.Printf("provider %+v", provider)
-		/*
-			c.Providers = append(c.Providers, server.Provider{
-				Name:     provider.Name,
-				Type:     provider.Type,
-				Host:     provider.Host,
-				Port:     provider.Port,
-				Database: provider.Database,
-				User:     provider.User,
-				Password: provider.Password,
-			})
-		*/
+
+		//	register the provider
 	}
 
-	/*
-		//	iterate maps
-		for _, m := range conf.Maps {
-			serverMap := server.Map{
-				Name: m.Name,
+	//	iterate maps
+	for _, m := range conf.Maps {
+		var layers []Layer
+		//	iterate layers
+		for _, l := range m.Layers {
+			//	split our provider into provider.query
+			providerQuery := strings.Split(l.Provider, ".")
+
+			if len(providerQuery) != 2 {
+				log.Fatal("invalid layer provider for map: %v, layer %v: %v.", m, l.Name, l.Provider)
 			}
 
-			//	iterate layers
-			for _, l := range m.Layers {
-				serverMap.Layers = append(serverMap.Layers, server.Layer{
-					Name:      l.Name,
-					Provider:  l.Provider,
-					Minzoom:   l.Minzoom,
-					Maxzoom:   l.Maxzoom,
-					TableName: l.TableName,
-					SQL:       l.SQL,
-				})
+			//	lookup our proivder
+			provider, ok := registeredProviders[providerQuery[0]]
+			if !ok {
+				log.Fatal("provider not defined: %v", providerQuery[0])
 			}
 
-			c.Maps = append(c.Maps, serverMap)
+			//	setup our layer properties
+			layer = server.Layer{
+				Name:     l.Name,
+				Minzoom:  l.Minzoom,
+				Maxzoom:  l.Maxzoom,
+				Provider: provider,
+			}
+
+			//	add our layer to our layer size
+			layers = append(layers, layer)
 		}
-	*/
-	return c
+
+		//	register map
+		server.RegisterMap(m, layers)
+	}
+
+	//	bind our webserver
+	server.Start(conf.Webserver.Port)
 }

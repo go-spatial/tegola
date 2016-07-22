@@ -11,6 +11,12 @@ database = "ARolek"
 user = "ARolek"
 password = ""
 
+    [[providers.queries]]
+    name = "landuse"                    # will be encoded as the layer name in the tile
+    table_name = "gis.zoning_base_3857" # sql or table_name are required
+    geom_field = "wkb_geom"             # geom field. default is geom
+    gid_field = "fid"                   # geom id field. default is gid
+
 
 # maps are made up of layers
 [[maps]]

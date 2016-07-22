@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -8,14 +9,24 @@ import (
 )
 
 //	incoming requests are associated with a map
-var maps = map[string][]*mapLayer{}
+var maps = map[string][]Layer{}
 
-//	map layers point to a provider
-type mapLayer struct {
+type Layer struct {
 	Name     string
 	Minzoom  int
 	Maxzoom  int
-	Provider mvt.Provider
+	Provider *mvt.Provider
+}
+
+//RegisterMap associates layers with map names
+func RegisterMap(name string, layers []Layer) error {
+	//	check if our map is already registered
+	if _, ok := maps[name]; ok {
+		return errors.New("map is alraedy registered: %v", name)
+	}
+
+	//	associate our layers with a map
+	maps[name] = layers
 }
 
 // Start starts the tile server binding to the provided port
