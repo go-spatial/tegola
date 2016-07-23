@@ -1,5 +1,5 @@
 [webserver]
-port = ":8080"
+port = ":9090"
 
 # register data providers
 [[providers]]
@@ -7,8 +7,8 @@ name = "test_postgis"
 type = "postgis"
 host = "localhost"
 port = 5432
-database = "ARolek" 
-user = "ARolek"
+database = "gdey" 
+user = "gdey"
 password = ""
 
 # maps are made up of layers
@@ -19,5 +19,5 @@ name = "zoning"					# used in the URL to reference this map
 	name = "landuse" 			# will be encoded as the layer name in the tile
 	provider = "test_postgis"	# must match a data provider
 	minzoom = 12
-	maxzoom = 16
+	maxzoom = 20
 	sql = "gis.zoning_base_3857"
