@@ -3,9 +3,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/BurntSushi/toml"
 
@@ -14,27 +16,24 @@ import (
 
 type Config struct {
 	Webserver struct {
-		Port string
+		Port      string
+		LogFile   string `toml:"log_file"`
+		LogFormat string `toml:"log_format"`
 	}
 	Providers []map[string]interface{}
 	Maps      []struct {
 		Name   string
 		Layers []struct {
-			Name     string
-			Provider string
-			Minzoom  int
-			Maxzoom  int
+			ProviderLayer string                 `toml:"provider_layer"`
+			MinZoom       int                    `toml:"minzoom"`
+			MaxZoom       int                    `toml:"maxzoom"`
+			DefaultTags   map[string]interface{} `toml:"default_tags"`
 		}
 	}
 }
 
 //	hold parsed config from config file
 var conf Config
-
-//	flags
-var (
-	confPath = flag.String("conf", "config.toml", "path to a toml config file")
-)
 
 func main() {
 	var err error
@@ -43,17 +42,69 @@ func main() {
 	flag.Parse()
 
 	//	check the conf file exists
-	if _, err := os.Stat(*confPath); os.IsNotExist(err) {
-		log.Fatal("config.toml file not found!")
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		log.Fatal(configFile + " not found!")
 	}
-
 	//	decode conf file
-	if _, err := toml.DecodeFile(*confPath, &conf); err != nil {
+	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
 		log.Fatal(err)
 	}
 
+	setupServer()
+
+	//	start our webserver
+	server.Start(conf.Webserver.Port)
+}
+
+func setupServer() {
+	var err error
+
+	// Command line logfile overrides config file.
+	if logFile != "" {
+		conf.Webserver.LogFile = logFile
+		// Need to make sure that the log file exists.
+	}
+
+	if server.DefaultLogFormat != logFormat || conf.Webserver.LogFormat == "" {
+		conf.Webserver.LogFormat = logFormat
+	}
+
+	if conf.Webserver.LogFile != "" {
+		if server.LogFile, err = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
+			log.Printf("Unable to open logfile (%v) for writing: %v", logFile, err)
+			os.Exit(2)
+		}
+	}
+
+	if conf.Webserver.LogFormat == "" {
+		conf.Webserver.LogFormat = server.DefaultLogFormat
+	}
+
+	if conf.Webserver.LogFile != "" {
+		logFile = conf.Webserver.LogFile
+	}
+
+	// Command line logTemplate overrides config file.
+	if logFormat == "" {
+		server.LogTemplate = template.New("logfile")
+
+		if _, err := server.LogTemplate.Parse(server.DefaultLogFormat); err != nil {
+			log.Fatal(fmt.Sprintf("Could not parse default template: %v error: %v", server.DefaultLogFormat, err))
+		}
+	} else {
+		server.LogTemplate = conf.Webserver.LogFormat
+	}
+
+	//	setup our server log template
+	server.LogTemplate = template.New("logfile")
+
+	if _, err := server.LogTemplate.Parse(conf.Webserver.LogFormat); err != nil {
+		log.Printf("Could not parse log template: %v error: %v", conf.Webserver.LogFormat, err)
+		os.Exit(3)
+	}
+
 	//	holder for registered providers
-	var registeredProviders map[string]*mvt.Proivder
+	var registeredProviders map[string]mvt.Proivder
 
 	//	iterate providers
 	for _, provider := range conf.Providers {
@@ -64,38 +115,33 @@ func main() {
 
 	//	iterate maps
 	for _, m := range conf.Maps {
-		var layers []Layer
+		var layers []server.Layer
 		//	iterate layers
 		for _, l := range m.Layers {
 			//	split our provider into provider.query
-			providerQuery := strings.Split(l.Provider, ".")
+			providerLayer := strings.Split(l.ProviderLayer, ".")
 
-			if len(providerQuery) != 2 {
-				log.Fatal("invalid layer provider for map: %v, layer %v: %v.", m, l.Name, l.Provider)
+			//	we're expecting two params in the provider layer definition
+			if len(providerLayer) != 2 {
+				log.Fatal("invalid provider layer (%v) for map (%v)", l.ProviderLayer, m)
 			}
 
 			//	lookup our proivder
-			provider, ok := registeredProviders[providerQuery[0]]
+			provider, ok := registeredProviders[providerLayer[0]]
 			if !ok {
-				log.Fatal("provider not defined: %v", providerQuery[0])
+				log.Fatal("provider not defined: %v", providerLayer[0])
 			}
 
-			//	setup our layer properties
-			layer = server.Layer{
-				Name:     l.Name,
-				Minzoom:  l.Minzoom,
-				Maxzoom:  l.Maxzoom,
+			//	add our layer to our layers slice
+			layers = append(layers, server.Layer{
+				Name:     providerLayer[1],
+				MinZoom:  l.MinZoom,
+				MaxZoom:  l.MaxZoom,
 				Provider: provider,
-			}
-
-			//	add our layer to our layer size
-			layers = append(layers, layer)
+			})
 		}
 
 		//	register map
-		server.RegisterMap(m, layers)
+		server.RegisterMap(m.Name, layers)
 	}
-
-	//	bind our webserver
-	server.Start(conf.Webserver.Port)
 }

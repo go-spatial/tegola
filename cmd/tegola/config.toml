@@ -11,7 +11,7 @@ database = "ARolek"
 user = "ARolek"
 password = ""
 
-    [[providers.queries]]
+    [[providers.layers]]
     name = "landuse"                    # will be encoded as the layer name in the tile
     table_name = "gis.zoning_base_3857" # sql or table_name are required
     geom_field = "wkb_geom"             # geom field. default is geom
@@ -23,7 +23,9 @@ password = ""
 name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
 
 	[[maps.layers]]
-	name = "landuse" 					# will be encoded as the layer name in the tile
-	provider = "test_postgis.landuse"	# must match a data provider query
+	provider_layer = "test_postgis.landuse"	# must match a data provider query
 	minzoom = 12
 	maxzoom = 16
+
+		[[maps.layers.default_tags]]	# a table of default tags to encode in the tile. SQL statements will override
+		cls = "park"

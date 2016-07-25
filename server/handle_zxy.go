@@ -95,18 +95,26 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		//	check that our request is below max zoom
 		if tile.Z <= MaxZoom {
+			//	layer stack
+			var mvtLayers []*mvt.Layer
+
 			//	iterate our layers and fetch data from their providers
 			for _, l := range layers {
-				if l.Minzoom <= tile.Z && l.Maxzoom >= tile.Z {
+				//	check if layer is within our zoom levels
+				if l.MinZoom <= tile.Z && l.MaxZoom >= tile.Z {
+					//	fetch layer from data provider
 					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile)
 					if err != nil {
 						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
 						return
 					}
-					//	add layers
-					mvtTile.AddLayers(mvtLayer)
+
+					mvtLayers = append(mvtLayers, mvtLayer)
 				}
 			}
+
+			//	add layers to our tile
+			mvtTile.AddLayers(mvtLayers...)
 		}
 
 		//	check for the debug query string
@@ -131,11 +139,6 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//	check for tile size warnings
-		if len(pbyte) > MaxTileSize {
-			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
-		}
-
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
 		w.Header().Add("Access-Control-Allow-Origin", "*")
@@ -144,6 +147,18 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/x-protobuf")
 
 		w.Write(pbyte)
+
+		//	check for tile size warnings
+		if len(pbyte) > MaxTileSize {
+			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
+		}
+		//	log the request
+		Log(logItem{
+			X:         tile.X,
+			Y:         tile.Y,
+			Z:         tile.Z,
+			RequestIP: r.RemoteAddr,
+		})
 
 	default:
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -160,6 +175,8 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 	layer := mvt.Layer{
 		Name: "debug",
 	}
+	xlen := ext.Maxx - ext.Minx
+	ylen := ext.Maxy - ext.Miny
 
 	//	tile outlines
 	outline := mvt.Feature{
@@ -181,12 +198,12 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
 		},
 		Geometry: &basic.Point{ //	middle of the tile
-			ext.Minx + ((ext.Maxx - ext.Minx) / 2),
-			ext.Miny + ((ext.Maxy - ext.Miny) / 2),
+			ext.Minx + (xlen / 2),
+			ext.Miny + (ylen / 2),
 		},
 	}
 
-	layer.AddFeatures(zxy, outline)
+	layer.AddFeatures(outline, zxy)
 
 	return &layer
 }

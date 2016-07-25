@@ -12,27 +12,30 @@ import (
 var maps = map[string][]Layer{}
 
 type Layer struct {
-	Name     string
-	Minzoom  int
-	Maxzoom  int
-	Provider *mvt.Provider
+	Name        string
+	MinZoom     int
+	MaxZoom     int
+	Provider    mvt.Provider
+	DefaultTags map[string]interface{}
 }
 
-//RegisterMap associates layers with map names
+//	RegisterMap associates layers with map names
 func RegisterMap(name string, layers []Layer) error {
 	//	check if our map is already registered
 	if _, ok := maps[name]; ok {
-		return errors.New("map is alraedy registered: %v", name)
+		return errors.New("map is alraedy registered: " + name)
 	}
 
 	//	associate our layers with a map
 	maps[name] = layers
+
+	return nil
 }
 
-// Start starts the tile server binding to the provided port
+//	Start starts the tile server binding to the provided port
 func Start(port string) {
 	//	notify the user the server is starting
-	log.Printf("Starting tegola server on port %v\n", port)
+	log.Printf("Starting tegola server on port %v", port)
 
 	//	setup routes
 	http.Handle("/", http.FileServer(http.Dir("static")))
