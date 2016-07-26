@@ -7,15 +7,15 @@ name = "test_postgis"
 type = "postgis"
 host = "localhost"
 port = 5432
-database = "gdey" 
-user = "gdey"
+database = "ARolek" 
+user = "ARolek"
 password = ""
 
-    [[providers.layers]]
-    name = "landuse"                    # will be encoded as the layer name in the tile
-    table_name = "gis.zoning_base_3857" # sql or table_name are required
-    geom_field = "wkb_geom"             # geom field. default is geom
-    gid_field = "fid"                   # geom id field. default is gid
+	[[providers.layers]]
+	name = "landuse" 			# will be encoded as the layer name in the tile
+	tablename = "gis.zoning_base_3857" # sql or table_name are required
+	geometry_fieldname = "wkb_geom"             # geom field. default is geom
+	id_fieldname = "fid"                   # geom id field. default is gid
 
 
 # maps are made up of layers

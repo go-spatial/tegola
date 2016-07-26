@@ -49,12 +49,13 @@ const DefaultMaxConn = 5
 const (
 	ConfigKeyHost        = "host"
 	ConfigKeyPort        = "port"
-	ConfigKeyDB          = "db"
+	ConfigKeyDB          = "database"
 	ConfigKeyUser        = "user"
 	ConfigKeyPassword    = "password"
 	ConfigKeyMaxConn     = "max_connection"
 	ConfigKeySRID        = "srid"
 	ConfigKeyLayers      = "layers"
+	ConfigKeyLayerName   = "name"
 	ConfigKeyTablename   = "tablename"
 	ConfigKeySQL         = "sql"
 	ConfigKeyFields      = "fields"
@@ -106,75 +107,90 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	port := int(DefaultPort)
-	if port, err = c.Int(ConfigKeyPort, &port); err != nil {
+	port := int64(DefaultPort)
+	if port, err = c.Int64(ConfigKeyPort, &port); err != nil {
 		return nil, err
 	}
 
-	maxcon := int(DefaultMaxConn)
-	if maxcon, err = c.Int(ConfigKeyMaxConn, &maxcon); err != nil {
+	maxcon := int64(DefaultMaxConn)
+	if maxcon, err = c.Int64(ConfigKeyMaxConn, &maxcon); err != nil {
 		return nil, err
 	}
 
-	var srid = int(DefaultSRID)
-	if srid, err = c.Int(ConfigKeySRID, &srid); err != nil {
+	var srid = int64(DefaultSRID)
+	if srid, err = c.Int64(ConfigKeySRID, &srid); err != nil {
 		return nil, err
 	}
 
-	layers, ok := c[ConfigKeyLayers].(map[string]map[string]interface{})
+	layers, ok := c[ConfigKeyLayers].([]map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Expected %v to be a map[string]map[string]interface{}", ConfigKeyLayers)
+		return nil, fmt.Errorf("Expected %v to be a []map[string]interface{}. Value is of type %T", ConfigKeyLayers, c[ConfigKeyLayers])
 	}
 
 	lyrs := make(map[string]layer)
 	zerostr := ""
 
-	for lname, v := range layers {
+	seenlyrs := make(map[string]int)
+
+	for i, v := range layers {
+
 		vc := dict.M(v)
+
+		lname, err := vc.String(ConfigKeyLayerName, nil)
+		if err != nil {
+			return nil, fmt.Errorf("for %v layer(%v)  has an error: %v", i, ConfigKeyLayerName, err)
+		}
+
+		// Check to see if we have seen this name before.
+		if at, ok := seenlyrs[lname]; ok {
+			return nil, fmt.Errorf("Already saw %v(%v) for layer(%v) at Layer(%v) ", ConfigKeyLayerName, lname, i, at)
+		}
+		seenlyrs[lname] = i
+
 		tblName, err := vc.String(ConfigKeyTablename, &zerostr)
 		if err != nil {
-			return nil, fmt.Errorf("for %v layer %v has an error: %v", lname, ConfigKeyTablename, err)
+			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
 		}
 		sql, err := vc.String(ConfigKeySQL, &zerostr)
 		if err != nil {
-			return nil, fmt.Errorf("for %v layer %v has an error: %v", lname, ConfigKeySQL, err)
+			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
 		}
 		if tblName == "" && sql == "" {
-			return nil, fmt.Errorf("The %v or %v field for layer %v must be specified.", ConfigKeyTablename, ConfigKeySQL, lname)
+			return nil, fmt.Errorf("The %v or %v field for layer(%v) %v must be specified.", ConfigKeyTablename, ConfigKeySQL, i, lname)
 		}
 		if tblName != "" && sql != "" {
-			log.Printf("Both %v and %v field are specified for layer %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, lname)
+			log.Printf("Both %v and %v field are specified for layer(%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
 		}
 
 		fields, err := vc.StringSlice(ConfigKeyFields)
 		if err != nil {
-			return nil, fmt.Errorf("For layer %v %v field had the following error: %v", lname, ConfigKeyFields, err)
+			return nil, fmt.Errorf("For layer(%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
 		}
 		fld := "geom"
 		geomfld, err := vc.String(ConfigKeyGeomField, &fld)
 		if err != nil {
-			return nil, fmt.Errorf("For layer %v : %v", lname, err)
+			return nil, fmt.Errorf("For layer(%v) %v : %v", i, lname, err)
 		}
 		fld = "gid"
 		idfld, err := vc.String(ConfigKeyGeomIDField, &fld)
 		if err != nil {
-			return nil, fmt.Errorf("For layer %v : %v", lname, err)
+			return nil, fmt.Errorf("For layer(%v) %v : %v", i, lname, err)
 		}
 		if idfld == geomfld {
-			return nil, fmt.Errorf("For layer %v: %v (%v) and %v field (%v) is the same!", lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+			return nil, fmt.Errorf("For layer(%v) %v: %v (%v) and %v field (%v) is the same!", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
 		}
 		var lsql string
 		if sql != "" {
 			// We need to make sure that the sql has a BBOX for the bounding box env.
 			if !strings.Contains(sql, BBOX) {
-				return nil, fmt.Errorf("SQL for layer %v does not contain "+BBOX+", entry.", lname)
+				return nil, fmt.Errorf("SQL for layer(%v) %v does not contain "+BBOX+", entry.", i, lname)
 			}
 			if !strings.Contains(sql, "*") {
 				if !strings.Contains(sql, geomfld) {
-					return nil, fmt.Errorf("SQL for layer %v does not contain the geometry field: %v", lname, geomfld)
+					return nil, fmt.Errorf("SQL for layer(%v) %v does not contain the geometry field: %v", i, lname, geomfld)
 				}
 				if !strings.Contains(sql, idfld) {
-					return nil, fmt.Errorf("SQL for layer %v does not contain the id field for the geometry: %v", lname, idfld)
+					return nil, fmt.Errorf("SQL for layer(%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
 				}
 			}
 			lsql = sql
@@ -211,7 +227,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		}
 	}
 	p := Provider{
-		srid:   srid,
+		srid:   int(srid),
 		layers: lyrs,
 		config: pgx.ConnPoolConfig{
 			ConnConfig: pgx.ConnConfig{
@@ -221,7 +237,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 				User:     user,
 				Password: password,
 			},
-			MaxConnections: maxcon,
+			MaxConnections: int(maxcon),
 		},
 	}
 	if p.pool, err = pgx.NewConnPool(p.config); err != nil {

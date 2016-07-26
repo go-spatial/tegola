@@ -46,7 +46,7 @@ func (m M) $fnName(key string, def $T_ptr)(v $T, err error){
         return v, fmt.Errorf("%v value is required.",key)
     }
     if v, ok = val.($T); !ok {
-        return \*def, fmt.Errorf("%v value needs to be of type ${T}.", key)
+        return \*def, fmt.Errorf("%v value needs to be of type ${T}. Value is of type %T", key, val)
     }
     return v, nil
 }
@@ -58,7 +58,7 @@ func (m M)$fnSliceName(key string)(v []$T, err error){
         return v,nil
     }
     if v, ok = val.([]$T); !ok {
-        return v, fmt.Errorf("%v value needs to be of type []${T}.", key)
+        return v, fmt.Errorf("%v value needs to be of type []${T}. Value is of type %T", key, val)
     }
     return v, nil
 }
