@@ -199,7 +199,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			// We need to do some work. We need to check to see Fields contains the geom and gid fields
 			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field
 			// list.
-			selectClause := "*"
+			selectClause := "ST_AsBinary(geom), gid"
 			if len(fields) != 0 {
 				var fgeom, fgid bool
 				for _, f := range fields {
@@ -263,6 +263,8 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	}
 	sql := strings.Replace(plyr.SQL, BBOX, bbox, -1)
 
+	log.Println("sql", sql)
+
 	layer = new(mvt.Layer)
 	layer.Name = layerName
 
@@ -294,7 +296,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				}
 			case plyr.IDFieldName:
 				if gid, ok = v.(uint64); !ok {
-					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v", plyr.IDFieldName, layerName)
+					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v: %T", plyr.IDFieldName, layerName, v)
 				}
 			default:
 				gtags[fdescs[i].Name] = vals[i]

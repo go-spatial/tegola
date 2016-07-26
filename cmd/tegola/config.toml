@@ -14,9 +14,8 @@ password = ""
 	[[providers.layers]]
 	name = "landuse" 			# will be encoded as the layer name in the tile
 	tablename = "gis.zoning_base_3857" # sql or table_name are required
-	geometry_fieldname = "wkb_geom"             # geom field. default is geom
-	id_fieldname = "fid"                   # geom id field. default is gid
-
+	geometry_fieldname = "geom"             # geom field. default is geom
+	id_fieldname = "gid"                   # geom id field. default is gid
 
 # maps are made up of layers
 [[maps]]

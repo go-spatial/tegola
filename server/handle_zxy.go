@@ -105,6 +105,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 					//	fetch layer from data provider
 					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
 					if err != nil {
+						log.Println("mvt layer error", err)
 						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
 						return
 					}
