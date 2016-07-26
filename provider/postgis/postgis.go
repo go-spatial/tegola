@@ -8,9 +8,9 @@ import (
 	"github.com/jackc/pgx"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/Util/dict"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
+	"github.com/terranodo/tegola/util/dict"
 	"github.com/terranodo/tegola/wkb"
 )
 
@@ -19,7 +19,7 @@ type layer struct {
 	// The SQL to use. !BBOX! token will be replaced by the envelope
 	SQL string
 	// The ID field name, this will default to 'gid' if not set to something other then empty string.
-	IDFieldname string
+	IDFieldName string
 	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
 	GeomFieldName string
 }
@@ -106,13 +106,13 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	port := int16(DefaultPort)
-	if port, err = c.Int16(ConfigKeyPort, &port); err != nil {
+	port := int(DefaultPort)
+	if port, err = c.Int(ConfigKeyPort, &port); err != nil {
 		return nil, err
 	}
 
-	maxcon := int8(DefaultMaxConn)
-	if maxcon, err = c.Int8(ConfigKeyMaxConn, &maxcon); err != nil {
+	maxcon := int(DefaultMaxConn)
+	if maxcon, err = c.Int(ConfigKeyMaxConn, &maxcon); err != nil {
 		return nil, err
 	}
 
@@ -139,24 +139,24 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		if err != nil {
 			return nil, fmt.Errorf("for %v layer %v has an error: %v", lname, ConfigKeySQL, err)
 		}
-		if tablename == "" && sql == "" {
-			return nil, fmt.Errorf("The %v or %v field for layer %v must be specified.", ConfigKeyTablename, ConfigKeySQLlname, lname)
+		if tblName == "" && sql == "" {
+			return nil, fmt.Errorf("The %v or %v field for layer %v must be specified.", ConfigKeyTablename, ConfigKeySQL, lname)
 		}
-		if tablename != "" && sql != "" {
+		if tblName != "" && sql != "" {
 			log.Printf("Both %v and %v field are specified for layer %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, lname)
 		}
 
-		fields, err := vm.StringSlice(ConfigKeyFields)
+		fields, err := vc.StringSlice(ConfigKeyFields)
 		if err != nil {
 			return nil, fmt.Errorf("For layer %v %v field had the following error: %v", lname, ConfigKeyFields, err)
 		}
 		fld := "geom"
-		geomfld, err := vm.String(ConfigKeyGeomField, &fld)
+		geomfld, err := vc.String(ConfigKeyGeomField, &fld)
 		if err != nil {
 			return nil, fmt.Errorf("For layer %v : %v", lname, err)
 		}
 		fld = "gid"
-		idfld, err := vm.String(ConfigKeyGeomIDField, &fld)
+		idfld, err := vc.String(ConfigKeyGeomIDField, &fld)
 		if err != nil {
 			return nil, fmt.Errorf("For layer %v : %v", lname, err)
 		}
@@ -191,22 +191,22 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 						fgeom = true
 					}
 					if f == idfld {
-						idfld = true
+						fgid = true
 					}
 				}
 				if !fgeom {
 					fields = append(fields, geomfld)
 				}
-				if !idfld {
+				if !fgid {
 					fields = append(fields, idfld)
 				}
 				selectClause = strings.Join(fields, ",")
 			}
-			lsql = fmt.Sprintf(stdSQL, selectClause, tablename, geomfld)
+			lsql = fmt.Sprintf(stdSQL, selectClause, tblName, geomfld)
 		}
 		lyrs[lname] = layer{
 			SQL:           lsql,
-			IDFieldname:   idfld,
+			IDFieldName:   idfld,
 			GeomFieldName: geomfld,
 		}
 	}
@@ -214,9 +214,9 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		srid:   srid,
 		layers: lyrs,
 		config: pgx.ConnPoolConfig{
-			ConnConfig: pgx.Config{
+			ConnConfig: pgx.ConnConfig{
 				Host:     host,
-				Port:     port,
+				Port:     uint16(port),
 				Database: db,
 				User:     user,
 				Password: password,
@@ -224,7 +224,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			MaxConnections: maxcon,
 		},
 	}
-	if p.connPool, err = pgx.NewConnPool(p.config); err != nil {
+	if p.pool, err = pgx.NewConnPool(p.config); err != nil {
 		return nil, fmt.Errorf("Failed while creating connection pool: %v", err)
 	}
 
@@ -268,7 +268,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 		}
 		gtags := make(map[string]interface{})
 		for i, v := range vals {
-			switch fdecs[i].Name {
+			switch fdescs[i].Name {
 			case plyr.GeomFieldName:
 				if geobytes, ok = v.([]byte); !ok {
 					return nil, fmt.Errorf("Was unable to convert geometry field(%v) into bytes for layer %v.", plyr.GeomFieldName, layerName)
@@ -278,10 +278,10 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				}
 			case plyr.IDFieldName:
 				if gid, ok = v.(uint64); !ok {
-					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v", fdecs[i].IDFieldname, layerName)
+					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v", plyr.IDFieldName, layerName)
 				}
 			default:
-				gtags[fdecs[i].Name] = vals[i]
+				gtags[fdescs[i].Name] = vals[i]
 			}
 		}
 		for k, v := range tags {

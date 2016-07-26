@@ -8,16 +8,20 @@ push @types, "int$_", "uint$_" for (qw(8 16 32 64));
 
 say <<GOCODE;
 /* This file was generated using gen.pl and go fmt. */
+// dict is a helper function that allow one to easily get concreate values out of a map[string]interface{}
 package dict
 
 type M map[string]interface{}
 
+// Dict is to obtain a map[string]interface{} that has already been cast to a M type.
 func (m M)Dict(key string)(v M, err error){
     var val interface{}
+    var mv map[string]interface{}
     var ok bool
-    if val, ok = config[key]; !ok {
+    if val, ok = m[key]; !ok {
         return v, fmt.Errorf("%v value is required.",key)
     }
+
     if mv, ok = val.(map[string]interface{}); !ok {
         return v, fmt.Errorf("%v value needs to be of type map[string]interface{}.", key)
     }
@@ -35,7 +39,7 @@ for my $T ( @types ) {
 func (m M) $fnName(key string, def $T_ptr)(v $T, err error){
     var val interface{}
     var ok bool
-    if val, ok = config[key]; !ok {
+    if val, ok = m[key]; !ok {
         if def != nil {
             return \*def, nil
         }
@@ -50,7 +54,7 @@ func (m M) $fnName(key string, def $T_ptr)(v $T, err error){
 func (m M)$fnSliceName(key string)(v []$T, err error){
     var val interface{}
     var ok bool
-    if val, ok = config[key]; !ok {
+    if val, ok = m[key]; !ok {
         return v,nil
     }
     if v, ok = val.([]$T); !ok {
