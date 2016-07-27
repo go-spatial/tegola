@@ -16,6 +16,8 @@ import (
 
 // layer holds information about a query.
 type layer struct {
+	// The Name of the layer
+	Name string
 	// The SQL to use. !BBOX! token will be replaced by the envelope
 	SQL string
 	// The ID field name, this will default to 'gid' if not set to something other then empty string.
@@ -41,6 +43,9 @@ FROM
 WHERE
 	%[3]v && ` + BBOX
 
+// SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
+const fldsSQL = "SELECT * FROM %[1]v LIMIT 0;"
+
 const Name = "postgis"
 const DefaultPort = 5432
 const DefaultSRID = 3857
@@ -49,13 +54,12 @@ const DefaultMaxConn = 5
 const (
 	ConfigKeyHost        = "host"
 	ConfigKeyPort        = "port"
-	ConfigKeyDB          = "database"
+	ConfigKeyDB          = "db"
 	ConfigKeyUser        = "user"
 	ConfigKeyPassword    = "password"
 	ConfigKeyMaxConn     = "max_connection"
 	ConfigKeySRID        = "srid"
 	ConfigKeyLayers      = "layers"
-	ConfigKeyLayerName   = "name"
 	ConfigKeyTablename   = "tablename"
 	ConfigKeySQL         = "sql"
 	ConfigKeyFields      = "fields"
@@ -65,6 +69,49 @@ const (
 
 func init() {
 	provider.Register(Name, NewProvider)
+}
+
+// genSQL will fill in the SQL field of a layer given a pool, and list of fields.
+func (l *layer) genSQL(pool *pgx.ConnPool, tblname string, flds []string) (err error) {
+
+	if len(flds) == 0 {
+		// We need to hit the database to see what the fields are.
+		rows, err := pool.Query(fmt.Sprintf(fldsSQL, tblname))
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		fdescs := rows.FieldDescriptions()
+		if len(fdescs) == 0 {
+			return fmt.Errorf("No fields were returned for table %v", tblname)
+		}
+		for i, _ := range fdescs {
+			flds = append(flds, fdescs[i].Name)
+		}
+
+	}
+	var fgeom int
+	var fgid bool
+	for i, f := range flds {
+		if f == l.GeomFieldName {
+			fgeom = i
+		}
+		if f == l.IDFieldName {
+			fgid = true
+		}
+	}
+
+	if fgeom == 0 {
+		flds = append(flds, fmt.Sprintf("ST_AsBinary(%v)", l.GeomFieldName))
+	} else {
+		flds[fgeom] = fmt.Sprintf("ST_AsBinary(%v)", l.GeomFieldName)
+	}
+	if !fgid {
+		flds = append(flds, l.IDFieldName)
+	}
+	selectClause := strings.Join(flds, ",")
+	l.SQL = fmt.Sprintf(stdSQL, selectClause, tblname, l.GeomFieldName)
+	return nil
 }
 
 // NewProvider Setups and returns a new postgis provide or an error; if something
@@ -107,128 +154,28 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	port := int64(DefaultPort)
-	if port, err = c.Int64(ConfigKeyPort, &port); err != nil {
+	port := int(DefaultPort)
+	if port, err = c.Int(ConfigKeyPort, &port); err != nil {
 		return nil, err
 	}
 
-	maxcon := int64(DefaultMaxConn)
-	if maxcon, err = c.Int64(ConfigKeyMaxConn, &maxcon); err != nil {
+	maxcon := int(DefaultMaxConn)
+	if maxcon, err = c.Int(ConfigKeyMaxConn, &maxcon); err != nil {
 		return nil, err
 	}
 
-	var srid = int64(DefaultSRID)
-	if srid, err = c.Int64(ConfigKeySRID, &srid); err != nil {
+	var srid = int(DefaultSRID)
+	if srid, err = c.Int(ConfigKeySRID, &srid); err != nil {
 		return nil, err
 	}
 
-	layers, ok := c[ConfigKeyLayers].([]map[string]interface{})
+	layers, ok := c[ConfigKeyLayers].(map[string]map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Expected %v to be a []map[string]interface{}. Value is of type %T", ConfigKeyLayers, c[ConfigKeyLayers])
+		return nil, fmt.Errorf("Expected %v to be a map[string]map[string]interface{}", ConfigKeyLayers)
 	}
 
-	lyrs := make(map[string]layer)
-	zerostr := ""
-
-	seenlyrs := make(map[string]int)
-
-	for i, v := range layers {
-
-		vc := dict.M(v)
-
-		lname, err := vc.String(ConfigKeyLayerName, nil)
-		if err != nil {
-			return nil, fmt.Errorf("for %v layer(%v)  has an error: %v", i, ConfigKeyLayerName, err)
-		}
-
-		// Check to see if we have seen this name before.
-		if at, ok := seenlyrs[lname]; ok {
-			return nil, fmt.Errorf("Already saw %v(%v) for layer(%v) at Layer(%v) ", ConfigKeyLayerName, lname, i, at)
-		}
-		seenlyrs[lname] = i
-
-		tblName, err := vc.String(ConfigKeyTablename, &zerostr)
-		if err != nil {
-			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
-		}
-		sql, err := vc.String(ConfigKeySQL, &zerostr)
-		if err != nil {
-			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
-		}
-		if tblName == "" && sql == "" {
-			return nil, fmt.Errorf("The %v or %v field for layer(%v) %v must be specified.", ConfigKeyTablename, ConfigKeySQL, i, lname)
-		}
-		if tblName != "" && sql != "" {
-			log.Printf("Both %v and %v field are specified for layer(%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
-		}
-
-		fields, err := vc.StringSlice(ConfigKeyFields)
-		if err != nil {
-			return nil, fmt.Errorf("For layer(%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
-		}
-		fld := "geom"
-		geomfld, err := vc.String(ConfigKeyGeomField, &fld)
-		if err != nil {
-			return nil, fmt.Errorf("For layer(%v) %v : %v", i, lname, err)
-		}
-		fld = "gid"
-		idfld, err := vc.String(ConfigKeyGeomIDField, &fld)
-		if err != nil {
-			return nil, fmt.Errorf("For layer(%v) %v : %v", i, lname, err)
-		}
-		if idfld == geomfld {
-			return nil, fmt.Errorf("For layer(%v) %v: %v (%v) and %v field (%v) is the same!", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
-		}
-		var lsql string
-		if sql != "" {
-			// We need to make sure that the sql has a BBOX for the bounding box env.
-			if !strings.Contains(sql, BBOX) {
-				return nil, fmt.Errorf("SQL for layer(%v) %v does not contain "+BBOX+", entry.", i, lname)
-			}
-			if !strings.Contains(sql, "*") {
-				if !strings.Contains(sql, geomfld) {
-					return nil, fmt.Errorf("SQL for layer(%v) %v does not contain the geometry field: %v", i, lname, geomfld)
-				}
-				if !strings.Contains(sql, idfld) {
-					return nil, fmt.Errorf("SQL for layer(%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
-				}
-			}
-			lsql = sql
-		} else {
-			// Tablename and Fields will be used to
-			// We need to do some work. We need to check to see Fields contains the geom and gid fields
-			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field
-			// list.
-			selectClause := "ST_AsBinary(geom), gid"
-			if len(fields) != 0 {
-				var fgeom, fgid bool
-				for _, f := range fields {
-					if f == geomfld {
-						fgeom = true
-					}
-					if f == idfld {
-						fgid = true
-					}
-				}
-				if !fgeom {
-					fields = append(fields, geomfld)
-				}
-				if !fgid {
-					fields = append(fields, idfld)
-				}
-				selectClause = strings.Join(fields, ",")
-			}
-			lsql = fmt.Sprintf(stdSQL, selectClause, tblName, geomfld)
-		}
-		lyrs[lname] = layer{
-			SQL:           lsql,
-			IDFieldName:   idfld,
-			GeomFieldName: geomfld,
-		}
-	}
 	p := Provider{
-		srid:   int(srid),
-		layers: lyrs,
+		srid: srid,
 		config: pgx.ConnPoolConfig{
 			ConnConfig: pgx.ConnConfig{
 				Host:     host,
@@ -237,12 +184,86 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 				User:     user,
 				Password: password,
 			},
-			MaxConnections: int(maxcon),
+			MaxConnections: maxcon,
 		},
 	}
+
 	if p.pool, err = pgx.NewConnPool(p.config); err != nil {
 		return nil, fmt.Errorf("Failed while creating connection pool: %v", err)
 	}
+
+	lyrs := make(map[string]layer)
+
+	for lname, v := range layers {
+		vc := dict.M(v)
+
+		fields, err := vc.StringSlice(ConfigKeyFields)
+		if err != nil {
+			return nil, fmt.Errorf("For layer %v %v field had the following error: %v", lname, ConfigKeyFields, err)
+		}
+		geomfld := "geom"
+		geomfld, err = vc.String(ConfigKeyGeomField, &geomfld)
+		if err != nil {
+			return nil, fmt.Errorf("For layer %v : %v", lname, err)
+		}
+		idfld := "gid"
+		idfld, err = vc.String(ConfigKeyGeomIDField, &idfld)
+		if err != nil {
+			return nil, fmt.Errorf("For layer %v : %v", lname, err)
+		}
+		if idfld == geomfld {
+			return nil, fmt.Errorf("For layer %v: %v (%v) and %v field (%v) is the same!", lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+		}
+
+		var tblName string
+		tblName, err = vc.String(ConfigKeyTablename, &tblName)
+		if err != nil {
+			return nil, fmt.Errorf("for %v layer %v has an error: %v", lname, ConfigKeyTablename, err)
+		}
+		var sql string
+
+		sql, err = vc.String(ConfigKeySQL, &sql)
+
+		if err != nil {
+			return nil, fmt.Errorf("for %v layer %v has an error: %v", lname, ConfigKeySQL, err)
+		}
+
+		if tblName == "" && sql == "" {
+			return nil, fmt.Errorf("The %v or %v field for layer %v must be specified.", ConfigKeyTablename, ConfigKeySQL, lname)
+		}
+		if tblName != "" && sql != "" {
+			log.Printf("Both %v and %v field are specified for layer %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, lname)
+		}
+
+		l := layer{
+			Name:          lname,
+			IDFieldName:   idfld,
+			GeomFieldName: geomfld,
+		}
+		if sql != "" {
+			// We need to make sure that the sql has a BBOX for the bounding box env.
+			if !strings.Contains(sql, BBOX) {
+				return nil, fmt.Errorf("SQL for layer %v does not contain "+BBOX+", entry.", lname)
+			}
+			if !strings.Contains(sql, "*") {
+				if !strings.Contains(sql, geomfld) {
+					return nil, fmt.Errorf("SQL for layer %v does not contain the geometry field: %v", lname, geomfld)
+				}
+				if !strings.Contains(sql, idfld) {
+					return nil, fmt.Errorf("SQL for layer %v does not contain the id field for the geometry: %v", lname, idfld)
+				}
+			}
+			l.SQL = sql
+		} else {
+			// Tablename and Fields will be used to
+			// We need to do some work. We need to check to see Fields contains the geom and gid fields
+			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field
+			// list.
+			l.genSQL(p.pool, tblName, fields)
+		}
+		lyrs[lname] = l
+	}
+	p.layers = lyrs
 
 	return p, nil
 }
@@ -262,8 +283,6 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
 	sql := strings.Replace(plyr.SQL, BBOX, bbox, -1)
-
-	log.Println("sql", sql)
 
 	layer = new(mvt.Layer)
 	layer.Name = layerName
@@ -295,8 +314,29 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 					return nil, fmt.Errorf("Was unable to decode geometry field(%v) into wkb for layer %v.", plyr.GeomFieldName, layerName)
 				}
 			case plyr.IDFieldName:
-				if gid, ok = v.(uint64); !ok {
-					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v: %T", plyr.IDFieldName, layerName, v)
+				switch aval := v.(type) {
+				case int64:
+					gid = uint64(aval)
+				case uint64:
+					gid = aval
+				case int:
+					gid = uint64(aval)
+				case uint:
+					gid = uint64(aval)
+				case int8:
+					gid = uint64(aval)
+				case uint8:
+					gid = uint64(aval)
+				case int16:
+					gid = uint64(aval)
+				case uint16:
+					gid = uint64(aval)
+				case int32:
+					gid = uint64(aval)
+				case uint32:
+					gid = uint64(aval)
+				default:
+					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v", plyr.IDFieldName, layerName)
 				}
 			default:
 				gtags[fdescs[i].Name] = vals[i]
