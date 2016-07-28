@@ -54,7 +54,7 @@ const DefaultMaxConn = 5
 const (
 	ConfigKeyHost        = "host"
 	ConfigKeyPort        = "port"
-	ConfigKeyDB          = "db"
+	ConfigKeyDB          = "database"
 	ConfigKeyUser        = "user"
 	ConfigKeyPassword    = "password"
 	ConfigKeyMaxConn     = "max_connection"
@@ -90,7 +90,7 @@ func (l *layer) genSQL(pool *pgx.ConnPool, tblname string, flds []string) (err e
 		}
 
 	}
-	var fgeom int
+	var fgeom int = -1
 	var fgid bool
 	for i, f := range flds {
 		if f == l.GeomFieldName {
@@ -101,7 +101,7 @@ func (l *layer) genSQL(pool *pgx.ConnPool, tblname string, flds []string) (err e
 		}
 	}
 
-	if fgeom == 0 {
+	if fgeom == -1 {
 		flds = append(flds, fmt.Sprintf("ST_AsBinary(%v)", l.GeomFieldName))
 	} else {
 		flds[fgeom] = fmt.Sprintf("ST_AsBinary(%v)", l.GeomFieldName)
@@ -111,6 +111,7 @@ func (l *layer) genSQL(pool *pgx.ConnPool, tblname string, flds []string) (err e
 	}
 	selectClause := strings.Join(flds, ",")
 	l.SQL = fmt.Sprintf(stdSQL, selectClause, tblname, l.GeomFieldName)
+	log.Printf("The SQL for layer %v is %v.", l.Name, l.SQL)
 	return nil
 }
 
@@ -154,8 +155,8 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	port := int(DefaultPort)
-	if port, err = c.Int(ConfigKeyPort, &port); err != nil {
+	port := int64(DefaultPort)
+	if port, err = c.Int64(ConfigKeyPort, &port); err != nil {
 		return nil, err
 	}
 
