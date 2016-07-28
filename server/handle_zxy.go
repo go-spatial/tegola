@@ -102,6 +102,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			for _, l := range layers {
 				//	check if layer is within our zoom levels
 				if l.MinZoom <= tile.Z && l.MaxZoom >= tile.Z {
+					log.Printf("default tags %+v", l.DefaultTags)
 					//	fetch layer from data provider
 					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
 					if err != nil {

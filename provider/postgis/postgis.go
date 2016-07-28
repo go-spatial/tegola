@@ -103,16 +103,16 @@ func (l *layer) genSQL(pool *pgx.ConnPool, tblname string, flds []string) (err e
 	}
 
 	if fgeom == -1 {
-		flds = append(flds, fmt.Sprintf("ST_AsBinary(%v)", l.GeomFieldName))
+		flds = append(flds, fmt.Sprintf("ST_AsBinary(%v) AS %[1]v", l.GeomFieldName))
 	} else {
-		flds[fgeom] = fmt.Sprintf("ST_AsBinary(%v)", l.GeomFieldName)
+		flds[fgeom] = fmt.Sprintf("ST_AsBinary(%v) AS %[1]v", l.GeomFieldName)
 	}
 	if !fgid {
 		flds = append(flds, l.IDFieldName)
 	}
 	selectClause := strings.Join(flds, ",")
 	l.SQL = fmt.Sprintf(stdSQL, selectClause, tblname, l.GeomFieldName)
-	log.Printf("The SQL for layer %v is %v.", l.Name, l.SQL)
+	log.Printf("The SQL for layer %v is:\n%v\n\n.", l.Name, l.SQL)
 	return nil
 }
 
@@ -299,6 +299,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	layer = new(mvt.Layer)
 	layer.Name = layerName
 
+	log.Printf("The SQL is: %v", sql)
 	rows, err := p.pool.Query(sql)
 	if err != nil {
 		return nil, err
@@ -359,6 +360,13 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 			if _, ok = gtags[k]; !ok {
 				gtags[k] = v
 			}
+		}
+		{
+			var keys []string
+			for k, _ := range gtags {
+				keys = append(keys, k)
+			}
+			log.Printf("The tags are: ( %v ) for layer: %v", strings.Join(keys, ", "), layerName)
 		}
 		// Add features to Layer
 		layer.AddFeatures(mvt.Feature{
