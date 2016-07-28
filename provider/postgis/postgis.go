@@ -60,6 +60,7 @@ const (
 	ConfigKeyMaxConn     = "max_connection"
 	ConfigKeySRID        = "srid"
 	ConfigKeyLayers      = "layers"
+	ConfigKeyLayerName   = "name"
 	ConfigKeyTablename   = "tablename"
 	ConfigKeySQL         = "sql"
 	ConfigKeyFields      = "fields"
@@ -170,11 +171,6 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	layers, ok := c[ConfigKeyLayers].(map[string]map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("Expected %v to be a map[string]map[string]interface{}", ConfigKeyLayers)
-	}
-
 	p := Provider{
 		srid: srid,
 		config: pgx.ConnPoolConfig{
@@ -193,47 +189,62 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, fmt.Errorf("Failed while creating connection pool: %v", err)
 	}
 
-	lyrs := make(map[string]layer)
+	layers, ok := c[ConfigKeyLayers].([]map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Expected %v to be a []map[string]interface{}", ConfigKeyLayers)
+	}
 
-	for lname, v := range layers {
+	lyrs := make(map[string]layer)
+	lyrsSeen := make(map[string]int)
+
+	for i, v := range layers {
 		vc := dict.M(v)
+
+		lname, err := vc.String(ConfigKeyLayerName, nil)
+		if err != nil {
+			return nil, fmt.Errorf("For layer(%v) we got the following error trying to get the layer's name field: %v", i, err)
+		}
+		if j, ok := lyrsSeen[lname]; ok {
+			return nil, fmt.Errorf("%v layer name is duplicated in both layer %v and layer %v", lname, i, j)
+		}
+		lyrsSeen[lname] = i
 
 		fields, err := vc.StringSlice(ConfigKeyFields)
 		if err != nil {
-			return nil, fmt.Errorf("For layer %v %v field had the following error: %v", lname, ConfigKeyFields, err)
+			return nil, fmt.Errorf("For layer(%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
 		}
 		geomfld := "geom"
 		geomfld, err = vc.String(ConfigKeyGeomField, &geomfld)
 		if err != nil {
-			return nil, fmt.Errorf("For layer %v : %v", lname, err)
+			return nil, fmt.Errorf("For layer(%v) %v : %v", i, lname, err)
 		}
 		idfld := "gid"
 		idfld, err = vc.String(ConfigKeyGeomIDField, &idfld)
 		if err != nil {
-			return nil, fmt.Errorf("For layer %v : %v", lname, err)
+			return nil, fmt.Errorf("For layer(%v) %v : %v", i, lname, err)
 		}
 		if idfld == geomfld {
-			return nil, fmt.Errorf("For layer %v: %v (%v) and %v field (%v) is the same!", lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+			return nil, fmt.Errorf("For layer(%v) %v: %v (%v) and %v field (%v) is the same!", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
 		}
 
 		var tblName string
 		tblName, err = vc.String(ConfigKeyTablename, &tblName)
 		if err != nil {
-			return nil, fmt.Errorf("for %v layer %v has an error: %v", lname, ConfigKeyTablename, err)
+			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
 		}
 		var sql string
 
 		sql, err = vc.String(ConfigKeySQL, &sql)
 
 		if err != nil {
-			return nil, fmt.Errorf("for %v layer %v has an error: %v", lname, ConfigKeySQL, err)
+			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
 		}
 
 		if tblName == "" && sql == "" {
-			return nil, fmt.Errorf("The %v or %v field for layer %v must be specified.", ConfigKeyTablename, ConfigKeySQL, lname)
+			return nil, fmt.Errorf("The %v or %v field for layer(%v) %v must be specified.", ConfigKeyTablename, ConfigKeySQL, i, lname)
 		}
 		if tblName != "" && sql != "" {
-			log.Printf("Both %v and %v field are specified for layer %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, lname)
+			log.Printf("Both %v and %v field are specified for layer(%v) %v, using only %v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
 		}
 
 		l := layer{
@@ -244,14 +255,14 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		if sql != "" {
 			// We need to make sure that the sql has a BBOX for the bounding box env.
 			if !strings.Contains(sql, BBOX) {
-				return nil, fmt.Errorf("SQL for layer %v does not contain "+BBOX+", entry.", lname)
+				return nil, fmt.Errorf("SQL for layer(%v) %v does not contain "+BBOX+", entry.", i, lname)
 			}
 			if !strings.Contains(sql, "*") {
 				if !strings.Contains(sql, geomfld) {
-					return nil, fmt.Errorf("SQL for layer %v does not contain the geometry field: %v", lname, geomfld)
+					return nil, fmt.Errorf("SQL for layer(%v) %v does not contain the geometry field: %v", i, lname, geomfld)
 				}
 				if !strings.Contains(sql, idfld) {
-					return nil, fmt.Errorf("SQL for layer %v does not contain the id field for the geometry: %v", lname, idfld)
+					return nil, fmt.Errorf("SQL for layer(%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
 				}
 			}
 			l.SQL = sql
