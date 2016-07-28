@@ -16,6 +16,11 @@ password = ""
 	tablename = "gis.zoning_base_3857" # sql or table_name are required
 	geometry_fieldname = "geom"             # geom field. default is geom
 	id_fieldname = "gid"                   # geom id field. default is gid
+	sql = """SELECT gid, ST_AsBinary(geom)
+		FROM
+    gis.zoning_base_3857
+		WHERE
+    geom && !BBOX!;"""
 
 # maps are made up of layers
 [[maps]]
