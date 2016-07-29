@@ -287,7 +287,7 @@ func (p Provider) LayerNames() (names []string) {
 }
 
 func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
-	textent := tile.Extent()
+	textent := tile.BoundingBox()
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", textent.Minx, textent.Miny, textent.Maxx, textent.Maxy, p.srid)
 	plyr, ok := p.layers[layerName]
 	if !ok {

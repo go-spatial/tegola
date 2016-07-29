@@ -6,9 +6,12 @@ import (
 	"github.com/terranodo/tegola/server"
 )
 
-var configFile string
-var logFile string
-var logFormat string
+var (
+	configFile string
+	logFile    string
+	logFormat  string
+	port       string
+)
 
 func init() {
 	flag.StringVar(&configFile, "config-file", "config.toml", "Path to a toml config file. Can be absolute or relative.")
@@ -22,4 +25,5 @@ Available fields:
     {{.X}} : The X Coordinate.
     {{.Y}} : The Y Coordinate.
 `)
+	flag.StringVar(&port, "port", ":8080", "Webserver port to bind to")
 }
