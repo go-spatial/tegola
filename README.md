@@ -1,5 +1,7 @@
 # Tegola
 
+[![Build Status](https://travis-ci.org/terranodo/tegola.svg?branch=master)](https://travis-ci.org/terranodo/tegola)
+
 Tegola is a high performance vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) leveraging PostGIS as the data provider.
 
 ## Near term goals
@@ -61,13 +63,13 @@ password = ""			# postgis database password
 	geometry_fieldname = "geom"			# geom field. default is geom
 	id_fieldname = "gid"				# geom id field. default is gid
 	sql = """
-		SELECT 
+		SELECT
 			gid,
 			ST_AsBinary(geom) AS geom
 		FROM
 			gis.rivers
 		WHERE
-			geom && !BBOX!				
+			geom && !BBOX!
 	"""
 
 # maps are made up of layers
@@ -97,7 +99,7 @@ Tegola currently supports the following command flags:
 - `config-file` - path to the config.toml file.
 - `port` - port for the webserver to bind to. i.e. :8080
 - `log-file` - path to write webserver access logs
-- `log-format` - The format that the logger will log with. Available fields: 
+- `log-format` - The format that the logger will log with. Available fields:
   - `{{.Time}}` : The current Date Time in RFC 2822 format.
   - `{{.RequestIP}}` : The IP address of the the requester.
   - `{{.Z}}` : The Zoom level.

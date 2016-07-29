@@ -20,16 +20,16 @@ func TestEncodeGeometry(t *testing.T) {
 		}
 	*/
 	testcases := []struct {
-		geo    tegola.Geometry
-		typ    vectorTile.Tile_GeomType
-		extent tegola.Extent
-		egeo   []uint32
-		eerr   error
+		geo  tegola.Geometry
+		typ  vectorTile.Tile_GeomType
+		bbox tegola.BoundingBox
+		egeo []uint32
+		eerr error
 	}{
 		{
 			geo: nil,
 			typ: vectorTile.Tile_UNKNOWN,
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 0,
 				Miny: 0,
 				Maxx: 4096,
@@ -41,7 +41,7 @@ func TestEncodeGeometry(t *testing.T) {
 		{
 			geo: &basic.Point{1, 1},
 			typ: vectorTile.Tile_POINT,
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 0,
 				Miny: 0,
 				Maxx: 4096,
@@ -52,7 +52,7 @@ func TestEncodeGeometry(t *testing.T) {
 		{
 			geo: &basic.Point{25, 17},
 			typ: vectorTile.Tile_POINT,
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 0,
 				Miny: 0,
 				Maxx: 4096,
@@ -63,7 +63,7 @@ func TestEncodeGeometry(t *testing.T) {
 		{
 			geo: &basic.MultiPoint{basic.Point{5, 7}, basic.Point{3, 2}},
 			typ: vectorTile.Tile_POINT,
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 0,
 				Miny: 0,
 				Maxx: 4096,
@@ -74,7 +74,7 @@ func TestEncodeGeometry(t *testing.T) {
 		{
 			geo: &basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
 			typ: vectorTile.Tile_LINESTRING,
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 0,
 				Miny: 0,
 				Maxx: 4096,
@@ -88,7 +88,7 @@ func TestEncodeGeometry(t *testing.T) {
 				basic.Line{basic.Point{1, 1}, basic.Point{3, 5}},
 			},
 			typ: vectorTile.Tile_LINESTRING,
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 0,
 				Miny: 0,
 				Maxx: 4096,
@@ -105,7 +105,7 @@ func TestEncodeGeometry(t *testing.T) {
 				},
 			},
 			typ: vectorTile.Tile_POLYGON,
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 0,
 				Miny: 0,
 				Maxx: 4096,
@@ -139,7 +139,7 @@ func TestEncodeGeometry(t *testing.T) {
 				},
 			},
 			typ: vectorTile.Tile_POLYGON,
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 0,
 				Miny: 0,
 				Maxx: 4096,
@@ -149,7 +149,7 @@ func TestEncodeGeometry(t *testing.T) {
 		},
 	}
 	for _, tcase := range testcases {
-		g, gtype, err := encodeGeometry(tcase.geo, tcase.extent, 4096)
+		g, gtype, err := encodeGeometry(tcase.geo, tcase.bbox, 4096)
 		if tcase.eerr != err {
 			t.Errorf("Expected error (%v) got (%v) instead", tcase.eerr, err)
 		}
@@ -198,27 +198,27 @@ func TestNewFeature(t *testing.T) {
 func TestNormalizePoint(t *testing.T) {
 	testcases := []struct {
 		point       basic.Point
-		extent      tegola.Extent
-		nx, ny      float64
+		bbox        tegola.BoundingBox
+		nx, ny      int64
 		layerExtent int
 	}{
 		{
 			point: basic.Point{960000, 6002729},
-			extent: tegola.Extent{
+			bbox: tegola.BoundingBox{
 				Minx: 958826.08,
 				Miny: 5987771.04,
 				Maxx: 978393.96,
 				Maxy: 6007338.92,
 			},
-			nx:          245.7280155029656,
-			ny:          3131.0394462762547,
+			nx:          245,
+			ny:          3131,
 			layerExtent: 4096,
 		},
 	}
 
 	for i, tcase := range testcases {
 		//	new cursor
-		c := newCursor(tcase.extent, tcase.layerExtent)
+		c := newCursor(tcase.bbox, tcase.layerExtent)
 
 		nx, ny := c.ScalePoint(&tcase.point)
 		if nx != tcase.nx {

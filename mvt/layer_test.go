@@ -22,7 +22,7 @@ func newTileLayer(name string, keys []string, values []*vectorTile.Tile_Value, f
 }
 
 func TestLayer(t *testing.T) {
-	baseExtent := tegola.Extent{
+	baseBBox := tegola.BoundingBox{
 		Minx: 0,
 		Miny: 0,
 		Maxx: 4096,
@@ -31,7 +31,7 @@ func TestLayer(t *testing.T) {
 	testcases := []struct {
 		layer   *Layer
 		vtlayer *vectorTile.Tile_Layer
-		extent  tegola.Extent
+		bbox    tegola.BoundingBox
 		eerr    error
 	}{
 		{
@@ -39,7 +39,7 @@ func TestLayer(t *testing.T) {
 				Name: "nofeatures",
 			},
 			vtlayer: newTileLayer("nofeatures", nil, nil, nil),
-			extent:  baseExtent,
+			bbox:    baseBBox,
 		},
 		{
 			layer: &Layer{
@@ -57,7 +57,7 @@ func TestLayer(t *testing.T) {
 			// features should not be nil, when we start comparing features this will fail.
 			// But for now it's okay.
 			vtlayer: newTileLayer("onefeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag")}, []*vectorTile.Tile_Feature{nil}),
-			extent:  baseExtent,
+			bbox:    baseBBox,
 		},
 		{
 			layer: &Layer{
@@ -88,11 +88,11 @@ func TestLayer(t *testing.T) {
 			// features should not be nil, when we start comparing features this will fail.
 			// But for now it's okay.
 			vtlayer: newTileLayer("twofeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag1")}, []*vectorTile.Tile_Feature{nil, nil}),
-			extent:  baseExtent,
+			bbox:    baseBBox,
 		},
 	}
 	for i, tcase := range testcases {
-		vt, err := tcase.layer.VTileLayer(tcase.extent)
+		vt, err := tcase.layer.VTileLayer(tcase.bbox)
 		if err != tcase.eerr {
 			t.Errorf("For Test %v: Got unexpected error. Expected %v Got %v", i, tcase.eerr, err)
 		}

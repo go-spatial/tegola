@@ -64,19 +64,19 @@ func TestTileBBox(t *testing.T) {
 	}
 
 	for i, test := range testcases {
-		extent := test.tile.Extent()
+		bbox := test.tile.BoundingBox()
 
-		if extent.Minx != test.minx {
-			t.Errorf("Failed test %v. Expected minx (%v), got (%v)", i, test.minx, extent.Minx)
+		if bbox.Minx != test.minx {
+			t.Errorf("Failed test %v. Expected minx (%v), got (%v)", i, test.minx, bbox.Minx)
 		}
-		if extent.Miny != test.miny {
-			t.Errorf("Failed test %v. Expected miny (%v), got (%v)", i, test.miny, extent.Miny)
+		if bbox.Miny != test.miny {
+			t.Errorf("Failed test %v. Expected miny (%v), got (%v)", i, test.miny, bbox.Miny)
 		}
-		if extent.Maxx != test.maxx {
-			t.Errorf("Failed test %v. Expected maxx (%v), got (%v)", i, test.maxx, extent.Maxx)
+		if bbox.Maxx != test.maxx {
+			t.Errorf("Failed test %v. Expected maxx (%v), got (%v)", i, test.maxx, bbox.Maxx)
 		}
-		if extent.Maxy != test.maxy {
-			t.Errorf("Failed test %v. Expected maxy (%v), got (%v)", i, test.maxy, extent.Maxy)
+		if bbox.Maxy != test.maxy {
+			t.Errorf("Failed test %v. Expected maxy (%v), got (%v)", i, test.maxy, bbox.Maxy)
 		}
 	}
 }
