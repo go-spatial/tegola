@@ -128,7 +128,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	generate our vector tile
-		vtile, err := mvtTile.VTile(tile.Extent())
+		vtile, err := mvtTile.VTile(tile.BoundingBox())
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
@@ -170,8 +170,8 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 //	creates a debug layer with z/x/y encoded as a point
 func debugLayer(tile tegola.Tile) *mvt.Layer {
-	//	get tile extent
-	ext := tile.Extent()
+	//	get tile bounding box
+	ext := tile.BoundingBox()
 
 	//	create a new layer and name it
 	layer := mvt.Layer{

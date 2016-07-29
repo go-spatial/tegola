@@ -154,8 +154,6 @@ func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider,
 
 	//	iterate providers
 	for _, p := range providers {
-		log.Printf("provider %v", p)
-
 		//	lookup our proivder name
 		n, ok := p["name"]
 		if !ok {

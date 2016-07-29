@@ -62,7 +62,7 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(keys []string, vals []interface{}, extent tegola.Extent, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keys, vals, f); err != nil {
@@ -127,7 +127,7 @@ type cursor struct {
 	y int64
 
 	// The diamentions for the screen tile.
-	tile tegola.Extent
+	tile tegola.BoundingBox
 
 	// The extent — it is an int, but to make computations easier and not lose precision
 	// Untill we convert the ∆'s to int32.
@@ -138,7 +138,7 @@ type cursor struct {
 	yspan float64
 }
 
-func newCursor(tile tegola.Extent, layerExtent int) *cursor {
+func newCursor(tile tegola.BoundingBox, layerExtent int) *cursor {
 	xspan := tile.Maxx - tile.Minx
 	yspan := tile.Maxy - tile.Miny
 	return &cursor{
@@ -200,7 +200,7 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geo tegola.Geometry, extent tegola.Extent, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(geo tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 	//	new cursor
 	c := newCursor(extent, layerExtent)
 	if geo == nil {

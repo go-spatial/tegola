@@ -28,16 +28,16 @@ func (t *Tile) Num2Deg() (lat, lng float64) {
 	return lat, lng
 }
 
-//Extent returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
+//BoundingBox returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
 // in web mercator projection
 // ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
-func (t *Tile) Extent() Extent {
+func (t *Tile) BoundingBox() BoundingBox {
 	max := 20037508.34
 
 	//	resolution
 	res := (max * 2) / math.Exp2(float64(t.Z))
 
-	return Extent{
+	return BoundingBox{
 		Minx: -max + (float64(t.X) * res),
 		Miny: max - (float64(t.Y) * res),
 		Maxx: -max + (float64(t.X) * res) + res,
