@@ -1,5 +1,6 @@
 [webserver]
-port = ":9090"
+port = ":8080"
+log_file = "/home/ubuntu/foo.log"
 
 # register data providers
 [[providers]]
@@ -7,8 +8,8 @@ name = "test_postgis"
 type = "postgis"
 host = "localhost"
 port = 5432
-database = "ARolek" 
-user = "ARolek"
+database = ""
+user = ""
 password = ""
 
 	[[providers.layers]]
