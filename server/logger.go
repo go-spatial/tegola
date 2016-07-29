@@ -8,10 +8,14 @@ import (
 	"time"
 )
 
-var (
-	LogFile     *os.File
-	LogTemplate *template.Template
-)
+type Logger struct {
+	File     *os.File
+	Format   string
+	template *template.Template
+	skip     bool
+}
+
+var L *Logger
 
 type logItem struct {
 	RequestIP string
@@ -23,8 +27,25 @@ type logItem struct {
 
 const DefaultLogFormat = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
 
-func Log(item logItem) {
-	if LogFile == nil {
+func (l *Logger) initTemplate() {
+	if l == nil || l.template != nil || l.skip {
+		return
+	}
+	if l.Format == "" {
+		l.Format = DefaultLogFormat
+	}
+	//	setup our server log template
+	l.template = template.New("logfile")
+
+	if _, err := l.template.Parse(l.Format); err != nil {
+		log.Printf("Could not parse log template(%v) disabling logging. Error: %v", l.Format, err)
+		l.skip = true
+	}
+}
+
+func (l *Logger) Log(item logItem) {
+	l.initTemplate()
+	if l == nil || l.File == nil || l.skip {
 		return
 	}
 
@@ -32,12 +53,13 @@ func Log(item logItem) {
 		item.Time = time.Now()
 	}
 
-	var l string
-	lbuf := bytes.NewBufferString(l)
+	var lstr string
+	lbuf := bytes.NewBufferString(lstr)
 
-	if err := LogTemplate.Execute(lbuf, item); err != nil {
+	if err := l.template.Execute(lbuf, item); err != nil {
 		// Don't care about the error.
-		log.Println("Error writing to log file", err)
+		log.Println("Error writing to log file; disabling logging.", err)
+		l.skip = true
 		return
 	}
 	b := lbuf.Bytes()
@@ -48,5 +70,5 @@ func Log(item logItem) {
 	}
 
 	// Don't care about the error.
-	LogFile.Write(b)
+	l.File.Write(b)
 }

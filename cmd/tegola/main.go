@@ -65,13 +65,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("providers", providers)
-
-	/*
-		if err = setupLogger(); err != nil {
-			log.Fatal(err)
-		}
-	*/
+	initLogger(logFile, logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
 
 	//	start our webserver
 	server.Start(conf.Webserver.Port)
@@ -115,10 +109,10 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 
 			//	add our layer to our layers slice
 			layers = append(layers, server.Layer{
-				Name:     providerLayer[1],
-				MinZoom:  l.MinZoom,
-				MaxZoom:  l.MaxZoom,
-				Provider: provider,
+				Name:        providerLayer[1],
+				MinZoom:     l.MinZoom,
+				MaxZoom:     l.MaxZoom,
+				Provider:    provider,
 				DefaultTags: l.DefaultTags,
 			})
 		}
@@ -138,7 +132,6 @@ func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider,
 
 	//	iterate providers
 	for _, p := range providers {
-		log.Printf("provider %v", p)
 
 		//	lookup our proivder name
 		n, ok := p["name"]
@@ -181,52 +174,28 @@ func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider,
 	return registeredProviders, err
 }
 
-/*
-func setupLogger() {
+func initLogger(cmdFile, cmdFormat, confFile, confFormat string) {
 	var err error
+	filename := cmdFile
+	format := cmdFormat
+	var file *os.File
 
-	// Command line logfile overrides config file.
-	if logFile != "" {
-		conf.Webserver.LogFile = logFile
-		// Need to make sure that the log file exists.
+	if filename == "" {
+		filename = confFile
+	}
+	if filename == "" {
+		return
+	}
+	if format == "" {
+		format = confFormat
 	}
 
-	if server.DefaultLogFormat != logFormat || conf.Webserver.LogFormat == "" {
-		conf.Webserver.LogFormat = logFormat
-	}
-
-	if conf.Webserver.LogFile != "" {
-		if server.LogFile, err = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
-			log.Printf("Unable to open logfile (%v) for writing: %v", logFile, err)
-			os.Exit(2)
-		}
-	}
-
-	if conf.Webserver.LogFormat == "" {
-		conf.Webserver.LogFormat = server.DefaultLogFormat
-	}
-
-	if conf.Webserver.LogFile != "" {
-		logFile = conf.Webserver.LogFile
-	}
-
-	// Command line logTemplate overrides config file.
-	if logFormat == "" {
-		server.LogTemplate = template.New("logfile")
-
-		if _, err := server.LogTemplate.Parse(server.DefaultLogFormat); err != nil {
-			log.Fatal(fmt.Sprintf("Could not parse default template: %v error: %v", server.DefaultLogFormat, err))
-		}
-	} else {
-		server.LogTemplate = conf.Webserver.LogFormat
-	}
-
-	//	setup our server log template
-	server.LogTemplate = template.New("logfile")
-
-	if _, err := server.LogTemplate.Parse(conf.Webserver.LogFormat); err != nil {
-		log.Printf("Could not parse log template: %v error: %v", conf.Webserver.LogFormat, err)
+	if file, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
+		log.Printf("Unable to open logfile (%v) for writing: %v", filename, err)
 		os.Exit(3)
 	}
+	server.L = &server.Logger{
+		File:   file,
+		Format: format,
+	}
 }
-*/
