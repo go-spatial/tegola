@@ -12,15 +12,10 @@ user = "ARolek"
 password = ""
 
 	[[providers.layers]]
-	name = "landuse" 			# will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857" # sql or table_name are required
-	geometry_fieldname = "geom"             # geom field. default is geom
-	id_fieldname = "gid"                   # geom id field. default is gid
-	sql = """SELECT gid, ST_AsBinary(geom)
-		FROM
-    gis.zoning_base_3857
-		WHERE
-    geom && !BBOX!;"""
+	name = "landuse" 					# will be encoded as the layer name in the tile
+	tablename = "gis.zoning_base_3857" 	# sql or table_name are required
+	geometry_fieldname = "geom"			# geom field. default is geom
+	id_fieldname = "gid"				# geom id field. default is gid
 
 # maps are made up of layers
 [[maps]]
@@ -31,5 +26,5 @@ name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
 	min_zoom = 12
 	max_zoom = 16
 
-		[[maps.layers.default_tags]]	# a table of default tags to encode in the tile. SQL statements will override
-		cls = "park"
+		[maps.layers.default_tags]		# table of default tags to encode in the tile. SQL statements will override
+		class = "park"

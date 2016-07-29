@@ -30,10 +30,10 @@ type Config struct {
 type Map struct {
 	Name   string `toml:"name"`
 	Layers []struct {
-		ProviderLayer string                 `toml:"provider_layer"`
-		MinZoom       int                    `toml:"min_zoom"`
-		MaxZoom       int                    `toml:"max_zoom"`
-		DefaultTags   map[string]interface{} `toml:"default_tags"`
+		ProviderLayer string      `toml:"provider_layer"`
+		MinZoom       int         `toml:"min_zoom"`
+		MaxZoom       int         `toml:"max_zoom"`
+		DefaultTags   interface{} `toml:"default_tags"`
 	} `toml:"layers"`
 }
 
@@ -65,16 +65,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("providers", providers)
-
 	/*
 		if err = setupLogger(); err != nil {
 			log.Fatal(err)
 		}
 	*/
 
+	//	if port was not set via the command line
+	if port == "" {
+		//	do we have a port in our config file
+		if conf.Webserver.Port != "" {
+			port = conf.Webserver.Port
+		}
+		//	default is :8080
+	}
+
 	//	start our webserver
-	server.Start(conf.Webserver.Port)
+	server.Start(port)
 }
 
 //	initMaps registers maps with our server
@@ -110,16 +117,25 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 				}
 			}
 			if !found {
-				return fmt.Errorf("map (%v) provider_layer (%v) is not registered with provider (%v)", m.Name, l.ProviderLayer, providerLayer[1])
+				return fmt.Errorf("map (%v) 'provider_layer' (%v) is not registered with provider (%v)", m.Name, l.ProviderLayer, providerLayer[1])
+			}
+
+			var defaultTags map[string]interface{}
+			if l.DefaultTags != nil {
+				var ok bool
+				defaultTags, ok = l.DefaultTags.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("'default_tags' for 'provider_layer' (%v) should be a TOML table", l.ProviderLayer)
+				}
 			}
 
 			//	add our layer to our layers slice
 			layers = append(layers, server.Layer{
-				Name:     providerLayer[1],
-				MinZoom:  l.MinZoom,
-				MaxZoom:  l.MaxZoom,
-				Provider: provider,
-				DefaultTags: l.DefaultTags,
+				Name:        providerLayer[1],
+				MinZoom:     l.MinZoom,
+				MaxZoom:     l.MaxZoom,
+				Provider:    provider,
+				DefaultTags: defaultTags,
 			})
 		}
 
@@ -154,7 +170,7 @@ func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider,
 		//	check if a proivder with this name is alrady registered
 		_, ok = registeredProviders[pname]
 		if ok {
-			return registeredProviders, fmt.Errorf("provider named (%v) already registered!", pname)
+			return registeredProviders, fmt.Errorf("provider (%v) already registered!", pname)
 		}
 
 		//	lookup our provider type
