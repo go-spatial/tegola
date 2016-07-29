@@ -1,7 +1,11 @@
 package tegola
 
-import "math"
+const (
+	WebMercator = 3857
+	WGS84       = 4326
+)
 
+/*
 // AreaOfPolygon will calculate the Area of a polygon using the surveyor's formula
 // (https://en.wikipedia.org/wiki/Shoelace_formula)
 func AreaOfPolygon(p Polygon) (area float64) {
@@ -17,3 +21,4 @@ func AreaOfPolygon(p Polygon) (area float64) {
 	}
 	return math.Abs(area) / 2.0
 }
+*/

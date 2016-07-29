@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
 	"github.com/terranodo/tegola/util/dict"
@@ -48,7 +49,7 @@ const fldsSQL = "SELECT * FROM %[1]v LIMIT 0;"
 
 const Name = "postgis"
 const DefaultPort = 5432
-const DefaultSRID = 3857
+const DefaultSRID = tegola.WebMercator
 const DefaultMaxConn = 5
 
 const (
@@ -323,6 +324,14 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				}
 				if geom, err = wkb.DecodeBytes(geobytes); err != nil {
 					return nil, fmt.Errorf("Was unable to decode geometry field(%v) into wkb for layer %v.", plyr.GeomFieldName, layerName)
+				}
+				// TODO: Need to move this from being the responsiblity of the provider to the responsibility of the feature. But that means a feature should know
+				// how the points are encoded.
+				if p.srid != DefaultSRID {
+					// We need to convert our points to Webmercator.
+					if geom, err = basic.ToWebMercator(p.srid, geom); err != nil {
+						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID(%v) for layer %v.", p.srid, layerName)
+					}
 				}
 			case plyr.IDFieldName:
 				switch aval := v.(type) {
