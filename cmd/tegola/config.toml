@@ -26,5 +26,5 @@ name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
 	min_zoom = 12
 	max_zoom = 16
 
-		[maps.layers.default_tags]		# table of default tags to encode in the tile. SQL statements will override
+		[maps.layers.default_tags]		# a table of default tags to encode in the tile. SQL statements will override
 		class = "park"
