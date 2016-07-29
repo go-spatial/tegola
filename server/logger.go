@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"log"
 	"os"
+	"sync"
 	"text/template"
 	"time"
 )
 
 type Logger struct {
-	File     *os.File
-	Format   string
+	File   *os.File
+	Format string
+	sync.Mutex
 	template *template.Template
 	skip     bool
 }
@@ -34,6 +36,7 @@ func (l *Logger) initTemplate() {
 	if l.Format == "" {
 		l.Format = DefaultLogFormat
 	}
+	l.Lock()
 	//	setup our server log template
 	l.template = template.New("logfile")
 
@@ -41,6 +44,7 @@ func (l *Logger) initTemplate() {
 		log.Printf("Could not parse log template(%v) disabling logging. Error: %v", l.Format, err)
 		l.skip = true
 	}
+	l.Unlock()
 }
 
 func (l *Logger) Log(item logItem) {
@@ -59,7 +63,9 @@ func (l *Logger) Log(item logItem) {
 	if err := l.template.Execute(lbuf, item); err != nil {
 		// Don't care about the error.
 		log.Println("Error writing to log file; disabling logging.", err)
+		l.Lock()
 		l.skip = true
+		l.Unlock()
 		return
 	}
 	b := lbuf.Bytes()
@@ -70,5 +76,7 @@ func (l *Logger) Log(item logItem) {
 	}
 
 	// Don't care about the error.
+	l.Lock()
 	l.File.Write(b)
+	l.Unlock()
 }
