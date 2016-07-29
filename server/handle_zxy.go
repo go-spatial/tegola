@@ -95,19 +95,27 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		//	check that our request is below max zoom
 		if tile.Z <= MaxZoom {
+			//	layer stack
+			var mvtLayers []*mvt.Layer
+
 			//	iterate our layers and fetch data from their providers
 			for _, l := range layers {
-				if l.Minzoom <= tile.Z && l.Maxzoom >= tile.Z {
-					var mvtLayer *mvt.Layer
-					mvtLayer, err = l.Provider.MVTLayer(l.Name, tile)
+				//	check if layer is within our zoom levels
+				if l.MinZoom <= tile.Z && l.MaxZoom >= tile.Z {
+					//	fetch layer from data provider
+					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
 					if err != nil {
+						log.Println("mvt layer error", err)
 						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
 						return
 					}
-					//	add layers
-					mvtTile.AddLayers(mvtLayer)
+
+					mvtLayers = append(mvtLayers, mvtLayer)
 				}
 			}
+
+			//	add layers to our tile
+			mvtTile.AddLayers(mvtLayers...)
 		}
 
 		//	check for the debug query string
@@ -119,7 +127,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	generate our vector tile
-		vtile, err := mvtTile.VTile(tile.Extent())
+		vtile, err := mvtTile.VTile(tile.BoundingBox())
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
@@ -132,17 +140,6 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//	check for tile size warnings
-		if len(pbyte) > MaxTileSize {
-			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
-		}
-		Log(logItem{
-			X:         tile.X,
-			Y:         tile.Y,
-			Z:         tile.Z,
-			RequestIP: r.RemoteAddr,
-		})
-
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
 		w.Header().Add("Access-Control-Allow-Origin", "*")
@@ -152,6 +149,18 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		w.Write(pbyte)
 
+		//	check for tile size warnings
+		if len(pbyte) > MaxTileSize {
+			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
+		}
+		//	log the request
+		L.Log(logItem{
+			X:         tile.X,
+			Y:         tile.Y,
+			Z:         tile.Z,
+			RequestIP: r.RemoteAddr,
+		})
+
 	default:
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -160,8 +169,8 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 //	creates a debug layer with z/x/y encoded as a point
 func debugLayer(tile tegola.Tile) *mvt.Layer {
-	//	get tile extent
-	ext := tile.Extent()
+	//	get tile bounding box
+	ext := tile.BoundingBox()
 
 	//	create a new layer and name it
 	layer := mvt.Layer{

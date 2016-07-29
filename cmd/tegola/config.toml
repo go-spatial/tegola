@@ -1,5 +1,6 @@
 [webserver]
 port = ":8080"
+log_file = "/home/ubuntu/foo.log"
 
 # register data providers
 [[providers]]
@@ -7,17 +8,24 @@ name = "test_postgis"
 type = "postgis"
 host = "localhost"
 port = 5432
-database = "ARolek" 
-user = "ARolek"
+database = ""
+user = ""
 password = ""
+
+	[[providers.layers]]
+	name = "landuse" 					# will be encoded as the layer name in the tile
+	tablename = "gis.zoning_base_3857" 	# sql or table_name are required
+	geometry_fieldname = "geom"			# geom field. default is geom
+	id_fieldname = "gid"				# geom id field. default is gid
 
 # maps are made up of layers
 [[maps]]
-name = "zoning"					# used in the URL to reference this map
+name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
 
 	[[maps.layers]]
-	name = "landuse" 			# will be encoded as the layer name in the tile
-	provider = "test_postgis"	# must match a data provider
-	minzoom = 12
-	maxzoom = 16
-	sql = "gis.zoning_base_3857"
+	provider_layer = "test_postgis.landuse"	# must match a data provider layer
+	min_zoom = 12
+	max_zoom = 16
+
+		[maps.layers.default_tags]		# a table of default tags to encode in the tile. SQL statements will override
+		class = "park"

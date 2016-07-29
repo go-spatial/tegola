@@ -35,7 +35,7 @@ func (t *Tile) Layers() (l []Layer) {
 
 //VTile returns a tile object according to the Google Protobuff def. This function
 // does the hard work of converting everthing to the standard.
-func (t *Tile) VTile(extent tegola.Extent) (vt *vectorTile.Tile, err error) {
+func (t *Tile) VTile(extent tegola.BoundingBox) (vt *vectorTile.Tile, err error) {
 	vt = new(vectorTile.Tile)
 	for _, l := range t.layers {
 		vtl, err := l.VTileLayer(extent)

@@ -2,6 +2,7 @@ package postgis_test
 
 import (
 	"log"
+	"os"
 	"testing"
 
 	"github.com/terranodo/tegola"
@@ -9,28 +10,39 @@ import (
 )
 
 func TestNewProvider(t *testing.T) {
-	config := postgis.Config{
-		Host:     "localhost",
-		Port:     5432,
-		Database: "gdey",
-		User:     "gdey",
-		Layers: map[string]string{
-			"buildings": "gis.zoning_base_3857",
+	// The database connection string have the following JSON format:
+	// { "host" : "host", port
+	if os.Getenv("RUN_POSTGRESS_TEST") == "" {
+		return
+	}
+
+	config := map[string]interface{}{
+		postgis.ConfigKeyHost:     "localhost",
+		postgis.ConfigKeyPort:     int64(5432),
+		postgis.ConfigKeyDB:       "gdey",
+		postgis.ConfigKeyUser:     "gdey",
+		postgis.ConfigKeyPassword: "",
+		postgis.ConfigKeyLayers: map[string]map[string]interface{}{
+			"buildings": map[string]interface{}{
+				postgis.ConfigKeyTablename: "gis.zoning_base_3857",
+			},
 		},
 	}
 	p, err := postgis.NewProvider(config)
 	if err != nil {
 		t.Errorf("Failed to create a new provider. %v", err)
+		return
 	}
+
 	tile := tegola.Tile{
 		Z: 15,
 		X: 12451,
 		Y: 18527,
 	}
-	l, err := p.MVTLayer("buildings", tile)
+	l, err := p.MVTLayer("buildings", tile, map[string]interface{}{"class": "park"})
 	if err != nil {
-		t.Errorf("Failed to create a new provider. %v", err)
+		t.Errorf("Failed to create mvt layer. %v", err)
+		return
 	}
 	log.Printf("Go to following layer %v\n", l)
-
 }

@@ -1,65 +1,41 @@
 package server
 
 import (
-	"bytes"
+	"errors"
 	"log"
 	"net/http"
-	"os"
-	"text/template"
-	"time"
 
 	"github.com/terranodo/tegola/mvt"
 )
 
 //	incoming requests are associated with a map
-var maps = map[string][]*mapLayer{}
-var logFile *os.File
-var logTemplate *template.Template
+var maps = map[string][]Layer{}
 
-type logItem struct {
-	RequestIP string
-	Time      time.Time
-	X         int
-	Y         int
-	Z         int
+type Layer struct {
+	Name        string
+	MinZoom     int
+	MaxZoom     int
+	Provider    mvt.Provider
+	DefaultTags map[string]interface{}
 }
 
-func Log(item logItem) {
-	if logFile == nil {
-		return
+//	RegisterMap associates layers with map names
+func RegisterMap(name string, layers []Layer) error {
+	//	check if our map is already registered
+	if _, ok := maps[name]; ok {
+		return errors.New("map is alraedy registered: " + name)
 	}
-	log.Println("Logging something")
-	var l string
-	if item.Time.IsZero() {
-		item.Time = time.Now()
-	}
-	lbuf := bytes.NewBufferString(l)
-	if err := logTemplate.Execute(lbuf, item); err != nil {
-		// Don't care about the error.
-		log.Println("Error writing log to log file.", err)
-		return
-	}
-	b := lbuf.Bytes()
-	// If there is no new line, let's add it.
-	if b[len(b)-1] != '\n' {
-		b = append(b, '\n')
-	}
-	// Don't care about the error.
-	logFile.Write(b)
+
+	//	associate our layers with a map
+	maps[name] = layers
+
+	return nil
 }
 
-//	map layers point to a provider
-type mapLayer struct {
-	Name     string
-	Minzoom  int
-	Maxzoom  int
-	Provider mvt.Provider
-}
-
-// Start starts the tile server binding to the provided port
+//	Start starts the tile server binding to the provided port
 func Start(port string) {
 	//	notify the user the server is starting
-	log.Printf("Starting tegola server on port %v\n", port)
+	log.Printf("Starting tegola server on port %v", port)
 
 	//	setup routes
 	http.Handle("/", http.FileServer(http.Dir("static")))

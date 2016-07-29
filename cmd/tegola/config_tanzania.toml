@@ -1,0 +1,107 @@
+[webserver]
+port = ":8080"
+
+# register data providers
+[[providers]]
+name = "tanzania_osm"
+type = "postgis"
+host = "localhost"
+port = 5432
+database = "tanzania_osm" 
+user = "ARolek"
+password = ""
+
+# maps are made up of layers
+[[maps]]
+name = "tanzania_osm"					# used in the URL to reference this map
+
+	[[maps.layers]]
+	name = "building" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 14 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM buildings_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "road" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 10
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM all_roads_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "river" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 1 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM rivers_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "main_roads" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM main_roads_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "farms" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM farms_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "aerodromes_polygon" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM aerodromes_polygon_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "forest" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM forest_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "grassland" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM grassland_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "lakes" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM lakes_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "medical_polygon" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM medical_polygon_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "military" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM military_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "residential" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM residential_3857 WHERE wkb_geometry && {{.BBox}}"
+
+	[[maps.layers]]
+	name = "schools_polygon" 			# will be encoded as the layer name in the tile
+	provider = "tanzania_osm"	# must match a data provider
+	minzoom = 5 
+	maxzoom = 20
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM schools_polygon_3857 WHERE wkb_geometry && {{.BBox}}"

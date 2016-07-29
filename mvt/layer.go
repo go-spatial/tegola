@@ -27,7 +27,7 @@ func valMapToVTileValue(valMap []interface{}) (vt []*vectorTile.Tile_Value) {
 }
 
 // VTileLayer returns a vectorTile Tile_Layer object that represents this Layer.
-func (l *Layer) VTileLayer(extent tegola.Extent) (*vectorTile.Tile_Layer, error) {
+func (l *Layer) VTileLayer(extent tegola.BoundingBox) (*vectorTile.Tile_Layer, error) {
 	kmap, vmap, err := keyvalMapsFromFeatures(l.features)
 	if err != nil {
 		return nil, err

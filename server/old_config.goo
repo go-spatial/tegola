@@ -43,8 +43,6 @@ type Layer struct {
 	SQL       string
 }
 
-const DefaultLogFormat = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
-
 //Init maps sets up our data providers and builds out the
 //	map and layer associations
 func Init(conf Config) error {

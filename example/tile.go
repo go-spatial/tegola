@@ -67,11 +67,11 @@ func TileExample() {
 
 	// VTile is the protobuff representation of the tile. This is what you can
 	// send to the protobuff Marshal functions.
-	extent := tegola.Extent{
+	bbox := tegola.BoundingBox{
 		Maxx: 4096,
 		Maxy: 4096,
 	}
-	vtile, err := tile.VTile(extent)
+	vtile, err := tile.VTile(bbox)
 	if err != nil {
 		panic(err)
 	}

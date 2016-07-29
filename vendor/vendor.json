@@ -3,34 +3,22 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "UJTpOZ5IuuyoWFrS42uw/167mn0=",
+			"path": "github.com/BurntSushi/toml",
+			"revision": "f0aeabca5a127c4078abb8c8d64298b147264b55",
+			"revisionTime": "2016-04-26T10:16:13Z"
+		},
+		{
 			"checksumSHA1": "kVJ5YScYaDWw6iotbpZwQJ6xCGM=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0",
 			"revisionTime": "2016-06-14T22:31:40Z"
 		},
 		{
-			"checksumSHA1": "GCQCsO9zW6F6QmIdGuW5PJAMnNo=",
+			"checksumSHA1": "ZCMYdNAc0qTW5e7hWTZBVnYUXDs=",
 			"path": "github.com/jackc/pgx",
-			"revision": "30cb421551a46adf91f5078bc6ea9fb18609ea0a",
-			"revisionTime": "2016-06-21T20:00:47Z"
-		},
-		{
-			"checksumSHA1": "A6nZdZ1/lTOVINhIndyw2ZWN9JU=",
-			"path": "github.com/naoina/go-stringutil",
-			"revision": "6b638e95a32d0c1131db0e7fe83775cbea4a0d0b",
-			"revisionTime": "2015-11-18T23:44:43Z"
-		},
-		{
-			"checksumSHA1": "MUYxtCY95dt/b/5cmzP0x1b9d/E=",
-			"path": "github.com/naoina/toml",
-			"revision": "751171607256bb66e64c9f0220c00662420c38e9",
-			"revisionTime": "2015-07-27T12:48:37Z"
-		},
-		{
-			"checksumSHA1": "6Sd81okp0F1ByCD/xCP9L1+v4Xs=",
-			"path": "github.com/naoina/toml/ast",
-			"revision": "751171607256bb66e64c9f0220c00662420c38e9",
-			"revisionTime": "2015-07-27T12:48:37Z"
+			"revision": "558d5550cf5c08e7192eb2eb8635f21f4b700ff5",
+			"revisionTime": "2016-07-15T19:51:40Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"
