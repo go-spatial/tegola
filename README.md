@@ -8,7 +8,7 @@ Tegola is a high performance vector tile server delivering [Mapbox Vector Tiles]
 - [x] Support for PostGIS data provider.
 
 ## Running Tegola
-1. Download the appropriate binary of tegola for your platoform via the release page.
+1. Download the appropriate binary of tegola for your platoform via the [release page](https://github.com/terranodo/tegola/releases).
 2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
@@ -96,6 +96,13 @@ Tegola currently supports the following command flags:
 
 - `config-file` - path to the config.toml file.
 - `port` - port for the webserver to bind to. i.e. :8080
+- `log-file` - path to write webserver access logs
+- `log-format` - The format that the logger will log with. Available fields: 
+  - `{{.Time}}` : The current Date Time in RFC 2822 format.
+  - `{{.RequestIP}}` : The IP address of the the requester.
+  - `{{.Z}}` : The Zoom level.
+  - `{{.X}}` : The X Coordinate.
+  - `{{.Y}}` : The Y Coordinate.
 
 ## Specifications
 - [Well Known Binary (WKB)](http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm)
