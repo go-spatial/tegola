@@ -2,6 +2,7 @@ package postgis_test
 
 import (
 	"log"
+	"os"
 	"testing"
 
 	"github.com/terranodo/tegola"
@@ -11,9 +12,13 @@ import (
 func TestNewProvider(t *testing.T) {
 	// The database connection string have the following JSON format:
 	// { "host" : "host", port
+	if os.Getenv("RUN_POSTGRESS_TEST") == "" {
+		return
+	}
+
 	config := map[string]interface{}{
 		postgis.ConfigKeyHost:     "localhost",
-		postgis.ConfigKeyPort:     5432,
+		postgis.ConfigKeyPort:     int64(5432),
 		postgis.ConfigKeyDB:       "gdey",
 		postgis.ConfigKeyUser:     "gdey",
 		postgis.ConfigKeyPassword: "",
