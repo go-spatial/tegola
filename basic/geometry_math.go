@@ -166,7 +166,7 @@ func ToWebMercator(SRID int, geometry tegola.Geometry) (tegola.Geometry, error) 
 		// in the same SRID.
 		return CloneGeometry(geometry)
 	case tegola.WGS84:
-		return ApplyToPoints(geometry, webmercator.ToXY)
+		return ApplyToPoints(geometry, webmercator.PToXY)
 	}
 }
 
@@ -180,6 +180,6 @@ func FromWebMercator(SRID int, geometry tegola.Geometry) (tegola.Geometry, error
 		// in the same SRID.
 		return CloneGeometry(geometry)
 	case tegola.WGS84:
-		return ApplyToPoints(geometry, webmercator.ToLonLat)
+		return ApplyToPoints(geometry, webmercator.PToLonLat)
 	}
 }

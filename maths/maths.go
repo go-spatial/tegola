@@ -16,6 +16,7 @@ const (
 	Deg2Rad     = math.Pi / 180
 	Rad2Deg     = 180 / math.Pi
 	PiDiv2      = math.Pi / 2.0
+	PiDiv4      = math.Pi / 4.0
 )
 
 // AreaOfPolygon will calculate the Area of a polygon using the surveyor's formula
