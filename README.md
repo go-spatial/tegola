@@ -50,18 +50,29 @@ port = 5432				# postgis database port
 database = "tegola" 	# postgis database name
 user = "tegola"			# postgis database user
 password = ""			# postgis database password
-
+srid = 3857             # The default srid for this provider. If not provided it will be WebMercator (3857)
 	[[providers.layers]]
 	name = "landuse" 					# will be encoded as the layer name in the tile
 	tablename = "gis.zoning_base_3857" 	# sql or table_name are required
 	geometry_fieldname = "geom"			# geom field. default is geom
 	id_fieldname = "gid"				# geom id field. default is gid
+	srid = 4326                         # the srid of table's geo data.
 
+
+	[[providers.layers]]
+	name = "roads" 					# will be encoded as the layer name in the tile
+	tablename = "gis.zoning_base_3857" 	# sql or table_name are required
+	geometry_fieldname = "geom"			# geom field. default is geom
+	id_fieldname = "gid"				# geom id field. default is gid
+	fields = [ "class", "name" ]        # Additional fields to include in the select statement.
+	srid = 4326                         # the srid of table's geo data.
 
 	[[providers.layers]]
 	name = "rivers" 					# will be encoded as the layer name in the tile
 	geometry_fieldname = "geom"			# geom field. default is geom
 	id_fieldname = "gid"				# geom id field. default is gid
+	# Custom sql to be used for this layer. Note: that the geometery field is wraped
+	# in a ST_AsBinary, as tegola only understand wkb.
 	sql = """
 		SELECT
 			gid,

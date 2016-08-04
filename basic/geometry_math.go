@@ -7,6 +7,7 @@ import (
 	"github.com/terranodo/tegola/maths/webmercator"
 )
 
+// ApplyToPoints applys the given function to each point in the geometry and any sub geometries, return a new transformed geometry.
 func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float64, error)) (tegola.Geometry, error) {
 	switch geo := geometry.(type) {
 	default:
@@ -101,6 +102,7 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 	}
 }
 
+// CloneGeomtry returns a deep clone of the Geometry.
 func CloneGeometry(geometry tegola.Geometry) (tegola.Geometry, error) {
 	switch geo := geometry.(type) {
 	default:
@@ -156,6 +158,8 @@ func CloneGeometry(geometry tegola.Geometry) (tegola.Geometry, error) {
 		return &mpoly, nil
 	}
 }
+
+// ToWebMercator takes a SRID and a geometry encode using that srid, and returns a geometry encoded as a WebMercator.
 func ToWebMercator(SRID int, geometry tegola.Geometry) (tegola.Geometry, error) {
 	switch SRID {
 	default:
@@ -170,6 +174,7 @@ func ToWebMercator(SRID int, geometry tegola.Geometry) (tegola.Geometry, error) 
 	}
 }
 
+// FromWebMercator takes a geometry encoded with WebMercator, and returns a Geometry encodes to the given srid.
 func FromWebMercator(SRID int, geometry tegola.Geometry) (tegola.Geometry, error) {
 	switch SRID {
 	default:
