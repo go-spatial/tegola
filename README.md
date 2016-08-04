@@ -65,7 +65,7 @@ srid = 3857             # The default srid for this provider. If not provided it
 	geometry_fieldname = "geom"			# geom field. default is geom
 	id_fieldname = "gid"				# geom id field. default is gid
 	fields = [ "class", "name" ]        # Additional fields to include in the select statement.
-	srid = 4326                         # the srid of table's geo data.
+	srid = 3857                         # the srid of table's geo data. Don't need to specify this as it will inherit this from the provider.
 
 	[[providers.layers]]
 	name = "rivers" 					# will be encoded as the layer name in the tile
