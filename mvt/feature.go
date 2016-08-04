@@ -287,6 +287,10 @@ func keyvalMapsFromFeatures(features []Feature) (keyMap []string, valMap []inter
 
 			switch vt := v.(type) {
 			default:
+				if vt == nil {
+					// ignore nil types
+					continue
+				}
 				return keyMap, valMap, fmt.Errorf("Unsupported type for value(%v) with key(%v) in tags for feature %v.", vt, k, f)
 
 			case string:
