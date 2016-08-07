@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/terranodo/tegola"
@@ -15,9 +16,11 @@ import (
 )
 
 const (
-	// MaxTileSize is 500k
+	//	MaxTileSize is 500k. Currently just throws a warning when tile
+	//	is larger than MaxTileSize
 	MaxTileSize = 500000
-	MaxZoom     = 20
+	//	MaxZoom will not render tile beyond this zoom level
+	MaxZoom = 20
 )
 
 //	URI scheme: /maps/:map_name/:z/:x/:y
@@ -91,28 +94,41 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 
 		//	generate a tile
 		var mvtTile mvt.Tile
-		var pbyte []byte
 
 		//	check that our request is below max zoom
-		if tile.Z <= MaxZoom {
+		if tile.Z <= MaxZoom && len(layers) != 0 {
 			//	layer stack
 			var mvtLayers []*mvt.Layer
+			//	waitgroup for concurrent layer fetching
+			var wg sync.WaitGroup
 
 			//	iterate our layers and fetch data from their providers
 			for _, l := range layers {
 				//	check if layer is within our zoom levels
 				if l.MinZoom <= tile.Z && l.MaxZoom >= tile.Z {
-					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
-					if err != nil {
-						log.Println("mvt layer error", err)
-						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
-						return
-					}
+					//	if we need to render the layer incriment our waitgroup
+					wg.Add(1)
 
-					mvtLayers = append(mvtLayers, mvtLayer)
+					//	wrap our layer fetching in a closure
+					go func() {
+						//	when this func completes deincriment the waitgroup counter
+						defer wg.Done()
+
+						//	fetch layer from data provider
+						mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
+						if err != nil {
+							log.Printf("Error Getting MVTLayer: %v", err)
+							http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+							return
+						}
+
+						mvtLayers = append(mvtLayers, mvtLayer)
+					}()
 				}
 			}
+
+			//	wait for the waitgroup to finish
+			wg.Wait()
 
 			//	add layers to our tile
 			mvtTile.AddLayers(mvtLayers...)
@@ -134,6 +150,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	marshal our tile into a protocol buffer
+		var pbyte []byte
 		pbyte, err = proto.Marshal(vtile)
 		if err != nil {
 			http.Error(w, "error marshalling tile", http.StatusInternalServerError)
@@ -153,6 +170,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		if len(pbyte) > MaxTileSize {
 			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
 		}
+
 		//	log the request
 		L.Log(logItem{
 			X:         tile.X,

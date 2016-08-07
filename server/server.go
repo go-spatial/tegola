@@ -12,11 +12,15 @@ import (
 var maps = map[string][]Layer{}
 
 type Layer struct {
-	Name        string
-	MinZoom     int
-	MaxZoom     int
-	Provider    mvt.Provider
+	Name    string
+	MinZoom int
+	MaxZoom int
+	//	instantiated provider
+	Provider mvt.Provider
+	//	default tags to include when encoding the layer. provider tags take precedence
 	DefaultTags map[string]interface{}
+	//	the layer stacking position as setup in the config file
+	OrderIndex int
 }
 
 //	RegisterMap associates layers with map names
@@ -41,6 +45,6 @@ func Start(port string) {
 	http.Handle("/", http.FileServer(http.Dir("static")))
 	http.HandleFunc("/maps/", handleZXY)
 
-	// TODO: make http port configurable
+	//	start our server
 	log.Fatal(http.ListenAndServe(port, nil))
 }
