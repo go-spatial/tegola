@@ -301,7 +301,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 
 	rows, err := p.pool.Query(sql)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
 	}
 	defer rows.Close()
 
