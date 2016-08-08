@@ -129,7 +129,7 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 	for _, m := range maps {
 		var layers []server.Layer
 		//	iterate our layers
-		for idx, l := range m.Layers {
+		for _, l := range m.Layers {
 			//	split our provider name (provider.layer) into [provider,layer]
 			providerLayer := strings.Split(l.ProviderLayer, ".")
 
