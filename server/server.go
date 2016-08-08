@@ -9,7 +9,19 @@ import (
 )
 
 //	incoming requests are associated with a map
-var maps = map[string][]Layer{}
+var maps = map[string]layers{}
+
+type layers []Layer
+
+//	FilterByZoom returns layers that that are to be rendered between a min and max zoom
+func (ls layers) FilterByZoom(zoom int) (filteredLayers []Layer) {
+	for _, l := range ls {
+		if l.MinZoom <= zoom && l.MaxZoom >= zoom {
+			filteredLayers = append(filteredLayers, l)
+		}
+	}
+	return
+}
 
 type Layer struct {
 	Name    string

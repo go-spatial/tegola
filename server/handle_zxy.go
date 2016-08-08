@@ -95,40 +95,41 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		//	generate a tile
 		var mvtTile mvt.Tile
 
-		//	check that our request is below max zoom
+		//	check that our request is below max zoom and we have layers to render
 		if tile.Z <= MaxZoom && len(layers) != 0 {
-			//	layer stack
-			var mvtLayers []*mvt.Layer
-			//	waitgroup for concurrent layer fetching
+
+			//	wait group for concurrent layer fetching
 			var wg sync.WaitGroup
+			//	filter down the layers we need for this zoom
+			ls := layers.FilterByZoom(tile.Z)
+			//	layer stack
+			mvtLayers := make([]*mvt.Layer, len(ls))
 
-			//	iterate our layers and fetch data from their providers
-			for _, l := range layers {
-				//	check if layer is within our zoom levels
-				if l.MinZoom <= tile.Z && l.MaxZoom >= tile.Z {
-					//	if we need to render the layer incriment our waitgroup
-					wg.Add(1)
+			//	iterate our layers
+			for i, l := range ls {
+				//	incriment our waitgroup
+				wg.Add(1)
+				//	go routine for rendering the layer
+				go func(i int, l Layer) {
+					//	on completion let the wait group know
+					defer wg.Done()
 
-					//	wrap our layer fetching in a closure
-					go func() {
-						//	when this func completes deincriment the waitgroup counter
-						defer wg.Done()
-
-						//	fetch layer from data provider
-						mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
-						if err != nil {
-							log.Printf("Error Getting MVTLayer: %v", err)
-							http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
-							return
-						}
-
-						mvtLayers = append(mvtLayers, mvtLayer)
-					}()
-				}
+					//	fetch layer from data provider
+					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
+					if err != nil {
+						log.Printf("Error Getting MVTLayer: %v", err)
+						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+						return
+					}
+					//	add the layer to the slice position
+					mvtLayers[i] = mvtLayer
+				}(i, l)
 			}
 
 			//	wait for the waitgroup to finish
 			wg.Wait()
+
+			log.Println("mvtLayer", len(mvtLayers), mvtLayers)
 
 			//	add layers to our tile
 			mvtTile.AddLayers(mvtLayers...)
