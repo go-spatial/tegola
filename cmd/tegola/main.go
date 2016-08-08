@@ -174,7 +174,6 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 				MaxZoom:     l.MaxZoom,
 				Provider:    provider,
 				DefaultTags: defaultTags,
-				OrderIndex:  idx,
 			})
 		}
 

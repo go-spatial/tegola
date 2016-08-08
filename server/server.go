@@ -31,8 +31,6 @@ type Layer struct {
 	Provider mvt.Provider
 	//	default tags to include when encoding the layer. provider tags take precedence
 	DefaultTags map[string]interface{}
-	//	the layer stacking position as setup in the config file
-	OrderIndex int
 }
 
 //	RegisterMap associates layers with map names
