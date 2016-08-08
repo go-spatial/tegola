@@ -129,8 +129,6 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			//	wait for the waitgroup to finish
 			wg.Wait()
 
-			log.Println("mvtLayer", len(mvtLayers), mvtLayers)
-
 			//	add layers to our tile
 			mvtTile.AddLayers(mvtLayers...)
 		}
