@@ -9,8 +9,9 @@ notifications:
 
 before_deploy:
   - go get github.com/mitchellh/gox
-  - gox -output "$TRAVIS_BUILD_DIR/{{.Dir}}_{{.OS}}_{{.Arch}}"
-  - export RELEASE_FILES=$(ls $TRAVIS_BUILD_DIR) 
+  - gox -output "$TRAVIS_BUILD_DIR/dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
+  - export RELEASE_FILES=$(ls $TRAVIS_BUILD_DIR/dist)
+  - echo ${RELEASE_FILES}
 
 deploy:
   provider: releases
