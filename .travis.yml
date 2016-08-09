@@ -12,13 +12,11 @@ before_deploy:
   - cd cmd/tegola/
   - gox -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
   - export RELEASE_FILES=$(ls dist)
-  - ls dist
 
 deploy:
   provider: releases
   api_key:
     secure: GrkTzVjddIHB8MXfLloPgifJKrZuFptk9DzrrSSXAOxxBBqYnddg2WKAr2TfrPLQaSNdR84PaPN3FXW009W/CjclxM3mW9h9a/sFVlWtWOWd5u/szFPwn5JQKKt0D/EhScBUF9Jvyo4g28YxSR9rV/RnJne/B6pthJAFSrztHglC7XGkW9mSTH7aG68yIALoGeqHRIKT3DDHJPCm14EEXKq8oacJSX6SZyexBcBJRKj8S+/k3HoYDeKqvCC8oPHt1kPHXiSF/mZdeox0CQ+Q9B3cWPu6rFNbOjiLQriq9ayY/DxdZPVHdQ/nFkTpBQ3lwDLFL4X2jcT1V0jvNxJnExJOXV9lFtjvyExqr7quGHTMd4iJVeYOkWwEl8/cJJAoePIlKaGL5FDxLhlq1RscHOu25sd1DgmbhJMjlexxG/bXyJhV873kyv6JhIq+XniA2TxpaMMrut8MOBH76THbQr9yWpdf6GXs7NdRiK8yzS+L/hvXJO88NXegavCk8gGtWhHSLSJzYg5fVIo9QdghfRe8cLj2HcMehwzLyu3GRiWdm8TtNQ+PIp9qXxB+BIOfXN+Dx1ydVdlt8aghefONw9+0zDtrGZhWyORMHBCypXrTEmiGxlIfsR4QQxVpejd8DXi3i9CQou68ECuC51YqxhH49tfiE8Adh0WPKCklRnY=
-  file_glob: true
   file: '${RELEASE_FILES}'
   skip_cleanup: true
   on:
