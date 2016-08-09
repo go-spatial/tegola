@@ -10,7 +10,7 @@ notifications:
 before_deploy:
   - go get github.com/mitchellh/gox
   - cd cmd/tegola/
-  - gox -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
+  - gox -output "{{.Dir}}_{{.OS}}_{{.Arch}}"
 
 deploy:
   provider: releases
@@ -32,7 +32,6 @@ deploy:
     - "tegola_freebsd_arm"
     - "tegola_netbsd_amd64"
     - "tegola_windows_amd64.exe"
-
   skip_cleanup: true
   on:
     tags: true
