@@ -1,18 +1,23 @@
 language: go
+
 go:
   - tip
+
 notifications:
   slack:
     secure: TzRnZdJ1dhQJg9nby2oJ6qFj9Bl20VJ2aJXmXwADsj2ck/UGsFWpYNnqZVWvZomCZEJinFpA/h2TG1odEzg1BpCT0+rLIGQDAhIMVuici+nIs+DyPQmL2owG1LZ6/hzX09Y1mIZci0nmnI1wousfM8WDPRq5NSOsBeAMlixGR4g4lF8cp/R0B6CtcewtQx4RicdPJtopHDwXm5KI1/7euFcJwu15FWwWoUp6mOw+r44T1Md+qbqDKBbLSy+YvMkPcxI7HeECa7OP9OjkeUfU0BoMP6qqo9QTVX5v6lOHxA+FhueyyPrSTtNV377tilDy88kytqu6w8gcrxZOddj7nFbv6ErjfVaMfeepzk/HH2bzlLevvL+ukeJKrBNdmPuDRU3BqG5ygrdGAQUNpM7VSXLDcGrM2+ocVn/HO1NyXWwpejq7Gq0HWhNkYPHG5c7+khkQkRGJtg0wp9R3qXDAcRHLR+CHh89g5Blz4Wo6R/Q48MLJycbH/W56zsoe0xQ5Ww2eti16uSFE4kkiPt99uewWkPSfEZn4pyk+xCwDxgNDNu/BaV+Mjm4JTL1GjWalto+NLK7NsEg+6sEYok0CHkUb8MQV++r1KVfIaxC3zVuojIiOSB9/+JPtPd9w2iuVOlz0rrbXfKkkSf5wcmOguqk3aAfAgmcjAV9p1kI9pSc=
+
 before_deploy:
   - go get github.com/mitchellh/gox
   - gox -output "$TRAVIS_BUILD_DIR/{{.Dir}}_{{.OS}}_{{.Arch}}"
   - export RELEASE_FILES=$(ls $TRAVIS_BUILD_DIR) 
+
 deploy:
   provider: releases
   api_key:
     secure: GrkTzVjddIHB8MXfLloPgifJKrZuFptk9DzrrSSXAOxxBBqYnddg2WKAr2TfrPLQaSNdR84PaPN3FXW009W/CjclxM3mW9h9a/sFVlWtWOWd5u/szFPwn5JQKKt0D/EhScBUF9Jvyo4g28YxSR9rV/RnJne/B6pthJAFSrztHglC7XGkW9mSTH7aG68yIALoGeqHRIKT3DDHJPCm14EEXKq8oacJSX6SZyexBcBJRKj8S+/k3HoYDeKqvCC8oPHt1kPHXiSF/mZdeox0CQ+Q9B3cWPu6rFNbOjiLQriq9ayY/DxdZPVHdQ/nFkTpBQ3lwDLFL4X2jcT1V0jvNxJnExJOXV9lFtjvyExqr7quGHTMd4iJVeYOkWwEl8/cJJAoePIlKaGL5FDxLhlq1RscHOu25sd1DgmbhJMjlexxG/bXyJhV873kyv6JhIq+XniA2TxpaMMrut8MOBH76THbQr9yWpdf6GXs7NdRiK8yzS+L/hvXJO88NXegavCk8gGtWhHSLSJzYg5fVIo9QdghfRe8cLj2HcMehwzLyu3GRiWdm8TtNQ+PIp9qXxB+BIOfXN+Dx1ydVdlt8aghefONw9+0zDtrGZhWyORMHBCypXrTEmiGxlIfsR4QQxVpejd8DXi3i9CQou68ECuC51YqxhH49tfiE8Adh0WPKCklRnY=
-  file: "${RELEASE_FILES}"
+  file_glob: true
+  file: '${RELEASE_FILES}'
   skip_cleanup: true
   on:
     tags: true
