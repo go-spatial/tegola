@@ -12,7 +12,7 @@ before_deploy:
   - go get github.com/mitchellh/gox
   - gox -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
   - export RELEASE_FILES=$(ls dist)
-  - echo '${RELEASE_FILES}'
+  - ls dist
 
 deploy:
   provider: releases
