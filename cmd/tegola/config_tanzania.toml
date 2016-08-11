@@ -1,0 +1,160 @@
+[webserver]
+port = ":8080"
+
+# register data providers
+[[providers]]
+name = "tanzania_osm"
+type = "postgis"
+host = "localhost"
+port = 5432
+database = "tanzania_osm" 
+user = "ARolek"
+password = ""
+
+	[[providers.layers]]
+	name = "buildings" 						# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM buildings_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "roads" 						# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM all_roads_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "rivers" 						# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM rivers_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "main_roads" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM main_roads_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "farms" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM farms_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "aerodromes_polygon" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM aerodromes_polygon_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "forest" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM forest_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "grassland" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM grassland_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "lakes" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM lakes_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "medical_polygon" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM medical_polygon_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "military" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM military_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "residential" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM residential_3857 WHERE wkb_geometry && !BBOX!"
+
+	[[maps.layers]]
+	name = "schools_polygon" 			# will be encoded as the layer name in the tile
+	geometry_fieldname = "wkb_geometry"		# geom field. default is geom
+	id_fieldname = "ogc_fid"				# geom id field. default is gid
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM schools_polygon_3857 WHERE wkb_geometry && !BBOX!"
+
+# maps are made up of layers
+[[maps]]
+name = "tanzania_osm"				# used in the URL to reference this map
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.buildings"
+	min_zoom = 14 
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.roads"
+	min_zoom = 10
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.rivers"
+	min_zoom = 1 
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.main_roads" 			
+	provide
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.farms" 				
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.aerodromes_polygon" 			
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.forest" 				
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.grassland" 			
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.lakes" 			
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.medical_polygon" 			
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.military" 			
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.residential" 			
+	minzoom = 5 
+	maxzoom = 20
+
+	[[maps.layers]]
+	provider_layer = "tanzania_osm.schools_polygon"
+	minzoom = 5 
+	maxzoom = 20

@@ -58,6 +58,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		//	lookup our map layers
 		layers, ok := maps[uriParts[0]]
 		if !ok {
+			log.Printf("map (%v) not configured. check your config file", uriParts[0])
 			http.Error(w, "no map configured: "+uriParts[0], http.StatusBadRequest)
 			return
 		}
@@ -102,6 +103,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			var wg sync.WaitGroup
 			//	filter down the layers we need for this zoom
 			ls := layers.FilterByZoom(tile.Z)
+
 			//	layer stack
 			mvtLayers := make([]*mvt.Layer, len(ls))
 
@@ -144,6 +146,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		//	generate our vector tile
 		vtile, err := mvtTile.VTile(tile.BoundingBox())
 		if err != nil {
+			log.Printf("Error Getting VTile: %v", err)
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}
@@ -152,7 +155,8 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		var pbyte []byte
 		pbyte, err = proto.Marshal(vtile)
 		if err != nil {
-			http.Error(w, "error marshalling tile", http.StatusInternalServerError)
+			log.Printf("Error marshalling tile: %v", err)
+			http.Error(w, "Error marshalling tile", http.StatusInternalServerError)
 			return
 		}
 

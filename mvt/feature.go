@@ -508,8 +508,8 @@ func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []
 		}
 
 		if kidx == -1 {
-			log.Println("We go an error")
-			return tags, fmt.Errorf("Did not find key: %v in keymap.", key)
+			log.Printf("Did not find key (%v) in keymap.", key)
+			return tags, fmt.Errorf("Did not find key (%v) in keymap.", key)
 		}
 
 		// if val is nil we skip it for now
