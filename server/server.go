@@ -16,7 +16,7 @@ type layers []Layer
 //	FilterByZoom returns layers that that are to be rendered between a min and max zoom
 func (ls layers) FilterByZoom(zoom int) (filteredLayers []Layer) {
 	for _, l := range ls {
-		if l.MinZoom <= zoom && l.MaxZoom >= zoom {
+		if (l.MinZoom <= zoom || l.MinZoom == 0) && (l.MaxZoom >= zoom || l.MaxZoom == 0) {
 			filteredLayers = append(filteredLayers, l)
 		}
 	}
