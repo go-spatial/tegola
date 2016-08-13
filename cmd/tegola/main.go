@@ -5,9 +5,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 
@@ -39,18 +42,12 @@ type Map struct {
 
 func main() {
 	var err error
-	//	hold parsed config from config file
-	var conf Config
 
 	//	parse our command line flags
 	flag.Parse()
 
-	//	check the conf file exists
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		log.Fatal(configFile + " not found!")
-	}
-	//	decode conf file
-	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
+	conf, err := loadConfig(configFile)
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -73,11 +70,56 @@ func main() {
 		if conf.Webserver.Port != "" {
 			port = conf.Webserver.Port
 		}
-		//	default is :8080
 	}
 
 	//	start our webserver
 	server.Start(port)
+}
+
+//	parseConfig handles loading a config file locally or remote over http(s)
+func loadConfig(confLocation string) (Config, error) {
+	var err error
+	var conf Config
+	var reader io.Reader
+
+	//	check for http prefix
+	if strings.HasPrefix(confLocation, "http") {
+		log.Printf("Loading remote config (%v)", confLocation)
+
+		//	setup http client with a timeout
+		var httpClient = &http.Client{
+			Timeout: time.Second * 10,
+		}
+
+		//	make the http request
+		res, err := httpClient.Get(confLocation)
+		if err != nil {
+			return conf, fmt.Errorf("error fetching remote config file (%v): %v ", confLocation, err)
+		}
+
+		//	set the reader to the response body
+		reader = res.Body
+	} else {
+		log.Printf("Loading local config (%v)", confLocation)
+
+		//	check the conf file exists
+		if _, err := os.Stat(confLocation); os.IsNotExist(err) {
+			return conf, fmt.Errorf("config file at location (%v) not found!", confLocation)
+		}
+
+		//	open the confi file
+		reader, err = os.Open(confLocation)
+		if err != nil {
+			return conf, fmt.Errorf("error opening local config file (%v): %v ", confLocation, err)
+		}
+	}
+
+	//	decode conf file
+	if _, err := toml.DecodeReader(reader, &conf); err != nil {
+		return conf, nil
+	}
+
+	return conf, nil
 }
 
 //	initMaps registers maps with our server

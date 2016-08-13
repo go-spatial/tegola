@@ -1,6 +1,5 @@
 [webserver]
 port = ":8080"
-log_file = "/home/ubuntu/foo.log"
 
 # register data providers
 [[providers]]

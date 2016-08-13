@@ -108,9 +108,9 @@ name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
 ## Command flags
 Tegola currently supports the following command flags:
 
-- `config-file` - path to the config.toml file.
-- `port` - port for the webserver to bind to. i.e. :8080
-- `log-file` - path to write webserver access logs
+- `config` - Location of config file in TOML format. Can be absolute, relative or remote over http(s).
+- `port` - Port for the webserver to bind to. i.e. :8080
+- `log-file` - Path to write webserver access logs
 - `log-format` - The format that the logger will log with. Available fields:
   - `{{.Time}}` : The current Date Time in RFC 2822 format.
   - `{{.RequestIP}}` : The IP address of the the requester.
