@@ -25,6 +25,8 @@ type layer struct {
 	IDFieldName string
 	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
 	GeomFieldName string
+	// The SRID that the data in the table is stored in. This will default to WebMercator
+	SRID int
 }
 
 // Provider provides the postgis data provider.
@@ -166,13 +168,13 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	var srid = int(DefaultSRID)
-	if srid, err = c.Int(ConfigKeySRID, &srid); err != nil {
+	var srid = int64(DefaultSRID)
+	if srid, err = c.Int64(ConfigKeySRID, &srid); err != nil {
 		return nil, err
 	}
 
 	p := Provider{
-		srid: srid,
+		srid: int(srid),
 		config: pgx.ConnPoolConfig{
 			ConnConfig: pgx.ConnConfig{
 				Host:     host,
@@ -246,11 +248,16 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		if tblName != "" && sql != "" {
 			log.Printf("Both %v and %v field are specified for layer(%v) %v, using only %v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
 		}
+		var lsrid = srid
+		if lsrid, err = vc.Int64(ConfigKeySRID, &lsrid); err != nil {
+			return nil, err
+		}
 
 		l := layer{
 			Name:          lname,
 			IDFieldName:   idfld,
 			GeomFieldName: geomfld,
+			SRID:          int(lsrid),
 		}
 		if sql != "" {
 			// We need to make sure that the sql has a BBOX for the bounding box env.
@@ -288,16 +295,32 @@ func (p Provider) LayerNames() (names []string) {
 }
 
 func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
-	textent := tile.BoundingBox()
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", textent.Minx, textent.Miny, textent.Maxx, textent.Maxy, p.srid)
+
 	plyr, ok := p.layers[layerName]
 	if !ok {
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
-	sql := strings.Replace(plyr.SQL, BBOX, bbox, -1)
 
-	layer = new(mvt.Layer)
-	layer.Name = layerName
+	textent := tile.BoundingBox()
+	minGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Minx, textent.Miny})
+	if err != nil {
+		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
+	}
+	maxGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Maxx, textent.Maxy})
+	if err != nil {
+		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
+	}
+	minPt, ok := minGeo.(*basic.Point)
+	if !ok {
+		return nil, fmt.Errorf("Expected Point, got %t %v", minGeo)
+	}
+	maxPt, ok := maxGeo.(*basic.Point)
+	if !ok {
+		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo)
+	}
+
+	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)
+	sql := strings.Replace(plyr.SQL, BBOX, bbox, -1)
 
 	rows, err := p.pool.Query(sql)
 	if err != nil {
@@ -308,7 +331,17 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	fdescs := rows.FieldDescriptions()
 	var geobytes []byte
 
+	layer = new(mvt.Layer)
+	layer.Name = layerName
+	var count int
+	var didEnd bool
+	defer func() {
+		log.Printf("Got %v rows running:\n%v\nDid complete %v\n", count, sql, didEnd)
+
+	}()
+
 	for rows.Next() {
+		count++
 		var geom tegola.Geometry
 		var gid uint64
 		vals, err := rows.Values()
@@ -327,10 +360,10 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				}
 				// TODO: Need to move this from being the responsiblity of the provider to the responsibility of the feature. But that means a feature should know
 				// how the points are encoded.
-				if p.srid != DefaultSRID {
+				if plyr.SRID != DefaultSRID {
 					// We need to convert our points to Webmercator.
-					if geom, err = basic.ToWebMercator(p.srid, geom); err != nil {
-						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID(%v) for layer %v.", p.srid, layerName)
+					if geom, err = basic.ToWebMercator(plyr.SRID, geom); err != nil {
+						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID(%v) for layer %v.", plyr.SRID, layerName)
 					}
 				}
 			case plyr.IDFieldName:
@@ -375,5 +408,6 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 			Geometry: geom,
 		})
 	}
+	didEnd = true
 	return layer, err
 }
