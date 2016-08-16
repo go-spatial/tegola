@@ -58,7 +58,20 @@ func (m M)$fnSliceName(key string)(v []$T, err error){
         return v,nil
     }
     if v, ok = val.([]$T); !ok {
-        return v, fmt.Errorf("%v value needs to be of type []${T}. Value is of type %T", key, val)
+        // It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+        // type first, and then into the this type.
+        var iv []interface{}
+        if iv, ok = val.([]interface{}); !ok {
+            // Could not convert to the generic type, so we don't have the correct thing.
+           return v, fmt.Errorf("%v value needs to be of type []${T}. Value is of type %T", key, val)
+        }
+        for _, value := range iv {
+            vt, ok := value.($T);
+            if !ok {
+               return v, fmt.Errorf("%v value needs to be of type []${T}. Value is of type %T", key, val)
+            }
+            v = append(v, vt)
+        }
     }
     return v, nil
 }

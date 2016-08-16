@@ -32,7 +32,7 @@ func (m M) String(key string, def *string) (v string, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(string); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type string. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type string. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -44,7 +44,20 @@ func (m M) StringSlice(key string) (v []string, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]string); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []string.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []string. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(string)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []string. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -60,7 +73,7 @@ func (m M) Int(key string, def *int) (v int, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type int. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type int. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -72,7 +85,20 @@ func (m M) IntSlice(key string) (v []int, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]int); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []int.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []int. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(int)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []int. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -88,7 +114,7 @@ func (m M) Uint(key string, def *uint) (v uint, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type uint. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type uint. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -100,7 +126,20 @@ func (m M) UintSlice(key string) (v []uint, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]uint); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []uint.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []uint. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(uint)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []uint. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -116,7 +155,7 @@ func (m M) Int8(key string, def *int8) (v int8, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int8); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type int8. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type int8. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -128,7 +167,20 @@ func (m M) Int8Slice(key string) (v []int8, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]int8); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []int8.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []int8. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(int8)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []int8. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -144,7 +196,7 @@ func (m M) Uint8(key string, def *uint8) (v uint8, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint8); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type uint8. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type uint8. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -156,7 +208,20 @@ func (m M) Uint8Slice(key string) (v []uint8, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]uint8); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []uint8.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []uint8. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(uint8)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []uint8. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -172,7 +237,7 @@ func (m M) Int16(key string, def *int16) (v int16, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int16); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type int16. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type int16. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -184,7 +249,20 @@ func (m M) Int16Slice(key string) (v []int16, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]int16); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []int16.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []int16. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(int16)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []int16. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -200,7 +278,7 @@ func (m M) Uint16(key string, def *uint16) (v uint16, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint16); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type uint16. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type uint16. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -212,7 +290,20 @@ func (m M) Uint16Slice(key string) (v []uint16, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]uint16); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []uint16.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []uint16. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(uint16)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []uint16. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -228,7 +319,7 @@ func (m M) Int32(key string, def *int32) (v int32, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int32); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type int32. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type int32. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -240,7 +331,20 @@ func (m M) Int32Slice(key string) (v []int32, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]int32); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []int32.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []int32. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(int32)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []int32. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -256,7 +360,7 @@ func (m M) Uint32(key string, def *uint32) (v uint32, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint32); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type uint32. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type uint32. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -268,7 +372,20 @@ func (m M) Uint32Slice(key string) (v []uint32, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]uint32); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []uint32.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []uint32. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(uint32)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []uint32. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -284,7 +401,7 @@ func (m M) Int64(key string, def *int64) (v int64, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int64); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type int64. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type int64. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -296,7 +413,20 @@ func (m M) Int64Slice(key string) (v []int64, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]int64); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []int64.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []int64. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(int64)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []int64. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }
@@ -312,7 +442,7 @@ func (m M) Uint64(key string, def *uint64) (v uint64, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint64); !ok {
-		return *def, fmt.Errorf("%v value needs to be of type uint64. Value is of type %t", key, val)
+		return *def, fmt.Errorf("%v value needs to be of type uint64. Value is of type %T", key, val)
 	}
 	return v, nil
 }
@@ -324,7 +454,20 @@ func (m M) Uint64Slice(key string) (v []uint64, err error) {
 		return v, nil
 	}
 	if v, ok = val.([]uint64); !ok {
-		return v, fmt.Errorf("%v value needs to be of type []uint64.", key)
+		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
+		// type first, and then into the this type.
+		var iv []interface{}
+		if iv, ok = val.([]interface{}); !ok {
+			// Could not convert to the generic type, so we don't have the correct thing.
+			return v, fmt.Errorf("%v value needs to be of type []uint64. Value is of type %T", key, val)
+		}
+		for _, value := range iv {
+			vt, ok := value.(uint64)
+			if !ok {
+				return v, fmt.Errorf("%v value needs to be of type []uint64. Value is of type %T", key, val)
+			}
+			v = append(v, vt)
+		}
 	}
 	return v, nil
 }

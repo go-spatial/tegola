@@ -90,9 +90,11 @@ func genSQL(l *layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		//	to avoid field names possibly colliding with Postgres keywords,
 		//	we wrap the field names in quotes
 		for i, _ := range fdescs {
-			flds = append(flds, fmt.Sprintf(`"%v"`, fdescs[i].Name))
+			flds = append(flds, fdescs[i].Name)
 		}
-
+	}
+	for i := range flds {
+		flds[i] = fmt.Sprintf(`"%v"`, flds[i])
 	}
 	var fgeom int = -1
 	var fgid bool
