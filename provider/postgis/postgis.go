@@ -3,6 +3,7 @@ package postgis
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -39,15 +40,12 @@ type Provider struct {
 
 // DEFAULT sql for get geometries,
 const BBOX = "!BBOX!"
-const stdSQL = `
-SELECT %[1]v
-FROM
-	%[2]v
-WHERE
-	%[3]v && ` + BBOX
+
+// We quote the field and table names to prevent colliding with postgres keywords.
+const stdSQL = `SELECT %[1]v FROM "%[2]v" WHERE "%[3]v" && ` + BBOX
 
 // SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
-const fldsSQL = "SELECT * FROM %[1]v LIMIT 0;"
+const fldsSQL = `SELECT * FROM "%[1]v" LIMIT 0;`
 
 const Name = "postgis"
 const DefaultPort = 5432
@@ -76,46 +74,49 @@ func init() {
 }
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
-func (l *layer) genSQL(pool *pgx.ConnPool, tblname string, flds []string) (err error) {
+func genSQL(l *layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
 
 	if len(flds) == 0 {
 		// We need to hit the database to see what the fields are.
 		rows, err := pool.Query(fmt.Sprintf(fldsSQL, tblname))
 		if err != nil {
-			return err
+			return "", err
 		}
 		defer rows.Close()
 		fdescs := rows.FieldDescriptions()
 		if len(fdescs) == 0 {
-			return fmt.Errorf("No fields were returned for table %v", tblname)
+			return "", fmt.Errorf("No fields were returned for table %v", tblname)
 		}
+		//	to avoid field names possibly colliding with Postgres keywords,
+		//	we wrap the field names in quotes
 		for i, _ := range fdescs {
-			flds = append(flds, fdescs[i].Name)
+			flds = append(flds, fmt.Sprintf(`"%v"`, fdescs[i].Name))
 		}
 
 	}
 	var fgeom int = -1
 	var fgid bool
 	for i, f := range flds {
-		if f == l.GeomFieldName {
+		if f == `"`+l.GeomFieldName+`"` {
 			fgeom = i
 		}
-		if f == l.IDFieldName {
+		if f == `"`+l.IDFieldName+`"` {
 			fgid = true
 		}
 	}
 
+	//	to avoid field names possibly colliding with Postgres keywords,
+	//	we wrap the field names in quotes
 	if fgeom == -1 {
-		flds = append(flds, fmt.Sprintf("ST_AsBinary(%v) AS %[1]v", l.GeomFieldName))
+		flds = append(flds, fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.GeomFieldName))
 	} else {
-		flds[fgeom] = fmt.Sprintf("ST_AsBinary(%v) AS %[1]v", l.GeomFieldName)
+		flds[fgeom] = fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.GeomFieldName)
 	}
 	if !fgid {
-		flds = append(flds, l.IDFieldName)
+		flds = append(flds, fmt.Sprintf(`"%v"`, l.IDFieldName))
 	}
-	selectClause := strings.Join(flds, ",")
-	l.SQL = fmt.Sprintf(stdSQL, selectClause, tblname, l.GeomFieldName)
-	return nil
+	selectClause := strings.Join(flds, ", ")
+	return fmt.Sprintf(stdSQL, selectClause, tblname, l.GeomFieldName), nil
 }
 
 // NewProvider Setups and returns a new postgis provide or an error; if something
@@ -278,7 +279,13 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			// We need to do some work. We need to check to see Fields contains the geom and gid fields
 			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field
 			// list.
-			l.genSQL(p.pool, tblName, fields)
+			l.SQL, err = genSQL(&l, p.pool, tblName, fields)
+			if err != nil {
+				return nil, fmt.Errorf("Could not generate sql, for layer(%v): %v", lname, err)
+			}
+		}
+		if strings.Contains(os.Getenv("SQL_DEBUG"), "LAYER_SQL") {
+			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.SQL)
 		}
 		lyrs[lname] = l
 	}
@@ -335,10 +342,12 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	layer.Name = layerName
 	var count int
 	var didEnd bool
-	defer func() {
-		log.Printf("Got %v rows running:\n%v\nDid complete %v\n", count, sql, didEnd)
+	if strings.Contains(os.Getenv("SQL_DEBUG"), "EXECUTE_SQL") {
+		defer func() {
+			log.Printf("Got %v rows running:\n%v\nDid complete %v\n", count, sql, didEnd)
 
-	}()
+		}()
+	}
 
 	for rows.Next() {
 		count++
