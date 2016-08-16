@@ -41,7 +41,7 @@ function createMapboxStreetsV6Style() {
 		styles[length++] = line;
 	} else if (layer == 'debug' && type == 'debug_text'){
 		//	write z, x, y values
-		text.getText().setText(feature.get('name_en'));
+		text.getText().setText(feature.get('zxy'));
 		text.getText().setFont('11px "Open Sans", "Arial Unicode MS"');
 		fill.setColor('#333');
 		stroke.setColor('rgba(255,255,255,0.8)');
