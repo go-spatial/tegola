@@ -245,12 +245,10 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
 		}
 
-		if tblName == "" && sql == "" {
-			return nil, fmt.Errorf("The %v or %v field for layer(%v) %v must be specified.", ConfigKeyTablename, ConfigKeySQL, i, lname)
+		if tblName != lname && sql != "" {
+			log.Printf("Both %v and %v field are specified for layer(%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
 		}
-		if tblName != "" && sql != "" {
-			log.Printf("Both %v and %v field are specified for layer(%v) %v, using only %v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
-		}
+
 		var lsrid = srid
 		if lsrid, err = vc.Int64(ConfigKeySRID, &lsrid); err != nil {
 			return nil, err
