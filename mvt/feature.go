@@ -512,11 +512,16 @@ func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []
 			return tags, fmt.Errorf("Did not find key: %v in keymap.", key)
 		}
 
+		// if val is nil we skip it for now
+		// https://github.com/mapbox/vector-tile-spec/issues/62
+		if val == nil {
+			continue
+		}
+
 		for i, v := range valueMap {
 			switch tv := val.(type) {
 			default:
-				return tags, fmt.Errorf("Value(%[1]v) type of %[1]t is not supported.", tv)
-
+				return tags, fmt.Errorf("Value (%[1]v) of type (%[1]T) for key (%[2]v) is not supported.", tv, key)
 			case string:
 				vmt, ok := v.(string) // Make sure the type of the Value map matches the type of the Tag's value
 				if !ok || vmt != tv { // and that the values match
