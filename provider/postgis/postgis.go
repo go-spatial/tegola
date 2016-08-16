@@ -42,10 +42,10 @@ type Provider struct {
 const BBOX = "!BBOX!"
 
 // We quote the field and table names to prevent colliding with postgres keywords.
-const stdSQL = `SELECT %[1]v FROM "%[2]v" WHERE "%[3]v" && ` + BBOX
+const stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + BBOX
 
 // SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
-const fldsSQL = `SELECT * FROM "%[1]v" LIMIT 0;`
+const fldsSQL = `SELECT * FROM %[1]v LIMIT 0;`
 
 const Name = "postgis"
 const DefaultPort = 5432
