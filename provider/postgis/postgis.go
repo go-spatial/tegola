@@ -233,7 +233,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		}
 
 		var tblName string
-		tblName, err = vc.String(ConfigKeyTablename, &tblName)
+		tblName, err = vc.String(ConfigKeyTablename, &lname)
 		if err != nil {
 			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
 		}
