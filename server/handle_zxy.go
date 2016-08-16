@@ -195,8 +195,8 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 	//	new feature
 	zxy := mvt.Feature{
 		Tags: map[string]interface{}{
-			"type":    "debug_text",
-			"name_en": fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
+			"type": "debug_text",
+			"zxy":  fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
 		},
 		Geometry: &basic.Point{ //	middle of the tile
 			ext.Minx + (xlen / 2),

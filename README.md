@@ -51,6 +51,7 @@ database = "tegola" 	# postgis database name
 user = "tegola"			# postgis database user
 password = ""			# postgis database password
 srid = 3857             # The default srid for this provider. If not provided it will be WebMercator (3857)
+
 	[[providers.layers]]
 	name = "landuse" 					# will be encoded as the layer name in the tile
 	tablename = "gis.zoning_base_3857" 	# sql or table_name are required
@@ -116,6 +117,35 @@ Tegola currently supports the following command flags:
   - `{{.Z}}` : The Zoom level.
   - `{{.X}}` : The X Coordinate.
   - `{{.Y}}` : The Y Coordinate.
+
+## Debugging
+
+### Environment Variables
+The following environment variables can be used for debugging the tegola server:
+
+`SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
+
+- `LAYER_SQL`: print layer SQL as they are parsed from the config file.
+- `EXCUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
+
+#### Usage
+
+```bash
+$ SQL_DEBUG=LAYER_SQL tegola --config-file=/path/to/conf.toml
+```
+
+### Client side
+When debugging client side, it's often helpful to to see an outline of a tile along with it's Z/X/Y values. To encode a debug layer into every tile add the query string variable `debug=true` to the URL template being used to request tiles. For example:
+
+```
+http://localhost:8080/maps/mymap/{z}/{x}/{y}.vector.pbf?debug=true
+```
+
+The requested tile will be encode a layer with the `name` value set to `debug` and include two features:
+
+ - `debug_outline`: a line feature that traces the border of the tile
+ - `debug_text`: a point feature in the middle of the tile with the following tags:
+   - `zxy`: a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
 
 ## Specifications
 - [Well Known Binary (WKB)](http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm)
