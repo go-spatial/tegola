@@ -301,6 +301,47 @@ func (p Provider) LayerNames() (names []string) {
 	return names
 }
 
+func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
+	switch valType {
+	default:
+		switch vt := val.(type) {
+		default:
+			return nil, fmt.Errorf("%v type is not supported. (Expected it to be a stringer type.)", valType)
+		case fmt.Stringer:
+			return vt.String(), nil
+		case string:
+			return vt, nil
+		}
+	case pgx.BoolOid, pgx.ByteaOid, pgx.TextOid, pgx.OidOid, pgx.VarcharOid, pgx.JsonbOid:
+		return val, nil
+	case pgx.Int8Oid, pgx.Int2Oid, pgx.Int4Oid, pgx.Float4Oid, pgx.Float8Oid:
+		switch vt := val.(type) {
+		default: // should never happen.
+			return nil, fmt.Errorf("%v type is not supported. (should never happen)", valType)
+		case int8:
+			return int64(vt), nil
+		case int16:
+			return int64(vt), nil
+		case int32:
+			return int64(vt), nil
+		case int64, uint64:
+			return vt, nil
+		case uint8:
+			return int64(vt), nil
+		case uint16:
+			return int64(vt), nil
+		case uint32:
+			return int64(vt), nil
+		case float32:
+			return float64(vt), nil
+		case float64:
+			return vt, nil
+		}
+	case pgx.DateOid, pgx.TimestampOid, pgx.TimestampTzOid:
+		return fmt.Sprintf("%v", val), nil
+	}
+}
+
 func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
 
 	plyr, ok := p.layers[layerName]
@@ -401,7 +442,15 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v", plyr.IDFieldName, layerName)
 				}
 			default:
-				gtags[fdescs[i].Name] = vals[i]
+				if vals[i] == nil {
+					// We want to skip all nil values.
+					continue
+				}
+				value, err := transfromVal(fdescs[i].DataType, vals[i])
+				if err != nil {
+					return nil, fmt.Errorf("Unable to convert field[%v] (%v) of type (%v - %v) to a suitable value.: [[ %T  :: %[5]t ]]", i, fdescs[i].Name, fdescs[i].DataType, fdescs[i].DataTypeName, vals[i])
+				}
+				gtags[fdescs[i].Name] = value
 			}
 		}
 		for k, v := range tags {
