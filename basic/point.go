@@ -1,6 +1,10 @@
 package basic
 
-import "github.com/terranodo/tegola"
+import (
+	"fmt"
+
+	"github.com/terranodo/tegola"
+)
 
 // Point describes a simple 2d point
 type Point [2]float64
@@ -18,8 +22,11 @@ func (bp *Point) Y() float64 {
 	return bp[1]
 }
 
-func (*Point) String() string {
-	return "Point"
+func (p *Point) String() string {
+	if p == nil {
+		return "Point(nil)"
+	}
+	return fmt.Sprintf("Point(%v %v)", p.X(), p.Y())
 }
 
 // Point3 describes a simple 3d point

@@ -188,3 +188,103 @@ func FromWebMercator(SRID int, geometry tegola.Geometry) (tegola.Geometry, error
 		return ApplyToPoints(geometry, webmercator.PToLonLat)
 	}
 }
+
+func ScaleGeometry(tile tegola.BoundingBox, extent float64, geo tegola.Geometry) (tegola.Geometry, error) {
+	xspan := tile.Maxx - tile.Minx
+	yspan := tile.Maxy - tile.Miny
+	return ApplyToPoints(geo, func(coords ...float64) ([]float64, error) {
+		nx := int64((coords[0] - tile.Minx) * extent / xspan)
+		ny := int64((coords[1] - tile.Miny) * extent / yspan)
+		return []float64{float64(nx), float64(ny)}, nil
+	})
+}
+
+func Slope(p1, p2 tegola.Point) (float64, error) {
+	dx := p2.X() - p1.X()
+	if dx == 0 {
+		return 0, fmt.Errorf("Line is vertical")
+	}
+	dy := p2.Y() - p1.Y()
+	if dy == 0 {
+		return 0, nil
+	}
+	return (dy / dx), nil
+
+}
+
+func simplifyLine(line tegola.LineString, connected bool) *Line {
+	var pts []float64
+	points := line.Subpoints()
+	if len(points) < 3 {
+		for _, p := range points {
+			pts = append(pts, p.X(), p.Y())
+		}
+		return NewLine(pts...)
+	}
+	stpos := 0
+	stidx := stpos
+	endpos := len(points) - 1
+
+	if connected {
+		stidx = endpos
+	}
+	spt := points[stidx]
+	for i := stpos; i < endpos; i++ {
+		m1, err1 := Slope(spt, points[i])
+		m2, err2 := Slope(spt, points[i+1])
+		// If the slope matches we skip the point.
+		if err1 == err2 && m1 == m2 {
+			continue
+		}
+		pts = append(pts, points[i].X(), points[i].Y())
+		spt = points[i]
+	}
+	if len(pts) < 2 {
+		// 1 point or few means the line should disappear.
+		return nil
+	}
+	// Always add the last point.
+	pts = append(pts, points[len(points)-1].X(), points[len(points)-1].Y())
+	return NewLine(pts...)
+}
+
+func simplifyPolygon(geo tegola.Polygon) Polygon {
+	var pol []Line
+	for _, l := range geo.Sublines() {
+		ln := simplifyLine(l, true)
+		if ln != nil {
+			pol = append(pol, *ln)
+		}
+	}
+	return Polygon(pol)
+}
+
+func SimplifyGeometry(geometry tegola.Geometry) (tegola.Geometry, error) {
+	switch geo := geometry.(type) {
+	//case tegola.Point, tegola.Point3, tegola.MultiPoint:
+	default:
+		// Nothing to simplify for Points.
+		return CloneGeometry(geometry)
+	case tegola.LineString:
+		l := simplifyLine(geo, false)
+		return l, nil
+	case tegola.MultiLine:
+		var ml []Line
+		for _, l := range geo.Lines() {
+			ln := simplifyLine(l, false)
+			if ln != nil {
+				ml = append(ml, *ln)
+			}
+		}
+		return MultiLine(ml), nil
+	case tegola.Polygon:
+		return simplifyPolygon(geo), nil
+	case tegola.MultiPolygon:
+		var mpol []Polygon
+		for _, p := range geo.Polygons() {
+			mpol = append(mpol, simplifyPolygon(p))
+		}
+		mpl := MultiPolygon(mpol)
+		return &mpl, nil
+	}
+}

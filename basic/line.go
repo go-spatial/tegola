@@ -14,7 +14,7 @@ func (Line) String() string { return "Line" }
 // NewLine creates a line given pairs for floats.
 func NewLine(pointPairs ...float64) *Line {
 	line := new(Line)
-	if (2 % len(pointPairs)) != 0 {
+	if (len(pointPairs) % 2) != 0 {
 		panic("NewLine requires pair of points.")
 	}
 	for i := 0; i < len(pointPairs); i += 2 {

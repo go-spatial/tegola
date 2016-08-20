@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 	"github.com/terranodo/tegola/wkb"
 )
@@ -159,7 +160,9 @@ func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
 }
 
 func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
-	ix, iy := c.ScalePoint(p)
+	//ix, iy := c.ScalePoint(p)
+	ix, iy := int64(p.X()), int64(p.Y())
+
 	//	computer our point delta
 	dx = ix - int64(c.x)
 	dy = iy - int64(c.y)
@@ -200,11 +203,18 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geo tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(geometry tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 	//	new cursor
 	c := newCursor(extent, layerExtent)
-	if geo == nil {
+	if geometry == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
+	}
+	geo, err := basic.ScaleGeometry(extent, float64(layerExtent), geometry)
+	if err != nil {
+		return nil, vectorTile.Tile_UNKNOWN, fmt.Errorf("Failed to scale geo. %v", err)
+	}
+	if geo, err = basic.SimplifyGeometry(geo); err != nil {
+		return nil, vectorTile.Tile_UNKNOWN, fmt.Errorf("Failed to simplify geo. %v", err)
 	}
 
 	switch t := geo.(type) {
