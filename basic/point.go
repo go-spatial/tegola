@@ -13,12 +13,12 @@ type Point [2]float64
 func (Point) basicType() {}
 
 // X is the x coordinate
-func (bp *Point) X() float64 {
+func (bp Point) X() float64 {
 	return bp[0]
 }
 
 // Y is the y coordinate
-func (bp *Point) Y() float64 {
+func (bp Point) Y() float64 {
 	return bp[1]
 }
 
@@ -36,20 +36,20 @@ type Point3 [3]float64
 func (Point3) basicType() {}
 
 // X is the x coordinate
-func (bp *Point3) X() float64 {
+func (bp Point3) X() float64 {
 	return bp[0]
 }
-func (*Point3) String() string {
+func (Point3) String() string {
 	return "Point3"
 }
 
 // Y is the y coordinate
-func (bp *Point3) Y() float64 {
+func (bp Point3) Y() float64 {
 	return bp[1]
 }
 
 // Z is the z coordinate
-func (bp *Point3) Z() float64 {
+func (bp Point3) Z() float64 {
 	return bp[2]
 }
 
@@ -58,14 +58,14 @@ type MultiPoint []Point
 
 // Just to make basic collection only usable with basic types.
 func (MultiPoint) basicType() {}
-func (*MultiPoint) String() string {
+func (MultiPoint) String() string {
 	return "MultiPoint"
 }
 
 // Points are the points that make up the set
-func (v *MultiPoint) Points() (points []tegola.Point) {
-	for i := range *v {
-		points = append(points, &((*v)[i]))
+func (v MultiPoint) Points() (points []tegola.Point) {
+	for i := range v {
+		points = append(points, v[i])
 	}
 	return points
 }
@@ -77,13 +77,13 @@ type MultiPoint3 []Point3
 func (MultiPoint3) basicType() {}
 
 // Points are the points that make up the set
-func (v *MultiPoint3) Points() (points []tegola.Point) {
-	for i := range *v {
-		points = append(points, &((*v)[i]))
+func (v MultiPoint3) Points() (points []tegola.Point) {
+	for i := range v {
+		points = append(points, v[i])
 	}
 	return points
 }
 
-func (*MultiPoint3) String() string {
+func (MultiPoint3) String() string {
 	return "MultiPoint3"
 }

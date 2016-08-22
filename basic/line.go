@@ -12,22 +12,22 @@ func (Line) basicType()     {}
 func (Line) String() string { return "Line" }
 
 // NewLine creates a line given pairs for floats.
-func NewLine(pointPairs ...float64) *Line {
-	line := new(Line)
+func NewLine(pointPairs ...float64) Line {
+	var line Line
 	if (len(pointPairs) % 2) != 0 {
 		panic("NewLine requires pair of points.")
 	}
 	for i := 0; i < len(pointPairs); i += 2 {
-		*line = append(*line, Point{pointPairs[i], pointPairs[i+1]})
+		line = append(line, Point{pointPairs[i], pointPairs[i+1]})
 	}
 	return line
 }
 
 // Subpoints return the points in a line.
-func (l *Line) Subpoints() (points []tegola.Point) {
-	points = make([]tegola.Point, 0, len(*l))
-	for i := range *l {
-		points = append(points, tegola.Point(&((*l)[i])))
+func (l Line) Subpoints() (points []tegola.Point) {
+	points = make([]tegola.Point, 0, len(l))
+	for i := range l {
+		points = append(points, tegola.Point(l[i]))
 	}
 	return points
 }
@@ -41,10 +41,10 @@ func (MultiLine) String() string { return "Line" }
 func (MultiLine) basicType() {}
 
 // Lines are the lines in a Multiline
-func (ml *MultiLine) Lines() (lines []tegola.LineString) {
-	lines = make([]tegola.LineString, 0, len(*ml))
-	for i := range *ml {
-		lines = append(lines, tegola.LineString(&(*ml)[i]))
+func (ml MultiLine) Lines() (lines []tegola.LineString) {
+	lines = make([]tegola.LineString, 0, len(ml))
+	for i := range ml {
+		lines = append(lines, tegola.LineString(ml[i]))
 	}
 	return lines
 }

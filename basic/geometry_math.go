@@ -2,6 +2,7 @@ package basic
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths/webmercator"
@@ -20,7 +21,7 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 		if len(c) < 2 {
 			return nil, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 2", len(c))
 		}
-		return &Point{c[0], c[1]}, nil
+		return Point{c[0], c[1]}, nil
 	case tegola.Point3:
 		c, err := f(geo.X(), geo.Y(), geo.Z())
 		if err != nil {
@@ -29,7 +30,7 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 		if len(c) < 3 {
 			return nil, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 3", len(c))
 		}
-		return &Point3{c[0], c[1], c[2]}, nil
+		return Point3{c[0], c[1], c[2]}, nil
 	case tegola.MultiPoint:
 		var pts MultiPoint
 		for _, pt := range geo.Points() {
@@ -55,7 +56,7 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 			}
 			line = append(line, Point{c[0], c[1]})
 		}
-		return &line, nil
+		return line, nil
 	case tegola.MultiLine:
 		var line MultiLine
 		for i, lineGeo := range geo.Lines() {
@@ -65,6 +66,7 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 			}
 			ln, ok := geoLine.(Line)
 			if !ok {
+				log.Printf("We did not get the conversion we were expecting: %t", geoLine)
 				panic("We did not get the conversion we were expecting")
 			}
 			line = append(line, ln)
@@ -77,14 +79,14 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 			if err != nil {
 				return nil, fmt.Errorf("Got error converting line(%v) of polygon: %v", i, err)
 			}
-			ln, ok := geoLine.(*Line)
+			ln, ok := geoLine.(Line)
 			if !ok {
 				panic("We did not get the conversion we were expecting")
 			}
 
-			poly = append(poly, *ln)
+			poly = append(poly, ln)
 		}
-		return &poly, nil
+		return poly, nil
 	case tegola.MultiPolygon:
 		var mpoly MultiPolygon
 		for i, poly := range geo.Polygons() {
@@ -92,13 +94,13 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 			if err != nil {
 				return nil, fmt.Errorf("Got error converting poly(%v) of multipolygon: %v", i, err)
 			}
-			p, ok := geoPoly.(*Polygon)
+			p, ok := geoPoly.(Polygon)
 			if !ok {
 				panic("We did not get the conversion we were expecting")
 			}
-			mpoly = append(mpoly, *p)
+			mpoly = append(mpoly, p)
 		}
-		return &mpoly, nil
+		return mpoly, nil
 	}
 }
 
@@ -106,23 +108,39 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 func CloneGeometry(geometry tegola.Geometry) (tegola.Geometry, error) {
 	switch geo := geometry.(type) {
 	default:
-		return nil, fmt.Errorf("Unknown Geometry: %+v", geometry)
+		return nil, fmt.Errorf("Unknown Geometry: %t", geometry)
 	case tegola.Point:
-		return &Point{geo.X(), geo.Y()}, nil
+		return Point{geo.X(), geo.Y()}, nil
 	case tegola.Point3:
-		return &Point3{geo.X(), geo.Y(), geo.Z()}, nil
+		return Point3{geo.X(), geo.Y(), geo.Z()}, nil
 	case tegola.MultiPoint:
 		var pts MultiPoint
-		for _, pt := range geo.Points() {
-			pts = append(pts, Point{pt.X(), pt.Y()})
+		for i, pt := range geo.Points() {
+			geopt, err := CloneGeometry(pt)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to clone point(%v) of multipoint: %v", i, err)
+			}
+			p, ok := geopt.(Point)
+			if !ok {
+				return nil, fmt.Errorf("Failed to clone point(%v) of multipoint: %t", i, geopt)
+			}
+			pts = append(pts, p)
 		}
 		return pts, nil
 	case tegola.LineString:
 		var line Line
-		for _, ptGeo := range geo.Subpoints() {
-			line = append(line, Point{ptGeo.X(), ptGeo.Y()})
+		for i, pt := range geo.Subpoints() {
+			geopt, err := CloneGeometry(pt)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to clone point(%v) of line: %v", i, err)
+			}
+			p, ok := geopt.(Point)
+			if !ok {
+				return nil, fmt.Errorf("Failed to clone point(%v) of line", i)
+			}
+			line = append(line, p)
 		}
-		return &line, nil
+		return line, nil
 	case tegola.MultiLine:
 		var line MultiLine
 		for i, lineGeo := range geo.Lines() {
@@ -144,7 +162,7 @@ func CloneGeometry(geometry tegola.Geometry) (tegola.Geometry, error) {
 			ln, _ := geoLine.(Line)
 			poly = append(poly, ln)
 		}
-		return &poly, nil
+		return poly, nil
 	case tegola.MultiPolygon:
 		var mpoly MultiPolygon
 		for i, poly := range geo.Polygons() {
@@ -155,7 +173,7 @@ func CloneGeometry(geometry tegola.Geometry) (tegola.Geometry, error) {
 			p, _ := geoPoly.(Polygon)
 			mpoly = append(mpoly, p)
 		}
-		return &mpoly, nil
+		return mpoly, nil
 	}
 }
 
@@ -212,7 +230,7 @@ func Slope(p1, p2 tegola.Point) (float64, error) {
 
 }
 
-func simplifyLine(line tegola.LineString, connected bool) *Line {
+func simplifyLine(line tegola.LineString, connected bool) Line {
 	var pts []float64
 	points := line.Subpoints()
 	if len(points) < 3 {
@@ -253,7 +271,7 @@ func simplifyPolygon(geo tegola.Polygon) Polygon {
 	for _, l := range geo.Sublines() {
 		ln := simplifyLine(l, true)
 		if ln != nil {
-			pol = append(pol, *ln)
+			pol = append(pol, ln)
 		}
 	}
 	return Polygon(pol)
@@ -273,7 +291,7 @@ func SimplifyGeometry(geometry tegola.Geometry) (tegola.Geometry, error) {
 		for _, l := range geo.Lines() {
 			ln := simplifyLine(l, false)
 			if ln != nil {
-				ml = append(ml, *ln)
+				ml = append(ml, ln)
 			}
 		}
 		return MultiLine(ml), nil
