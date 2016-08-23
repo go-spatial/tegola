@@ -107,10 +107,11 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			//	layer stack
 			mvtLayers := make([]*mvt.Layer, len(ls))
 
+			//	set our waitgroup count
+			wg.Add(len(ls))
+
 			//	iterate our layers
 			for i, l := range ls {
-				//	incriment our waitgroup
-				wg.Add(1)
 				//	go routine for rendering the layer
 				go func(i int, l Layer) {
 					//	on completion let the wait group know
