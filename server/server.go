@@ -1,3 +1,4 @@
+//  Package server implements the http frontend
 package server
 
 import (
@@ -54,6 +55,7 @@ func Start(port string) {
 	//	setup routes
 	http.Handle("/", http.FileServer(http.Dir("static")))
 	http.HandleFunc("/maps/", handleZXY)
+	http.HandleFunc("/capabilities", handleCapabilities)
 
 	//	start our server
 	log.Fatal(http.ListenAndServe(port, nil))

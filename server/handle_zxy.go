@@ -1,4 +1,3 @@
-//Package server implements the http frontend
 package server
 
 import (

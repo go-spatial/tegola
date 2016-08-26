@@ -29,7 +29,27 @@ Tegola uses the following URL scheme:
 - `:x` is the row of the tile at the zoom level.
 - `:y` is the column of the tile at the zoom level.
 
+### Additional endpoints
 
+```
+/capabilities
+```
+Will return a JSON encoded list of the server's configured maps and layers with various attributes. An example response:
+
+```json
+{
+	"maps": [{
+		"name": "zoning",
+		"uri": "/maps/zoning",
+		"layers": [{
+			"name": "landuse",
+			"minZoom": 12,
+			"maxZoom": 16
+		}]
+	}]
+}
+
+```
 
 ## Configuration
 The tegola config file uses the [TOML](https://github.com/toml-lang/toml) format. The following example shows how to configure a PostGIS data provider with two layers. The first layer includes a `tablename`, `geometry_field` and an `id_field`. The second layer uses a custom `sql` statement instead of the `tablename` property.
@@ -103,7 +123,6 @@ name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
 
 
 ```
-
 
 ## Command flags
 Tegola currently supports the following command flags:
