@@ -14,7 +14,7 @@ Tegola is a high performance vector tile server delivering [Mapbox Vector Tiles]
 2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
-./tegola -config=/path/to/config.toml
+./tegola --config=/path/to/config.toml
 ```
 
 ## URL Scheme
