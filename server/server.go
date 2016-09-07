@@ -24,6 +24,18 @@ func (ls layers) FilterByZoom(zoom int) (filteredLayers []Layer) {
 	return
 }
 
+//	FilterByName returns a slice with the first layer that matches the provided name
+//	the slice return is for convenience. MVT tiles require unique layer names
+func (ls layers) FilterByName(name string) (filteredLayers []Layer) {
+	for _, l := range ls {
+		if l.Name == name {
+			filteredLayers = append(filteredLayers, l)
+			return
+		}
+	}
+	return
+}
+
 type Layer struct {
 	Name    string
 	MinZoom int
@@ -54,7 +66,7 @@ func Start(port string) {
 
 	//	setup routes
 	http.Handle("/", http.FileServer(http.Dir("static")))
-	http.HandleFunc("/maps/", handleZXY)
+	http.Handle("/maps/", handleZXY{})
 	http.HandleFunc("/capabilities", handleCapabilities)
 
 	//	start our server

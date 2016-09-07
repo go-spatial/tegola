@@ -41,7 +41,7 @@ func (l *Logger) initTemplate() {
 	l.template = template.New("logfile")
 
 	if _, err := l.template.Parse(l.Format); err != nil {
-		log.Printf("Could not parse log template(%v) disabling logging. Error: %v", l.Format, err)
+		log.Printf("Could not parse log template (%v) disabling logging. Error: %v", l.Format, err)
 		l.skip = true
 	}
 	l.Unlock()

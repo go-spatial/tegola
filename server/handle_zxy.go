@@ -22,13 +22,84 @@ const (
 	MaxZoom = 20
 )
 
+type handleZXY struct {
+	//	required
+	mapName string
+	//	optional
+	layerName string
+	//	zoom
+	z int
+	//	row
+	x int
+	//	column
+	y int
+	//	debug
+	debug bool
+}
+
+//	parseURI reads the request URI and extracts the various values for the request
+func (req *handleZXY) parseURI(r *http.Request) error {
+	var err error
+
+	//	pop off URI prefix
+	uri := r.URL.Path[len("/maps/"):]
+
+	//	break apart our URI
+	uriParts := strings.Split(uri, "/")
+
+	//	check that we have the correct number of arguments in our URI
+	if len(uriParts) < 4 || len(uriParts) > 6 {
+		log.Printf("invalid URI format (%v). expecting /maps/:map_name/:z/:x/:y", r.URL.Path)
+		return fmt.Errorf("invalid URI format (%v). expecting /maps/:map_name/:z/:x/:y", r.URL.Path)
+	}
+
+	//	set map name
+	req.mapName = uriParts[0]
+
+	//	check for possible layer name (i.e. /maps/:map_name/:layer_name/:z/:x/:y)
+	if len(uriParts) == 5 {
+		req.layerName = uriParts[1]
+	}
+
+	//	parse our URL vals to ints
+	z := uriParts[len(uriParts)-3]
+	req.z, err = strconv.Atoi(z)
+	if err != nil {
+		log.Println("invalid Z value (%v)", z)
+		return fmt.Errorf("invalid Z value (%v)", z)
+	}
+
+	x := uriParts[len(uriParts)-2]
+	req.x, err = strconv.Atoi(x)
+	if err != nil {
+		log.Println("invalid X value (%v)", x)
+		return fmt.Errorf("invalid X value (%v)", x)
+	}
+
+	//	trim the "y" param in the url in case it has an extension
+	y := uriParts[len(uriParts)-1]
+	yParts := strings.Split(y, ".")
+	req.y, err = strconv.Atoi(yParts[0])
+	if err != nil {
+		log.Println("invalid Y value (%v)", y)
+		return fmt.Errorf("invalid Y value (%v)", y)
+	}
+
+	//	check for debug request
+	if r.URL.Query().Get("debug") == "true" {
+		req.debug = true
+	}
+
+	return nil
+}
+
 //	URI scheme: /maps/:map_name/:z/:x/:y
 //	map_name - map name in the config file
 //	z, x, y - tile coordinates as described in the Slippy Map Tilenames specification
 //		z - zoom level
 //		x - row
 //		y - column
-func handleZXY(w http.ResponseWriter, r *http.Request) {
+func (req handleZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	check http verb
 	switch r.Method {
 	//	preflight check for CORS request
@@ -42,54 +113,26 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		return
 	//	tile request
 	case "GET":
-		//	pop off URI prefix
-		uri := r.URL.Path[len("/maps/"):]
 
-		//	break apart our URI
-		uriParts := strings.Split(uri, "/")
-
-		//	check that we have the correct number of arguments in our URI
-		if len(uriParts) != 4 {
-			http.Error(w, "uri requires four params: /:map_id/:z/:x/:y", http.StatusBadRequest)
+		//	parse our URI
+		if err := req.parseURI(r); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		//	lookup our map layers
-		layers, ok := maps[uriParts[0]]
+		layers, ok := maps[req.mapName]
 		if !ok {
-			log.Printf("map (%v) not configured. check your config file", uriParts[0])
-			http.Error(w, "no map configured: "+uriParts[0], http.StatusBadRequest)
-			return
-		}
-
-		//	trim the "y" param in the url in case it has an extension
-		yparts := strings.Split(uriParts[3], ".")
-		uriParts[3] = yparts[0]
-
-		//	parse our URL vals to ints
-		z, err := strconv.Atoi(uriParts[1])
-		if err != nil {
-			http.Error(w, "invalid z value: "+uriParts[1], http.StatusBadRequest)
-			return
-		}
-
-		x, err := strconv.Atoi(uriParts[2])
-		if err != nil {
-			http.Error(w, "invalid x value: "+uriParts[2], http.StatusBadRequest)
-			return
-		}
-
-		y, err := strconv.Atoi(uriParts[3])
-		if err != nil {
-			http.Error(w, "invalid y value: "+uriParts[3], http.StatusBadRequest)
+			log.Printf("map (%v) not configured. check your config file", req.mapName)
+			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
 			return
 		}
 
 		//	new tile
 		tile := tegola.Tile{
-			Z: z,
-			X: x,
-			Y: y,
+			Z: req.z,
+			X: req.x,
+			Y: req.y,
 		}
 
 		//	generate a tile
@@ -102,6 +145,11 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 			var wg sync.WaitGroup
 			//	filter down the layers we need for this zoom
 			ls := layers.FilterByZoom(tile.Z)
+
+			//	if our request has a layerName defined only render
+			if req.layerName != "" {
+				ls = layers.FilterByName(req.layerName)
+			}
 
 			//	layer stack
 			mvtLayers := make([]*mvt.Layer, len(ls))
@@ -136,8 +184,7 @@ func handleZXY(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	check for the debug query string
-		debug := r.URL.Query().Get("debug")
-		if debug == "true" {
+		if req.debug {
 			//	add debug layer
 			debugLayer := debugLayer(tile)
 			mvtTile.AddLayers(debugLayer)
