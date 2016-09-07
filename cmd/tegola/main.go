@@ -116,7 +116,7 @@ func loadConfig(confLocation string) (Config, error) {
 
 	//	decode conf file
 	if _, err := toml.DecodeReader(reader, &conf); err != nil {
-		return conf, nil
+		return conf, err
 	}
 
 	return conf, nil
