@@ -6,9 +6,6 @@ import (
 	"net/http"
 )
 
-//	set at runtime from main
-var Version string
-
 type Capabilities struct {
 	Version string            `json:"version"`
 	Maps    []CapabilitiesMap `json:"maps"`
@@ -27,9 +24,9 @@ type CapabilitiesLayer struct {
 	MaxZoom int    `json:"maxZoom"`
 }
 
-type handleCapabilities struct{}
+type HandleCapabilities struct{}
 
-func (req handleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case "GET":

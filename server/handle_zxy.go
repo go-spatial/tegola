@@ -22,7 +22,7 @@ const (
 	MaxZoom = 20
 )
 
-type handleZXY struct {
+type HandleZXY struct {
 	//	required
 	mapName string
 	//	optional
@@ -38,7 +38,7 @@ type handleZXY struct {
 }
 
 //	parseURI reads the request URI and extracts the various values for the request
-func (req *handleZXY) parseURI(r *http.Request) error {
+func (req *HandleZXY) parseURI(r *http.Request) error {
 	var err error
 
 	//	pop off URI prefix
@@ -99,7 +99,7 @@ func (req *handleZXY) parseURI(r *http.Request) error {
 //		z - zoom level
 //		x - row
 //		y - column
-func (req handleZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (req HandleZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	check http verb
 	switch r.Method {
 	//	preflight check for CORS request

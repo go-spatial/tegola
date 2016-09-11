@@ -9,6 +9,9 @@ import (
 	"github.com/terranodo/tegola/mvt"
 )
 
+//	set at runtime from main
+var Version string
+
 //	incoming requests are associated with a map
 var maps = map[string]layers{}
 
@@ -66,8 +69,8 @@ func Start(port string) {
 
 	//	setup routes
 	http.Handle("/", http.FileServer(http.Dir("static")))
-	http.Handle("/maps/", handleZXY{})
-	http.Handle("/capabilities", handleCapabilities{})
+	http.Handle("/maps/", HandleZXY{})
+	http.Handle("/capabilities", HandleCapabilities{})
 
 	//	start our server
 	log.Fatal(http.ListenAndServe(port, nil))
