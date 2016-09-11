@@ -20,6 +20,11 @@ import (
 	"github.com/terranodo/tegola/server"
 )
 
+var (
+	//	set at buildtime via the CI
+	Version = "version not set"
+)
+
 type Config struct {
 	Webserver struct {
 		Port      string
@@ -71,6 +76,9 @@ func main() {
 			port = conf.Webserver.Port
 		}
 	}
+
+	//	set our server version
+	server.Version = Version
 
 	//	start our webserver
 	server.Start(port)

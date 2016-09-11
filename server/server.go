@@ -67,7 +67,7 @@ func Start(port string) {
 	//	setup routes
 	http.Handle("/", http.FileServer(http.Dir("static")))
 	http.Handle("/maps/", handleZXY{})
-	http.HandleFunc("/capabilities", handleCapabilities)
+	http.Handle("/capabilities", handleCapabilities{})
 
 	//	start our server
 	log.Fatal(http.ListenAndServe(port, nil))

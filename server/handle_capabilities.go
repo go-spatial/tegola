@@ -6,8 +6,12 @@ import (
 	"net/http"
 )
 
+//	set at runtime from main
+var Version string
+
 type Capabilities struct {
-	Maps []CapabilitiesMap `json:"maps"`
+	Version string            `json:"version"`
+	Maps    []CapabilitiesMap `json:"maps"`
 }
 
 type CapabilitiesMap struct {
@@ -18,15 +22,22 @@ type CapabilitiesMap struct {
 
 type CapabilitiesLayer struct {
 	Name    string `json:"name"`
+	URI     string `json:"uri"`
 	MinZoom int    `json:"minZoom"`
 	MaxZoom int    `json:"maxZoom"`
 }
 
-func handleCapabilities(w http.ResponseWriter, r *http.Request) {
+type handleCapabilities struct{}
+
+func (req handleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case "GET":
+		//	new capabilities struct
 		var capabilities Capabilities
+		capabilities.Version = Version
+
+		//	iterate our registered maps
 		for name, m := range maps {
 			//	build the map details
 			cMap := CapabilitiesMap{
@@ -38,6 +49,7 @@ func handleCapabilities(w http.ResponseWriter, r *http.Request) {
 				//	build the layer details
 				cLayer := CapabilitiesLayer{
 					Name:    layer.Name,
+					URI:     fmt.Sprintf("/maps/%v/%v", name, layer.Name),
 					MinZoom: layer.MinZoom,
 					MaxZoom: layer.MaxZoom,
 				}

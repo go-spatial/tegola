@@ -10,7 +10,7 @@ notifications:
 before_deploy:
   - go get github.com/mitchellh/gox
   - cd cmd/tegola/
-  - gox -output "{{.Dir}}_{{.OS}}_{{.Arch}}"
+  - gox -ldflags "-w -X main.Version=$TRAVIS_TAG" -output "{{.Dir}}_{{.OS}}_{{.Arch}}"
 
 deploy:
   provider: releases
@@ -35,3 +35,7 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
+
+notifications:
+  email:
+    on_success: never
