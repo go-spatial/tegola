@@ -56,6 +56,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	//	log.Println("config webserver port", conf.Webserver.Port)
+
 	//	init our providers
 	providers, err := initProviders(conf.Providers)
 	if err != nil {
@@ -69,12 +71,9 @@ func main() {
 
 	initLogger(logFile, logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
 
-	//	if port was not set via the command line
-	if port == "" {
-		//	do we have a port in our config file
-		if conf.Webserver.Port != "" {
-			port = conf.Webserver.Port
-		}
+	//	check config for port setting
+	if port == defaultHTTPPort && conf.Webserver.Port != "" {
+		port = conf.Webserver.Port
 	}
 
 	//	set our server version
