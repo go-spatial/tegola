@@ -13,6 +13,8 @@ var (
 	port       string
 )
 
+const defaultHTTPPort = ":8080"
+
 func init() {
 	flag.StringVar(&configFile, "config", "config.toml", "Location of config file in TOML format. Can be absolute, relative or remote over http(s).")
 	flag.StringVar(&logFile, "log-file", "", "The file to log output to. Disable by default.")
@@ -26,5 +28,5 @@ func init() {
 		{{.X}} : The X Coordinate.
 		{{.Y}} : The Y Coordinate.
 `)
-	flag.StringVar(&port, "port", ":8080", "Webserver port to bind to")
+	flag.StringVar(&port, "port", defaultHTTPPort, "Webserver port to bind to")
 }

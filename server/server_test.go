@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	httpPort = ":8080"
+	httpPort      = ":8080"
+	serverVersion = "0.3.0"
 )
 
 type testMVTProvider struct{}
@@ -25,5 +26,5 @@ func (tp *testMVTProvider) LayerNames() []string {
 }
 
 func init() {
-	server.Version = "0.3.0"
+	server.Version = serverVersion
 }

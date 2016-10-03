@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -13,9 +14,11 @@ import (
 func TestCapabilities(t *testing.T) {
 	//	setup a new provider
 	testcases := []struct {
-		handler  http.Handler
-		mapName  string
-		layers   []server.Layer
+		handler http.Handler
+		mapName string
+		layers  []server.Layer
+		//	built during our test as we need the dynamically generated
+		//	host and port from httptest for comparing various endpoints
 		expected server.Capabilities
 	}{
 		{
@@ -32,23 +35,6 @@ func TestCapabilities(t *testing.T) {
 					},
 				},
 			},
-			expected: server.Capabilities{
-				Version: "0.3.0",
-				Maps: []server.CapabilitiesMap{
-					{
-						Name: "test-map",
-						URI:  "/maps/test-map",
-						Layers: []server.CapabilitiesLayer{
-							{
-								Name:    "test-layer",
-								URI:     "/maps/test-map/test-layer",
-								MinZoom: 10,
-								MaxZoom: 20,
-							},
-						},
-					},
-				},
-			},
 		},
 	}
 
@@ -58,6 +44,34 @@ func TestCapabilities(t *testing.T) {
 		//	setup a test server
 		ts := httptest.NewServer(test.handler)
 		defer ts.Close()
+
+		//	build out layer capabilities
+		var layers []server.CapabilitiesLayer
+		for _, layer := range test.layers {
+			layers = append(layers, server.CapabilitiesLayer{
+				Name: layer.Name,
+				Tiles: []string{
+					fmt.Sprintf("%v/maps/%v/%v/{z}/{x}/{y}.pbf", ts.Listener.Addr(), test.mapName, layer.Name),
+				},
+				MinZoom: layer.MinZoom,
+				MaxZoom: layer.MaxZoom,
+			})
+		}
+
+		//	build our expected capabilities
+		test.expected = server.Capabilities{
+			Version: serverVersion,
+			Maps: []server.CapabilitiesMap{
+				{
+					Name:         test.mapName,
+					Capabilities: fmt.Sprintf("%v/capabilities/%v.json", ts.Listener.Addr(), test.mapName),
+					Tiles: []string{
+						fmt.Sprintf("%v/maps/%v/{z}/{x}/{y}.pbf", ts.Listener.Addr(), test.mapName),
+					},
+					Layers: layers,
+				},
+			},
+		}
 
 		//	register a map with layers
 		if err := server.RegisterMap(test.mapName, test.layers); err != nil {

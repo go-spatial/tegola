@@ -12,16 +12,17 @@ type Capabilities struct {
 }
 
 type CapabilitiesMap struct {
-	Name   string              `json:"name"`
-	URI    string              `json:"uri"`
-	Layers []CapabilitiesLayer `json:"layers"`
+	Name         string              `json:"name"`
+	Tiles        []string            `json:"tiles"`
+	Capabilities string              `json:"capabilities"`
+	Layers       []CapabilitiesLayer `json:"layers"`
 }
 
 type CapabilitiesLayer struct {
-	Name    string `json:"name"`
-	URI     string `json:"uri"`
-	MinZoom int    `json:"minZoom"`
-	MaxZoom int    `json:"maxZoom"`
+	Name    string   `json:"name"`
+	Tiles   []string `json:"tiles"`
+	MinZoom int      `json:"minzoom"`
+	MaxZoom int      `json:"maxzoom"`
 }
 
 type HandleCapabilities struct{}
@@ -35,18 +36,23 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		capabilities.Version = Version
 
 		//	iterate our registered maps
-		for name, m := range maps {
+		for mapName, m := range maps {
 			//	build the map details
 			cMap := CapabilitiesMap{
-				Name: name,
-				URI:  fmt.Sprintf("/maps/%v", name),
+				Name: mapName,
+				Tiles: []string{
+					fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, mapName),
+				},
+				Capabilities: fmt.Sprintf("%v%v/capabilities/%v.json", r.URL.Scheme, r.Host, mapName),
 			}
 
 			for _, layer := range m {
 				//	build the layer details
 				cLayer := CapabilitiesLayer{
-					Name:    layer.Name,
-					URI:     fmt.Sprintf("/maps/%v/%v", name, layer.Name),
+					Name: layer.Name,
+					Tiles: []string{
+						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, mapName, layer.Name),
+					},
 					MinZoom: layer.MinZoom,
 					MaxZoom: layer.MaxZoom,
 				}

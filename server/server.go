@@ -6,7 +6,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/pressly/chi"
 	"github.com/terranodo/tegola/mvt"
+)
+
+const (
+	//	MaxTileSize is 500k. Currently just throws a warning when tile
+	//	is larger than MaxTileSize
+	MaxTileSize = 500000
+	//	MaxZoom will not render tile beyond this zoom level
+	MaxZoom = 20
 )
 
 //	set at runtime from main
@@ -67,11 +76,14 @@ func Start(port string) {
 	//	notify the user the server is starting
 	log.Printf("Starting tegola server on port %v", port)
 
-	//	setup routes
-	http.Handle("/", http.FileServer(http.Dir("static")))
-	http.Handle("/maps/", HandleZXY{})
-	http.Handle("/capabilities", HandleCapabilities{})
+	r := chi.NewRouter()
+
+	r.FileServer("/", http.Dir("static"))
+	r.Handle("/capabilities", HandleCapabilities{})
+	r.Handle("/capabilities/:map_name", HandleMapCapabilities{})
+	r.Handle("/maps/:map_name/:layer_name/:z/:x/:y", HandleLayerZXY{})
+	r.Handle("/maps/:map_name/:z/:x/:y", HandleMapZXY{})
 
 	//	start our server
-	log.Fatal(http.ListenAndServe(port, nil))
+	log.Fatal(http.ListenAndServe(port, r))
 }
