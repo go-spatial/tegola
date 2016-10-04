@@ -27,7 +27,18 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	var err error
 	//	check http verb
 	switch r.Method {
-	//	tile request
+	//	CORS preflight
+	case "OPTIONS":
+		//	TODO: how configurable do we want the CORS policy to be?
+		//	set CORS header
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusNoContent)
+
+		//	options call does not have a body
+		w.Write(nil)
+		return
+
+	//	build payload
 	case "GET":
 		params := httptreemux.ContextParams(r.Context())
 

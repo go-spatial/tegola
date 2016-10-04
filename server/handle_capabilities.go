@@ -29,6 +29,16 @@ type HandleCapabilities struct{}
 
 func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+	//	CORS preflight
+	case "OPTIONS":
+		//	TODO: how configurable do we want the CORS policy to be?
+		//	set CORS header
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusNoContent)
+
+		//	options call does not have a body
+		w.Write(nil)
+		return
 
 	case "GET":
 		//	new capabilities struct

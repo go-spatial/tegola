@@ -81,7 +81,9 @@ func Start(port string) {
 
 	//	capabilities endpoints
 	group.UsingContext().Handler("GET", "/capabilities", HandleCapabilities{})
+	group.UsingContext().Handler("OPTIONS", "/capabilities", HandleCapabilities{})
 	group.UsingContext().Handler("GET", "/capabilities/:map_name", HandleMapCapabilities{})
+	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", HandleMapCapabilities{})
 
 	//	map tiles
 	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})

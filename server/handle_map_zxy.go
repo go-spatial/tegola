@@ -92,6 +92,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
 		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusNoContent)
 
 		//	options call does not have a body
 		w.Write(nil)
