@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dimfeld/httptreemux"
 	"github.com/golang/protobuf/proto"
-	"github.com/pressly/chi"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
 )
@@ -36,19 +36,21 @@ type HandleLayerZXY struct {
 func (req *HandleLayerZXY) parseURI(r *http.Request) error {
 	var err error
 
+	params := httptreemux.ContextParams(r.Context())
+
 	//	set map name
-	req.mapName = chi.URLParam(r, "map_name")
-	req.layerName = chi.URLParam(r, "layer_name")
+	req.mapName = params["map_name"]
+	req.layerName = params["layer_name"]
 
 	//	parse our URL vals to ints
-	z := chi.URLParam(r, "z")
+	z := params["z"]
 	req.z, err = strconv.Atoi(z)
 	if err != nil {
 		log.Printf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
 
-	x := chi.URLParam(r, "x")
+	x := params["x"]
 	req.x, err = strconv.Atoi(x)
 	if err != nil {
 		log.Printf("invalid X value (%v)", x)
@@ -56,7 +58,7 @@ func (req *HandleLayerZXY) parseURI(r *http.Request) error {
 	}
 
 	//	trim the "y" param in the url in case it has an extension
-	y := chi.URLParam(r, "y")
+	y := params["y"]
 	yParts := strings.Split(y, ".")
 	req.y, err = strconv.Atoi(yParts[0])
 	if err != nil {
@@ -65,8 +67,8 @@ func (req *HandleLayerZXY) parseURI(r *http.Request) error {
 	}
 
 	//	check if we have a file extension
-	if len(yParts) == 2 {
-		req.extension = yParts[1]
+	if len(yParts) > 2 {
+		req.extension = yParts[len(yParts)-1]
 	} else {
 		req.extension = "pbf"
 	}

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/pressly/chi"
+	"github.com/dimfeld/httptreemux"
 	"github.com/terranodo/tegola/tilejson"
 )
 
@@ -29,13 +29,15 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	switch r.Method {
 	//	tile request
 	case "GET":
-		mapName := chi.URLParam(r, "map_name")
+		params := httptreemux.ContextParams(r.Context())
+
+		mapName := params["map_name"]
 		mapNameParts := strings.Split(mapName, ".")
 
 		req.mapName = mapNameParts[0]
 		//	check if we have a provided extension
-		if len(mapNameParts) == 2 {
-			req.extension = mapNameParts[1]
+		if len(mapNameParts) > 2 {
+			req.extension = mapNameParts[len(mapNameParts)-1]
 		} else {
 			req.extension = "json"
 		}

@@ -9,6 +9,18 @@
 			"revisionTime": "2016-04-26T10:16:13Z"
 		},
 		{
+			"checksumSHA1": "67Ufp7gCzJyjLVW3iW3og8uVtkw=",
+			"path": "github.com/dimfeld/httppath",
+			"revision": "c8e499c3ef3c3e272ed8bdcc1ccf39f73c88debc",
+			"revisionTime": "2014-05-15T16:47:37Z"
+		},
+		{
+			"checksumSHA1": "pvSASUV9ePhHWwO/c0DIfI0zX58=",
+			"path": "github.com/dimfeld/httptreemux",
+			"revision": "5684d912938d8ef16b72e9c9dd1ce2117e62bc2a",
+			"revisionTime": "2016-10-04T02:10:53Z"
+		},
+		{
 			"checksumSHA1": "kVJ5YScYaDWw6iotbpZwQJ6xCGM=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0",
@@ -19,12 +31,6 @@
 			"path": "github.com/jackc/pgx",
 			"revision": "558d5550cf5c08e7192eb2eb8635f21f4b700ff5",
 			"revisionTime": "2016-07-15T19:51:40Z"
-		},
-		{
-			"checksumSHA1": "WfD1SHiij/yM7ei7bp+WoYLea90=",
-			"path": "github.com/pressly/chi",
-			"revision": "ca3673057931c4b5c0d775c5e12b1e74a7bddc6e",
-			"revisionTime": "2016-09-27T14:16:37Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"

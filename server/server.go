@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/pressly/chi"
+	"github.com/dimfeld/httptreemux"
 	"github.com/terranodo/tegola/mvt"
 )
 
@@ -76,13 +76,24 @@ func Start(port string) {
 	//	notify the user the server is starting
 	log.Printf("Starting tegola server on port %v", port)
 
-	r := chi.NewRouter()
+	r := httptreemux.New()
+	group := r.NewGroup("/")
 
-	r.FileServer("/", http.Dir("static"))
-	r.Handle("/capabilities", HandleCapabilities{})
-	r.Handle("/capabilities/:map_name", HandleMapCapabilities{})
-	r.Handle("/maps/:map_name/:layer_name/:z/:x/:y", HandleLayerZXY{})
-	r.Handle("/maps/:map_name/:z/:x/:y", HandleMapZXY{})
+	//	capabilities endpoints
+	group.UsingContext().Handler("GET", "/capabilities", HandleCapabilities{})
+	group.UsingContext().Handler("GET", "/capabilities/:map_name", HandleMapCapabilities{})
+
+	//	map tiles
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
+	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
+
+	//	map layer tiles
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HandleLayerZXY{})
+	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", HandleLayerZXY{})
+
+	//	static convenience routes
+	group.UsingContext().Handler("GET", "/", http.FileServer(http.Dir("static")))
+	group.UsingContext().Handler("GET", "/*path", http.FileServer(http.Dir("static")))
 
 	//	start our server
 	log.Fatal(http.ListenAndServe(port, r))
