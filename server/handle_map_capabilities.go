@@ -63,12 +63,12 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		}
 
 		tileJSON := tilejson.TileJSON{
-			Bounds:   [4]float64{-180, -85.05112877980659, 180, 85.0511287798066},
+			Bounds:   m.Bounds,
 			Center:   m.Center,
 			Format:   "pbf",
-			Name:     &req.mapName,
+			Name:     &m.Name,
 			Scheme:   "zxy",
-			TileJSON: "2.1.0",
+			TileJSON: tilejson.Version,
 			Version:  "1.0.0",
 			Grids:    make([]string, 0),
 			Data:     make([]string, 0),

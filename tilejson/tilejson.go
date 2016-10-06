@@ -2,6 +2,8 @@
 //	https://github.com/mapbox/tilejson-spec
 package tilejson
 
+const Version = "2.1.0"
+
 type TileJSON struct {
 	// OPTIONAL. Default: null. Contains an attribution to be displayed
 	// when the map is shown to a user. Implementations MAY decide to treat this

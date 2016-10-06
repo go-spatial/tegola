@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/terranodo/tegola/mvt"
 )
 
 const (
@@ -23,44 +22,6 @@ var Version string
 
 //	incoming requests are associated with a map
 var maps = map[string]Map{}
-
-type Map struct {
-	Name   string
-	Center [3]float64
-	Layers []Layer
-}
-
-//	FilterByZoom returns layers that that are to be rendered between a min and max zoom
-func (m *Map) FilterLayersByZoom(zoom int) (filteredLayers []Layer) {
-	for _, l := range m.Layers {
-		if (l.MinZoom <= zoom || l.MinZoom == 0) && (l.MaxZoom >= zoom || l.MaxZoom == 0) {
-			filteredLayers = append(filteredLayers, l)
-		}
-	}
-	return
-}
-
-//	FilterByName returns a slice with the first layer that matches the provided name
-//	the slice return is for convenience. MVT tiles require unique layer names
-func (m *Map) FilterLayersByName(name string) (filteredLayers []Layer) {
-	for _, l := range m.Layers {
-		if l.Name == name {
-			filteredLayers = append(filteredLayers, l)
-			return
-		}
-	}
-	return
-}
-
-type Layer struct {
-	Name    string
-	MinZoom int
-	MaxZoom int
-	//	instantiated provider
-	Provider mvt.Provider
-	//	default tags to include when encoding the layer. provider tags take precedence
-	DefaultTags map[string]interface{}
-}
 
 //	RegisterMap associates layers with map names
 func RegisterMap(m Map) error {

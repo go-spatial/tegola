@@ -13,6 +13,7 @@ type Capabilities struct {
 
 type CapabilitiesMap struct {
 	Name         string              `json:"name"`
+	Bounds       [4]float64          `json:"bounds"`
 	Center       [3]float64          `json:"center"`
 	Tiles        []string            `json:"tiles"`
 	Capabilities string              `json:"capabilities"`
@@ -51,6 +52,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			//	build the map details
 			cMap := CapabilitiesMap{
 				Name:   m.Name,
+				Bounds: m.Bounds,
 				Center: m.Center,
 				Tiles: []string{
 					fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, m.Name),

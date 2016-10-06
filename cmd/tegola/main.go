@@ -38,6 +38,7 @@ type Config struct {
 type Map struct {
 	Name   string     `toml:"name"`
 	Center [3]float64 `toml:"center"`
+	Bounds []float64  `toml:"bounds"`
 	Layers []struct {
 		ProviderLayer string      `toml:"provider_layer"`
 		MinZoom       int         `toml:"min_zoom"`
@@ -135,10 +136,11 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 
 	//	iterate our maps
 	for _, m := range maps {
-		//	setup a new server map
-		serverMap := server.Map{
-			Name:   m.Name,
-			Center: m.Center,
+
+		serverMap := server.NewMap(m.Name)
+		serverMap.Center = m.Center
+		if len(m.Bounds) == 4 {
+			serverMap.Bounds = [4]float64{m.Bounds[0], m.Bounds[1], m.Bounds[2], m.Bounds[3]}
 		}
 
 		//	var layers []server.Layer
