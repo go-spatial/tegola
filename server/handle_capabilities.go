@@ -13,6 +13,7 @@ type Capabilities struct {
 
 type CapabilitiesMap struct {
 	Name         string              `json:"name"`
+	Center       [3]float64          `json:"center"`
 	Tiles        []string            `json:"tiles"`
 	Capabilities string              `json:"capabilities"`
 	Layers       []CapabilitiesLayer `json:"layers"`
@@ -46,22 +47,23 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		capabilities.Version = Version
 
 		//	iterate our registered maps
-		for mapName, m := range maps {
+		for _, m := range maps {
 			//	build the map details
 			cMap := CapabilitiesMap{
-				Name: mapName,
+				Name:   m.Name,
+				Center: m.Center,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, mapName),
+					fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, m.Name),
 				},
-				Capabilities: fmt.Sprintf("%v%v/capabilities/%v.json", r.URL.Scheme, r.Host, mapName),
+				Capabilities: fmt.Sprintf("%v%v/capabilities/%v.json", r.URL.Scheme, r.Host, m.Name),
 			}
 
-			for _, layer := range m {
+			for _, layer := range m.Layers {
 				//	build the layer details
 				cLayer := CapabilitiesLayer{
 					Name: layer.Name,
 					Tiles: []string{
-						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, mapName, layer.Name),
+						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, m.Name, layer.Name),
 					},
 					MinZoom: layer.MinZoom,
 					MaxZoom: layer.MaxZoom,

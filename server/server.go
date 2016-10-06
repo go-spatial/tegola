@@ -2,7 +2,7 @@
 package server
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -22,13 +22,17 @@ const (
 var Version string
 
 //	incoming requests are associated with a map
-var maps = map[string]layers{}
+var maps = map[string]Map{}
 
-type layers []Layer
+type Map struct {
+	Name   string
+	Center [3]float64
+	Layers []Layer
+}
 
 //	FilterByZoom returns layers that that are to be rendered between a min and max zoom
-func (ls layers) FilterByZoom(zoom int) (filteredLayers []Layer) {
-	for _, l := range ls {
+func (m *Map) FilterLayersByZoom(zoom int) (filteredLayers []Layer) {
+	for _, l := range m.Layers {
 		if (l.MinZoom <= zoom || l.MinZoom == 0) && (l.MaxZoom >= zoom || l.MaxZoom == 0) {
 			filteredLayers = append(filteredLayers, l)
 		}
@@ -38,8 +42,8 @@ func (ls layers) FilterByZoom(zoom int) (filteredLayers []Layer) {
 
 //	FilterByName returns a slice with the first layer that matches the provided name
 //	the slice return is for convenience. MVT tiles require unique layer names
-func (ls layers) FilterByName(name string) (filteredLayers []Layer) {
-	for _, l := range ls {
+func (m *Map) FilterLayersByName(name string) (filteredLayers []Layer) {
+	for _, l := range m.Layers {
 		if l.Name == name {
 			filteredLayers = append(filteredLayers, l)
 			return
@@ -59,14 +63,14 @@ type Layer struct {
 }
 
 //	RegisterMap associates layers with map names
-func RegisterMap(name string, layers []Layer) error {
+func RegisterMap(m Map) error {
 	//	check if our map is already registered
-	if _, ok := maps[name]; ok {
-		return errors.New("map is alraedy registered: " + name)
+	if _, ok := maps[m.Name]; ok {
+		return fmt.Errorf("map (%v) is alraedy registered", m.Name)
 	}
 
 	//	associate our layers with a map
-	maps[name] = layers
+	maps[m.Name] = m
 
 	return nil
 }

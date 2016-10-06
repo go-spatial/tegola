@@ -20,6 +20,7 @@ password = ""
 # maps are made up of layers
 [[maps]]
 name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
+center = [-76.275329586789, 39.153492567373, 8.0] # optional center value. part of the TileJSON spec
 
 	[[maps.layers]]
 	provider_layer = "test_postgis.landuse"	# must match a data provider layer

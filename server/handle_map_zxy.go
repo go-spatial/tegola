@@ -106,8 +106,8 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//	lookup our map layers
-		layers, ok := maps[req.mapName]
+		//	lookup our Map
+		m, ok := maps[req.mapName]
 		if !ok {
 			log.Printf("map (%v) not configured. check your config file", req.mapName)
 			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
@@ -125,12 +125,12 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var mvtTile mvt.Tile
 
 		//	check that our request is below max zoom and we have layers to render
-		if tile.Z <= MaxZoom && len(layers) != 0 {
+		if tile.Z <= MaxZoom && len(m.Layers) != 0 {
 
 			//	wait group for concurrent layer fetching
 			var wg sync.WaitGroup
 			//	filter down the layers we need for this zoom
-			ls := layers.FilterByZoom(tile.Z)
+			ls := m.FilterLayersByZoom(tile.Z)
 
 			//	layer stack
 			mvtLayers := make([]*mvt.Layer, len(ls))

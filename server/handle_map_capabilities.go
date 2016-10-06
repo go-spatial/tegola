@@ -42,6 +42,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	case "GET":
 		params := httptreemux.ContextParams(r.Context())
 
+		//	read the map_name value from the request
 		mapName := params["map_name"]
 		mapNameParts := strings.Split(mapName, ".")
 
@@ -53,8 +54,17 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			req.extension = "json"
 		}
 
+		//	lookup our Map
+		m, ok := maps[req.mapName]
+		if !ok {
+			log.Printf("map (%v) not configured. check your config file", req.mapName)
+			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
+			return
+		}
+
 		tileJSON := tilejson.TileJSON{
 			Bounds:   [4]float64{-180, -85.05112877980659, 180, 85.0511287798066},
+			Center:   m.Center,
 			Format:   "pbf",
 			Name:     &req.mapName,
 			Scheme:   "zxy",
@@ -64,16 +74,8 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			Data:     make([]string, 0),
 		}
 
-		//	lookup our map layers
-		layers, ok := maps[req.mapName]
-		if !ok {
-			log.Printf("map (%v) not configured. check your config file", req.mapName)
-			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
-			return
-		}
-
 		//	determing the min and max zoom for this map
-		for i, l := range layers {
+		for i, l := range m.Layers {
 			//	set our min and max using the first layer
 			if i == 0 {
 				tileJSON.MinZoom = l.MinZoom
