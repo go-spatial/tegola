@@ -14,7 +14,7 @@ import (
 	"github.com/terranodo/tegola/mvt"
 )
 
-type HandleLayerZXY struct {
+type HandleMapLayerZXY struct {
 	//	required
 	mapName string
 	//	optional
@@ -33,7 +33,7 @@ type HandleLayerZXY struct {
 }
 
 //	parseURI reads the request URI and extracts the various values for the request
-func (req *HandleLayerZXY) parseURI(r *http.Request) error {
+func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	var err error
 
 	params := httptreemux.ContextParams(r.Context())
@@ -88,7 +88,7 @@ func (req *HandleLayerZXY) parseURI(r *http.Request) error {
 //		z - zoom level
 //		x - row
 //		y - column
-func (req HandleLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	check http verb
 	switch r.Method {
 	//	preflight check for CORS request
@@ -141,7 +141,7 @@ func (req HandleLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if req.layerName != "" {
 				ls = m.FilterLayersByName(req.layerName)
 				if len(ls) == 0 {
-					errMsg := fmt.Sprintf("layer (%v) not configured for map (%v) %v", req.layerName, req.mapName)
+					errMsg := fmt.Sprintf("layer (%v) not configured for map (%v)", req.layerName, req.mapName)
 					log.Println(errMsg)
 					http.Error(w, errMsg, http.StatusBadRequest)
 				}

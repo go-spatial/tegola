@@ -55,8 +55,8 @@ func Start(port string) {
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
 
 	//	map layer tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HandleLayerZXY{})
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", HandleLayerZXY{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
+	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
 
 	//	static convenience routes
 	group.UsingContext().Handler("GET", "/", http.FileServer(http.Dir("static")))
