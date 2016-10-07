@@ -7,41 +7,41 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/dimfeld/httptreemux"
 	"github.com/terranodo/tegola/server"
 )
 
-func TestCapabilities(t *testing.T) {
+func TestHandleCapabilities(t *testing.T) {
 	//	setup a new provider
 	testcases := []struct {
-		handler  http.Handler
-		mapName  string
-		layers   []server.Layer
-		expected server.Capabilities
+		handler    http.Handler
+		uri        string
+		uriPattern string
+		reqMethod  string
+		expected   server.Capabilities
 	}{
 		{
-			handler: server.HandleCapabilities{},
-			mapName: "test-map",
-			layers: []server.Layer{
-				server.Layer{
-					Name:     "test-layer",
-					MinZoom:  10,
-					MaxZoom:  20,
-					Provider: &testMVTProvider{},
-					DefaultTags: map[string]interface{}{
-						"foo": "bar",
-					},
-				},
-			},
+			handler:    server.HandleCapabilities{},
+			uri:        "/capabilities",
+			uriPattern: "/capabilities",
+			reqMethod:  "GET",
 			expected: server.Capabilities{
-				Version: "0.3.0",
+				Version: serverVersion,
 				Maps: []server.CapabilitiesMap{
 					{
-						Name: "test-map",
-						URI:  "/maps/test-map",
+						Name:         "test-map",
+						Attribution:  "test attribution",
+						Center:       [3]float64{1.0, 2.0, 3.0},
+						Capabilities: "/capabilities/test-map.json",
+						Tiles: []string{
+							"/maps/test-map/{z}/{x}/{y}.pbf",
+						},
 						Layers: []server.CapabilitiesLayer{
 							{
-								Name:    "test-layer",
-								URI:     "/maps/test-map/test-layer",
+								Name: "test-layer",
+								Tiles: []string{
+									"/maps/test-map/test-layer/{z}/{x}/{y}.pbf",
+								},
 								MinZoom: 10,
 								MaxZoom: 20,
 							},
@@ -55,30 +55,32 @@ func TestCapabilities(t *testing.T) {
 	for i, test := range testcases {
 		var err error
 
-		//	setup a test server
-		ts := httptest.NewServer(test.handler)
-		defer ts.Close()
+		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		router := httptreemux.New()
+		//	setup a new router group
+		group := router.NewGroup("/")
+		group.UsingContext().Handler(test.reqMethod, test.uriPattern, server.HandleCapabilities{})
 
-		//	register a map with layers
-		if err := server.RegisterMap(test.mapName, test.layers); err != nil {
-			t.Errorf("Failed test %v. Unable to register map (%v)", i, test.mapName)
+		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
+		if err != nil {
+			t.Fatal(err)
 		}
 
-		//	fetch the URL
-		res, err := http.Get(ts.URL)
-		if err != nil {
-			t.Errorf("Failed test %v. Unable to GET URL (%v)", i, ts.URL)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Failed test %v. handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
 		}
 
 		var capabilities server.Capabilities
 		//	read the respons body
-		if err := json.NewDecoder(res.Body).Decode(&capabilities); err != nil {
+		if err := json.NewDecoder(w.Body).Decode(&capabilities); err != nil {
 			t.Errorf("Failed test %v. Unable to decode JSON response body", i)
 		}
-		defer res.Body.Close()
 
 		if !reflect.DeepEqual(test.expected, capabilities) {
-			t.Errorf("Failed test %v. Response body and expected do not match", i)
+			t.Errorf("Failed test %v. Response body and expected do not match \n%+v\n%+v", i, test.expected, capabilities)
 		}
 	}
 }

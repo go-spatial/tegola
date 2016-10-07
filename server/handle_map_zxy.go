@@ -8,81 +8,66 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dimfeld/httptreemux"
 	"github.com/golang/protobuf/proto"
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
 )
 
-const (
-	//	MaxTileSize is 500k. Currently just throws a warning when tile
-	//	is larger than MaxTileSize
-	MaxTileSize = 500000
-	//	MaxZoom will not render tile beyond this zoom level
-	MaxZoom = 20
-)
-
-type HandleZXY struct {
+type HandleMapZXY struct {
 	//	required
 	mapName string
-	//	optional
-	layerName string
 	//	zoom
 	z int
 	//	row
 	x int
 	//	column
 	y int
+	//	the requests extension (i.e. pbf or json)
+	//	defaults to "pbf"
+	extension string
 	//	debug
 	debug bool
 }
 
 //	parseURI reads the request URI and extracts the various values for the request
-func (req *HandleZXY) parseURI(r *http.Request) error {
+func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	var err error
 
-	//	pop off URI prefix
-	uri := r.URL.Path[len("/maps/"):]
-
-	//	break apart our URI
-	uriParts := strings.Split(uri, "/")
-
-	//	check that we have the correct number of arguments in our URI
-	if len(uriParts) < 4 || len(uriParts) > 6 {
-		log.Printf("invalid URI format (%v). expecting /maps/:map_name/:z/:x/:y", r.URL.Path)
-		return fmt.Errorf("invalid URI format (%v). expecting /maps/:map_name/:z/:x/:y", r.URL.Path)
-	}
+	params := httptreemux.ContextParams(r.Context())
 
 	//	set map name
-	req.mapName = uriParts[0]
-
-	//	check for possible layer name (i.e. /maps/:map_name/:layer_name/:z/:x/:y)
-	if len(uriParts) == 5 {
-		req.layerName = uriParts[1]
-	}
+	req.mapName = params["map_name"]
 
 	//	parse our URL vals to ints
-	z := uriParts[len(uriParts)-3]
+	z := params["z"]
 	req.z, err = strconv.Atoi(z)
 	if err != nil {
-		log.Println("invalid Z value (%v)", z)
+		log.Printf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
 
-	x := uriParts[len(uriParts)-2]
+	x := params["x"]
 	req.x, err = strconv.Atoi(x)
 	if err != nil {
-		log.Println("invalid X value (%v)", x)
+		log.Printf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
 
 	//	trim the "y" param in the url in case it has an extension
-	y := uriParts[len(uriParts)-1]
+	y := params["y"]
 	yParts := strings.Split(y, ".")
 	req.y, err = strconv.Atoi(yParts[0])
 	if err != nil {
-		log.Println("invalid Y value (%v)", y)
+		log.Printf("invalid Y value (%v)", y)
 		return fmt.Errorf("invalid Y value (%v)", y)
+	}
+
+	//	check if we have a file extension
+	if len(yParts) > 1 {
+		req.extension = yParts[len(yParts)-1]
+	} else {
+		req.extension = "pbf"
 	}
 
 	//	check for debug request
@@ -99,7 +84,7 @@ func (req *HandleZXY) parseURI(r *http.Request) error {
 //		z - zoom level
 //		x - row
 //		y - column
-func (req HandleZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	check http verb
 	switch r.Method {
 	//	preflight check for CORS request
@@ -107,6 +92,7 @@ func (req HandleZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
 		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusNoContent)
 
 		//	options call does not have a body
 		w.Write(nil)
@@ -120,8 +106,8 @@ func (req HandleZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//	lookup our map layers
-		layers, ok := maps[req.mapName]
+		//	lookup our Map
+		m, ok := maps[req.mapName]
 		if !ok {
 			log.Printf("map (%v) not configured. check your config file", req.mapName)
 			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
@@ -139,17 +125,12 @@ func (req HandleZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var mvtTile mvt.Tile
 
 		//	check that our request is below max zoom and we have layers to render
-		if tile.Z <= MaxZoom && len(layers) != 0 {
+		if tile.Z <= MaxZoom && len(m.Layers) != 0 {
 
 			//	wait group for concurrent layer fetching
 			var wg sync.WaitGroup
 			//	filter down the layers we need for this zoom
-			ls := layers.FilterByZoom(tile.Z)
-
-			//	if our request has a layerName defined only render
-			if req.layerName != "" {
-				ls = layers.FilterByName(req.layerName)
-			}
+			ls := m.FilterLayersByZoom(tile.Z)
 
 			//	layer stack
 			mvtLayers := make([]*mvt.Layer, len(ls))
@@ -233,46 +214,4 @@ func (req HandleZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
-}
-
-//	creates a debug layer with z/x/y encoded as a point
-func debugLayer(tile tegola.Tile) *mvt.Layer {
-	//	get tile bounding box
-	ext := tile.BoundingBox()
-
-	//	create a new layer and name it
-	layer := mvt.Layer{
-		Name: "debug",
-	}
-	xlen := ext.Maxx - ext.Minx
-	ylen := ext.Maxy - ext.Miny
-
-	//	tile outlines
-	outline := mvt.Feature{
-		Tags: map[string]interface{}{
-			"type": "debug_outline",
-		},
-		Geometry: &basic.Line{ //	tile outline
-			basic.Point{ext.Minx, ext.Miny},
-			basic.Point{ext.Maxx, ext.Miny},
-			basic.Point{ext.Maxx, ext.Maxy},
-			basic.Point{ext.Minx, ext.Maxy},
-		},
-	}
-
-	//	new feature
-	zxy := mvt.Feature{
-		Tags: map[string]interface{}{
-			"type": "debug_text",
-			"zxy":  fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
-		},
-		Geometry: &basic.Point{ //	middle of the tile
-			ext.Minx + (xlen / 2),
-			ext.Miny + (ylen / 2),
-		},
-	}
-
-	layer.AddFeatures(outline, zxy)
-
-	return &layer
 }
