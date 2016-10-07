@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -36,10 +37,11 @@ type Config struct {
 }
 
 type Map struct {
-	Name   string     `toml:"name"`
-	Center [3]float64 `toml:"center"`
-	Bounds []float64  `toml:"bounds"`
-	Layers []struct {
+	Name        string     `toml:"name"`
+	Attribution string     `toml:"attribution"`
+	Bounds      []float64  `toml:"bounds"`
+	Center      [3]float64 `toml:"center"`
+	Layers      []struct {
 		ProviderLayer string      `toml:"provider_layer"`
 		MinZoom       int         `toml:"min_zoom"`
 		MaxZoom       int         `toml:"max_zoom"`
@@ -138,6 +140,8 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 	for _, m := range maps {
 
 		serverMap := server.NewMap(m.Name)
+		//	sanitize the provided attirbution string
+		serverMap.Attribution = html.EscapeString(m.Attribution)
 		serverMap.Center = m.Center
 		if len(m.Bounds) == 4 {
 			serverMap.Bounds = [4]float64{m.Bounds[0], m.Bounds[1], m.Bounds[2], m.Bounds[3]}

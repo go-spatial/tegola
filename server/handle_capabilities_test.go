@@ -30,6 +30,7 @@ func TestHandleCapabilities(t *testing.T) {
 				Maps: []server.CapabilitiesMap{
 					{
 						Name:         "test-map",
+						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
 						Capabilities: "/capabilities/test-map.json",
 						Tiles: []string{

@@ -63,15 +63,16 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		}
 
 		tileJSON := tilejson.TileJSON{
-			Bounds:   m.Bounds,
-			Center:   m.Center,
-			Format:   "pbf",
-			Name:     &m.Name,
-			Scheme:   "zxy",
-			TileJSON: tilejson.Version,
-			Version:  "1.0.0",
-			Grids:    make([]string, 0),
-			Data:     make([]string, 0),
+			Attribution: &m.Attribution,
+			Bounds:      m.Bounds,
+			Center:      m.Center,
+			Format:      "pbf",
+			Name:        &m.Name,
+			Scheme:      "zxy",
+			TileJSON:    tilejson.Version,
+			Version:     "1.0.0",
+			Grids:       make([]string, 0),
+			Data:        make([]string, 0),
 		}
 
 		//	determing the min and max zoom for this map

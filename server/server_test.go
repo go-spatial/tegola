@@ -28,8 +28,9 @@ func (tp *testMVTProvider) LayerNames() []string {
 }
 
 var testMap = server.Map{
-	Name:   "test-map",
-	Center: [3]float64{1.0, 2.0, 3.0},
+	Name:        "test-map",
+	Attribution: "test attribution",
+	Center:      [3]float64{1.0, 2.0, 3.0},
 	Layers: []server.Layer{
 		server.Layer{
 			Name:     "test-layer",
