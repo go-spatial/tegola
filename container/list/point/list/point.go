@@ -26,6 +26,9 @@ func (p *Pt) String() string {
 	return p.Pt.String()
 }
 
+func NewPt(pt maths.Pt) *Pt {
+	return &Pt{Pt: pt}
+}
 func NewPoint(x, y float64) *Pt {
 	return &Pt{
 		Pt: maths.Pt{
