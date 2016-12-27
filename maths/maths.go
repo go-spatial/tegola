@@ -20,10 +20,36 @@ const (
 	PiDiv4      = math.Pi / 4.0
 )
 
+// WindingOrder the direction the line strings.
+type WindingOrder uint8
+
+const (
+	_ WindingOrder = iota
+	Clockwise
+	CounterClockwise
+)
+
+func (w WindingOrder) String() string {
+	switch w {
+	case Clockwise:
+		return "clockwise"
+	case CounterClockwise:
+		return "counter clockwise"
+	}
+	return "unknown"
+}
+
+func (w WindingOrder) IsClockwise() bool        { return w == Clockwise }
+func (w WindingOrder) IsCounterClockwise() bool { return w == CounterClockwise }
+
 // Pt describes a 2d Point.
 type Pt struct {
 	X, Y float64
 }
+
+func (pt Pt) XCoord() float64   { return pt.X }
+func (pt Pt) YCoord() float64   { return pt.X }
+func (pt Pt) Coords() []float64 { return []float64{pt.X, pt.Y} }
 
 func (pt Pt) IsEqual(pt2 Pt) bool {
 	return pt.X == pt2.X && pt.Y == pt2.Y

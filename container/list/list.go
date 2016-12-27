@@ -292,9 +292,22 @@ func (l *List) FindElementForward(start, end Elementer, finder func(e Elementer)
 	if l == nil || l.len == 0 {
 		return nil
 	}
-	for e := l.Front(); e != nil; e = e.Next() {
+	if start == nil {
+		start = l.Front()
+	}
+	if end == nil {
+		end = l.Back()
+	}
+	if start.List() != l || end.List() != l {
+		return nil
+	}
+
+	for e := start; e != nil; e = e.Next() {
 		if finder(e) {
 			return e
+		}
+		if e == end {
+			break
 		}
 	}
 	return nil
@@ -307,7 +320,20 @@ func (l *List) FindElementBackward(start, end Elementer, finder func(e Elementer
 	if l == nil || l.len == 0 {
 		return nil
 	}
-	for e := l.Back(); e != nil; e = e.Prev() {
+	if l == nil || l.len == 0 {
+		return nil
+	}
+	if start == nil {
+		start = l.Back()
+	}
+	if end == nil {
+		end = l.Front()
+	}
+	if start.List() != l || end.List() != l {
+		return nil
+	}
+
+	for e := start; e != end.Prev(); e = e.Prev() {
 		if finder(e) {
 			return e
 		}
