@@ -13,7 +13,6 @@ type Point struct {
 	ptList.Pt
 
 	Inward bool
-	Seen   bool
 
 	subject list.Sentinel
 	region  list.Sentinel
@@ -26,11 +25,18 @@ func NewPoint(x, y float64, inward bool) *Point {
 	return &Point{Pt: *ptList.NewPoint(x, y), Inward: inward}
 }
 
-func (i *Point) String() string {
-	return fmt.Sprintf("Intersec{ X: %v, Y: %v, Inward: %v}", i.Pt.X, i.Pt.Y, i.Inward)
+func (p *Point) String() string {
+	return fmt.Sprintf("Intersec{ X: %v, Y: %v, Inward: %v}", p.Pt.X, p.Pt.Y, p.Inward)
 }
-func (i *Point) AsSubjectPoint() *SubjectPoint { return (*SubjectPoint)(i) }
-func (i *Point) AsRegionPoint() *RegionPoint   { return (*RegionPoint)(i) }
+func (p *Point) AsSubjectPoint() *SubjectPoint { return (*SubjectPoint)(p) }
+func (p *Point) AsRegionPoint() *RegionPoint   { return (*RegionPoint)(p) }
+
+func (p *Point) NextWalk() list.Elementer {
+	if p.Inward {
+		return p.subject.Next()
+	}
+	return p.region.Next()
+}
 
 /*
 func (i *Point) Walk() (w Walker) {
@@ -67,6 +73,9 @@ func (i *RegionPoint) AsSubjectPoint() *SubjectPoint {
 }
 func (i *RegionPoint) AsIntersectPoint() *Point { return (*Point)(i) }
 func (i *RegionPoint) Point() maths.Pt          { return i.Pt.Point() }
+func (i *RegionPoint) GoString() string {
+	return fmt.Sprintf("%T(%[1]p)[%v;%v]", i, i.Point(), i.Inward)
+}
 
 // SubjectPoing causes an intersect point to "act" like a subject point so that it can be inserted into a subject list.
 type SubjectPoint Point
@@ -86,3 +95,6 @@ func (i *SubjectPoint) AsRegionPoint() *RegionPoint {
 }
 func (i *SubjectPoint) AsIntersectPoint() *Point { return (*Point)(i) }
 func (i *SubjectPoint) Point() maths.Pt          { return i.Pt.Point() }
+func (i *SubjectPoint) GoString() string {
+	return fmt.Sprintf("%T(%[1]p)[%v;%v]", i, i.Point(), i.Inward)
+}

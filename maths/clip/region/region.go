@@ -64,7 +64,12 @@ func (r *Region) Init(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
 					0pt     3    3pt
 			   MinX,MaxY       MaxX,MaxY
 		*/
-		pts = [4][2]float64{[2]float64{Min.X, Max.Y}, [2]float64{Min.X, Min.Y}, [2]float64{Max.X, Min.Y}, [2]float64{Max.X, Max.Y}}
+		pts = [4][2]float64{
+			[2]float64{Min.X, Max.Y},
+			[2]float64{Min.X, Min.Y},
+			[2]float64{Max.X, Min.Y},
+			[2]float64{Max.X, Max.Y},
+		}
 		r.aDownOrRight = [4]bool{false, true, true, false}
 	} else {
 		/*
@@ -113,3 +118,13 @@ func (r *Region) LineString() []float64 {
 func (r *Region) Max() maths.Pt                    { return r.max }
 func (r *Region) Min() maths.Pt                    { return r.min }
 func (r *Region) WindingOrder() maths.WindingOrder { return r.winding }
+func (r *Region) Contains(pt maths.Pt) bool {
+	return r.max.X > pt.X && pt.X > r.min.X &&
+		r.max.Y > pt.Y && pt.Y > r.min.Y
+}
+func (r *Region) SentinalPoints() (pts []maths.Pt) {
+	for _, p := range r.sentinelPoints {
+		pts = append(pts, p.Point())
+	}
+	return pts
+}

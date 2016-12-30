@@ -25,5 +25,15 @@ func TestNewIntersect(t *testing.T) {
 	log.Printf("intersect: %#v\n", l)
 	log.Printf("region: %#v\n", rl)
 	log.Printf("subject: %#v\n", sl)
+	for ib := l.FirstInboundPtWalker(); ib != nil; ib = ib.Next() {
+		log.Printf("InBound %#v\n", ib)
+		ib.Walk(func(idx int, pt maths.Pt) bool {
+			log.Printf("Pt %v: %v\n", idx, pt)
+			if idx == 10 {
+				return false
+			}
+			return true
+		})
+	}
 
 }

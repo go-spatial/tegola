@@ -1,6 +1,11 @@
 package subject
 
-import "github.com/terranodo/tegola/container/list/point/list"
+import (
+	"fmt"
+
+	"github.com/terranodo/tegola/container/list/point/list"
+	"github.com/terranodo/tegola/maths"
+)
 
 type pair struct {
 	pts [2]*list.Pt
@@ -24,5 +29,13 @@ func (p *pair) Next() *pair {
 	return p
 }
 
-func (p *pair) Pt1() *list.Pt { return p.pts[0] }
-func (p *pair) Pt2() *list.Pt { return p.pts[1] }
+func (p *pair) Pt1() *list.Pt      { return p.pts[0] }
+func (p *pair) Pt2() *list.Pt      { return p.pts[1] }
+func (p *pair) AsLine() maths.Line { return maths.Line{p.pts[0].Point(), p.pts[1].Point()} }
+func (p *pair) PushInBetween(e list.ElementerPointer) bool {
+	return p.l.PushInBetween(p.pts[0], p.pts[1], e)
+}
+
+func (p *pair) GoString() string {
+	return fmt.Sprintf("p[%p]( %#v %#v )", p, p.Pt1(), p.Pt2())
+}

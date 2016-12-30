@@ -8,6 +8,10 @@ import (
 	"github.com/terranodo/tegola/maths"
 )
 
+type Elementer interface {
+	list.Elementer
+}
+
 type ElementerPointer interface {
 	list.Elementer
 	maths.Pointer
@@ -161,7 +165,7 @@ func (l *List) GoString() string {
 	strs := []string{"List{"}
 	for p := l.Front(); p != nil; p = p.Next() {
 		pt := p.(maths.Pointer)
-		strs = append(strs, fmt.Sprintf("%v(%p)", pt.Point(), p))
+		strs = append(strs, fmt.Sprintf("%v(%p:%[2]T)", pt.Point(), p))
 	}
 	strs = append(strs, "}")
 	return strings.Join(strs, "")

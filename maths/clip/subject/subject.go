@@ -2,7 +2,6 @@ package subject
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/terranodo/tegola/container/list/point/list"
 	"github.com/terranodo/tegola/maths"
@@ -31,7 +30,6 @@ func (s *Subject) Init(winding maths.WindingOrder, coords []float64) (*Subject, 
 
 func (s *Subject) FirstPair() *pair {
 	if s == nil {
-		log.Println("Subject is nil")
 		return nil
 	}
 	var first, last *list.Pt
@@ -48,4 +46,21 @@ func (s *Subject) FirstPair() *pair {
 		pts: [2]*list.Pt{last, first},
 	}
 
+}
+
+// Contains will test to see if the point if fully contained by the subject. If the point is on the broader it is not considered as contained.
+func (s *Subject) Contains(pt maths.Pt) bool {
+	line := maths.Line{pt, maths.Pt{pt.X - 1, pt.Y}}
+	count := 0
+	for p := s.FirstPair(); p != nil; p = p.Next() {
+		pline := p.AsLine()
+		if ipt, ok := maths.Intersect(line, pline); ok {
+			// We only care about intersect points that are left of the point being tested.
+			if pline.InBetween(ipt) && ipt.X < pt.X {
+				count++
+			}
+		}
+	}
+	// If it's odd then it's inside of the polygon, otherwise it's outside of the polygon.
+	return count%2 != 0
 }

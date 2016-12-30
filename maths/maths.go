@@ -78,6 +78,18 @@ func (l Line) InBetween(pt Pt) bool {
 	return lx <= pt.X && pt.X <= gx && ly <= pt.Y && pt.Y <= gy
 
 }
+func (l Line) ExInBetween(pt Pt) bool {
+	lx, gx := l[0].X, l[1].X
+	if l[0].X > l[1].X {
+		lx, gx = l[1].X, l[0].X
+	}
+	ly, gy := l[0].Y, l[1].Y
+	if l[0].Y > l[1].Y {
+		ly, gy = l[1].Y, l[0].Y
+	}
+	return lx < pt.X && pt.X < gx && ly < pt.Y && pt.Y < gy
+
+}
 
 //Clamp will return a point that is on the line based on pt. It will do this by restricting each of the coordiantes to the line.
 func (l Line) Clamp(pt Pt) (p Pt) {

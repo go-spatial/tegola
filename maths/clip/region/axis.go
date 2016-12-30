@@ -30,20 +30,20 @@ func (a *axis) PushInBetween(pt list.ElementerPointer) bool {
 func (a *axis) AsLine() maths.Line { return maths.Line{a.pt0.Point(), a.pt1.Point()} }
 
 // Intersect finds the intersections point if one exists with the line described by pt0,pt1. This point will be clamped to the line of the clipping region.
-func (a *axis) Intersect(pt0, pt1 maths.Pointer) (x, y float64, doesIntersect bool) {
-	var pt maths.Pt
-	line := maths.Line{pt0.Point(), pt1.Point()}
+func (a *axis) Intersect(line maths.Line) (pt maths.Pt, doesIntersect bool) {
 	axisLine := a.AsLine()
 	if pt, doesIntersect = maths.Intersect(axisLine, line); !doesIntersect {
-		return pt.X, pt.Y, doesIntersect
+		return pt, doesIntersect
 	}
 	// Now we need to make sure that the point in between the end points of the line.
 	if !line.InBetween(pt) {
-		return pt.X, pt.Y, false
+		return pt, false
 	}
-	// Clamp the point to the axis that it crosses…
-	pt = axisLine.Clamp(pt)
-	return pt.X, pt.Y, true
+	// Make sure the pt is on the axis as well
+	if !axisLine.InBetween(pt) {
+		return pt, false
+	}
+	return pt, true
 }
 
 /*
@@ -67,30 +67,41 @@ func (a *axis) Intersect(pt0, pt1 maths.Pointer) (x, y float64, doesIntersect bo
 		     |_____|
 		1pt     1    2pt
 */
-
-// IsInward returns weather the line described by pt1,pt2 is headed inward with respect to the axis.
-func (a *axis) IsInward(pt1, pt2 maths.Pointer) bool {
-	p1, p2 := pt1.Point(), pt2.Point()
+func (a *axis) staticCoord() float64 {
 	switch a.idx % 4 {
-	// There is no change in x for case 0, and 2 as they are the y axises for either clockwise or counter clockwise.
+	case 0, 2:
+		return a.pt0.X
+	case 1, 3:
+		return a.pt0.Y
+	}
+	return 0
+}
+
+func (a *axis) inside(pt maths.Pt) bool {
+
+	switch a.idx % 4 {
 	case 0:
-		// check to see if the p1.X is less then a.pts[0].X and p2.X is greater then a.pts[0].X
-		return p1.X <= a.pt0.X && a.pt1.X <= p2.X
-	case 2:
-		// for case two it's oppsite of case 1.
-		return p2.X <= a.pt0.X && a.pt1.X <= p1.X
-	//
+		return pt.X > a.staticCoord()
 	case 1:
 		if a.winding.IsClockwise() {
-			return p1.Y <= a.pt0.Y && a.pt1.Y <= p2.Y
+			return pt.Y > a.staticCoord()
 		}
-		return p2.Y <= a.pt0.Y && a.pt1.Y <= p1.Y
+		return pt.Y < a.staticCoord()
+	case 2:
+		return pt.X < a.staticCoord()
 	case 3:
 		if a.winding.IsClockwise() {
-			return p2.Y <= a.pt0.Y && a.pt1.Y <= p1.Y
+			return pt.Y < a.staticCoord()
 		}
-		return p1.Y <= a.pt0.Y && a.pt1.Y <= p2.Y
-	default:
-		return false
+		return pt.Y > a.staticCoord()
 	}
+	return false
+}
+func (a *axis) outside(pt maths.Pt) bool { return !a.inside(pt) }
+
+// IsInward returns weather the line described by pt1,pt2 is headed inward with respect to the axis.
+func (a *axis) IsInward(line maths.Line) bool {
+	p1, p2 := line[0], line[1]
+	p1out, p2in := a.outside(p1), a.inside(p2)
+	return p1out && p2in
 }
