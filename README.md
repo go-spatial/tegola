@@ -168,6 +168,18 @@ The requested tile will be encode a layer with the `name` value set to `debug` a
  - `debug_text`: a point feature in the middle of the tile with the following tags:
    - `zxy`: a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
 
+## Building from source
+
+Tegola is written in [Go](https://golang.org/). To build tegola from source, make sure you have Go installed and have cloned the repository to your `$GOPATH` or `$GOROOT`. Navigate to the repository then run the following commands:
+
+```bash
+cd cmd/tegola/
+go build -o tegola *.go
+```
+
+You will now have a binary named `tegola` in the current directory which is [ready for running](#running-tegola).
+
+
 ## Specifications
 - [Well Known Binary (WKB)](http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm)
 - [Mapbox Vector Tile (MVT) 2.1](https://github.com/mapbox/vector-tile-spec/tree/master/2.1)
