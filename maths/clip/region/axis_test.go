@@ -3,7 +3,7 @@ package region
 import (
 	"testing"
 
-	"github.com/gdey/tbl"
+	"github.com/gdey/tbltest"
 	"github.com/terranodo/tegola/maths"
 )
 
@@ -16,7 +16,7 @@ func TestAxis(t *testing.T) {
 
 	r := New(maths.CounterClockwise, maths.Pt{5, 2}, maths.Pt{11, 9})
 
-	test := tbl.Cases(
+	test := tbltest.Cases(
 		testcase{
 			line:          maths.Line{maths.Pt{-3, 1}, maths.Pt{-3, 10}},
 			doesIntersect: [4]bool{false, false, false, false},

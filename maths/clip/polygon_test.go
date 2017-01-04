@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gdey/tbl"
+	"github.com/gdey/tbltest"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
@@ -112,7 +112,7 @@ func checkPolygon(want, got tegola.Polygon) (string, bool) {
 
 func TestClipPolygon(t *testing.T) {
 
-	test := tbl.Cases(
+	test := tbltest.Cases(
 		PolygonTestCase{
 			desc: "Basic Polygon contain clip region.",
 			p: basic.NewPolygon(

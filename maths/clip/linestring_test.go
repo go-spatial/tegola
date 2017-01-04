@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gdey/tbl"
+	"github.com/gdey/tbltest"
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/clip/internal/draw"
 	"github.com/terranodo/tegola/maths/clip/region"
@@ -86,7 +86,7 @@ func (tc *TestCase) ClipRegion() *region.Region {
 
 func TestCliplinestring(t *testing.T) {
 
-	test := tbl.Cases(
+	test := tbltest.Cases(
 		TestCase{
 			region:  testRegion[0],
 			winding: maths.Clockwise,
