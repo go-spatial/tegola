@@ -448,5 +448,75 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 		}
 	}
 	return p, nil
+}
+func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
+	switch g := geo.(type) {
 
+	case tegola.Point, tegola.Point3, tegola.MultiPoint:
+		return geo, nil
+
+	case tegola.Polygon:
+		ps, err := Polygon(g, min, max, 1)
+		if err != nil {
+			return geo, err
+		}
+		if len(ps) == 0 {
+			return nil, nil
+		}
+		if len(ps) == 1 {
+			return ps[0], nil
+		}
+		return basic.MultiPolygon(ps), err
+
+	case tegola.MultiPolygon:
+		var mp basic.MultiPolygon
+		for _, p := range g.Polygons() {
+			ps, err := Polygon(p, min, max, 1)
+			if err != nil {
+				return nil, err
+			}
+			mp = append(mp, ps...)
+		}
+		if len(mp) == 0 {
+			return nil, nil
+		}
+		if len(mp) == 1 {
+			return mp[0], nil
+		}
+		return mp, nil
+
+	case tegola.LineString:
+		ls, err := LineString(g, min, max)
+		if err != nil {
+			return geo, err
+		}
+		if len(ls) == 0 {
+			return nil, nil
+		}
+		if len(ls) == 1 {
+			return ls[0], nil
+		}
+		return basic.MultiLine(ls), nil
+
+	case tegola.MultiLine:
+		var ls basic.MultiLine
+		for _, l := range g.Lines() {
+			lls, err := LineString(l, min, max)
+			if err != nil {
+				return ls, err
+			}
+			ls = append(ls, lls...)
+		}
+		if len(ls) == 0 {
+			return nil, nil
+		}
+		if len(ls) == 1 {
+			return ls[0], nil
+		}
+		return ls, nil
+
+	default:
+		return geo, nil
+
+	}
 }

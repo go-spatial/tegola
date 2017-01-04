@@ -10,6 +10,8 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/clip"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
 	"github.com/terranodo/tegola/util/dict"
@@ -459,11 +461,25 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				gtags[k] = v
 			}
 		}
+		// Need to clip geom to tile. Here
+		ggeom := geom
+		if os.Getenv("TEGOLA_CLIPPING") != "" {
+			bb := tile.BoundingBox()
+			min, max := maths.Pt{bb.Minx, bb.Miny}, maths.Pt{bb.Maxx, bb.Maxy}
+			ggeom, err = clip.Geometry(geom, min, max)
+			if err != nil {
+				return layer, err
+			}
+			// The geo got clipped out, skip this feature.
+			if ggeom == nil {
+				continue
+			}
+		}
 		// Add features to Layer
 		layer.AddFeatures(mvt.Feature{
 			ID:       &gid,
 			Tags:     gtags,
-			Geometry: geom,
+			Geometry: ggeom,
 		})
 	}
 	didEnd = true
