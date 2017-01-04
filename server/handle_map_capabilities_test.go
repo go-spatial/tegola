@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -52,7 +51,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Extent:       4096,
 						ID:           testLayer1.Name,
 						Name:         testLayer1.Name,
-						FeatureTags:  []string{},
+						FeatureTags:  nil,
 						GeometryType: nil,
 						MinZoom:      testLayer1.MinZoom,
 						MaxZoom:      testLayer1.MaxZoom,
@@ -91,8 +90,6 @@ func TestHandleMapCapabilities(t *testing.T) {
 		if err := json.NewDecoder(w.Body).Decode(&tileJSON); err != nil {
 			t.Errorf("Failed test %v. Unable to decode JSON response body", i)
 		}
-
-		log.Println(*tileJSON.Name, *test.expected.Name)
 
 		if !reflect.DeepEqual(test.expected, tileJSON) {
 			t.Errorf("Failed test %v. Response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
