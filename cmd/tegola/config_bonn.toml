@@ -103,7 +103,7 @@ password = ""
 
 
 [[maps]]
-name = "zoning"
+name = "bonn_osm"
 attribution = "<div>Test attribution</div>" # map attribution
 center = [-76.275329586789, 39.153492567373, 8.0] # optional center value. part of the TileJSON spec
 
