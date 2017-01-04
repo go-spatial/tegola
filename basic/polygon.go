@@ -1,6 +1,9 @@
 package basic
 
-import "github.com/terranodo/tegola"
+import (
+	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/maths"
+)
 
 // Polygon describes a basic polygon; made up of multiple lines.
 type Polygon []Line
@@ -36,4 +39,13 @@ func (mp *MultiPolygon) Polygons() (polygons []tegola.Polygon) {
 }
 func (MultiPolygon) String() string {
 	return "Polygon"
+}
+
+func NewPolygon(main []maths.Pt, clines ...[]maths.Pt) Polygon {
+
+	p := Polygon{*NewLineFromPt(main...)}
+	for _, l := range clines {
+		p = append(p, *NewLineFromPt(l...))
+	}
+	return p
 }

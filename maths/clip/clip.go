@@ -1,6 +1,8 @@
 package clip
 
 import (
+	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/clip/intersect"
 	"github.com/terranodo/tegola/maths/clip/region"
@@ -289,7 +291,7 @@ Since N(o), is the end of the array we, start at the beginning and notice, that 
 
 */
 
-func LineString(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]float64, err error) {
+func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]float64, err error) {
 	il := intersect.New()
 	rl := region.New(w, rMinPt, rMaxPt)
 	sl, err := subject.New(w, sub)
@@ -297,10 +299,10 @@ func LineString(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 		return clippedSubjects, err
 	}
 
-	// log.Println("Starting to work through the pair of points.")
+	//log.Println("Starting to work through the pair of points.")
 	allSubjectsPtsIn := true
 	for p, i := sl.FirstPair(), 0; p != nil; p, i = p.Next(), i+1 {
-		// log.Printf("Looking pair %v : %#v ", i, p)
+		//log.Printf("Looking pair %v : %#v ", i, p)
 		line := p.AsLine()
 		if !rl.Contains(p.Pt1().Point()) {
 			allSubjectsPtsIn = false
@@ -311,7 +313,7 @@ func LineString(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 				continue
 			}
 			ipt := intersect.NewPt(pt, a.IsInward(line))
-			// log.Printf("Found Intersect (%p)%[1]v\n", ipt)
+			//log.Printf("Found Intersect (%p)%[1]v\n", ipt)
 			// Only care about inbound intersect points.
 			if ipt.Inward {
 				il.PushBack(ipt)
@@ -325,19 +327,19 @@ func LineString(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 		log.Printf("intersect: %#v\n", il)
 		log.Printf("   region: %#v\n", rl)
 		log.Printf("   region: ")
-		for p := rl.Front(); p != nil; p = p.Next() {
-			switch pp := p.(type) {
-			case *intersect.RegionPoint:
-				log.Printf("\t%p - (%v;%v)", pp, pp.Point(), pp.Inward)
-			case *intersect.SubjectPoint:
-				log.Printf("\t%p - (%v;%v)", pp, pp.Point(), pp.Inward)
-			case list.ElementerPointer:
-				log.Printf("\t%p - (%v)", pp, pp.Point())
-			default:
-				log.Printf("\t%p - %[1]#v\n", p)
+			for p := rl.Front(); p != nil; p = p.Next() {
+				switch pp := p.(type) {
+				case *intersect.RegionPoint:
+					log.Printf("\t%p - (%v;%v)", pp, pp.Point(), pp.Inward)
+				case *intersect.SubjectPoint:
+					log.Printf("\t%p - (%v;%v)", pp, pp.Point(), pp.Inward)
+				case list.ElementerPointer:
+					log.Printf("\t%p - (%v)", pp, pp.Point())
+				default:
+					log.Printf("\t%p - %[1]#v\n", p)
+				}
 			}
-		}
-		log.Printf("  subject: %#v\n", sl)
+			log.Printf("  subject: %#v\n", sl)
 	*/
 	// Check to see if all the subject points are contained in the region.
 	if allSubjectsPtsIn {
@@ -349,7 +351,7 @@ func LineString(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 	if il.Len() == 0 {
 		for _, pt := range rl.SentinalPoints() {
 			if !sl.Contains(pt) {
-				// 	log.Printf("pt(%v)(%v) was not contained in subject(%#v).", i, pt, sl)
+				//log.Printf("pt(%v)(%v) was not contained in subject(%#v).", i, pt, sl)
 				// Not all region points are contain by the subject, so none of the subject points must be in the region.
 				return clippedSubjects, nil
 			}
@@ -358,15 +360,15 @@ func LineString(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 		clippedSubjects = append(clippedSubjects, rl.LineString())
 		return clippedSubjects, nil
 	}
-	// log.Println("Walking through the Inbound Intersection points.")
+	//log.Println("Walking through the Inbound Intersection points.")
 	for w := il.FirstInboundPtWalker(); w != nil; w = w.Next() {
-		// log.Printf("Looking at: %p", w)
+		//log.Printf("Looking at: %p", w)
 		var s []float64
 		var opt *maths.Pt
 		w.Walk(func(idx int, pt maths.Pt) bool {
 			if opt == nil || !opt.IsEqual(pt) {
 				// Only add point if it's not the same as the last point
-				// 	log.Printf("Adding point(%v): %v\n", idx, pt)
+				//log.Printf("Adding point(%v): %v\n", idx, pt)
 				s = append(s, pt.X, pt.Y)
 			}
 			opt = &pt
@@ -382,4 +384,69 @@ func LineString(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 	}
 	// log.Println("Done walking through the Inbound Intersection points.")
 	return clippedSubjects, nil
+}
+
+func linestring2floats(l tegola.LineString) (ls []float64) {
+	for _, p := range l.Subpoints() {
+		ls = append(ls, p.X(), p.Y())
+	}
+	return ls
+}
+
+func LineString(line tegola.LineString, min, max maths.Pt) (ls []basic.Line, err error) {
+	slines, err := linestring(maths.Clockwise, linestring2floats(line), min, max)
+	if err != nil {
+		return nil, err
+	}
+	for _, s := range slines {
+		ls = append(ls, *basic.NewLine(s...))
+	}
+	return ls, nil
+}
+
+func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.Polygon, err error) {
+	// Each polygon is made up of a main linestring describing the outer ring,
+	// and set of ourter rignts. The outer ring is clockwise while the inner ring is
+	// usually conter clockwise.
+
+	sls := polygon.Sublines()
+	var subls []*subject.Subject
+
+	emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
+	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
+	//log.Printf("Starting to clip main line to %v, %v", emin, emax)
+	plstrs, err := linestring(maths.Clockwise, linestring2floats(sls[0]), emin, emax)
+	//log.Printf("Done to clipping main line to %v, %v", emin, emax)
+	if err != nil {
+		return nil, err
+	}
+	if len(plstrs) == 0 {
+		return nil, nil
+	}
+	for _, ls := range plstrs {
+		p = append(p, basic.Polygon{*basic.NewLine(ls...)})
+		nsub, err := subject.New(maths.Clockwise, ls)
+		if err != nil {
+			return nil, err
+		}
+		subls = append(subls, nsub)
+	}
+	for _, s := range sls[1:] {
+		slines, err := linestring(maths.CounterClockwise, linestring2floats(s), min, max)
+		if err != nil {
+			return nil, err
+		}
+		// For each of the substrings, I need to figure out which polygon it goes to.
+		for _, ss := range slines {
+			for i, sublss := range subls {
+				if sublss.Contains(maths.Pt{ss[0], ss[1]}) {
+					// Found the polygon, move to the next substring.
+					p[i] = append(p[i], *basic.NewLine(ss...))
+					break
+				}
+			}
+		}
+	}
+	return p, nil
+
 }

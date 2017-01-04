@@ -55,6 +55,13 @@ func (pt Pt) IsEqual(pt2 Pt) bool {
 	return pt.X == pt2.X && pt.Y == pt2.Y
 }
 
+func (pt Pt) Delta(pt2 Pt) (d Pt) {
+	return Pt{
+		X: pt.X - pt2.X,
+		Y: pt.Y - pt2.Y,
+	}
+}
+
 func (pt Pt) String() string {
 	return fmt.Sprintf("(%v,%v)", pt.X, pt.Y)
 }

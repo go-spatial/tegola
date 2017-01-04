@@ -7,14 +7,16 @@ import (
 )
 
 type Inbound struct {
-	pt *Point
+	pt   *Point
+	seen map[list.Elementer]bool
 }
 
 func NewInbound(pt *Point) *Inbound {
 	if pt == nil {
 		return nil
 	}
-	return &Inbound{pt: pt}
+	seen := make(map[list.Elementer]bool)
+	return &Inbound{pt: pt, seen: seen}
 }
 
 func (ib *Inbound) Next() (nib *Inbound) {
@@ -27,7 +29,9 @@ func (ib *Inbound) Next() (nib *Inbound) {
 			continue
 		}
 		if pt.Inward {
-			return NewInbound(pt)
+			nib := NewInbound(pt)
+			nib.seen = ib.seen
+			return nib
 		}
 	}
 	return nil
@@ -40,14 +44,13 @@ func (ib *Inbound) Walk(fn func(idx int, pt maths.Pt) bool) {
 	}
 	var pt maths.Pt
 	var ipt *Point
-	seen := make(map[list.Elementer]bool)
 	for p, i := fib.NextWalk(), 1; p != nil; i++ {
 		op := p
-		if seen[p] {
+		if ib.seen[p] {
 			//log.Printf("Already saw %p -- cycle bailing.\n", p)
 			return
 		}
-		seen[p] = true
+		ib.seen[p] = true
 		switch ppt := p.(type) {
 		case *Point:
 			ipt = ppt

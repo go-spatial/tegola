@@ -1,6 +1,11 @@
 package basic
 
-import "github.com/terranodo/tegola"
+import (
+	"fmt"
+
+	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/maths"
+)
 
 // Line is a basic line type which is made up of two or more points that don't
 // interect.
@@ -14,13 +19,21 @@ func (Line) String() string { return "Line" }
 // NewLine creates a line given pairs for floats.
 func NewLine(pointPairs ...float64) *Line {
 	line := new(Line)
-	if (2 % len(pointPairs)) != 0 {
-		panic("NewLine requires pair of points.")
+	if (len(pointPairs) % 2) != 0 {
+		panic(fmt.Sprintf("NewLine requires pair of points. %v", len(pointPairs)%2))
 	}
 	for i := 0; i < len(pointPairs); i += 2 {
 		*line = append(*line, Point{pointPairs[i], pointPairs[i+1]})
 	}
 	return line
+}
+
+func NewLineFromPt(points ...maths.Pt) *Line {
+	var line Line
+	for _, p := range points {
+		line = append(line, Point{p.X, p.Y})
+	}
+	return &line
 }
 
 // Subpoints return the points in a line.
