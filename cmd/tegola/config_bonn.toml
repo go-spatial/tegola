@@ -15,7 +15,7 @@ password = ""
 	geometry_fieldname = "wkb_geometry"
 	id_fieldname = "ogc_fid"
 	srid=4326
-	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM buildings WHERE wkb_geometry && !BBOX!"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid, other_tags FROM buildings WHERE wkb_geometry && !BBOX!"
 
 	[[providers.layers]]
 	name = "road"
