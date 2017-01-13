@@ -456,9 +456,8 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 					continue
 				}
 
-				// 	Hstore handling.
-				//	the OID for an hstore is 229530. I'm hoping this get's turned into a constant in the pgx driver: https://github.com/jackc/pgx/issues/227
-				if fdescs[i].DataType == 229530 {
+				//	hstore is a special case
+				if fdescs[i].DataTypeName == "hstore" {
 					//	parse our Hstore values into keys and values
 					keys, values, err := pgx.ParseHstore(v.(string))
 					if err != nil {
@@ -471,7 +470,6 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 							gtags[k] = values[i].String
 						}
 					}
-
 					continue
 				}
 
@@ -482,6 +480,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				gtags[fdescs[i].Name] = value
 			}
 		}
+
 		for k, v := range tags {
 			// If tags does not exists, then let's add it.
 			if _, ok = gtags[k]; !ok {
