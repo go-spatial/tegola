@@ -49,9 +49,10 @@ func (m *Map) FilterLayersByName(name string) (filteredLayers []Layer) {
 }
 
 type Layer struct {
-	Name    string
-	MinZoom int
-	MaxZoom int
+	Name          string // if none is set, it will be inferred from ProviderLayer
+	ProviderLayer string
+	MinZoom       int
+	MaxZoom       int
 	//	instantiated provider
 	Provider mvt.Provider
 	//	default tags to include when encoding the layer. provider tags take precedence

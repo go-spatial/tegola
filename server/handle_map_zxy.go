@@ -146,7 +146,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					defer wg.Done()
 
 					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
+					mvtLayer, err := l.Provider.MVTLayer(l.ProviderLayer, l.Name, tile, l.DefaultTags)
 					if err != nil {
 						log.Printf("Error Getting MVTLayer: %v", err)
 						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)

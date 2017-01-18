@@ -22,10 +22,11 @@ type CapabilitiesMap struct {
 }
 
 type CapabilitiesLayer struct {
-	Name    string   `json:"name"`
-	Tiles   []string `json:"tiles"`
-	MinZoom int      `json:"minzoom"`
-	MaxZoom int      `json:"maxzoom"`
+	Name          string   `json:"name"`
+	ProviderLayer string   `json:"provider_layer"`
+	Tiles         []string `json:"tiles"`
+	MinZoom       int      `json:"minzoom"`
+	MaxZoom       int      `json:"maxzoom"`
 }
 
 type HandleCapabilities struct{}
@@ -74,7 +75,8 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			for _, layer := range m.Layers {
 				//	build the layer details
 				cLayer := CapabilitiesLayer{
-					Name: layer.Name,
+					Name:          layer.Name,
+					ProviderLayer: layer.ProviderLayer,
 					Tiles: []string{
 						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name, layer.Name),
 					},

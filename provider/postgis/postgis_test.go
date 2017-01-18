@@ -39,7 +39,7 @@ func TestNewProvider(t *testing.T) {
 		X: 12451,
 		Y: 18527,
 	}
-	l, err := p.MVTLayer("buildings", tile, map[string]interface{}{"class": "park"})
+	l, err := p.MVTLayer("buildings", "buildings", tile, map[string]interface{}{"class": "park"})
 	if err != nil {
 		t.Errorf("Failed to create mvt layer. %v", err)
 		return
