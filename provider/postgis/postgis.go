@@ -342,7 +342,7 @@ func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 	}
 }
 
-func (p Provider) MVTLayer(providerLayerName string, outputLayerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
+func (p Provider) MVTLayer(providerLayerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
 
 	plyr, ok := p.layers[providerLayerName]
 	if !ok {
@@ -380,7 +380,6 @@ func (p Provider) MVTLayer(providerLayerName string, outputLayerName string, til
 	var geobytes []byte
 
 	layer = new(mvt.Layer)
-	layer.Name = outputLayerName
 	var count int
 	var didEnd bool
 	if strings.Contains(os.Getenv("SQL_DEBUG"), "EXECUTE_SQL") {
