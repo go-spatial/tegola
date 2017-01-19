@@ -29,7 +29,7 @@ func Drivers() (l []string) {
 	if providers == nil {
 		return l
 	}
-	for k, _ := range providers {
+	for k := range providers {
 		l = append(l, k)
 	}
 	return l

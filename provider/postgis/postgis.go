@@ -360,11 +360,11 @@ func (p Provider) MVTLayer(providerLayerName string, tile tegola.Tile, tags map[
 	}
 	minPt, ok := minGeo.(*basic.Point)
 	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", minGeo)
+		return nil, fmt.Errorf("Expected Point, got %t %v", minGeo, minGeo)
 	}
 	maxPt, ok := maxGeo.(*basic.Point)
 	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo)
+		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo, maxGeo)
 	}
 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)
