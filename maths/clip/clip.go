@@ -393,8 +393,10 @@ func linestring2floats(l tegola.LineString) (ls []float64) {
 	return ls
 }
 
-func LineString(line tegola.LineString, min, max maths.Pt) (ls []basic.Line, err error) {
-	slines, err := linestring(maths.Clockwise, linestring2floats(line), min, max)
+func LineString(line tegola.LineString, min, max maths.Pt, extant int) (ls []basic.Line, err error) {
+	emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
+	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
+	slines, err := linestring(maths.Clockwise, linestring2floats(line), emin, emax)
 	if err != nil {
 		return nil, err
 	}
@@ -431,6 +433,8 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 		}
 		subls = append(subls, nsub)
 	}
+	emin = maths.Pt{min.X - (float64(extant) - 1), min.Y - (float64(extant) - 1)}
+	emax = maths.Pt{max.X + (float64(extant) - 1), max.Y + (float64(extant) - 1)}
 	for _, s := range sls[1:] {
 		slines, err := linestring(maths.CounterClockwise, linestring2floats(s), min, max)
 		if err != nil {
@@ -450,13 +454,14 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	return p, nil
 }
 func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
+	var extant = 512
 	switch g := geo.(type) {
 
 	case tegola.Point, tegola.Point3, tegola.MultiPoint:
 		return geo, nil
 
 	case tegola.Polygon:
-		ps, err := Polygon(g, min, max, 1)
+		ps, err := Polygon(g, min, max, extant)
 		if err != nil {
 			return geo, err
 		}
@@ -464,14 +469,14 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
 			return nil, nil
 		}
 		if len(ps) == 1 {
-			return ps[0], nil
+			return &ps[0], nil
 		}
-		return basic.MultiPolygon(ps), err
+		return (*basic.MultiPolygon)(&ps), err
 
 	case tegola.MultiPolygon:
 		var mp basic.MultiPolygon
 		for _, p := range g.Polygons() {
-			ps, err := Polygon(p, min, max, 1)
+			ps, err := Polygon(p, min, max, extant)
 			if err != nil {
 				return nil, err
 			}
@@ -481,12 +486,12 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
 			return nil, nil
 		}
 		if len(mp) == 1 {
-			return mp[0], nil
+			return &mp[0], nil
 		}
-		return mp, nil
+		return &mp, nil
 
 	case tegola.LineString:
-		ls, err := LineString(g, min, max)
+		ls, err := LineString(g, min, max, extant)
 		if err != nil {
 			return geo, err
 		}
@@ -494,14 +499,14 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
 			return nil, nil
 		}
 		if len(ls) == 1 {
-			return ls[0], nil
+			return &ls[0], nil
 		}
-		return basic.MultiLine(ls), nil
+		return (*basic.MultiLine)(&ls), nil
 
 	case tegola.MultiLine:
 		var ls basic.MultiLine
 		for _, l := range g.Lines() {
-			lls, err := LineString(l, min, max)
+			lls, err := LineString(l, min, max, extant)
 			if err != nil {
 				return ls, err
 			}
@@ -511,9 +516,9 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
 			return nil, nil
 		}
 		if len(ls) == 1 {
-			return ls[0], nil
+			return &ls[0], nil
 		}
-		return ls, nil
+		return &ls, nil
 
 	default:
 		return geo, nil
