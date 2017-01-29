@@ -121,17 +121,17 @@ func genSQL(l *layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 	return fmt.Sprintf(stdSQL, selectClause, tblname, l.GeomFieldName), nil
 }
 
-// NewProvider Setups and returns a new postgis provide or an error; if something
+// NewProvider Setups and returns a new postgis provider or an error; if something
 // is wrong. The function will validate that the config object looks good before
 // trying to create a driver. This means that the Provider expects the following
-// fields to exists in the provided map[string]interface{} map.
-// host string — the host to connect to.
-// port uint16 — the port to connect on.
-// database string — the database name
-// user string — the user name
-// password string — the Password
-// max_connections *uint8 // Default is 5 if nil, 0 means no max.
-// layers map[string]struct{ — This is map of layers keyed by the layer name.
+// fields to exists in the provided map[string]interface{} map:
+// 	host string — the host to connect to.
+// 	port uint16 — the port to connect on.
+// 	database string — the database name
+// 	user string — the user name
+// 	password string — the Password
+// 	max_connections *uint8 // Default is 5 if nil, 0 means no max.
+// 	layers map[string]struct{ — This is map of layers keyed by the layer name.
 //     tablename string || sql string — This is the sql to use or the tablename to use with the default query.
 //     fields []string — This is a list, if this is nil or empty we will get all fields.
 //     geometry_fieldname string — This is the field name of the geometry, if it's an empty string or nil, it will defaults to 'geom'.
@@ -207,7 +207,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 
 		lname, err := vc.String(ConfigKeyLayerName, nil)
 		if err != nil {
-			return nil, fmt.Errorf("For layer(%v) we got the following error trying to get the layer's name field: %v", i, err)
+			return nil, fmt.Errorf("For layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
 		}
 		if j, ok := lyrsSeen[lname]; ok {
 			return nil, fmt.Errorf("%v layer name is duplicated in both layer %v and layer %v", lname, i, j)
@@ -216,20 +216,20 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 
 		fields, err := vc.StringSlice(ConfigKeyFields)
 		if err != nil {
-			return nil, fmt.Errorf("For layer(%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
+			return nil, fmt.Errorf("For layer (%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
 		}
 		geomfld := "geom"
 		geomfld, err = vc.String(ConfigKeyGeomField, &geomfld)
 		if err != nil {
-			return nil, fmt.Errorf("For layer(%v) %v : %v", i, lname, err)
+			return nil, fmt.Errorf("For layer (%v) %v : %v", i, lname, err)
 		}
 		idfld := "gid"
 		idfld, err = vc.String(ConfigKeyGeomIDField, &idfld)
 		if err != nil {
-			return nil, fmt.Errorf("For layer(%v) %v : %v", i, lname, err)
+			return nil, fmt.Errorf("For layer (%v) %v : %v", i, lname, err)
 		}
 		if idfld == geomfld {
-			return nil, fmt.Errorf("For layer(%v) %v: %v (%v) and %v field (%v) is the same!", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+			return nil, fmt.Errorf("For layer (%v) %v: %v (%v) and %v field (%v) is the same!", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
 		}
 
 		var tblName string
@@ -263,14 +263,14 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		if sql != "" {
 			// We need to make sure that the sql has a BBOX for the bounding box env.
 			if !strings.Contains(sql, BBOX) {
-				return nil, fmt.Errorf("SQL for layer(%v) %v does not contain "+BBOX+", entry.", i, lname)
+				return nil, fmt.Errorf("SQL for layer (%v) %v does not contain "+BBOX+", entry.", i, lname)
 			}
 			if !strings.Contains(sql, "*") {
 				if !strings.Contains(sql, geomfld) {
-					return nil, fmt.Errorf("SQL for layer(%v) %v does not contain the geometry field: %v", i, lname, geomfld)
+					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the geometry field: %v", i, lname, geomfld)
 				}
 				if !strings.Contains(sql, idfld) {
-					return nil, fmt.Errorf("SQL for layer(%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
+					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
 				}
 			}
 			l.SQL = sql
@@ -306,7 +306,8 @@ func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 	default:
 		switch vt := val.(type) {
 		default:
-			return nil, fmt.Errorf("%v type is not supported. (Expected it to be a stringer type.)", valType)
+			log.Printf("%v type is not supported. (Expected it to be a stringer type)", valType)
+			return nil, fmt.Errorf("%v type is not supported. (Expected it to be a stringer type)", valType)
 		case fmt.Stringer:
 			return vt.String(), nil
 		case string:
@@ -376,17 +377,19 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	}
 	defer rows.Close()
 
+	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 	var geobytes []byte
 
+	//	new mvt.Layer
 	layer = new(mvt.Layer)
 	layer.Name = layerName
+
 	var count int
 	var didEnd bool
 	if strings.Contains(os.Getenv("SQL_DEBUG"), "EXECUTE_SQL") {
 		defer func() {
 			log.Printf("Got %v rows running:\n%v\nDid complete %v\n", count, sql, didEnd)
-
 		}()
 	}
 
@@ -394,26 +397,32 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 		count++
 		var geom tegola.Geometry
 		var gid uint64
+
+		//	fetch row values
 		vals, err := rows.Values()
 		if err != nil {
 			return nil, fmt.Errorf("Got an error trying to run SQL: %v ; %v", sql, err)
 		}
+		//	holds our encoded tags
 		gtags := make(map[string]interface{})
+
+		//	iterate the values returned from our row
 		for i, v := range vals {
 			switch fdescs[i].Name {
 			case plyr.GeomFieldName:
 				if geobytes, ok = v.([]byte); !ok {
-					return nil, fmt.Errorf("Was unable to convert geometry field(%v) into bytes for layer %v.", plyr.GeomFieldName, layerName)
+					return nil, fmt.Errorf("Was unable to convert geometry field (%v) into bytes for layer (%v)", plyr.GeomFieldName, layerName)
 				}
+				//	decode our WKB
 				if geom, err = wkb.DecodeBytes(geobytes); err != nil {
-					return nil, fmt.Errorf("Was unable to decode geometry field(%v) into wkb for layer %v.", plyr.GeomFieldName, layerName)
+					return nil, fmt.Errorf("Was unable to decode geometry field (%v) into wkb for layer (%v)", plyr.GeomFieldName, layerName)
 				}
 				// TODO: Need to move this from being the responsiblity of the provider to the responsibility of the feature. But that means a feature should know
 				// how the points are encoded.
 				if plyr.SRID != DefaultSRID {
 					// We need to convert our points to Webmercator.
 					if geom, err = basic.ToWebMercator(plyr.SRID, geom); err != nil {
-						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID(%v) for layer %v.", plyr.SRID, layerName)
+						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", plyr.SRID, layerName)
 					}
 				}
 			case plyr.IDFieldName:
@@ -439,13 +448,31 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				case uint32:
 					gid = uint64(aval)
 				default:
-					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v", plyr.IDFieldName, layerName)
+					return nil, fmt.Errorf("Unable to convert geometry ID field (%v) into a uint64 for layer (%v)", plyr.IDFieldName, layerName)
 				}
 			default:
 				if vals[i] == nil {
 					// We want to skip all nil values.
 					continue
 				}
+
+				//	hstore is a special case
+				if fdescs[i].DataTypeName == "hstore" {
+					//	parse our Hstore values into keys and values
+					keys, values, err := pgx.ParseHstore(v.(string))
+					if err != nil {
+						return nil, fmt.Errorf("Unable to parse Hstore err: %v", err)
+					}
+
+					for i, k := range keys {
+						//	if the value is Valid (i.e. not null) then add it to our gtags map
+						if values[i].Valid {
+							gtags[k] = values[i].String
+						}
+					}
+					continue
+				}
+
 				value, err := transfromVal(fdescs[i].DataType, vals[i])
 				if err != nil {
 					return nil, fmt.Errorf("Unable to convert field[%v] (%v) of type (%v - %v) to a suitable value.: [[ %T  :: %[5]t ]]", i, fdescs[i].Name, fdescs[i].DataType, fdescs[i].DataTypeName, vals[i])
@@ -453,12 +480,14 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				gtags[fdescs[i].Name] = value
 			}
 		}
+
 		for k, v := range tags {
 			// If tags does not exists, then let's add it.
 			if _, ok = gtags[k]; !ok {
 				gtags[k] = v
 			}
 		}
+
 		// Add features to Layer
 		layer.AddFeatures(mvt.Feature{
 			ID:       &gid,
