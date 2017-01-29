@@ -2,6 +2,7 @@ package basic
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths/webmercator"
@@ -187,4 +188,158 @@ func FromWebMercator(SRID int, geometry tegola.Geometry) (tegola.Geometry, error
 	case tegola.WGS84:
 		return ApplyToPoints(geometry, webmercator.PToLonLat)
 	}
+}
+
+func interfaceAsFloatslice(v interface{}) (vals []float64, err error) {
+	vs, ok := v.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Incorrect value type looking for float64 slice, not %t.", v)
+	}
+	for _, iv := range vs {
+		vv, ok := iv.(float64)
+		if !ok {
+			return nil, fmt.Errorf("Incorrect value type looking for float64 slice, not %t.", v)
+		}
+		vals = append(vals, vv)
+	}
+	return vals, nil
+}
+
+func mapIsOfType(v map[string]interface{}, wants ...string) (string, error) {
+	typ, ok := v["type"].(string)
+	if !ok {
+		return "", fmt.Errorf("Was not able to convert type to string.")
+	}
+	for _, want := range wants {
+		if typ == want {
+			return typ, nil
+		}
+	}
+	return "", fmt.Errorf("Expected all subtypes to be one of type (%v), not %v", strings.Join(wants, ","), v["type"])
+}
+
+func interfaceAsLine(v interface{}) (*Line, error) {
+	vals, err := interfaceAsFloatslice(v)
+	if err != nil {
+		return nil, fmt.Errorf("Incorrect values for line type: %v", err)
+	}
+	return NewLine(vals...), nil
+}
+
+func interfaceAsPoint(v interface{}) (*Point, error) {
+	vals, err := interfaceAsFloatslice(v)
+	if err != nil {
+		return nil, fmt.Errorf("Incorrect values for point type: %v", err)
+	}
+	return &Point{vals[0], vals[1]}, nil
+}
+
+func interfaceAsPoint3(v interface{}) (*Point3, error) {
+	vals, err := interfaceAsFloatslice(v)
+	if err != nil {
+		return nil, fmt.Errorf("Incorrect values for point3 type: %v", err)
+	}
+	return &Point3{vals[0], vals[1], vals[2]}, nil
+}
+
+func forEachMapInSlice(v interface{}, do func(typ string, v interface{}) error, wants ...string) error {
+	vals, ok := v.([]interface{})
+	if !ok {
+		return fmt.Errorf("Expected values to be []interface{}: ")
+	}
+	for i, iv := range vals {
+
+		v, ok := iv.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("Expected v[%v] to be map[string]interface{}: ", i)
+		}
+		typ, err := mapIsOfType(v, wants...)
+		if err != nil {
+			return err
+		}
+		if err = do(typ, v["value"]); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+func interfaceAsPolygon(v interface{}) (*Polygon, error) {
+	var p Polygon
+	err := forEachMapInSlice(v, func(_ string, v interface{}) error {
+		l, err := interfaceAsLine(v)
+		if err != nil {
+			return err
+		}
+		p = append(p, *l)
+		return nil
+	}, "linestring")
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func MapAsGeometry(m map[string]interface{}) (geo tegola.Geometry, err error) {
+	typ, err := mapIsOfType(m, "point", "point3", "linestring", "polygon", "multipolygon", "multipoint", "multiline")
+	if err != nil {
+		return nil, err
+	}
+	switch typ {
+	case "point":
+		return interfaceAsPoint(m["value"])
+	case "point3":
+		return interfaceAsPoint3(m["value"])
+
+	case "linestring":
+		return interfaceAsLine(m["value"])
+	case "polygon":
+		fmt.Println("Working on Polygon:")
+		return interfaceAsPolygon(m["value"])
+	case "multipolygon":
+		fmt.Println("Working on MPolygon:")
+		var mp MultiPolygon
+		err := forEachMapInSlice(m["value"], func(_ string, v interface{}) error {
+			p, err := interfaceAsPolygon(v)
+			if err != nil {
+				return err
+			}
+			mp = append(mp, *p)
+			return nil
+		}, "polygon")
+		if err != nil {
+			return nil, err
+		}
+		return mp, nil
+	case "multipoint":
+		var mp MultiPoint
+		err := forEachMapInSlice(m["value"], func(_ string, v interface{}) error {
+			p, err := interfaceAsPoint(v)
+			if err != nil {
+				return err
+			}
+			mp = append(mp, *p)
+			return nil
+		}, "point")
+		if err != nil {
+			return nil, err
+		}
+		return mp, nil
+	case "multiline":
+		var ml MultiLine
+		err := forEachMapInSlice(m["value"], func(_ string, v interface{}) error {
+			l, err := interfaceAsLine(v)
+			if err != nil {
+				return err
+			}
+			ml = append(ml, *l)
+			return nil
+		}, "linestring")
+		if err != nil {
+			return nil, err
+		}
+		return ml, nil
+	}
+	return nil, fmt.Errorf("Unknown type")
 }

@@ -1,10 +1,15 @@
 package mvt
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/clip"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 	"github.com/terranodo/tegola/wkb"
 )
@@ -73,6 +78,9 @@ func (f *Feature) VTileFeature(keys []string, vals []interface{}, extent tegola.
 	if err != nil {
 		return tf, err
 	}
+	if len(geo) == 0 {
+		return nil, nil
+	}
 	tf.Geometry = geo
 	tf.Type = &gtype
 	return tf, nil
@@ -136,6 +144,9 @@ type cursor struct {
 	// These values are cached
 	xspan float64
 	yspan float64
+
+	// Disabling scaling Use this when using clipping and scaling
+	DisableScaling bool
 }
 
 func newCursor(tile tegola.BoundingBox, layerExtent int) *cursor {
@@ -158,8 +169,21 @@ func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
 	return nx, ny
 }
 
+func (c *cursor) minmax() (min, max maths.Pt) {
+	return maths.Pt{-2, -2},
+		maths.Pt{
+			float64(c.extent + 2),
+			float64(c.extent + 2),
+		}
+}
+
 func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
-	ix, iy := c.ScalePoint(p)
+	var ix, iy int64
+	if c.DisableScaling {
+		ix, iy = int64(p.X()), int64(p.Y())
+	} else {
+		ix, iy = c.ScalePoint(p)
+	}
 	//	computer our point delta
 	dx = ix - int64(c.x)
 	dy = iy - int64(c.y)
@@ -170,6 +194,85 @@ func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	return dx, dy
 }
 
+func (c *cursor) scalept(g tegola.Point) basic.Point {
+	return basic.Point{
+		float64(int64((g.X() - c.tile.Minx) * c.extent / c.xspan)),
+		float64(int64((g.Y() - c.tile.Miny) * c.extent / c.yspan)),
+	}
+}
+func (c *cursor) scalelinestr(g tegola.LineString) basic.Line {
+	var ls basic.Line
+	for _, p := range g.Subpoints() {
+		ls = append(ls, c.scalept(p))
+	}
+	return ls
+}
+
+func (c *cursor) scalegeo(geo tegola.Geometry) tegola.Geometry {
+	switch g := geo.(type) {
+	case tegola.Point:
+		p := c.scalept(g)
+		return &p
+	case tegola.Point3:
+		p := c.scalept(g)
+		return &p
+	case tegola.MultiPoint:
+		var mp basic.MultiPoint
+		for _, p := range g.Points() {
+			mp = append(mp, c.scalept(p))
+		}
+		return &mp
+	case tegola.LineString:
+		l := c.scalelinestr(g)
+		return &l
+	case tegola.MultiLine:
+		var ml basic.MultiLine
+		for _, l := range g.Lines() {
+			ml = append(ml, c.scalelinestr(l))
+		}
+		return &ml
+	case tegola.Polygon:
+		var p basic.Polygon
+		for _, l := range g.Sublines() {
+			p = append(p, c.scalelinestr(l))
+		}
+		return &p
+	case tegola.MultiPolygon:
+		var mp basic.MultiPolygon
+		for _, p := range g.Polygons() {
+			var np basic.Polygon
+			for _, l := range p.Sublines() {
+				np = append(np, c.scalelinestr(l))
+			}
+			mp = append(mp, np)
+		}
+		return &mp
+	}
+	return geo
+}
+
+func (c *cursor) clipgeo(geo tegola.Geometry) (tegola.Geometry, error) {
+	min, max := c.minmax()
+	g, err := clip.Geometry(geo, min, max)
+	if g == nil {
+		fln := os.Getenv("GenTestCase")
+
+		if fln != "" {
+			filename := fmt.Sprintf("/tmp/testcase_%v_%p.json", fln, geo)
+			mgeo := make(map[string]interface{})
+			mgeo["min"] = min
+			mgeo["max"] = max
+			if f, err := os.Create(filename); err == nil {
+				enc := json.NewEncoder(f)
+				mgeo["geo"] = tegola.GeometryAsMap(geo)
+				enc.Encode(mgeo)
+				f.Close()
+				log.Printf("Created file: %v", filename)
+			}
+		}
+	}
+	return g, err
+}
 func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
 	if len(points) == 0 {
 		return []uint32{}
@@ -200,13 +303,27 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geo tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
-	//	new cursor
-	c := newCursor(extent, layerExtent)
-	if geo == nil {
+func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+
+	if geom == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
 
+	//	new cursor
+	c := newCursor(extent, layerExtent)
+	c.DisableScaling = true
+
+	geo := c.scalegeo(geom)
+	if os.Getenv("TEGOLA_CLIPPING") == "mvt" {
+		geo, err = c.clipgeo(geo)
+	}
+	if geo == nil {
+		return []uint32{}, -1, nil
+	}
+	if err != nil {
+		log.Printf("We got the following error clipping: %v", err)
+		return nil, vectorTile.Tile_UNKNOWN, err
+	}
 	switch t := geo.(type) {
 	case tegola.Point:
 		g = append(g, c.MoveTo(t)...)
