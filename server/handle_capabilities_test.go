@@ -22,7 +22,7 @@ func TestHandleCapabilities(t *testing.T) {
 	}{
 		{
 			handler:    server.HandleCapabilities{},
-			uri:        "/capabilities",
+			uri:        "http://localhost:8080/capabilities",
 			uriPattern: "/capabilities",
 			reqMethod:  "GET",
 			expected: server.Capabilities{
@@ -32,15 +32,15 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Capabilities: "/capabilities/test-map.json",
+						Capabilities: "http://localhost:8080/capabilities/test-map.json",
 						Tiles: []string{
-							"/maps/test-map/{z}/{x}/{y}.pbf",
+							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
 								Name: "test-layer",
 								Tiles: []string{
-									"/maps/test-map/test-layer/{z}/{x}/{y}.pbf",
+									"http://localhost:8080/maps/test-map/test-layer/{z}/{x}/{y}.pbf",
 								},
 								MinZoom: 10,
 								MaxZoom: 20,
