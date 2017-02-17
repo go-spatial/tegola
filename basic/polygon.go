@@ -12,10 +12,10 @@ type Polygon []Line
 func (Polygon) basicType() {}
 
 // Sublines returns the lines that make up the polygon.
-func (p *Polygon) Sublines() (slines []tegola.LineString) {
-	slines = make([]tegola.LineString, 0, len(*p))
-	for i := range *p {
-		slines = append(slines, &((*p)[i]))
+func (p Polygon) Sublines() (slines []tegola.LineString) {
+	slines = make([]tegola.LineString, 0, len(p))
+	for i := range p {
+		slines = append(slines, p[i])
 	}
 	return slines
 }
@@ -30,10 +30,10 @@ type MultiPolygon []Polygon
 func (MultiPolygon) basicType() {}
 
 // Polygons retuns the polygons that make up the set.
-func (mp *MultiPolygon) Polygons() (polygons []tegola.Polygon) {
-	polygons = make([]tegola.Polygon, 0, len(*mp))
-	for i := range *mp {
-		polygons = append(polygons, &((*mp)[i]))
+func (mp MultiPolygon) Polygons() (polygons []tegola.Polygon) {
+	polygons = make([]tegola.Polygon, 0, len(mp))
+	for i := range mp {
+		polygons = append(polygons, mp[i])
 	}
 	return polygons
 }
@@ -42,10 +42,9 @@ func (MultiPolygon) String() string {
 }
 
 func NewPolygon(main []maths.Pt, clines ...[]maths.Pt) Polygon {
-
-	p := Polygon{*NewLineFromPt(main...)}
+	p := Polygon{NewLineFromPt(main...)}
 	for _, l := range clines {
-		p = append(p, *NewLineFromPt(l...))
+		p = append(p, NewLineFromPt(l...))
 	}
 	return p
 }

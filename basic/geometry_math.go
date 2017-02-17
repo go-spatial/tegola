@@ -218,7 +218,7 @@ func mapIsOfType(v map[string]interface{}, wants ...string) (string, error) {
 	return "", fmt.Errorf("Expected all subtypes to be one of type (%v), not %v", strings.Join(wants, ","), v["type"])
 }
 
-func interfaceAsLine(v interface{}) (*Line, error) {
+func interfaceAsLine(v interface{}) (Line, error) {
 	vals, err := interfaceAsFloatslice(v)
 	if err != nil {
 		return nil, fmt.Errorf("Incorrect values for line type: %v", err)
@@ -265,20 +265,20 @@ func forEachMapInSlice(v interface{}, do func(typ string, v interface{}) error, 
 
 }
 
-func interfaceAsPolygon(v interface{}) (*Polygon, error) {
+func interfaceAsPolygon(v interface{}) (Polygon, error) {
 	var p Polygon
 	err := forEachMapInSlice(v, func(_ string, v interface{}) error {
 		l, err := interfaceAsLine(v)
 		if err != nil {
 			return err
 		}
-		p = append(p, *l)
+		p = append(p, l)
 		return nil
 	}, "linestring")
 	if err != nil {
 		return nil, err
 	}
-	return &p, nil
+	return p, nil
 }
 
 func MapAsGeometry(m map[string]interface{}) (geo tegola.Geometry, err error) {
@@ -305,7 +305,7 @@ func MapAsGeometry(m map[string]interface{}) (geo tegola.Geometry, err error) {
 			if err != nil {
 				return err
 			}
-			mp = append(mp, *p)
+			mp = append(mp, p)
 			return nil
 		}, "polygon")
 		if err != nil {
@@ -333,7 +333,7 @@ func MapAsGeometry(m map[string]interface{}) (geo tegola.Geometry, err error) {
 			if err != nil {
 				return err
 			}
-			ml = append(ml, *l)
+			ml = append(ml, l)
 			return nil
 		}, "linestring")
 		if err != nil {
