@@ -57,8 +57,20 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			rScheme = "http://"
 		}
 
+		//	parse our query string
+		var query = r.URL.Query()
+
 		//	iterate our registered maps
 		for _, m := range maps {
+			var tileURL = fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name)
+			var capabilitiesURL = fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, r.Host, m.Name)
+
+			//	if we have a debug param add it to our URLs
+			if query.Get("debug") == "true" {
+				tileURL = tileURL + "?debug=true"
+				capabilitiesURL = capabilitiesURL + "?debug=true"
+			}
+
 			//	build the map details
 			cMap := CapabilitiesMap{
 				Name:        m.Name,
@@ -66,17 +78,24 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				Bounds:      m.Bounds,
 				Center:      m.Center,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name),
+					tileURL,
 				},
-				Capabilities: fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, r.Host, m.Name),
+				Capabilities: capabilitiesURL,
 			}
 
 			for _, layer := range m.Layers {
+				tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name, layer.Name)
+
+				//	if we have a debug param add it to our tileURL
+				if query.Get("debug") == "true" {
+					tileURL = tileURL + "?debug=true"
+				}
+
 				//	build the layer details
 				cLayer := CapabilitiesLayer{
 					Name: layer.Name,
 					Tiles: []string{
-						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name, layer.Name),
+						tileURL,
 					},
 					MinZoom: layer.MinZoom,
 					MaxZoom: layer.MaxZoom,

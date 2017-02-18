@@ -50,6 +50,36 @@ func TestHandleCapabilities(t *testing.T) {
 				},
 			},
 		},
+		{
+			handler:    server.HandleCapabilities{},
+			uri:        "http://localhost:8080/capabilities?debug=true",
+			uriPattern: "/capabilities",
+			reqMethod:  "GET",
+			expected: server.Capabilities{
+				Version: serverVersion,
+				Maps: []server.CapabilitiesMap{
+					{
+						Name:         "test-map",
+						Attribution:  "test attribution",
+						Center:       [3]float64{1.0, 2.0, 3.0},
+						Capabilities: "http://localhost:8080/capabilities/test-map.json?debug=true",
+						Tiles: []string{
+							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
+						},
+						Layers: []server.CapabilitiesLayer{
+							{
+								Name: "test-layer",
+								Tiles: []string{
+									"http://localhost:8080/maps/test-map/test-layer/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 10,
+								MaxZoom: 20,
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for i, test := range testcases {

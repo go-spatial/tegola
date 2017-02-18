@@ -62,6 +62,60 @@ func TestHandleMapCapabilities(t *testing.T) {
 				},
 			},
 		},
+		{
+			handler:    server.HandleCapabilities{},
+			uri:        "http://localhost:8080/capabilities/test-map.json?debug=true",
+			uriPattern: "/capabilities/:map_name",
+			reqMethod:  "GET",
+			expected: tilejson.TileJSON{
+				Attribution: &testMap.Attribution,
+				Bounds:      [4]float64{0, 0, 0, 0},
+				Center:      testMap.Center,
+				Format:      "pbf",
+				MinZoom:     10,
+				MaxZoom:     20,
+				Name:        &testMap.Name,
+				Description: nil,
+				Scheme:      "zxy",
+				TileJSON:    tilejson.Version,
+				Tiles: []string{
+					"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
+				},
+				Grids:    []string{},
+				Data:     []string{},
+				Version:  "1.0.0",
+				Template: nil,
+				Legend:   nil,
+				VectorLayers: []tilejson.VectorLayer{
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           testLayer1.Name,
+						Name:         testLayer1.Name,
+						FeatureTags:  nil,
+						GeometryType: nil,
+						MinZoom:      testLayer1.MinZoom,
+						MaxZoom:      testLayer1.MaxZoom,
+						Tiles: []string{
+							"http://localhost:8080/maps/test-map/test-layer/{z}/{x}/{y}.pbf?debug=true",
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           "debug",
+						Name:         "debug",
+						FeatureTags:  nil,
+						GeometryType: nil,
+						MinZoom:      0,
+						MaxZoom:      server.MaxZoom,
+						Tiles: []string{
+							"http://localhost:8080/maps/test-map/debug/{z}/{x}/{y}.pbf?debug=true",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for i, test := range testcases {

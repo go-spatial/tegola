@@ -84,8 +84,18 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			Data:        make([]string, 0),
 		}
 
+		//	parse our query string
+		var query = r.URL.Query()
+
 		//	determing the min and max zoom for this map
 		for i, l := range m.Layers {
+			var tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName, l.Name)
+
+			//	if we have a debug param add it to our URLs
+			if query.Get("debug") == "true" {
+				tileURL = tileURL + "?debug=true"
+			}
+
 			//	set our min and max using the first layer
 			if i == 0 {
 				tileJSON.MinZoom = l.MinZoom
@@ -111,7 +121,33 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				MinZoom: l.MinZoom,
 				MaxZoom: l.MaxZoom,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName, l.Name),
+					tileURL,
+				},
+			}
+
+			//	add our layer to our tile layer response
+			tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
+		}
+
+		tileURL := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName)
+
+		//	if we have a debug param add it to our URLs
+		if query.Get("debug") == "true" {
+			tileURL = tileURL + "?debug=true"
+
+			debugTileURL := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, r.Host, req.mapName, "debug")
+
+			//	we also need to add a debug vector layer
+			//	build our vector layer details
+			layer := tilejson.VectorLayer{
+				Version: 2,
+				Extent:  4096,
+				ID:      "debug",
+				Name:    "debug",
+				MinZoom: 0,
+				MaxZoom: MaxZoom,
+				Tiles: []string{
+					debugTileURL,
 				},
 			}
 
@@ -120,7 +156,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		}
 
 		//	build our URL scheme for the tile grid
-		tileJSON.Tiles = append(tileJSON.Tiles, fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName))
+		tileJSON.Tiles = append(tileJSON.Tiles, tileURL)
 
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
