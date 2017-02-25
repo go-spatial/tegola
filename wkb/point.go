@@ -47,7 +47,7 @@ func (MultiPoint) Type() uint32 {
 }
 
 //Decode decodes the byte stream in the a grouping of points.
-func (mp MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
+func (mp *MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
 	var num uint32 // Number of points.
 	if err := binary.Read(r, bom, &num); err != nil {
 		return err
@@ -64,7 +64,7 @@ func (mp MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
 		if err := p.Decode(byteOrder, r); err != nil {
 			return err
 		}
-		mp = append(mp, *p)
+		*mp = append(*mp, *p)
 	}
 	return nil
 }

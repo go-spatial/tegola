@@ -85,9 +85,9 @@ func TestMultiPoint(t *testing.T) {
 	var p wkb.MultiPoint
 	for i, test := range testcases {
 		buf := bytes.NewReader(test.bytes)
-		p.Decode(test.bom, buf)
-		if len(test.expected) != len(p) {
-			t.Errorf("Failed test %v: Not the same number of points, Expected: %v, Got: %v", test.expected, p)
+		err := p.Decode(test.bom, buf)
+		if len(test.expected) != len(p) || err != nil {
+			t.Errorf("Failed test %v: Not the same number of points, Expected: %v, Got: %v -- err: %v", i, len(test.expected), len(p), err)
 			continue
 		}
 		for j, ep := range test.expected {
