@@ -1,7 +1,5 @@
 package basic
 
-import "github.com/terranodo/tegola"
-
 type Geometry interface {
 	basicType() // does nothing, but there to make collection only work with basic types.
 	String() string
@@ -11,10 +9,10 @@ type Geometry interface {
 type Collection []Geometry
 
 //Geometeries return a set of geometeies that make that collection.
-func (c Collection) Geometeries() (geometeries []tegola.Geometry) {
-	geometeries = make([]tegola.Geometry, 0, len(c))
+func (c Collection) Geometeries() (geometeries []G) {
+	geometeries = make([]G, 0, len(c))
 	for i := range c {
-		geometeries = append(geometeries, c[i])
+		geometeries = append(geometeries, G{c[i]})
 	}
 	return geometeries
 }

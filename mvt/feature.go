@@ -149,7 +149,7 @@ type cursor struct {
 	DisableScaling bool
 }
 
-func newCursor(tile tegola.BoundingBox, layerExtent int) *cursor {
+func NewCursor(tile tegola.BoundingBox, layerExtent int) *cursor {
 	xspan := tile.Maxx - tile.Minx
 	yspan := tile.Maxy - tile.Miny
 	return &cursor{
@@ -169,7 +169,7 @@ func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
 	return nx, ny
 }
 
-func (c *cursor) minmax() (min, max maths.Pt) {
+func (c *cursor) MinMax() (min, max maths.Pt) {
 	return maths.Pt{-2, -2},
 		maths.Pt{
 			float64(c.extent + 2),
@@ -208,35 +208,32 @@ func (c *cursor) scalelinestr(g tegola.LineString) basic.Line {
 	return ls
 }
 
-func (c *cursor) scalegeo(geo tegola.Geometry) tegola.Geometry {
+func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
 	switch g := geo.(type) {
 	case tegola.Point:
-		p := c.scalept(g)
-		return &p
+		return c.scalept(g)
 	case tegola.Point3:
-		p := c.scalept(g)
-		return &p
+		return c.scalept(g)
 	case tegola.MultiPoint:
 		var mp basic.MultiPoint
 		for _, p := range g.Points() {
 			mp = append(mp, c.scalept(p))
 		}
-		return &mp
+		return mp
 	case tegola.LineString:
-		l := c.scalelinestr(g)
-		return &l
+		return c.scalelinestr(g)
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		for _, l := range g.Lines() {
 			ml = append(ml, c.scalelinestr(l))
 		}
-		return &ml
+		return ml
 	case tegola.Polygon:
 		var p basic.Polygon
 		for _, l := range g.Sublines() {
 			p = append(p, c.scalelinestr(l))
 		}
-		return &p
+		return p
 	case tegola.MultiPolygon:
 		var mp basic.MultiPolygon
 		for _, p := range g.Polygons() {
@@ -246,30 +243,51 @@ func (c *cursor) scalegeo(geo tegola.Geometry) tegola.Geometry {
 			}
 			mp = append(mp, np)
 		}
-		return &mp
+		return mp
 	}
-	return geo
+	return basic.G{}
 }
 
-func (c *cursor) clipgeo(geo tegola.Geometry) (tegola.Geometry, error) {
-	min, max := c.minmax()
+type geoDebugStruct struct {
+	Min maths.Pt       `json:"min"`
+	Max maths.Pt       `json:"max"`
+	Geo basic.Geometry `json:"geo"`
+}
+
+func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
+	fln := os.Getenv("GenTestCase")
+	if fln == "" {
+		return
+	}
+	filename := fmt.Sprintf("/tmp/testcase_%v_%p.json", fln, geo)
+	bgeo, err := basic.CloneGeometry(geo)
+	if err != nil {
+		log.Println("Failed to clone geo for test case.", err)
+		return
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		log.Printf("Failed to create test file %v : %v.\n", filename, err)
+		return
+	}
+	defer f.Close()
+	geodebug := geoDebugStruct{
+		Max: max,
+		Min: min,
+		Geo: bgeo,
+	}
+	enc := json.NewEncoder(f)
+	enc.Encode(geodebug)
+	log.Printf("Created file: %v", filename)
+	log.Printf("ERR: %v", err)
+}
+
+func (c *cursor) ClipGeo(geo tegola.Geometry) (basic.Geometry, error) {
+	min, max := c.MinMax()
 	g, err := clip.Geometry(geo, min, max)
 	if g == nil {
-		fln := os.Getenv("GenTestCase")
-
-		if fln != "" {
-			filename := fmt.Sprintf("/tmp/testcase_%v_%p.json", fln, geo)
-			mgeo := make(map[string]interface{})
-			mgeo["min"] = min
-			mgeo["max"] = max
-			if f, err := os.Create(filename); err == nil {
-				enc := json.NewEncoder(f)
-				mgeo["geo"] = tegola.GeometryAsMap(geo)
-				enc.Encode(mgeo)
-				f.Close()
-				log.Printf("Created file: %v", filename)
-			}
-		}
+		println("The geo is nil")
+		createDebugFile(min, max, geo, err)
 	}
 	return g, err
 }
@@ -310,19 +328,19 @@ func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent
 	}
 
 	//	new cursor
-	c := newCursor(extent, layerExtent)
+	c := NewCursor(extent, layerExtent)
 	c.DisableScaling = true
 
-	geo := c.scalegeo(geom)
+	geo := c.ScaleGeo(geom)
 	if os.Getenv("TEGOLA_CLIPPING") == "mvt" {
-		geo, err = c.clipgeo(geo)
-	}
-	if geo == nil {
-		return []uint32{}, -1, nil
-	}
-	if err != nil {
-		log.Printf("We got the following error clipping: %v", err)
-		return nil, vectorTile.Tile_UNKNOWN, err
+		geo, err = c.ClipGeo(geo)
+		if geo == nil {
+			return []uint32{}, -1, nil
+		}
+		if err != nil {
+			log.Printf("We got the following error clipping: %v", err)
+			return nil, vectorTile.Tile_UNKNOWN, err
+		}
 	}
 	switch t := geo.(type) {
 	case tegola.Point:

@@ -15,7 +15,7 @@ type Point struct {
 }
 
 //Type returns the type constant for this Geometry.
-func (*Point) Type() uint32 {
+func (Point) Type() uint32 {
 	return GeoPoint
 }
 
@@ -29,7 +29,7 @@ func (p *Point) Decode(bom binary.ByteOrder, r io.Reader) error {
 	}
 	return nil
 }
-func (p *Point) String() string {
+func (p Point) String() string {
 	return WKT(p) // If we have a failure we don't care
 }
 
@@ -47,7 +47,7 @@ func (MultiPoint) Type() uint32 {
 }
 
 //Decode decodes the byte stream in the a grouping of points.
-func (mp *MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
+func (mp MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
 	var num uint32 // Number of points.
 	if err := binary.Read(r, bom, &num); err != nil {
 		return err
@@ -64,20 +64,20 @@ func (mp *MultiPoint) Decode(bom binary.ByteOrder, r io.Reader) error {
 		if err := p.Decode(byteOrder, r); err != nil {
 			return err
 		}
-		*mp = append(*mp, *p)
+		mp = append(mp, *p)
 	}
 	return nil
 }
 
 //Points returns a copy of the points in the group.
-func (mp *MultiPoint) Points() (pts []tegola.Point) {
-	for i := range *mp {
-		pts = append(pts, &(*mp)[i])
+func (mp MultiPoint) Points() (pts []tegola.Point) {
+	for i := range mp {
+		pts = append(pts, &(mp[i]))
 	}
 	return pts
 }
 
 //String returns the WTK version of the geometry.
-func (mp *MultiPoint) String() string {
+func (mp MultiPoint) String() string {
 	return WKT(mp) // If we have a failure we don't care
 }

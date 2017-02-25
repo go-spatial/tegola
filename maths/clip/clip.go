@@ -396,12 +396,54 @@ func linestring2floats(l tegola.LineString) (ls []float64) {
 func LineString(line tegola.LineString, min, max maths.Pt, extant int) (ls []basic.Line, err error) {
 	emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
 	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
-	slines, err := linestring(maths.Clockwise, linestring2floats(line), emin, emax)
-	if err != nil {
-		return nil, err
+	r := region.New(maths.Clockwise, emin, emax)
+	// I don't think this makes sense for a unconnected pollygon
+	// Linestrings are not connected. So, for these we just need to walk each point and see if it's within the clipping rectangle.
+	// When we enter the clipping rectangle, we need to calculate the interaction point, and start a new line.
+	// When we leave the clipping rectangle, we need to calculated the interaction point, and stop the line.
+	pts := linestring2floats(line)
+	lpt := maths.Pt{pts[0], pts[1]}
+	lptIsIn := r.Contains(lpt)
+	var cpts []float64
+	if lptIsIn {
+		cpts = append(cpts, lpt.X, lpt.Y)
 	}
-	for _, s := range slines {
-		ls = append(ls, *basic.NewLine(s...))
+	for x, y := 2, 3; y < len(pts); x, y = x+2, y+2 {
+		cpt := maths.Pt{pts[x], pts[y]}
+		cptIsIn := r.Contains(cpt)
+		if cptIsIn {
+			if !lptIsIn {
+				// Need to figure out the intersection point.
+				line := maths.Line{lpt, cpt}
+				for a := r.FirstAxis(); a != nil; a = a.Next() {
+					pt, doesIntersect := a.Intersect(line)
+					if doesIntersect {
+						cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
+						break
+					}
+				}
+			}
+			cpts = append(cpts, cpt.X, cpt.Y)
+		} else {
+			if lptIsIn {
+				line := maths.Line{lpt, cpt}
+				for a := r.FirstAxis(); a != nil; a = a.Next() {
+					pt, doesIntersect := a.Intersect(line)
+					if doesIntersect {
+						cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
+						break
+					}
+				}
+				// Need to complete this set of points.
+				ls = append(ls, basic.NewLine(cpts...))
+				cpts = cpts[:0]
+			}
+		}
+		lpt = cpt
+		lptIsIn = cptIsIn
+	}
+	if len(cpts) > 0 {
+		ls = append(ls, basic.NewLine(cpts...))
 	}
 	return ls, nil
 }
@@ -426,7 +468,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 		return nil, nil
 	}
 	for _, ls := range plstrs {
-		p = append(p, basic.Polygon{*basic.NewLine(ls...)})
+		p = append(p, basic.Polygon{basic.NewLine(ls...)})
 		nsub, err := subject.New(maths.Clockwise, ls)
 		if err != nil {
 			return nil, err
@@ -445,7 +487,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 			for i, sublss := range subls {
 				if sublss.Contains(maths.Pt{ss[0], ss[1]}) {
 					// Found the polygon, move to the next substring.
-					p[i] = append(p[i], *basic.NewLine(ss...))
+					p[i] = append(p[i], basic.NewLine(ss...))
 					break
 				}
 			}
@@ -453,25 +495,33 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	}
 	return p, nil
 }
-func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
-	var extant = 512
+func Geometry(geo tegola.Geometry, min, max maths.Pt) (basic.Geometry, error) {
+	var extant = 0
 	switch g := geo.(type) {
 
-	case tegola.Point, tegola.Point3, tegola.MultiPoint:
-		return geo, nil
+	case tegola.Point:
+		return basic.Point{g.X(), g.Y()}, nil
+	case tegola.Point3:
+		return basic.Point3{g.X(), g.Y()}, nil
+	case tegola.MultiPoint:
+		var mpt basic.MultiPoint
+		for _, pt := range g.Points() {
+			mpt = append(mpt, basic.Point{pt.X(), pt.Y()})
+		}
+		return mpt, nil
 
 	case tegola.Polygon:
 		ps, err := Polygon(g, min, max, extant)
 		if err != nil {
-			return geo, err
+			return basic.G{}, err
 		}
 		if len(ps) == 0 {
 			return nil, nil
 		}
 		if len(ps) == 1 {
-			return &ps[0], nil
+			return ps[0], nil
 		}
-		return (*basic.MultiPolygon)(&ps), err
+		return basic.MultiPolygon(ps), err
 
 	case tegola.MultiPolygon:
 		var mp basic.MultiPolygon
@@ -486,22 +536,22 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
 			return nil, nil
 		}
 		if len(mp) == 1 {
-			return &mp[0], nil
+			return mp[0], nil
 		}
-		return &mp, nil
+		return mp, nil
 
 	case tegola.LineString:
 		ls, err := LineString(g, min, max, extant)
 		if err != nil {
-			return geo, err
+			return basic.G{}, err
 		}
 		if len(ls) == 0 {
 			return nil, nil
 		}
 		if len(ls) == 1 {
-			return &ls[0], nil
+			return ls[0], nil
 		}
-		return (*basic.MultiLine)(&ls), nil
+		return basic.MultiLine(ls), nil
 
 	case tegola.MultiLine:
 		var ls basic.MultiLine
@@ -516,12 +566,12 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (tegola.Geometry, error) {
 			return nil, nil
 		}
 		if len(ls) == 1 {
-			return &ls[0], nil
+			return ls[0], nil
 		}
-		return &ls, nil
+		return ls, nil
 
 	default:
-		return geo, nil
+		return basic.G{}, nil
 
 	}
 }

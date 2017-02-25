@@ -39,7 +39,7 @@ func TestEncodeGeometry(t *testing.T) {
 			eerr: ErrNilGeometryType,
 		},
 		{
-			geo: &basic.Point{1, 1},
+			geo: basic.Point{1, 1},
 			typ: vectorTile.Tile_POINT,
 			bbox: tegola.BoundingBox{
 				Minx: 0,
@@ -50,7 +50,7 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{9, 2, 2},
 		},
 		{
-			geo: &basic.Point{25, 17},
+			geo: basic.Point{25, 17},
 			typ: vectorTile.Tile_POINT,
 			bbox: tegola.BoundingBox{
 				Minx: 0,
@@ -61,7 +61,7 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{9, 50, 34},
 		},
 		{
-			geo: &basic.MultiPoint{basic.Point{5, 7}, basic.Point{3, 2}},
+			geo: basic.MultiPoint{basic.Point{5, 7}, basic.Point{3, 2}},
 			typ: vectorTile.Tile_POINT,
 			bbox: tegola.BoundingBox{
 				Minx: 0,
@@ -72,7 +72,7 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{17, 10, 14, 3, 9},
 		},
 		{
-			geo: &basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
+			geo: basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
 			typ: vectorTile.Tile_LINESTRING,
 			bbox: tegola.BoundingBox{
 				Minx: 0,
@@ -83,7 +83,7 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{9, 4, 4, 18, 0, 16, 16, 0},
 		},
 		{
-			geo: &basic.MultiLine{
+			geo: basic.MultiLine{
 				basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
 				basic.Line{basic.Point{1, 1}, basic.Point{3, 5}},
 			},
@@ -97,7 +97,7 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{9, 4, 4, 18, 0, 16, 16, 0, 9, 17, 17, 10, 4, 8},
 		},
 		{
-			geo: &basic.Polygon{
+			geo: basic.Polygon{
 				basic.Line{
 					basic.Point{3, 6},
 					basic.Point{8, 12},
@@ -114,7 +114,7 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{9, 6, 12, 18, 10, 12, 24, 44, 15},
 		},
 		{
-			geo: &basic.MultiPolygon{
+			geo: basic.MultiPolygon{
 				basic.Polygon{
 					basic.Line{
 						basic.Point{0, 0},
@@ -218,7 +218,7 @@ func TestNormalizePoint(t *testing.T) {
 
 	for i, tcase := range testcases {
 		//	new cursor
-		c := newCursor(tcase.bbox, tcase.layerExtent)
+		c := NewCursor(tcase.bbox, tcase.layerExtent)
 
 		nx, ny := c.ScalePoint(&tcase.point)
 		if nx != tcase.nx {

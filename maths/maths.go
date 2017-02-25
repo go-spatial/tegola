@@ -44,7 +44,8 @@ func (w WindingOrder) IsCounterClockwise() bool { return w == CounterClockwise }
 
 // Pt describes a 2d Point.
 type Pt struct {
-	X, Y float64
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 func (pt Pt) XCoord() float64   { return pt.X }

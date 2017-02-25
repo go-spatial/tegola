@@ -359,14 +359,8 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	if err != nil {
 		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
 	}
-	minPt, ok := minGeo.(*basic.Point)
-	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", minGeo)
-	}
-	maxPt, ok := maxGeo.(*basic.Point)
-	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo)
-	}
+	minPt := minGeo.AsPoint()
+	maxPt := maxGeo.AsPoint()
 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)
 	sql := strings.Replace(plyr.SQL, BBOX, bbox, -1)
@@ -421,9 +415,11 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				// how the points are encoded.
 				if plyr.SRID != DefaultSRID {
 					// We need to convert our points to Webmercator.
-					if geom, err = basic.ToWebMercator(plyr.SRID, geom); err != nil {
+					g, err := basic.ToWebMercator(plyr.SRID, geom)
+					if err != nil {
 						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", plyr.SRID, layerName)
 					}
+					geom = g.Geometry
 				}
 			case plyr.IDFieldName:
 				switch aval := v.(type) {

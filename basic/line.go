@@ -15,6 +15,17 @@ type Line []Point
 // Just to make basic collection only usable with basic types.
 func (Line) basicType()     {}
 func (Line) String() string { return "Line" }
+func (l Line) GoString() string {
+	str := fmt.Sprintf("[%v]{", len(l))
+	for i, p := range l {
+		if i != 0 {
+			str += ","
+		}
+		str += fmt.Sprintf("(%v,%v)", p[0], p[1])
+	}
+	str += "}"
+	return str
+}
 
 // NewLine creates a line given pairs for floats.
 func NewLine(pointPairs ...float64) Line {

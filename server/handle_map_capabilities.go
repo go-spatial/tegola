@@ -102,6 +102,10 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				tileJSON.MaxZoom = l.MaxZoom
 			}
 
+			tiles := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName, l.Name)
+			if r.URL.Query().Get("debug") != "" {
+				tiles = tiles + "?debug=true"
+			}
 			//	build our vector layer details
 			layer := tilejson.VectorLayer{
 				Version: 2,
@@ -110,17 +114,20 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				Name:    l.Name,
 				MinZoom: l.MinZoom,
 				MaxZoom: l.MaxZoom,
-				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName, l.Name),
-				},
+				Tiles:   []string{tiles},
 			}
 
 			//	add our layer to our tile layer response
 			tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 		}
 
+		tiles := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName)
+		if r.URL.Query().Get("debug") != "" {
+			tiles = tiles + "?debug=true"
+		}
+
 		//	build our URL scheme for the tile grid
-		tileJSON.Tiles = append(tileJSON.Tiles, fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName))
+		tileJSON.Tiles = append(tileJSON.Tiles, tiles)
 
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
