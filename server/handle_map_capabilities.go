@@ -108,7 +108,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			}
 
 			//	check if we have a max zoom higher then our current max
-			if tileJSON.MinZoom < l.MaxZoom {
+			if tileJSON.MaxZoom < l.MaxZoom {
 				tileJSON.MaxZoom = l.MaxZoom
 			}
 
