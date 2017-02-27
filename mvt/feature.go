@@ -286,11 +286,11 @@ func (c *cursor) ClipGeo(geo tegola.Geometry) (basic.Geometry, error) {
 	min, max := c.MinMax()
 	g, err := clip.Geometry(geo, min, max)
 	if g == nil {
-		println("The geo is nil")
 		createDebugFile(min, max, geo, err)
 	}
 	return g, err
 }
+
 func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
 	if len(points) == 0 {
 		return []uint32{}

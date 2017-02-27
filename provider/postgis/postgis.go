@@ -380,8 +380,8 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	layer.Name = layerName
 
 	var count int
-	var didEnd bool
-	log.Printf("Running SQL:\n%v", sql)
+	// var didEnd bool
+	//log.Printf("Running SQL:\n%v", sql)
 
 	for rows.Next() {
 		count++
@@ -487,7 +487,9 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 			Geometry: geom,
 		})
 	}
-	didEnd = true
-	log.Printf("Got %v rows running:\n%v\nDid complete %v\n", count, sql, didEnd)
+	/*
+		didEnd = true
+		log.Printf("Got %v rows running:\n%v\nDid complete %v\n", count, sql, didEnd)
+	*/
 	return layer, err
 }

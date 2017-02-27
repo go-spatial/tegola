@@ -1,5 +1,7 @@
 package basic
 
+import "fmt"
+
 // G is used to pass back a generic Geometry type. It will contains functions to do basic conversions.
 type G struct {
 	Geometry
@@ -13,7 +15,7 @@ func (g G) IsLine() bool {
 func (g G) AsLine() Line {
 	l, ok := g.Geometry.(Line)
 	if !ok {
-		panic("Geo is not a line!")
+		panic(fmt.Sprintf("Geo is not a Line! : %T", g.Geometry))
 	}
 	return l
 }
@@ -26,14 +28,14 @@ func (g G) IsPolygon() bool {
 func (g G) AsPolygon() Polygon {
 	p, ok := g.Geometry.(Polygon)
 	if !ok {
-		panic("Geo is not a Polygon!")
+		panic(fmt.Sprintf("Geo is not a Polygon! : %T", g.Geometry))
 	}
 	return p
 }
 func (g G) AsMultiPolygon() MultiPolygon {
 	p, ok := g.Geometry.(MultiPolygon)
 	if !ok {
-		panic("Geo is not a Polygon!")
+		panic(fmt.Sprintf("Geo is not a MultiPolygon! : %T", g.Geometry))
 	}
 	return p
 }
@@ -46,7 +48,7 @@ func (g G) IsPoint() bool {
 func (g G) AsPoint() Point {
 	p, ok := g.Geometry.(Point)
 	if !ok {
-		panic("Geo is not a Point!")
+		panic(fmt.Sprintf("Geo is not a Point! : %T", g.Geometry))
 	}
 	return p
 }
