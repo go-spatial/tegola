@@ -30,6 +30,13 @@ func (g G) AsPolygon() Polygon {
 	}
 	return p
 }
+func (g G) AsMultiPolygon() MultiPolygon {
+	p, ok := g.Geometry.(MultiPolygon)
+	if !ok {
+		panic("Geo is not a Polygon!")
+	}
+	return p
+}
 
 func (g G) IsPoint() bool {
 	_, ok := g.Geometry.(Point)

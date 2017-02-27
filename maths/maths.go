@@ -42,6 +42,21 @@ func (w WindingOrder) String() string {
 func (w WindingOrder) IsClockwise() bool        { return w == Clockwise }
 func (w WindingOrder) IsCounterClockwise() bool { return w == CounterClockwise }
 
+func WindingOrderOf(sub []float64) WindingOrder {
+	sum := 0
+	for x, y := 0, 1; y < len(sub); x, y = x+2, y+2 {
+		nx, ny := x+2, y+2
+		if y == (len(sub) - 1) {
+			nx, ny = 0, 1
+		}
+		sum += int((sub[nx] - sub[x]) * (sub[ny] + sub[y]))
+	}
+	if sum < 0 {
+		return Clockwise
+	}
+	return CounterClockwise
+}
+
 // Pt describes a 2d Point.
 type Pt struct {
 	X float64 `json:"x"`

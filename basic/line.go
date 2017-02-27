@@ -15,8 +15,25 @@ type Line []Point
 // Just to make basic collection only usable with basic types.
 func (Line) basicType()     {}
 func (Line) String() string { return "Line" }
+func (l Line) direction() maths.WindingOrder {
+	sum := 0
+	var npt Point
+	for i, pt := range l {
+
+		if i == (len(l) - 1) {
+			npt = l[0]
+		} else {
+			npt = l[i+1]
+		}
+		sum += int((npt.X() - pt.X()) * (npt.Y() + pt.Y()))
+	}
+	if sum < 0 {
+		return maths.Clockwise
+	}
+	return maths.CounterClockwise
+}
 func (l Line) GoString() string {
-	str := fmt.Sprintf("[%v]{", len(l))
+	str := fmt.Sprintf("[%v--%v]{", len(l), l.direction())
 	for i, p := range l {
 		if i != 0 {
 			str += ","

@@ -292,6 +292,7 @@ Since N(o), is the end of the array we, start at the beginning and notice, that 
 */
 
 func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]float64, err error) {
+	w = maths.WindingOrderOf(sub)
 	il := intersect.New()
 	rl := region.New(w, rMinPt, rMaxPt)
 	sl, err := subject.New(w, sub)
@@ -312,6 +313,9 @@ func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 			if !doesIntersect {
 				continue
 			}
+			pt.X = float64(int64(pt.X))
+			pt.Y = float64(int64(pt.Y))
+
 			ipt := intersect.NewPt(pt, a.IsInward(line))
 			//log.Printf("Found Intersect (%p)%[1]v\n", ipt)
 			// Only care about inbound intersect points.

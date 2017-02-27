@@ -47,6 +47,7 @@ func (t *Tile) VTile(extent tegola.BoundingBox) (vt *vectorTile.Tile, err error)
 	return vt, nil
 }
 
+//TODO: What is this functions suppose to do?
 //TileFromVTile will return a Tile object from the given vectorTile Tile object
 func TileFromVTile(t *vectorTile.Tile) (*Tile, error) {
 	return nil, nil

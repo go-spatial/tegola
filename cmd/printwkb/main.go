@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
@@ -32,29 +34,26 @@ var tile2 = tegola.BoundingBox{
 
 var geomField int
 
-func print(geostr string, tile tegola.BoundingBox) {
+func print(srid int, geostr string, tile tegola.BoundingBox) {
 
 	rd1 := strings.NewReader(geostr)
 	geo, err := wkb.Decode(rd1)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding goe(road1): %v", err)
 		os.Exit(2)
-
 	}
-	geol, _ := geo.(tegola.LineString)
-	fmt.Printf("road GEO:%v %T: %[2]t\n", len(geol.Subpoints()), geo)
+	gwm, err := basic.ToWebMercator(srid, geo)
+	geol := gwm.AsMultiPolygon()
 	c := mvt.NewCursor(tile, 4096)
-	g := c.ScaleGeo(geo)
+	g := c.ScaleGeo(geol)
 	cmin, cmax := c.MinMax()
 	fmt.Printf("Rec: %v,%v\n", cmin, cmax)
-	gl, _ := g.(basic.Line)
-	fmt.Printf("Scle GEO:%v %T: %#[2]v\n", len(gl), gl)
+	fmt.Printf("Scle GEO: %T: %#[1]v\n", g)
 	cg, err := c.ClipGeo(g)
 	if err != nil {
 		panic(err)
 	}
-	cgl, _ := cg.(basic.Line)
-	fmt.Printf("Clip GEO:%v %T: %#[2]v\n", len(cgl), cgl)
+	fmt.Printf("Clip GEO:%T: %#[1]v\n", cg)
 
 }
 
@@ -68,18 +67,90 @@ func main() {
 		defer file.Close()
 		csvFile := csv.NewReader(file)
 		// We are going to assume the first record is the names of the columns. We only care for the geometry field
-		fieldNames, err := csvFile.Read()
+		fieldNames, err := csvFile.ReadAll()
 		if err != nil {
 			panic(err)
 		}
-		for i, n := range fieldNames {
-			if n == "geometry" {
-				geomField = i
-				break
-			}
+	*/
+	if len(os.Args) < 5 {
+		panic("Need x, y and z values.")
+
+	}
+	srid, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		srid = 4326
+	}
+	z, _ := strconv.Atoi(os.Args[2])
+	x, _ := strconv.Atoi(os.Args[3])
+	y, _ := strconv.Atoi(os.Args[4])
+	tile := tegola.Tile{
+		X: x,
+		Y: y,
+		Z: z,
+	}
+	bbox := tile.BoundingBox()
+	minGeo, err := basic.FromWebMercator(srid, &basic.Point{bbox.Minx, bbox.Miny})
+	if err != nil {
+		panic(err)
+	}
+	maxGeo, err := basic.FromWebMercator(srid, &basic.Point{bbox.Maxx, bbox.Maxy})
+	if err != nil {
+		panic(err)
+	}
+	minPt := minGeo.AsPoint()
+	maxPt := maxGeo.AsPoint()
+	config := pgx.ConnPoolConfig{
+		ConnConfig: pgx.ConnConfig{
+			Host:     "localhost",
+			Port:     5432,
+			Database: "bonn_osm",
+			User:     "gdey",
+			Password: "redfox",
+		},
+	}
+
+	pool, err := pgx.NewConnPool(config)
+	if err != nil {
+		panic(fmt.Sprintf("Failed while creating connection pool: %v", err))
+	}
+	/*
+		var bbox = tegola.BoundingBox{
+			Minx: 7.097167967762075,
+			Miny: 50.75035930616591,
+			Maxx: 7.119140624009016,
+			Maxy: 50.736455131807304,
 		}
 	*/
+	sql := fmt.Sprintf(
+		`SELECT  ST_AsBinary("wkb_geometry") AS "geometry" FROM medical_polygon WHERE "wkb_geometry" && ST_MakeEnvelope(%v,%v,%v,%v,%v)`,
+		minPt.X(),
+		minPt.Y(),
+		maxPt.X(),
+		maxPt.Y(),
+		srid,
+	)
+	fmt.Println("Running:", sql)
+	rows, err := pool.Query(sql)
+	if err != nil {
+		panic(fmt.Sprintf("Got the following error (%v) running this sql (%v)", err, sql))
+	}
+	defer rows.Close()
+	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
+	var geobytes []byte
+	var ok bool
+	for rows.Next() {
+		vals, err := rows.Values()
+		if err != nil {
+			panic(fmt.Sprintf("Got an error trying to run SQL: %v ; %v", sql, err))
+		}
+		println("Vals:", vals)
 
-	print(water3, tile2)
+		if geobytes, ok = vals[0].([]byte); !ok {
+			panic("Was unable to convert geometry field into bytes.")
+		}
+		print(srid, string(geobytes), bbox)
+	}
+
+	//print(water3, tile2)
 
 }
