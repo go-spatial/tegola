@@ -351,11 +351,11 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	}
 
 	textent := tile.BoundingBox()
-	minGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Minx, textent.Miny})
+	minGeo, err := basic.FromWebMercator(plyr.SRID, basic.Point{textent.Minx, textent.Miny})
 	if err != nil {
 		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
 	}
-	maxGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Maxx, textent.Maxy})
+	maxGeo, err := basic.FromWebMercator(plyr.SRID, basic.Point{textent.Maxx, textent.Maxy})
 	if err != nil {
 		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
 	}

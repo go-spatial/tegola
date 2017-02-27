@@ -158,8 +158,7 @@ func ToWebMercator(SRID int, geometry tegola.Geometry) (G, error) {
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
 		// in the same SRID.
-		g, err := CloneGeometry(geometry)
-		return G{g}, err
+		return CloneGeometry(geometry)
 	case tegola.WGS84:
 		return ApplyToPoints(geometry, webmercator.PToXY)
 	}
@@ -174,8 +173,7 @@ func FromWebMercator(SRID int, geometry tegola.Geometry) (G, error) {
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
 		// in the same SRID.
-		g, err := CloneGeometry(geometry)
-		return G{g}, err
+		return CloneGeometry(geometry)
 	case tegola.WGS84:
 		return ApplyToPoints(geometry, webmercator.PToLonLat)
 	}
