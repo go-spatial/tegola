@@ -38,9 +38,17 @@ func TestHandleCapabilities(t *testing.T) {
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
-								Name: "test-layer",
+								Name: "test-layer-1",
 								Tiles: []string{
-									"http://localhost:8080/maps/test-map/test-layer/{z}/{x}/{y}.pbf",
+									"http://localhost:8080/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf",
+								},
+								MinZoom: 4,
+								MaxZoom: 9,
+							},
+							{
+								Name: "test-layer-2",
+								Tiles: []string{
+									"http://localhost:8080/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf",
 								},
 								MinZoom: 10,
 								MaxZoom: 20,
@@ -68,9 +76,17 @@ func TestHandleCapabilities(t *testing.T) {
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
-								Name: "test-layer",
+								Name: "test-layer-1",
 								Tiles: []string{
-									"http://localhost:8080/maps/test-map/test-layer/{z}/{x}/{y}.pbf?debug=true",
+									"http://localhost:8080/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 4,
+								MaxZoom: 9,
+							},
+							{
+								Name: "test-layer-2",
+								Tiles: []string{
+									"http://localhost:8080/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf?debug=true",
 								},
 								MinZoom: 10,
 								MaxZoom: 20,

@@ -28,7 +28,17 @@ func (tp *testMVTProvider) LayerNames() []string {
 }
 
 var testLayer1 = server.Layer{
-	Name:     "test-layer",
+	Name:     "test-layer-1",
+	MinZoom:  4,
+	MaxZoom:  9,
+	Provider: &testMVTProvider{},
+	DefaultTags: map[string]interface{}{
+		"foo": "bar",
+	},
+}
+
+var testLayer2 = server.Layer{
+	Name:     "test-layer-2",
 	MinZoom:  10,
 	MaxZoom:  20,
 	Provider: &testMVTProvider{},
@@ -43,6 +53,7 @@ var testMap = server.Map{
 	Center:      [3]float64{1.0, 2.0, 3.0},
 	Layers: []server.Layer{
 		testLayer1,
+		testLayer2,
 	},
 }
 
