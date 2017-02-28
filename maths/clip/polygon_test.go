@@ -280,12 +280,75 @@ func TestClipPolygon(t *testing.T) {
 				),
 			},
 		},
+		PolygonTestCase{
+			desc: "Polygon from osm_bonn test.",
+			// For the image to be drawn.
+			min:  maths.Pt{-2, -2},
+			max:  maths.Pt{4098, 4098},
+			ridx: 11,
+			p: basic.NewPolygon(
+				[]maths.Pt{
+					{4038, 1792},
+					{4042, 1786},
+					{4035, 1782},
+					{4047, 1762},
+					{4054, 1767},
+					{4060, 1756},
+					{4064, 1758},
+					{4067, 1754},
+					{4056, 1748},
+					{4070, 1726},
+					{4061, 1720},
+					{4072, 1702},
+					{4083, 1709},
+					{4101, 1720},
+					{4089, 1740},
+					{4098, 1746},
+					{4088, 1763},
+					{4080, 1759},
+					{4076, 1765},
+					{4066, 1782},
+					{4070, 1785},
+					{4058, 1804},
+					{4038, 1792},
+				},
+			),
+			eps: []basic.Polygon{
+				basic.NewPolygon(
+					[]maths.Pt{
+						{4038, 1792},
+						{4042, 1786},
+						{4035, 1782},
+						{4047, 1762},
+						{4054, 1767},
+						{4060, 1756},
+						{4064, 1758},
+						{4067, 1754},
+						{4056, 1748},
+						{4070, 1726},
+						{4061, 1720},
+						{4072, 1702},
+						{4083, 1709},
+						{4101, 1720},
+						{4089, 1740},
+						{4098, 1746},
+						{4088, 1763},
+						{4080, 1759},
+						{4076, 1765},
+						{4066, 1782},
+						{4070, 1785},
+						{4058, 1804},
+						{4038, 1792},
+					},
+				),
+			},
+		},
 	)
 	test.Run(func(i int, tc PolygonTestCase) {
 		var drawPng bool
 		t.Log("Starting test ", i)
 		r := tc.Region()
-		got, err := Polygon(&tc.p, r.Min, r.Max, r.Extant)
+		got, err := Polygon(tc.p, r.Min, r.Max, r.Extant)
 		if err != tc.eerr {
 			t.Errorf("Did not get expected error: want : %v got %v", err, tc.eerr)
 			drawPng = true
@@ -305,8 +368,7 @@ func TestClipPolygon(t *testing.T) {
 		}
 	DRAW_IMAGE:
 		if drawPng || *showPng {
-			tc.DrawTestCase(got, fmt.Sprintf("tstcase_%v.png", i))
+			// tc.DrawTestCase(got, fmt.Sprintf("tstcase_%v.png", i))
 		}
-
 	})
 }

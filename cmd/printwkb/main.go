@@ -122,7 +122,7 @@ func main() {
 		}
 	*/
 	sql := fmt.Sprintf(
-		`SELECT  ST_AsBinary("wkb_geometry") AS "geometry" FROM medical_polygon WHERE "wkb_geometry" && ST_MakeEnvelope(%v,%v,%v,%v,%v)`,
+		`SELECT  ST_AsBinary("wkb_geometry") AS "geometry" from forest WHERE "wkb_geometry" && ST_MakeEnvelope(%v,%v,%v,%v,%v)`,
 		minPt.X(),
 		minPt.Y(),
 		maxPt.X(),

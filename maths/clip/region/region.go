@@ -119,8 +119,8 @@ func (r *Region) Max() maths.Pt                    { return r.max }
 func (r *Region) Min() maths.Pt                    { return r.min }
 func (r *Region) WindingOrder() maths.WindingOrder { return r.winding }
 func (r *Region) Contains(pt maths.Pt) bool {
-	return r.max.X > pt.X && pt.X > r.min.X &&
-		r.max.Y > pt.Y && pt.Y > r.min.Y
+	return r.max.X >= pt.X && pt.X >= r.min.X &&
+		r.max.Y >= pt.Y && pt.Y >= r.min.Y
 }
 func (r *Region) SentinalPoints() (pts []maths.Pt) {
 	for _, p := range r.sentinelPoints {

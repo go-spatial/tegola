@@ -64,6 +64,7 @@ var testRegion = []Region{
 	Region{Min: maths.Pt{X: -1, Y: 4}, Max: maths.Pt{X: 5, Y: 8}, Extant: 1},
 	Region{Min: maths.Pt{X: 5, Y: 2}, Max: maths.Pt{X: 11, Y: 9}, Extant: 1},
 	Region{Min: maths.Pt{X: -1, Y: -1}, Max: maths.Pt{X: 11, Y: 11}, Extant: 1},
+	Region{Min: maths.Pt{X: -2, Y: -2}, Max: maths.Pt{X: 4098, Y: 4098}, Extant: 0},
 }
 
 func (r *Region) ClipRegion(w maths.WindingOrder) *region.Region {
