@@ -2,6 +2,7 @@ package clip
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
@@ -327,7 +328,9 @@ func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 			if ipt.Inward {
 				il.PushBack(ipt)
 			}
-			p.PushInBetween(ipt.AsSubjectPoint())
+			if !p.PushInBetween(ipt.AsSubjectPoint()) {
+				log.Printf("Was not able to add to subject list %v\n", ipt)
+			}
 			a.PushInBetween(ipt.AsRegionPoint())
 		}
 	}
@@ -358,6 +361,7 @@ func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 	// Need to check if there are no intersection points, it could be for two reason.
 	// 2. The region points are all inside the subject.
 	if il.Len() == 0 {
+		// log.Printf("The number of inbound points is zero.")
 		for _, pt := range rl.SentinalPoints() {
 			if !sl.Contains(pt) {
 				// log.Printf("pt(%v)(%v) was not contained in subject(%#v).", i, pt, sl)
@@ -371,7 +375,7 @@ func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 	}
 	// log.Println("Walking through the Inbound Intersection points.")
 	for w := il.FirstInboundPtWalker(); w != nil; w = w.Next() {
-		// log.Printf("Looking at: %p", w)
+		// log.Printf("Looking at: %p, %[1]#v", w)
 		var s []float64
 		var opt *maths.Pt
 		w.Walk(func(idx int, pt maths.Pt) bool {
@@ -382,6 +386,7 @@ func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 			}
 			opt = &pt
 			if idx == sl.Len() {
+				// log.Printf("Return because we are at the end. %v %v", idx, sl.Len())
 				return false
 			}
 			return true
@@ -420,33 +425,55 @@ func LineString(line tegola.LineString, min, max maths.Pt, extant int) (ls []bas
 	for x, y := 2, 3; y < len(pts); x, y = x+2, y+2 {
 		cpt := maths.Pt{pts[x], pts[y]}
 		cptIsIn := r.Contains(cpt)
-		if cptIsIn {
-			if !lptIsIn {
-				// Need to figure out the intersection point.
-				line := maths.Line{lpt, cpt}
-				for a := r.FirstAxis(); a != nil; a = a.Next() {
-					pt, doesIntersect := a.Intersect(line)
-					if doesIntersect {
-						cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
-						break
-					}
+		// log.Printf("looking @ [ %v : %v , %v : %v ]", cptIsIn, cpt, lptIsIn, lpt)
+		switch {
+		case cptIsIn && !lptIsIn:
+			line := maths.Line{lpt, cpt}
+			for a := r.FirstAxis(); a != nil; a = a.Next() {
+				pt, doesIntersect := a.Intersect(line)
+				if doesIntersect {
+					cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
+					break
 				}
 			}
+			fallthrough
+		case cptIsIn && lptIsIn:
 			cpts = append(cpts, cpt.X, cpt.Y)
-		} else {
-			if lptIsIn {
-				line := maths.Line{lpt, cpt}
-				for a := r.FirstAxis(); a != nil; a = a.Next() {
-					pt, doesIntersect := a.Intersect(line)
-					if doesIntersect {
+		case !cptIsIn && lptIsIn:
+			line := maths.Line{lpt, cpt}
+			for a := r.FirstAxis(); a != nil; a = a.Next() {
+				pt, doesIntersect := a.Intersect(line)
+				if doesIntersect {
+					cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
+					break
+				}
+			}
+			// Need to complete this set of points.
+			ls = append(ls, basic.NewLine(cpts...))
+			cpts = cpts[:0]
+		case !cptIsIn && !lptIsIn:
+			// if they are both outside the clipping region, they could cross the clipping region.
+			// Which means we need to get the itersections twp points.
+			line := maths.Line{lpt, cpt}
+			var seenpts []maths.Pt
+			for a := r.FirstAxis(); a != nil; a = a.Next() {
+				pt, doesIntersect := a.Intersect(line)
+				if doesIntersect {
+					// Check to see if we have already seen the point.
+					seen := false
+					for _, spt := range seenpts {
+						if spt.IsEqual(pt) {
+							seen = true
+							break
+						}
+					}
+					if !seen {
+						seenpts = append(seenpts, pt)
 						cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
-						break
 					}
 				}
-				// Need to complete this set of points.
-				ls = append(ls, basic.NewLine(cpts...))
-				cpts = cpts[:0]
 			}
+
 		}
 		lpt = cpt
 		lptIsIn = cptIsIn

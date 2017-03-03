@@ -81,19 +81,19 @@ func (a *axis) inside(pt maths.Pt) bool {
 
 	switch a.idx % 4 {
 	case 0:
-		return pt.X > a.staticCoord()
+		return pt.X >= a.staticCoord()
 	case 1:
 		if a.winding.IsClockwise() {
-			return pt.Y > a.staticCoord()
+			return pt.Y >= a.staticCoord()
 		}
-		return pt.Y < a.staticCoord()
+		return pt.Y <= a.staticCoord()
 	case 2:
-		return pt.X < a.staticCoord()
+		return pt.X <= a.staticCoord()
 	case 3:
 		if a.winding.IsClockwise() {
-			return pt.Y < a.staticCoord()
+			return pt.Y <= a.staticCoord()
 		}
-		return pt.Y > a.staticCoord()
+		return pt.Y >= a.staticCoord()
 	}
 	return false
 }

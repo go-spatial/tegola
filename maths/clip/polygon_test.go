@@ -316,6 +316,15 @@ func TestClipPolygon(t *testing.T) {
 			eps: []basic.Polygon{
 				basic.NewPolygon(
 					[]maths.Pt{
+						{4098, 1725},
+						{4089, 1740},
+						{4098, 1746},
+						{4088, 1763},
+						{4080, 1759},
+						{4076, 1765},
+						{4066, 1782},
+						{4070, 1785},
+						{4058, 1804},
 						{4038, 1792},
 						{4042, 1786},
 						{4035, 1782},
@@ -329,16 +338,62 @@ func TestClipPolygon(t *testing.T) {
 						{4061, 1720},
 						{4072, 1702},
 						{4083, 1709},
-						{4101, 1720},
-						{4089, 1740},
-						{4098, 1746},
-						{4088, 1763},
-						{4080, 1759},
-						{4076, 1765},
-						{4066, 1782},
-						{4070, 1785},
-						{4058, 1804},
-						{4038, 1792},
+						{4098, 1718},
+					},
+				),
+			},
+		},
+		PolygonTestCase{
+			desc: "Polygon from osm_bonn test 2.",
+			// For the image to be drawn.
+			min:  maths.Pt{-2, -2},
+			max:  maths.Pt{4098, 4098},
+			ridx: 11,
+			p: basic.NewPolygon(
+				[]maths.Pt{
+					{-160, 1205},
+					{-154, 1187},
+					{-122, 1146},
+					{-91, 1113},
+					{-60, 1086},
+					{-33, 1072},
+					{-2, 1063}, // This is an intersection point on the boundery.
+					{22, 1059},
+					{47, 1059},
+					{74, 1080},
+					{101, 1115},
+					{137, 1176},
+
+					{139, 1187},
+					{131, 1196},
+					{116, 1208},
+					{89, 1226},
+					{67, 1238},
+					{50, 1246},
+					{4, 1248},
+					{-15, 1254},
+					{-43, 1258},
+					{-73, 1252},
+					{-83, 1247},
+					{-72, 1211},
+					{-65, 1199},
+					{-59, 1187},
+					{-60, 1176},
+					{-69, 1171},
+					{-80, 1171},
+					{-91, 1179},
+					{-111, 1223},
+					{-118, 1226},
+					{-150, 1218},
+					{-160, 1205},
+				},
+			),
+			eps: []basic.Polygon{
+				basic.NewPolygon(
+					[]maths.Pt{
+						{-118, 1226},
+						{-150, 1218},
+						{-160, 1205},
 					},
 				),
 			},
@@ -356,7 +411,8 @@ func TestClipPolygon(t *testing.T) {
 		}
 		t.Logf("Got %#v :  %v", got, err)
 		if len(tc.eps) != len(got) {
-			t.Errorf("For test(%v-%v): wanted %v polygons got %v", i, tc.desc, len(tc.eps), len(got))
+			t.Errorf("For test(%v-%v): wanted %v polygons got %v", i, tc.desc, len(tc.eps),
+				len(got))
 			drawPng = true
 			goto DRAW_IMAGE
 		}

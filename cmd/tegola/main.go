@@ -6,15 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"html"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/BurntSushi/toml"
-
+	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
 	_ "github.com/terranodo/tegola/provider/postgis"
@@ -26,36 +22,13 @@ var (
 	Version = "version not set"
 )
 
-type Config struct {
-	Webserver struct {
-		Port      string
-		LogFile   string `toml:"log_file"`
-		LogFormat string `toml:"log_format"`
-	}
-	Providers []map[string]interface{}
-	Maps      []Map
-}
-
-type Map struct {
-	Name        string     `toml:"name"`
-	Attribution string     `toml:"attribution"`
-	Bounds      []float64  `toml:"bounds"`
-	Center      [3]float64 `toml:"center"`
-	Layers      []struct {
-		ProviderLayer string      `toml:"provider_layer"`
-		MinZoom       int         `toml:"min_zoom"`
-		MaxZoom       int         `toml:"max_zoom"`
-		DefaultTags   interface{} `toml:"default_tags"`
-	} `toml:"layers"`
-}
-
 func main() {
 	var err error
 
 	//	parse our command line flags
 	flag.Parse()
 
-	conf, err := loadConfig(configFile)
+	conf, err := config.Load(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,54 +60,8 @@ func main() {
 	server.Start(port)
 }
 
-//	parseConfig handles loading a config file locally or remote over http(s)
-func loadConfig(confLocation string) (Config, error) {
-	var err error
-	var conf Config
-	var reader io.Reader
-
-	//	check for http prefix
-	if strings.HasPrefix(confLocation, "http") {
-		log.Printf("Loading remote config (%v)", confLocation)
-
-		//	setup http client with a timeout
-		var httpClient = &http.Client{
-			Timeout: time.Second * 10,
-		}
-
-		//	make the http request
-		res, err := httpClient.Get(confLocation)
-		if err != nil {
-			return conf, fmt.Errorf("error fetching remote config file (%v): %v ", confLocation, err)
-		}
-
-		//	set the reader to the response body
-		reader = res.Body
-	} else {
-		log.Printf("Loading local config (%v)", confLocation)
-
-		//	check the conf file exists
-		if _, err := os.Stat(confLocation); os.IsNotExist(err) {
-			return conf, fmt.Errorf("config file at location (%v) not found!", confLocation)
-		}
-
-		//	open the confi file
-		reader, err = os.Open(confLocation)
-		if err != nil {
-			return conf, fmt.Errorf("error opening local config file (%v): %v ", confLocation, err)
-		}
-	}
-
-	//	decode conf file
-	if _, err := toml.DecodeReader(reader, &conf); err != nil {
-		return conf, err
-	}
-
-	return conf, nil
-}
-
 //	initMaps registers maps with our server
-func initMaps(maps []Map, providers map[string]mvt.Provider) error {
+func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 
 	//	iterate our maps
 	for _, m := range maps {
