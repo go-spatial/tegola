@@ -9,7 +9,7 @@ import (
 )
 
 func newTileLayer(name string, keys []string, values []*vectorTile.Tile_Value, features []*vectorTile.Tile_Feature) *vectorTile.Tile_Layer {
-	version := uint32(2)
+	version := uint32(1)
 	extent := uint32(4096)
 	return &vectorTile.Tile_Layer{
 		Version:  &version,
