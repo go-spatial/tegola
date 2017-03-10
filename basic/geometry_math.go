@@ -164,7 +164,7 @@ func CloneGeometry(geometry tegola.Geometry) (tegola.Geometry, error) {
 func ToWebMercator(SRID int, geometry tegola.Geometry) (tegola.Geometry, error) {
 	switch SRID {
 	default:
-		return nil, fmt.Errorf("Don't know how to convert from %v to %v.", tegola.WebMercator, SRID)
+		return nil, fmt.Errorf("Don't know how to convert from %v to %v.", SRID, tegola.WebMercator)
 	case tegola.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already

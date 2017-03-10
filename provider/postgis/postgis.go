@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -17,10 +18,10 @@ import (
 )
 
 // layer holds information about a query.
-type layer struct {
+type Layer struct {
 	// The Name of the layer
 	Name string
-	// The SQL to use. !BBOX! token will be replaced by the envelope
+	// The SQL to use when querying PostGIS for this layer
 	SQL string
 	// The ID field name, this will default to 'gid' if not set to something other then empty string.
 	IDFieldName string
@@ -34,15 +35,18 @@ type layer struct {
 type Provider struct {
 	config pgx.ConnPoolConfig
 	pool   *pgx.ConnPool
-	layers map[string]layer // map of layer name and corrosponding sql
+	// map of layer name and corrosponding sql
+	layers map[string]Layer
 	srid   int
 }
 
-// DEFAULT sql for get geometries,
-const BBOX = "!BBOX!"
+const (
+	bboxToken = "!BBOX!"
+	zoomToken = "!ZOOM!"
+)
 
 // We quote the field and table names to prevent colliding with postgres keywords.
-const stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + BBOX
+const stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + bboxToken
 
 // SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
 const fldsSQL = `SELECT * FROM %[1]v LIMIT 0;`
@@ -74,7 +78,7 @@ func init() {
 }
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
-func genSQL(l *layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
+func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
 
 	if len(flds) == 0 {
 		// We need to hit the database to see what the fields are.
@@ -199,7 +203,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, fmt.Errorf("Expected %v to be a []map[string]interface{}", ConfigKeyLayers)
 	}
 
-	lyrs := make(map[string]layer)
+	lyrs := make(map[string]Layer)
 	lyrsSeen := make(map[string]int)
 
 	for i, v := range layers {
@@ -254,16 +258,16 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			return nil, err
 		}
 
-		l := layer{
+		l := Layer{
 			Name:          lname,
 			IDFieldName:   idfld,
 			GeomFieldName: geomfld,
 			SRID:          int(lsrid),
 		}
 		if sql != "" {
-			// We need to make sure that the sql has a BBOX for the bounding box env.
-			if !strings.Contains(sql, BBOX) {
-				return nil, fmt.Errorf("SQL for layer (%v) %v does not contain "+BBOX+", entry.", i, lname)
+			// make sure that the sql has a !BBOX! token
+			if !strings.Contains(sql, bboxToken) {
+				return nil, fmt.Errorf("SQL for layer (%v) %v does not contain "+bboxToken+", entry.", i, lname)
 			}
 			if !strings.Contains(sql, "*") {
 				if !strings.Contains(sql, geomfld) {
@@ -350,26 +354,10 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
 
-	textent := tile.BoundingBox()
-	minGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Minx, textent.Miny})
+	sql, err := ReplaceTokens(&plyr, tile)
 	if err != nil {
-		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
+		return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
 	}
-	maxGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Maxx, textent.Maxy})
-	if err != nil {
-		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
-	}
-	minPt, ok := minGeo.(*basic.Point)
-	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", minGeo)
-	}
-	maxPt, ok := maxGeo.(*basic.Point)
-	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo)
-	}
-
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)
-	sql := strings.Replace(plyr.SQL, BBOX, bbox, -1)
 
 	rows, err := p.pool.Query(sql)
 	if err != nil {
@@ -497,4 +485,41 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	}
 	didEnd = true
 	return layer, err
+}
+
+//	replaceTokens replaces tokens in the provided SQL string
+//
+//	!BBOX! - the bounding box of the tile
+//	!ZOOM! - the tile Z value
+func ReplaceTokens(plyr *Layer, tile tegola.Tile) (string, error) {
+
+	textent := tile.BoundingBox()
+
+	minGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Minx, textent.Miny})
+	if err != nil {
+		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
+	}
+	maxGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Maxx, textent.Maxy})
+	if err != nil {
+		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
+	}
+
+	minPt, ok := minGeo.(*basic.Point)
+	if !ok {
+		return "", fmt.Errorf("Expected Point, got %t %v", minGeo)
+	}
+	maxPt, ok := maxGeo.(*basic.Point)
+	if !ok {
+		return "", fmt.Errorf("Expected Point, got %t %v", maxGeo)
+	}
+
+	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)
+
+	//	replace query string tokens
+	tokenReplacer := strings.NewReplacer(
+		bboxToken, bbox,
+		zoomToken, strconv.Itoa(tile.Z),
+	)
+
+	return tokenReplacer.Replace(plyr.SQL), nil
 }
