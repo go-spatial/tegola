@@ -14,9 +14,6 @@ services:
 addons:
   postgresql: "9.4"
 
-before_script:
-  - psql -c 'create database postgres;' -U postgres
-
 install:
   - bash ci/config_postgis.sh
 
