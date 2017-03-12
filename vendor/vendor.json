@@ -21,6 +21,12 @@
 			"revisionTime": "2016-10-04T02:10:53Z"
 		},
 		{
+			"checksumSHA1": "/9vq4o3TnBLR7HCcDYEJZAVbE5E=",
+			"path": "github.com/gdey/tbltest",
+			"revision": "726edc3452c5623f6bdb9406bd9fcb20229be740",
+			"revisionTime": "2016-12-16T06:30:51Z"
+		},
+		{
 			"checksumSHA1": "kVJ5YScYaDWw6iotbpZwQJ6xCGM=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0",
