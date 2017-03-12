@@ -17,6 +17,15 @@ import (
 	"github.com/terranodo/tegola/wkb"
 )
 
+// Provider provides the postgis data provider.
+type Provider struct {
+	config pgx.ConnPoolConfig
+	pool   *pgx.ConnPool
+	// map of layer name and corrosponding sql
+	layers map[string]Layer
+	srid   int
+}
+
 // layer holds information about a query.
 type Layer struct {
 	// The Name of the layer
@@ -31,30 +40,26 @@ type Layer struct {
 	SRID int
 }
 
-// Provider provides the postgis data provider.
-type Provider struct {
-	config pgx.ConnPoolConfig
-	pool   *pgx.ConnPool
-	// map of layer name and corrosponding sql
-	layers map[string]Layer
-	srid   int
-}
-
 const (
 	bboxToken = "!BBOX!"
 	zoomToken = "!ZOOM!"
 )
 
-// We quote the field and table names to prevent colliding with postgres keywords.
-const stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + bboxToken
+const (
+	// We quote the field and table names to prevent colliding with postgres keywords.
+	stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + bboxToken
 
-// SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
-const fldsSQL = `SELECT * FROM %[1]v LIMIT 0;`
+	// SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
+	fldsSQL = `SELECT * FROM %[1]v LIMIT 0;`
+)
 
 const Name = "postgis"
-const DefaultPort = 5432
-const DefaultSRID = tegola.WebMercator
-const DefaultMaxConn = 5
+
+const (
+	DefaultPort    = 5432
+	DefaultSRID    = tegola.WebMercator
+	DefaultMaxConn = 5
+)
 
 const (
 	ConfigKeyHost        = "host"
@@ -87,6 +92,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 			return "", err
 		}
 		defer rows.Close()
+
 		fdescs := rows.FieldDescriptions()
 		if len(fdescs) == 0 {
 			return "", fmt.Errorf("No fields were returned for table %v", tblname)
@@ -100,6 +106,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 	for i := range flds {
 		flds[i] = fmt.Sprintf(`"%v"`, flds[i])
 	}
+
 	var fgeom int = -1
 	var fgid bool
 	for i, f := range flds {
@@ -118,29 +125,33 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 	} else {
 		flds[fgeom] = fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.GeomFieldName)
 	}
+
 	if !fgid {
 		flds = append(flds, fmt.Sprintf(`"%v"`, l.IDFieldName))
 	}
+
 	selectClause := strings.Join(flds, ", ")
+
 	return fmt.Sprintf(stdSQL, selectClause, tblname, l.GeomFieldName), nil
 }
 
-// NewProvider Setups and returns a new postgis provider or an error; if something
-// is wrong. The function will validate that the config object looks good before
-// trying to create a driver. This means that the Provider expects the following
-// fields to exists in the provided map[string]interface{} map:
-// 	host string — the host to connect to.
-// 	port uint16 — the port to connect on.
-// 	database string — the database name
-// 	user string — the user name
-// 	password string — the Password
-// 	max_connections *uint8 // Default is 5 if nil, 0 means no max.
-// 	layers map[string]struct{ — This is map of layers keyed by the layer name.
-//     tablename string || sql string — This is the sql to use or the tablename to use with the default query.
-//     fields []string — This is a list, if this is nil or empty we will get all fields.
-//     geometry_fieldname string — This is the field name of the geometry, if it's an empty string or nil, it will defaults to 'geom'.
-//     id_fieldname string — This is the field name for the id property, if it's an empty string or nil, it will defaults to 'gid'.
-//  }
+//	NewProvider Setups and returns a new postgis provider or an error; if something
+//	is wrong. The function will validate that the config object looks good before
+//	trying to create a driver. This means that the Provider expects the following
+//	fields to exists in the provided map[string]interface{} map:
+//
+//		host (string) — the host to connect to.
+// 		port (uint16) — the port to connect on.
+//		database (string) — the database name
+//		user (string) — the user name
+//		password (string) — the Password
+//		max_connections (*uint8) // Default is 5 if nil, 0 means no max.
+//		layers (map[string]struct{})  — This is map of layers keyed by the layer name.
+//     		tablename (string || sql string) — This is the sql to use or the tablename to use with the default query.
+//     		fields ([]string) — This is a list, if this is nil or empty we will get all fields.
+//     		geometry_fieldname (string) — This is the field name of the geometry, if it's an empty string or nil, it will defaults to 'geom'.
+//     		id_fieldname (string) — This is the field name for the id property, if it's an empty string or nil, it will defaults to 'gid'.
+//
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	// Validate the config to make sure it has the values I care about and the types for those values.
 	c := dict.M(config)
@@ -222,11 +233,13 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		if err != nil {
 			return nil, fmt.Errorf("For layer (%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
 		}
+
 		geomfld := "geom"
 		geomfld, err = vc.String(ConfigKeyGeomField, &geomfld)
 		if err != nil {
 			return nil, fmt.Errorf("For layer (%v) %v : %v", i, lname, err)
 		}
+
 		idfld := "gid"
 		idfld, err = vc.String(ConfigKeyGeomIDField, &idfld)
 		if err != nil {
@@ -241,10 +254,9 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		if err != nil {
 			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
 		}
+
 		var sql string
-
 		sql, err = vc.String(ConfigKeySQL, &sql)
-
 		if err != nil {
 			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
 		}
