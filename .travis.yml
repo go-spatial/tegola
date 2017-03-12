@@ -6,6 +6,7 @@ go:
 env:
   global:
     - RUN_POSTGIS_TESTS=yes
+    - PGUSER=postgres
 
 addons:
   postgresql: "9.6"
