@@ -7,6 +7,9 @@ env:
   global:
     - RUN_POSTGIS_TESTS=yes
 
+addons:
+  postgresql: "9.6"
+
 install:
   - bash ci/config_postgis.sh
 
