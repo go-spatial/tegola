@@ -8,6 +8,9 @@ env:
     - RUN_POSTGIS_TESTS=yes
     - PGUSER=postgres
 
+services:
+  - postgresql
+
 addons:
   postgresql: "9.6"
 
