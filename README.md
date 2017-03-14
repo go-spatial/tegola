@@ -1,7 +1,7 @@
 # Tegola
 
 [![Build Status](https://travis-ci.org/terranodo/tegola.svg?branch=master)](https://travis-ci.org/terranodo/tegola)
-[![Report Card](https://goreportcard.com/badge/github.com/terranodo/tegola)](https://goreportcard.com/badge/github.com/terranodo/tegola)
+[![Report Card](https://goreportcard.com/badge/github.com/terranodo/tegola)](https://goreportcard.com/report/github.com/terranodo/tegola)
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/terranodo/tegola)
 [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/terranodo/tegola/blob/master/LICENSE.md)
 
