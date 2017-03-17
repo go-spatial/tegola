@@ -13,34 +13,24 @@ import (
 type Line []Point
 
 // Just to make basic collection only usable with basic types.
-func (Line) basicType()     {}
-func (Line) String() string { return "Line" }
-func (l Line) direction() maths.WindingOrder {
-	sum := 0
-	var npt Point
-	for i, pt := range l {
-
-		if i == (len(l) - 1) {
-			npt = l[0]
-		} else {
-			npt = l[i+1]
-		}
-		sum += int((npt.X() - pt.X()) * (npt.Y() + pt.Y()))
-	}
-	if sum < 0 {
-		return maths.Clockwise
-	}
-	return maths.CounterClockwise
-}
+func (Line) basicType()                      {}
+func (Line) String() string                  { return "Line" }
+func (l Line) Direction() maths.WindingOrder { return maths.WindingOrderOfLine(l) }
 func (l Line) GoString() string {
-	str := fmt.Sprintf("[%v--%v]{", len(l), l.direction())
+	str := fmt.Sprintf("\n[%v--%v]{\n\t", len(l), l.Direction())
+	count := 0
 	for i, p := range l {
 		if i != 0 {
 			str += ","
 		}
 		str += fmt.Sprintf("(%v,%v)", p[0], p[1])
+		if count == 10 {
+			str += "\n\t"
+			count = 0
+		}
+		count++
 	}
-	str += "}"
+	str += "\n}"
 	return str
 }
 
@@ -62,6 +52,13 @@ func NewLineFromPt(points ...maths.Pt) Line {
 		line = append(line, Point{p.X, p.Y})
 	}
 	return line
+}
+
+func CloneLine(line tegola.LineString) (l Line) {
+	for _, pt := range line.Subpoints() {
+		l = append(l, Point{pt.X(), pt.Y()})
+	}
+	return l
 }
 
 // Subpoints return the points in a line.

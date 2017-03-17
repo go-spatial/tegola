@@ -1,0 +1,4 @@
+*.toml
+tegola
+static/debug
+static/landuse2

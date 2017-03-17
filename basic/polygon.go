@@ -1,6 +1,8 @@
 package basic
 
 import (
+	"fmt"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths"
 )
@@ -22,6 +24,14 @@ func (p Polygon) Sublines() (slines []tegola.LineString) {
 func (Polygon) String() string {
 	return "Polygon"
 }
+func (p Polygon) GoString() string {
+	str := fmt.Sprintf("\nPolygon[%v]{\n", len(p))
+	for _, l := range p {
+		str += fmt.Sprintf("%#", l)
+	}
+	str += "}\n"
+	return str
+}
 
 // MultiPolygon describes a set of polygons.
 type MultiPolygon []Polygon
@@ -38,7 +48,7 @@ func (mp MultiPolygon) Polygons() (polygons []tegola.Polygon) {
 	return polygons
 }
 func (MultiPolygon) String() string {
-	return "Polygon"
+	return "MultiPolygon"
 }
 
 func NewPolygon(main []maths.Pt, clines ...[]maths.Pt) Polygon {

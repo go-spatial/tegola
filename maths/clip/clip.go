@@ -2,7 +2,6 @@ package clip
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
@@ -329,7 +328,7 @@ func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 				il.PushBack(ipt)
 			}
 			if !p.PushInBetween(ipt.AsSubjectPoint()) {
-				log.Printf("Was not able to add to subject list %v\n", ipt)
+				// log.Printf("Was not able to add to subject list %v\n", ipt)
 			}
 			a.PushInBetween(ipt.AsRegionPoint())
 		}
@@ -489,14 +488,18 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	// and set of ourter rignts. The outer ring is clockwise while the inner ring is
 	// usually conter clockwise.
 
+	// log.Println("Starting Polygon clipping.")
 	sls := polygon.Sublines()
+	if len(sls) == 0 {
+		return p, nil
+	}
 	var subls []*subject.Subject
 
 	emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
 	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
-	//log.Printf("Starting to clip main line to %v, %v", emin, emax)
+	// log.Printf("Starting to clip main line to %v, %v", emin, emax)
 	plstrs, err := linestring(maths.Clockwise, linestring2floats(sls[0]), emin, emax)
-	//log.Printf("Done to clipping main line to %v, %v", emin, emax)
+	// log.Printf("Done to clipping main line to %v, %v", emin, emax)
 	if err != nil {
 		return nil, err
 	}

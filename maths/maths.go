@@ -46,10 +46,27 @@ func WindingOrderOf(sub []float64) WindingOrder {
 	sum := 0
 	for x, y := 0, 1; y < len(sub); x, y = x+2, y+2 {
 		nx, ny := x+2, y+2
-		if y == (len(sub) - 1) {
+		if y == (len(sub) - 2) {
 			nx, ny = 0, 1
 		}
 		sum += int((sub[nx] - sub[x]) * (sub[ny] + sub[y]))
+	}
+	if sum < 0 {
+		return Clockwise
+	}
+	return CounterClockwise
+}
+
+func WindingOrderOfLine(l tegola.LineString) WindingOrder {
+	pts := l.Subpoints()
+	sum := 0
+	for i, pt := range pts {
+		ni := i + 1
+		if i == len(pts) {
+			ni = 0
+		}
+		npt := pts[ni]
+		sum += int((npt.X() - pt.X()) * (npt.Y() - pt.Y()))
 	}
 	if sum < 0 {
 		return Clockwise
@@ -239,4 +256,44 @@ func Intersect(l1, l2 Line) (pt Pt, ok bool) {
 	x := db / dm
 	y := (m1 * x) + b1
 	return Pt{X: x, Y: y}, true
+}
+
+// Validate will transform a polygon that was encoded as a multipolygon as a polygon.
+func Validate(geo tegola.Geometry) (vg tegola.Geometry) {
+	return
+	/*
+		switch g := geo.(type) {
+		default:
+			return geo
+		case tegola.MultiPolygon:
+			polys := g.Polygons()
+			if len(polys) == 0 {
+				return geo
+			}
+			// If there is only one Polygon in the MultiPolygon, return the polygon.
+			if len(polys) == 1 {
+				return polys[0]
+			}
+			var p tegola.Polygon
+			for i, p := range polys {
+				lines := p.Lines()
+				// Ignore polygons that don't have any lines in them.
+				if len(lines) == 0 {
+					continue
+				}
+				var hasClockwiseLine bool
+				for _, l := range lines {
+					if WindingOrderOfLine(l) == Clockwise {
+						hasClockwiseLine = true
+
+
+					}
+
+
+				}
+
+			}
+		}
+	*/
+
 }

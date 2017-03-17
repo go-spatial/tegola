@@ -19,8 +19,12 @@ func print(srid int, geostr string, tile tegola.BoundingBox) {
 	rd1 := strings.NewReader(geostr)
 	geo, err := wkb.Decode(rd1)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding goe(road1): %v", err)
+		fmt.Fprintf(os.Stderr, "Error decoding goemetry: %v", err)
 		os.Exit(2)
+	}
+	if geo == nil {
+		fmt.Fprintf(os.Stderr, "Geo is nil.")
+		os.Exit(0)
 	}
 	gwm, err := basic.ToWebMercator(srid, geo)
 	c := mvt.NewCursor(tile, 4096)
@@ -33,7 +37,6 @@ func print(srid int, geostr string, tile tegola.BoundingBox) {
 		panic(err)
 	}
 	fmt.Printf("Clip GEO:%T: %#[1]v\n", cg)
-
 }
 
 var configFile string
@@ -77,6 +80,7 @@ type ProviderLayer struct {
 	password string
 	host     string
 	geoField string
+	geoID    string
 	table    string
 }
 
@@ -133,11 +137,17 @@ func LoadProvider(configfile string, providerlayer string) (pl ProviderLayer, er
 		}
 	}
 	var ok bool
-	srid, ok := provider["srid"].(int64)
-	if !ok {
-		return pl, fmt.Errorf("Cound not convert %T", provider["srid"])
+
+	if _, ok = provider["srid"]; ok {
+		srid, ok := provider["srid"].(int64)
+		if !ok {
+			return pl, fmt.Errorf("Cound not convert %T", provider["srid"])
+		}
+		pl.srid = int(srid)
+	} else {
+		pl.srid = 4326
 	}
-	pl.srid = int(srid)
+
 	port, ok := provider["port"].(int64)
 	if !ok {
 		return pl, fmt.Errorf("Cound not convert %T", provider["port"])
@@ -174,9 +184,11 @@ func LoadProvider(configfile string, providerlayer string) (pl ProviderLayer, er
 	if pl.geoField, ok = providerLayer["geometry_fieldname"].(string); !ok {
 		return pl, fmt.Errorf("was not able to convert geometry_fieldsname to string %v.", providerLayer["geometry_fieldname"])
 	}
-	pl.table = layerName
-	if tbln, ok := providerLayer["tablename"].(string); ok && tbln != "" {
-		pl.table = tbln
+	if pl.geoID, ok = providerLayer["id_fieldname"].(string); !ok || pl.geoID == "" {
+		pl.geoID = "gid"
+	}
+	if pl.table, ok = providerLayer["tablename"].(string); !ok || pl.table == "" {
+		pl.table = layerName
 	}
 	return pl, nil
 }
