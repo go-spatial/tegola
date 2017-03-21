@@ -22,12 +22,12 @@ type Provider struct {
 	config pgx.ConnPoolConfig
 	pool   *pgx.ConnPool
 	// map of layer name and corrosponding sql
-	layers map[string]Layer
+	layers map[string]layer
 	srid   int
 }
 
 // layer holds information about a query.
-type Layer struct {
+type layer struct {
 	// The Name of the layer
 	Name string
 	// The SQL to use when querying PostGIS for this layer
@@ -83,7 +83,7 @@ func init() {
 }
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
-func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
+func genSQL(l *layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
 
 	if len(flds) == 0 {
 		// We need to hit the database to see what the fields are.
@@ -214,7 +214,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, fmt.Errorf("Expected %v to be a []map[string]interface{}", ConfigKeyLayers)
 	}
 
-	lyrs := make(map[string]Layer)
+	lyrs := make(map[string]layer)
 	lyrsSeen := make(map[string]int)
 
 	for i, v := range layers {
@@ -270,7 +270,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			return nil, err
 		}
 
-		l := Layer{
+		l := layer{
 			Name:          lname,
 			IDFieldName:   idfld,
 			GeomFieldName: geomfld,
@@ -366,7 +366,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
 
-	sql, err := ReplaceTokens(&plyr, tile)
+	sql, err := replaceTokens(&plyr, tile)
 	if err != nil {
 		return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
 	}
@@ -503,7 +503,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 //
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
-func ReplaceTokens(plyr *Layer, tile tegola.Tile) (string, error) {
+func replaceTokens(plyr *layer, tile tegola.Tile) (string, error) {
 
 	textent := tile.BoundingBox()
 
