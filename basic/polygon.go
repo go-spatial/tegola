@@ -27,7 +27,7 @@ func (Polygon) String() string {
 func (p Polygon) GoString() string {
 	str := fmt.Sprintf("\nPolygon[%v]{\n", len(p))
 	for _, l := range p {
-		str += fmt.Sprintf("%#", l)
+		str += fmt.Sprintf("%#v", l)
 	}
 	str += "}\n"
 	return str

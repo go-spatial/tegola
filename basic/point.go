@@ -1,12 +1,25 @@
 package basic
 
-import "github.com/terranodo/tegola"
+import (
+	"fmt"
+
+	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/maths"
+)
 
 // Point describes a simple 2d point
 type Point [2]float64
 
 // Just to make basic collection only usable with basic types.
 func (Point) basicType() {}
+
+// AsPt returns the equivalent maths.Pt
+func (p *Point) AsPt() maths.Pt {
+	if p == nil {
+		return maths.Pt{0, 0}
+	}
+	return maths.Pt{p[0], p[1]}
+}
 
 // X is the x coordinate
 func (bp Point) X() float64 {
@@ -18,8 +31,8 @@ func (bp Point) Y() float64 {
 	return bp[1]
 }
 
-func (Point) String() string {
-	return "Point"
+func (p Point) String() string {
+	return fmt.Sprintf("Point(%v,%v)", p[0], p[1])
 }
 
 // Point3 describes a simple 3d point
@@ -32,8 +45,8 @@ func (Point3) basicType() {}
 func (bp Point3) X() float64 {
 	return bp[0]
 }
-func (Point3) String() string {
-	return "Point3"
+func (p Point3) String() string {
+	return fmt.Sprintf("Point3(%v,%v,%v)", p[0], p[1], p[2])
 }
 
 // Y is the y coordinate

@@ -16,22 +16,35 @@ type Line []Point
 func (Line) basicType()                      {}
 func (Line) String() string                  { return "Line" }
 func (l Line) Direction() maths.WindingOrder { return maths.WindingOrderOfLine(l) }
-func (l Line) GoString() string {
-	str := fmt.Sprintf("\n[%v--%v]{\n\t", len(l), l.Direction())
+
+// Contains tells you weather the given point is contained by the Linestring.
+// This assumes the linestring is a connected linestring.
+func (l Line) Contains(pt Point) bool {
+	pt0 := l[len(l)-1]
+	ptln := maths.Line{pt.AsPt(), maths.Pt{pt.X() + 1, pt.Y()}}
 	count := 0
-	for i, p := range l {
-		if i != 0 {
-			str += ","
+	for _, pt1 := range l {
+		ln := maths.Line{pt0.AsPt(), pt1.AsPt()}
+		if ipt, ok := maths.Intersect(ln, ptln); ok {
+			if ipt.IsEqual(pt.AsPt()) {
+				return false
+			}
+			if ln.InBetween(ipt) && ipt.X < pt.X() {
+				count++
+			}
 		}
-		str += fmt.Sprintf("(%v,%v)", p[0], p[1])
-		if count == 10 {
-			str += "\n\t"
-			count = 0
-		}
-		count++
+		pt0 = pt1
 	}
-	str += "\n}"
-	return str
+	return count%2 != 0
+}
+
+func (l Line) ContainsLine(ln Line) bool {
+	for _, pt := range ln {
+		if !l.Contains(pt) {
+			return false
+		}
+	}
+	return true
 }
 
 // NewLine creates a line given pairs for floats.
@@ -52,13 +65,6 @@ func NewLineFromPt(points ...maths.Pt) Line {
 		line = append(line, Point{p.X, p.Y})
 	}
 	return line
-}
-
-func CloneLine(line tegola.LineString) (l Line) {
-	for _, pt := range line.Subpoints() {
-		l = append(l, Point{pt.X(), pt.Y()})
-	}
-	return l
 }
 
 // Subpoints return the points in a line.
