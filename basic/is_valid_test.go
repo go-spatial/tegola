@@ -23,8 +23,14 @@ func TestIsValidLine(t *testing.T) {
 			line: basic.NewLine(1, 1, 3, 1, 5, 3, 6, 5, 7, 7, 9, 7, 10, 6, 10, 5, 3, 9, 2, 8, 2, 6, 3, 3, 2, 4),
 		},
 		testcase{
-			desc: "Valid line.",
-			line: basic.NewLine(1, 1, 3, 1, 5, 3, 6, 5, 7, 7, 9, 7, 10, 6, 10, 5, 3, 9, 2, 8),
+			desc:     "Valid line.",
+			line:     basic.NewLine(1, 1, 3, 1, 5, 3, 6, 5, 7, 7, 9, 7, 10, 6, 10, 5, 3, 9, 2, 8),
+			expected: true,
+		},
+		testcase{
+			desc:     "Valid line2",
+			line:     basic.NewLine(4, 2, 6, 2, 8, 3, 8, 5, 7, 7, 5, 8, 3, 7, 2, 6, 2, 4),
+			expected: true,
 		},
 	)
 	tests.Run(func(idx int, test testcase) {
@@ -35,19 +41,25 @@ func TestIsValidLine(t *testing.T) {
 	})
 }
 
-func TestIsValidPolygon(t *testing.T){
+func TestIsValidPolygon(t *testing.T) {
 	type testcase struct {
 		desc     string
-		polygon     basic.Polygon
+		polygon  basic.Polygon
 		expected bool
 	}
 	tests := tbltest.Cases(
 		testcase{
 			desc: "Standard one line Polygon",
-
+			polygon: basic.Polygon{
+				basic.NewLine(4, 2, 6, 2, 8, 3, 8, 5, 7, 7, 5, 8, 3, 7, 2, 6, 2, 4),
+			},
+			expected: true,
 		},
-		)
-		tests.Run(nil)
-
-
+	)
+	tests.Run(func(idx int, test testcase) {
+		got := test.polygon.IsValid()
+		if got != test.expected {
+			t.Errorf("Test %v, expected %v got %v", idx, test.expected, got)
+		}
+	})
 }

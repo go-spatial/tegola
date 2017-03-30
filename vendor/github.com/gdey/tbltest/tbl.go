@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
 )
 
-var runorder = flag.String("tblTest.RunOrder", "", "List of comma seperated index of the test cases to run.")
+var runorder = flag.String("tblTest.RunOrder", "", "List of comma separated index of the test cases to run.")
 
 // Test holds the testcases.
 type Test struct {
@@ -25,6 +26,21 @@ type Test struct {
 	// This option is overridden by the tblTest.RunOrder command line flag.
 	InOrder bool
 }
+
+// TestFunc describes a function that will do the actual testing. It must take one of four forms.
+//
+//    *  `func (tc $testcase)`
+//
+//    *  `func (tc $testcase) bool`
+//
+//    *  `func (idx int, tc $testcase)`
+//
+//    *  `func (idx int, tc $testcase) bool`
+//
+type TestFunc interface{}
+
+// TestCase is a custom type that describes a test case.
+type TestCase interface{}
 
 func panicf(format string, vals ...interface{}) {
 	pc, _, _, ok := runtime.Caller(2)
@@ -62,7 +78,7 @@ func runOrder() (idx []int, ok bool) {
 
 // Cases takes a list of test cases to use for the table driven tests.
 //   The test cases can be any type, as long as they are all the same.
-func Cases(testcases ...interface{}) *Test {
+func Cases(testcases ...TestCase) *Test {
 	tc := Test{}
 	for i, tcase := range testcases {
 		val := reflect.ValueOf(tcase)
@@ -128,14 +144,20 @@ func seq(n int) (idxs []int) {
 //
 //    *  `func (idx int, tc $testcase) bool`
 //
-func (tc *Test) Run(function interface{}) int {
+func (tc *Test) Run(function TestFunc) int {
+
+	if function == nil {
+		fmt.Fprintf(os.Stderr, "WARNING: on %v : Run called with nil function, skipping", MyCallerFileLine())
+		return 0
+	}
+
 	fn := reflect.ValueOf(function)
 	fnType := fn.Type()
 
 	if fnType.Kind() != reflect.Func {
 		panicf("Was not provided a function.")
 	}
-	// Check the paramaters.
+	// Check the parameters.
 	var twoInParams bool
 	var hasOutParam bool
 	switch fnType.NumIn() {
@@ -153,7 +175,7 @@ func (tc *Test) Run(function interface{}) int {
 		}
 		twoInParams = true
 	default:
-		panicf("Incorrect number of parameters given. Expect the funtion to take one of two forms. func(idx int, testcase $T) or func(testcase $T)")
+		panicf("Incorrect number of parameters given. Expect function to take one of two forms. func(idx int, testcase $T) or func(testcase $T)")
 	}
 	switch fnType.NumOut() {
 	case 0:

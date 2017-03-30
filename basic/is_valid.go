@@ -1,11 +1,13 @@
 package basic
 
 import (
+	"log"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths"
 )
 
-// IsValid returns wather the line is valid according to the OGC specifiction
+// IsValid returns whether the line is valid according to the OGC specifiction
 // The line should not intersect it's self.
 func (l Line) IsValid() bool {
 	// First let's run through all the points and see if any of them are
@@ -14,6 +16,7 @@ func (l Line) IsValid() bool {
 	for _, pt := range l {
 		// The map contains the point. Which means the point is duplicated.
 		if _, ok := seen[pt.String()]; ok {
+			log.Println("Saw point:", pt)
 			return false
 		}
 	}
@@ -22,12 +25,13 @@ func (l Line) IsValid() bool {
 	for i, pt1 := range l[:len(l)-1] {
 		inpt0 := pt1
 		for _, inpt1 := range l[i:] {
-			// If we are looking at the smae
+			// If we are looking at the same point
 			if tegola.IsPointEqual(pt0, inpt0) && tegola.IsPointEqual(pt1, inpt1) {
 				continue
 			}
 			l1, l2 := maths.Line{pt0.AsPt(), pt1.AsPt()}, maths.Line{inpt0.AsPt(), inpt1.AsPt()}
 			if _, ok := maths.Intersect(l1, l2); ok {
+				log.Println("The lines intersect:", l1, l2)
 				return false
 			}
 			inpt0 = inpt1
@@ -47,17 +51,15 @@ func (p Polygon) IsValid() bool {
 	   A Polygon is valid if the first linestring is clockwise and
 	*/
 	if !(p[0].IsValid() && p[0].Direction() == maths.Clockwise) {
+		log.Println("Line 0", p[0].IsValid(), p[0].Direction())
 		return false
 	}
 	/*
 	   all other linestrings are counter-clockwise and contained by
 	   the first linestring.
 	*/
-	if len(p) == 1 {
-		return true
-	}
 	for _, l := range p[1:] {
-		if !(l.IsValid() && l.Direction() == maths.CounterClockwise && p[0].Contains(l)) {
+		if !(l.IsValid() && l.Direction() == maths.CounterClockwise && p[0].ContainsLine(l)) {
 			return false
 		}
 	}

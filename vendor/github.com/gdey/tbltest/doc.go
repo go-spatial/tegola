@@ -2,7 +2,7 @@
 // Use of this source code is governed by FreeBDS License (2-clause Simplified BSD.)
 // that can be found in the LICENSE file.
 
-// Package tbl implements helper functions to help write table driven tests.
+// Package tbltest implements helper functions to help write table driven tests.
 //
 // The most common way to use this package is in a test function.
 //
