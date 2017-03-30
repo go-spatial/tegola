@@ -3,9 +3,19 @@ language: go
 go:
   - tip
 
-notifications:
-  slack:
-    secure: TzRnZdJ1dhQJg9nby2oJ6qFj9Bl20VJ2aJXmXwADsj2ck/UGsFWpYNnqZVWvZomCZEJinFpA/h2TG1odEzg1BpCT0+rLIGQDAhIMVuici+nIs+DyPQmL2owG1LZ6/hzX09Y1mIZci0nmnI1wousfM8WDPRq5NSOsBeAMlixGR4g4lF8cp/R0B6CtcewtQx4RicdPJtopHDwXm5KI1/7euFcJwu15FWwWoUp6mOw+r44T1Md+qbqDKBbLSy+YvMkPcxI7HeECa7OP9OjkeUfU0BoMP6qqo9QTVX5v6lOHxA+FhueyyPrSTtNV377tilDy88kytqu6w8gcrxZOddj7nFbv6ErjfVaMfeepzk/HH2bzlLevvL+ukeJKrBNdmPuDRU3BqG5ygrdGAQUNpM7VSXLDcGrM2+ocVn/HO1NyXWwpejq7Gq0HWhNkYPHG5c7+khkQkRGJtg0wp9R3qXDAcRHLR+CHh89g5Blz4Wo6R/Q48MLJycbH/W56zsoe0xQ5Ww2eti16uSFE4kkiPt99uewWkPSfEZn4pyk+xCwDxgNDNu/BaV+Mjm4JTL1GjWalto+NLK7NsEg+6sEYok0CHkUb8MQV++r1KVfIaxC3zVuojIiOSB9/+JPtPd9w2iuVOlz0rrbXfKkkSf5wcmOguqk3aAfAgmcjAV9p1kI9pSc=
+env:
+  global:
+    - RUN_POSTGIS_TESTS=yes
+    - PGUSER=postgres
+
+services:
+  - postgresql
+
+addons:
+  postgresql: "9.4"
+
+install:
+  - bash ci/config_postgis.sh
 
 before_deploy:
   - go get github.com/mitchellh/gox
@@ -39,3 +49,5 @@ deploy:
 notifications:
   email:
     on_success: never
+  slack:
+    secure: TzRnZdJ1dhQJg9nby2oJ6qFj9Bl20VJ2aJXmXwADsj2ck/UGsFWpYNnqZVWvZomCZEJinFpA/h2TG1odEzg1BpCT0+rLIGQDAhIMVuici+nIs+DyPQmL2owG1LZ6/hzX09Y1mIZci0nmnI1wousfM8WDPRq5NSOsBeAMlixGR4g4lF8cp/R0B6CtcewtQx4RicdPJtopHDwXm5KI1/7euFcJwu15FWwWoUp6mOw+r44T1Md+qbqDKBbLSy+YvMkPcxI7HeECa7OP9OjkeUfU0BoMP6qqo9QTVX5v6lOHxA+FhueyyPrSTtNV377tilDy88kytqu6w8gcrxZOddj7nFbv6ErjfVaMfeepzk/HH2bzlLevvL+ukeJKrBNdmPuDRU3BqG5ygrdGAQUNpM7VSXLDcGrM2+ocVn/HO1NyXWwpejq7Gq0HWhNkYPHG5c7+khkQkRGJtg0wp9R3qXDAcRHLR+CHh89g5Blz4Wo6R/Q48MLJycbH/W56zsoe0xQ5Ww2eti16uSFE4kkiPt99uewWkPSfEZn4pyk+xCwDxgNDNu/BaV+Mjm4JTL1GjWalto+NLK7NsEg+6sEYok0CHkUb8MQV++r1KVfIaxC3zVuojIiOSB9/+JPtPd9w2iuVOlz0rrbXfKkkSf5wcmOguqk3aAfAgmcjAV9p1kI9pSc=

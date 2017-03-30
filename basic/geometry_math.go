@@ -5,6 +5,8 @@ import (
 	"log"
 	"strings"
 
+	"errors"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths/webmercator"
 )
@@ -251,7 +253,6 @@ func forEachMapInSlice(v interface{}, do func(typ string, v interface{}) error, 
 		}
 	}
 	return nil
-
 }
 
 func interfaceAsPolygon(v interface{}) (Polygon, error) {
@@ -330,5 +331,5 @@ func MapAsGeometry(m map[string]interface{}) (geo Geometry, err error) {
 		}
 		return ml, nil
 	}
-	return nil, fmt.Errorf("Unknown type")
+	return nil, errors.New("Unknown type")
 }
