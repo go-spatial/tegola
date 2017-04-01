@@ -1,6 +1,8 @@
 package list
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Elementer interface {
 	// Prev returns the previous list element or nil.
@@ -301,8 +303,17 @@ func (l *List) FindElementForward(start, end Elementer, finder func(e Elementer)
 	if start.List() != l || end.List() != l {
 		return nil
 	}
-
-	for e := start; e != nil; e = e.Next() {
+	sawNil := false
+	for e := start; ; e = e.Next() {
+		// If we reach the end of the list we need to double back
+		// to the front.
+		if e == nil {
+			if sawNil {
+				break
+			}
+			sawNil = true
+			e = l.Front()
+		}
 		if finder(e) {
 			return e
 		}

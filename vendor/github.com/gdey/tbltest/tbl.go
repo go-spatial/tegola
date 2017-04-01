@@ -25,6 +25,9 @@ type Test struct {
 	// InOrder defines weather to run the test case in the order defined or randomly.
 	// This option is overridden by the tblTest.RunOrder command line flag.
 	InOrder bool
+
+	// The order in which to run these tests. This will be overridden by the Command line flag.
+	RunOrder string
 }
 
 // TestFunc describes a function that will do the actual testing. It must take one of four forms.
@@ -62,12 +65,9 @@ func logf(format string, vals ...interface{}) {
 	log.Printf(callSite+format, vals...)
 }
 
-func runOrder() (idx []int, ok bool) {
+func runOrder(runorder string) (idx []int, ok bool) {
 
-	if runorder == nil || *runorder == "" {
-		return []int{}, false
-	}
-	for _, s := range strings.Split(*runorder, ",") {
+	for _, s := range strings.Split(runorder, ",") {
 		// Only care about the good values.
 		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 			idx = append(idx, int(i))
@@ -192,11 +192,21 @@ func (tc *Test) Run(function TestFunc) int {
 		return 0
 	}
 	// Now loop through the testcase and call the test function, check to see if we should stop or keep going.
-	if idxs, ok := runOrder(); ok {
+	if idxs, ok := tc.runOrder(); ok {
 		return runTests(idxs, fn, tc.cases, twoInParams, hasOutParam)
 	}
 	if tc.InOrder {
 		return runTests(seq(len(tc.cases)), fn, tc.cases, twoInParams, hasOutParam)
 	}
 	return runTests(rand.Perm(len(tc.cases)), fn, tc.cases, twoInParams, hasOutParam)
+}
+
+func (tc *Test) runOrder() (idx []int, ok bool) {
+	if runorder != nil && *runorder != "" {
+		return runOrder(*runorder)
+	}
+	if tc.RunOrder != "" {
+		return runOrder(tc.RunOrder)
+	}
+	return idx, false
 }

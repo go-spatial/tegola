@@ -94,6 +94,13 @@ func (pt Pt) IsEqual(pt2 Pt) bool {
 	return pt.X == pt2.X && pt.Y == pt2.Y
 }
 
+func (pt Pt) Truncate() Pt {
+	return Pt{
+		X: float64(int64(pt.X)),
+		Y: float64(int64(pt.Y)),
+	}
+}
+
 func (pt Pt) Delta(pt2 Pt) (d Pt) {
 	return Pt{
 		X: pt.X - pt2.X,
@@ -103,6 +110,12 @@ func (pt Pt) Delta(pt2 Pt) (d Pt) {
 
 func (pt Pt) String() string {
 	return fmt.Sprintf("(%v,%v)", pt.X, pt.Y)
+}
+func (pt *Pt) GoString() string {
+	if pt == nil {
+		return "(nil)"
+	}
+	return fmt.Sprintf("[%v,%v]", pt.X, pt.Y)
 }
 
 type Pointer interface {

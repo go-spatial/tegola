@@ -13,7 +13,7 @@ type Region struct {
 	list.List
 	sentinelPoints [4]*list.Pt
 	winding        maths.WindingOrder
-	// The direction of the axis. true means it an axis that goes from smaller to bigger, otherwise it goes from bigger point to smaller point.
+	// The direction of the Axis. true means it an Axis that goes from smaller to bigger, otherwise it goes from bigger point to smaller point.
 	aDownOrRight [4]bool
 	max, min     maths.Pt
 }
@@ -94,9 +94,9 @@ func (r *Region) Init(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
 	return r
 }
 
-func (r *Region) Axis(idx int) *axis {
+func (r *Region) Axis(idx int) *Axis {
 	s, e := idx%4, (idx+1)%4
-	return &axis{
+	return &Axis{
 		region:      r,
 		idx:         s,
 		pt0:         r.sentinelPoints[s],
@@ -105,7 +105,7 @@ func (r *Region) Axis(idx int) *axis {
 		winding:     r.winding,
 	}
 }
-func (r *Region) FirstAxis() *axis { return r.Axis(0) }
+func (r *Region) FirstAxis() *Axis { return r.Axis(0) }
 func (r *Region) LineString() []float64 {
 	return []float64{
 		r.sentinelPoints[0].Pt.X, r.sentinelPoints[0].Pt.Y,

@@ -113,6 +113,7 @@ func checkPolygon(want, got tegola.Polygon) (string, bool) {
 func TestClipPolygon(t *testing.T) {
 
 	test := tbltest.Cases(
+
 		PolygonTestCase{
 			desc: "Basic Polygon contain clip region.",
 			p: basic.NewPolygon(
@@ -135,7 +136,7 @@ func TestClipPolygon(t *testing.T) {
 			min: maths.Pt{-5, -5},
 			max: maths.Pt{15, 15},
 		},
-		PolygonTestCase{
+		PolygonTestCase{ // 1
 			desc: "Basic Polygon with a cut out.",
 			// For the image to be drawn.
 			min: maths.Pt{-10, -10},
@@ -162,15 +163,15 @@ func TestClipPolygon(t *testing.T) {
 						maths.Pt{11, 11},
 					},
 					[]maths.Pt{
-						maths.Pt{10, 2},
 						maths.Pt{2, 2},
 						maths.Pt{2, 10},
 						maths.Pt{10, 10},
+						maths.Pt{10, 2},
 					},
 				),
 			},
 		},
-		PolygonTestCase{
+		PolygonTestCase{ // 2
 			desc: "Basic Polygon with two cut outs.",
 			// For the image to be drawn.
 			min: maths.Pt{-10, -10},
@@ -218,7 +219,7 @@ func TestClipPolygon(t *testing.T) {
 				),
 			},
 		},
-		PolygonTestCase{
+		PolygonTestCase{ // 3
 			desc: "Basic Polygon with two cut outs.",
 			// For the image to be drawn.
 			min: maths.Pt{-10, -10},
@@ -280,7 +281,8 @@ func TestClipPolygon(t *testing.T) {
 				),
 			},
 		},
-		PolygonTestCase{
+
+		PolygonTestCase{ // 4
 			desc: "Polygon from osm_bonn test.",
 			// For the image to be drawn.
 			min:  maths.Pt{-2, -2},
@@ -288,29 +290,29 @@ func TestClipPolygon(t *testing.T) {
 			ridx: 11,
 			p: basic.NewPolygon(
 				[]maths.Pt{
-					{4038, 1792},
-					{4042, 1786},
-					{4035, 1782},
-					{4047, 1762},
-					{4054, 1767},
-					{4060, 1756},
-					{4064, 1758},
-					{4067, 1754},
-					{4056, 1748},
-					{4070, 1726},
-					{4061, 1720},
-					{4072, 1702},
-					{4083, 1709},
-					{4101, 1720},
-					{4089, 1740},
-					{4098, 1746},
-					{4088, 1763},
-					{4080, 1759},
-					{4076, 1765},
-					{4066, 1782},
-					{4070, 1785},
-					{4058, 1804},
-					{4038, 1792},
+					{4038, 1792}, // inside
+					{4042, 1786}, // inside
+					{4035, 1782}, // inside
+					{4047, 1762}, // inside
+					{4054, 1767}, // inside
+					{4060, 1756}, // inside
+					{4064, 1758}, // inside
+					{4067, 1754}, // inside
+					{4056, 1748}, // inside
+					{4070, 1726}, // inside
+					{4061, 1720}, // inside
+					{4072, 1702}, // inside
+					{4083, 1709}, // inside
+					{4101, 1720}, // crosses (outside) 4098,1718
+					{4089, 1740}, // crosses (inside) 4098,1725
+					{4098, 1746}, // crosses (outside?) tricky part (insert in two points one as outbound and one as inbound)
+					{4088, 1763}, // inside
+					{4080, 1759}, // inside
+					{4076, 1765}, // inside
+					{4066, 1782}, // inside
+					{4070, 1785}, // inside
+					{4058, 1804}, // inside
+					//{4038, 1792},
 				},
 			),
 			eps: []basic.Polygon{
@@ -343,7 +345,8 @@ func TestClipPolygon(t *testing.T) {
 				),
 			},
 		},
-		PolygonTestCase{
+
+		PolygonTestCase{ // 5
 			desc: "Polygon from osm_bonn test 2.",
 			// For the image to be drawn.
 			min:  maths.Pt{-2, -2},
@@ -351,27 +354,28 @@ func TestClipPolygon(t *testing.T) {
 			ridx: 11,
 			p: basic.NewPolygon(
 				[]maths.Pt{
-					{-160, 1205},
-					{-154, 1187},
-					{-122, 1146},
-					{-91, 1113},
-					{-60, 1086},
-					{-33, 1072},
-					{-2, 1063}, // This is an intersection point on the boundery.
-					{22, 1059},
-					{47, 1059},
-					{74, 1080},
-					{101, 1115},
-					{137, 1176},
+					{-160, 1205}, // outside
+					{-154, 1187}, // outside
+					{-122, 1146}, // outside
+					{-91, 1113},  // outside
+					{-60, 1086},  // outside
+					{-33, 1072},  // outside
 
-					{139, 1187},
-					{131, 1196},
-					{116, 1208},
-					{89, 1226},
-					{67, 1238},
-					{50, 1246},
-					{4, 1248},
-					{-15, 1254},
+					{-2, 1063},  // This is an intersection point on the boundary.
+					{22, 1059},  // inside
+					{47, 1059},  // inside
+					{74, 1080},  // inside
+					{101, 1115}, //inside
+					{137, 1176}, // inside
+					{139, 1187}, // inside
+					{131, 1196}, // inside
+					{116, 1208}, // inside
+					{89, 1226},  // inside
+					{67, 1238},  // inside
+					{50, 1246},  // inside
+					{4, 1248},   // inside
+					// intersection here
+					{-15, 1254}, // outside
 					{-43, 1258},
 					{-73, 1252},
 					{-83, 1247},
@@ -385,20 +389,32 @@ func TestClipPolygon(t *testing.T) {
 					{-111, 1223},
 					{-118, 1226},
 					{-150, 1218},
-					{-160, 1205},
+					//{-160, 1205},
 				},
 			),
 			eps: []basic.Polygon{
 				basic.NewPolygon(
 					[]maths.Pt{
-						{-118, 1226},
-						{-150, 1218},
-						{-160, 1205},
+						{-2, 1063},
+						{22, 1059},
+						{47, 1059},
+						{74, 1080},
+						{101, 1115},
+						{137, 1176},
+						{139, 1187},
+						{131, 1196},
+						{116, 1208},
+						{89, 1226},
+						{67, 1238},
+						{50, 1246},
+						{4, 1248},
+						{-2, 1249},
 					},
 				),
 			},
 		},
 	)
+	test.RunOrder = "5"
 	test.Run(func(i int, tc PolygonTestCase) {
 		var drawPng bool
 		t.Log("Starting test ", i)

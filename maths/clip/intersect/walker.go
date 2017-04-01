@@ -38,18 +38,20 @@ func (ib *Inbound) Next() (nib *Inbound) {
 }
 
 func (ib *Inbound) Walk(fn func(idx int, pt maths.Pt) bool) {
-	fib := ib.pt
+
+	firstInboundPoint := ib.pt
 	icount := 0
-	if !fn(0, fib.Point()) {
+	if !fn(0, firstInboundPoint.Point()) {
 		// log.Printf("Bailing after first point.")
 		return
 	}
 	var pt maths.Pt
 	var ipt *Point
-	for p, i := fib.NextWalk(), 1; p != nil; i++ {
+	for i, p := 1, firstInboundPoint.NextWalk(); p != nil; i++ {
 		op := p
+		//log.Printf("Walk Looking at %#v", p)
 		if ib.seen[p] {
-			// log.Printf("Already saw %p -- cycle bailing.\n", p)
+			//log.Printf("Already saw %p -- cycle bailing.\n", p)
 			return
 		}
 		ib.seen[p] = true
@@ -67,7 +69,7 @@ func (ib *Inbound) Walk(fn func(idx int, pt maths.Pt) bool) {
 		default:
 			continue
 		}
-		if ipt == fib {
+		if ipt == firstInboundPoint {
 			return
 		}
 		if ipt != nil {
@@ -77,7 +79,7 @@ func (ib *Inbound) Walk(fn func(idx int, pt maths.Pt) bool) {
 			pt = ipt.Point()
 			p = ipt.NextWalk()
 		}
-		if fib.Point().IsEqual(pt) {
+		if firstInboundPoint.Point().IsEqual(pt) {
 			icount++
 			// icount of 3 because, if we see the same point 3 times, there is an issue.
 			// 1 time makes sense.
@@ -85,7 +87,7 @@ func (ib *Inbound) Walk(fn func(idx int, pt maths.Pt) bool) {
 			// 3 times if a point from the outside goes to the border point back to a point outside.
 			// 4+ we have an issue.
 			if icount == 3 {
-				// log.Println("fib point value is same.")
+				// log.Println("firstInboundPoint point value is same.")
 				return
 			}
 		}
@@ -93,7 +95,7 @@ func (ib *Inbound) Walk(fn func(idx int, pt maths.Pt) bool) {
 		if p == nil {
 			p = op.List().Front()
 		}
-		// log.Printf("Looking Point(%v) looking at pt(%p)%[2]v fib(%p)%[3]v\n", i, p, fib)
+		//log.Printf("Looking Point(%v) looking at pt(%p)%[2]v firstInboundPoint(%p)%[3]v\n", i, p, firstInboundPoint)
 
 		if !fn(i, pt) {
 			return

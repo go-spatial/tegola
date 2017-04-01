@@ -1,7 +1,8 @@
 package clip
 
 import (
-	"fmt"
+	"errors"
+	"log"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
@@ -12,7 +13,7 @@ import (
 )
 
 /*
-Basics of the alogrithim.
+Basics of the algorithm.
 
 Given:
 
@@ -293,70 +294,31 @@ Since N(o), is the end of the array we, start at the beginning and notice, that 
 
 */
 
-func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]float64, err error) {
-	w = maths.WindingOrderOf(sub)
-	il := intersect.New()
-	rl := region.New(w, rMinPt, rMaxPt)
-	sl, err := subject.New(w, sub)
+func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]float64, err error) {
+
+	sl, err := subject.New(sub)
 	if err != nil {
 		return clippedSubjects, err
 	}
-
-	// log.Println("Starting to work through the pair of points.")
-	allSubjectsPtsIn := true
-	for i, p := 0, sl.FirstPair(); p != nil; p, i = p.Next(), i+1 {
-		// log.Printf("Looking pair %v : %#v ", i, p)
-		line := p.AsLine()
-		if !rl.Contains(p.Pt1().Point()) {
-			allSubjectsPtsIn = false
-		}
-		if rl.Contains(p.Pt1().Point()) && rl.Contains(p.Pt2().Point()) {
-			continue
-		}
-		for a := rl.FirstAxis(); a != nil; a = a.Next() {
-			pt, doesIntersect := a.Intersect(line)
-			if !doesIntersect {
-				continue
-			}
-			pt.X = float64(int64(pt.X))
-			pt.Y = float64(int64(pt.Y))
-
-			ipt := intersect.NewPt(pt, a.IsInward(line))
-			// log.Printf("Found Intersect (%p)%[1]v\n", ipt)
-			// Only care about inbound intersect points.
-			if ipt.Inward {
-				il.PushBack(ipt)
-			}
-			if !p.PushInBetween(ipt.AsSubjectPoint()) {
-				// log.Printf("Was not able to add to subject list %v\n", ipt)
-			}
-			a.PushInBetween(ipt.AsRegionPoint())
-		}
-	}
+	il := intersect.New()
+	rl := region.New(sl.Winding(), rMinPt, rMaxPt)
 	/*
-		log.Printf("Done working through the pair of points. allSubjectsPtsIn %v\n", allSubjectsPtsIn)
-		log.Printf("intersect: %#v\n", il)
-		log.Printf("   region: %#v\n", rl)
-		log.Printf("   region: ")
-		for p := rl.Front(); p != nil; p = p.Next() {
-			switch pp := p.(type) {
-			case *intersect.RegionPoint:
-				log.Printf("\t%p - (%v;%v)", pp, pp.Point(), pp.Inward)
-			case *intersect.SubjectPoint:
-				log.Printf("\t%p - (%v;%v)", pp, pp.Point(), pp.Inward)
-			case list.ElementerPointer:
-				log.Printf("\t%p - (%v)", pp, pp.Point())
-			default:
-				log.Printf("\t%p - %[1]#v\n", p)
-			}
-		}
-		log.Printf("  subject: %#v\n", sl)
+		log.Println(rl.GoString())
+		log.Println(sl.GoString())
 	*/
-	// Check to see if all the subject points are contained in the region.
-	if allSubjectsPtsIn {
+	// log.Println("Starting to work through the pair of points.")
+
+	// BuildOutLists returns weather all subject points are contained by the region.
+	if buildOutLists(sl, rl, il) {
 		clippedSubjects = append(clippedSubjects, sub)
 		return clippedSubjects, nil
 	}
+	/*
+		log.Println("Done working through the pair of points.")
+		log.Printf("intersect: %#v\n", il)
+		log.Println(rl.GoString())
+		log.Println(sl.GoString())
+	*/
 	// Need to check if there are no intersection points, it could be for two reason.
 	// 2. The region points are all inside the subject.
 	if il.Len() == 0 {
@@ -374,14 +336,17 @@ func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 	}
 	// log.Println("Walking through the Inbound Intersection points.")
 	for w := il.FirstInboundPtWalker(); w != nil; w = w.Next() {
-		// log.Printf("Looking at: %p, %[1]#v", w)
+		//log.Printf("Looking at Inbound pt: %v", w.GoString())
 		var s []float64
 		var opt *maths.Pt
 		w.Walk(func(idx int, pt maths.Pt) bool {
-			if opt == nil || !opt.IsEqual(pt) {
-				// Only add point if it's not the same as the last point
+			// Only add point if it's not the same as the last point
+			// or the first point in s.
+			if (opt == nil || !opt.IsEqual(pt)) &&
+				(len(s) < 2 || s[0] != pt.X || s[1] != pt.Y) {
 				// log.Printf("Adding point(%v): %v\n", idx, pt)
 				s = append(s, pt.X, pt.Y)
+
 			}
 			opt = &pt
 			if idx == sl.Len() {
@@ -391,12 +356,81 @@ func linestring(w maths.WindingOrder, sub []float64, rMinPt, rMaxPt maths.Pt) (c
 			return true
 		})
 		// Must have at least 3 points for it to be a valid runstring. (3 *2 = 6)
-		if len(s) >= 6 {
+		valid := quickValidityCheck(s)
+		//log.Println("Is subject valid", valid, s)
+		if valid {
+
 			clippedSubjects = append(clippedSubjects, s)
 		}
 	}
+
 	// log.Println("Done walking through the Inbound Intersection points.")
 	return clippedSubjects, nil
+}
+func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Intersect) bool {
+	allSubjectsPtsIn := true
+	for i, p := 0, sl.FirstPair(); p != nil; p, i = p.Next(), i+1 {
+		//log.Printf("Looking pair %v : %#v ", i, p)
+		line := p.AsLine()
+		pt1, pt2 := p.Pt1().Point(), p.Pt2().Point()
+		containsPt1, containsPt2 := rl.Contains(pt1), rl.Contains(pt2)
+		_ = containsPt2
+		if !containsPt1 {
+			allSubjectsPtsIn = false
+		}
+		for a := rl.FirstAxis(); a != nil; a = a.Next() {
+
+			pt, doesIntersect := a.Intersect(line)
+			if !doesIntersect {
+				continue
+			}
+			// lastIDirection = a.IsInward(line)
+			inward, err := a.IsInward(line)
+			if err != nil {
+				continue
+			}
+			ipt := intersect.NewPt(pt.Truncate(), inward)
+
+			//log.Printf("Found Intersect (%p)%[1]v\n%v,%v", ipt, a.AsLine(), line)
+
+			insertIntersectPoint(ipt, il, p, a)
+
+		}
+	}
+	/*
+		log.Println(rl.GoString())
+		log.Println(sl.GoString())
+	*/
+	return allSubjectsPtsIn
+}
+
+func quickValidityCheck(s []float64) bool {
+
+	if len(s) < 6 {
+		return false
+	}
+	for x, y := 0, 1; y < len(s)-2; x, y = x+2, y+2 {
+		for x1, y1 := x+2, y+2; y1 < len(s); x1, y1 = x1+2, y1+2 {
+			if s[x] == s[x1] && s[y] == s[y1] {
+				return false
+			}
+		}
+	}
+	return true
+}
+func insertIntersectPoint(ipt *intersect.Point, il *intersect.Intersect, p *subject.Pair, a *region.Axis) {
+	// Only care about inbound intersect points.
+	if ipt.Inward {
+		il.PushBack(ipt)
+	}
+	if !p.PushInBetween(ipt.AsSubjectPoint()) {
+		log.Printf("Was not able to add to subject list %v\n", ipt)
+	}
+
+	if !a.PushInBetween(ipt.AsRegionPoint()) {
+		log.Printf("Was not able to add to region list %v\n", ipt)
+	}
+
 }
 
 func linestring2floats(l tegola.LineString) (ls []float64) {
@@ -485,8 +519,8 @@ func LineString(line tegola.LineString, min, max maths.Pt, extant int) (ls []bas
 
 func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.Polygon, err error) {
 	// Each polygon is made up of a main linestring describing the outer ring,
-	// and set of ourter rignts. The outer ring is clockwise while the inner ring is
-	// usually conter clockwise.
+	// and set of outer rings. The outer ring is clockwise while the inner ring is
+	// usually counter-clockwise.
 
 	// log.Println("Starting Polygon clipping.")
 	sls := polygon.Sublines()
@@ -498,7 +532,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
 	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
 	// log.Printf("Starting to clip main line to %v, %v", emin, emax)
-	plstrs, err := linestring(maths.Clockwise, linestring2floats(sls[0]), emin, emax)
+	plstrs, err := linestring(linestring2floats(sls[0]), emin, emax)
 	// log.Printf("Done to clipping main line to %v, %v", emin, emax)
 	if err != nil {
 		return nil, err
@@ -508,7 +542,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	}
 	for _, ls := range plstrs {
 		p = append(p, basic.Polygon{basic.NewLine(ls...)})
-		nsub, err := subject.New(maths.Clockwise, ls)
+		nsub, err := subject.New(ls)
 		if err != nil {
 			return nil, err
 		}
@@ -517,7 +551,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	emin = maths.Pt{min.X - (float64(extant) - 1), min.Y - (float64(extant) - 1)}
 	emax = maths.Pt{max.X + (float64(extant) - 1), max.Y + (float64(extant) - 1)}
 	for _, s := range sls[1:] {
-		slines, err := linestring(maths.CounterClockwise, linestring2floats(s), min, max)
+		slines, err := linestring(linestring2floats(s), min, max)
 		if err != nil {
 			return nil, err
 		}
@@ -610,6 +644,6 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (basic.Geometry, error) {
 		return ls, nil
 
 	default:
-		return nil, fmt.Errorf("Unsupported Geometry")
+		return nil, errors.New("Unsupported Geometry")
 	}
 }

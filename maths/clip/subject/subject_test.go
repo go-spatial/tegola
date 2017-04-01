@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewSubject(t *testing.T) {
-	sub, err := New(maths.CounterClockwise, []float64{0, 0, 1, 1, 2, 10, 10, 10})
+	sub, err := New([]float64{0, 0, 1, 1, 2, 10, 10, 10})
 	if err != nil {
 		t.Errorf("Got unexpected error: %v", err)
 		return

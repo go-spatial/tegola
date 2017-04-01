@@ -64,7 +64,7 @@ var testRegion = []Region{
 	Region{Min: maths.Pt{X: -1, Y: 4}, Max: maths.Pt{X: 5, Y: 8}, Extant: 1},
 	Region{Min: maths.Pt{X: 5, Y: 2}, Max: maths.Pt{X: 11, Y: 9}, Extant: 1},
 	Region{Min: maths.Pt{X: -1, Y: -1}, Max: maths.Pt{X: 11, Y: 11}, Extant: 1},
-	Region{Min: maths.Pt{X: -2, Y: -2}, Max: maths.Pt{X: 4098, Y: 4098}, Extant: 0},
+	/*11*/ Region{Min: maths.Pt{X: -2, Y: -2}, Max: maths.Pt{X: 4098, Y: 4098}, Extant: 0},
 }
 
 func (r *Region) ClipRegion(w maths.WindingOrder) *region.Region {
@@ -75,20 +75,22 @@ func (r *Region) ClipRegion(w maths.WindingOrder) *region.Region {
 }
 
 type TestCase struct {
-	region  Region
-	winding maths.WindingOrder
-	subject []float64
-	e       [][]float64
+	region   Region
+	winding  maths.WindingOrder
+	subject  []float64
+	e        [][]float64
+	dontdraw bool
 }
 
 func (tc *TestCase) ClipRegion() *region.Region {
 	return tc.region.ClipRegion(tc.winding)
 }
 
-func TestCliplinestring(t *testing.T) {
+func TestClipLinestring(t *testing.T) {
 
 	test := tbltest.Cases(
-		TestCase{
+
+		TestCase{ // 0
 			region:  testRegion[0],
 			winding: maths.Clockwise,
 			subject: []float64{-2, 1, 2, 1, 2, 2, -1, 2, -1, 11, 2, 11, 2, 4, 4, 4, 4, 13, -2, 13},
@@ -97,7 +99,7 @@ func TestCliplinestring(t *testing.T) {
 				{2, 10, 2, 4, 4, 4, 4, 10},
 			},
 		},
-		TestCase{
+		TestCase{ // 1
 			region:  testRegion[0],
 			winding: maths.Clockwise,
 			subject: []float64{-2, 1, 12, 1, 12, 2, -1, 2, -1, 11, 2, 11, 2, 4, 4, 4, 4, 13, -2, 13},
@@ -106,7 +108,7 @@ func TestCliplinestring(t *testing.T) {
 				{2, 10, 2, 4, 4, 4, 4, 10},
 			},
 		},
-		TestCase{
+		TestCase{ // 2
 			region:  testRegion[0],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
@@ -115,7 +117,8 @@ func TestCliplinestring(t *testing.T) {
 				{0, 4, 3, 4, 3, 1, 0, 1},
 			},
 		},
-		TestCase{
+
+		TestCase{ // 3
 			region:  testRegion[1],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
@@ -124,7 +127,8 @@ func TestCliplinestring(t *testing.T) {
 				{2, 4, 3, 4, 3, 2, 2, 2},
 			},
 		},
-		TestCase{
+
+		TestCase{ // 4
 			region:  testRegion[2],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
@@ -133,7 +137,8 @@ func TestCliplinestring(t *testing.T) {
 				{-1, 4, 3, 4, 3, 1, -1, 1},
 			},
 		},
-		TestCase{
+
+		TestCase{ // 5
 			region:  testRegion[3],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
@@ -141,15 +146,15 @@ func TestCliplinestring(t *testing.T) {
 				{-2, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1, -2, 1},
 			},
 		},
-		TestCase{
+		TestCase{ // 6
 			region:  testRegion[4],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
 			e: [][]float64{
-				[]float64{-3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1, -3, 1},
+				[]float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
 			},
 		},
-		TestCase{
+		TestCase{ // 7
 			region:  testRegion[5],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
@@ -157,7 +162,7 @@ func TestCliplinestring(t *testing.T) {
 				[]float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
 			},
 		},
-		TestCase{
+		TestCase{ // 8
 			region:  testRegion[6],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
@@ -165,19 +170,21 @@ func TestCliplinestring(t *testing.T) {
 				[]float64{7, 2, 5, 2, 5, 3, 7, 3},
 			},
 		},
-		TestCase{
+		TestCase{ // 9
 			region:  testRegion[7],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
 			e:       [][]float64{},
 		},
-		TestCase{
+
+		TestCase{ // 10
 			region:  testRegion[8],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
 			e:       [][]float64{},
 		},
-		TestCase{
+
+		TestCase{ // 11
 			region:  testRegion[9],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
@@ -185,7 +192,8 @@ func TestCliplinestring(t *testing.T) {
 				[]float64{5, 9, 11, 9, 11, 2, 5, 2, 5, 8},
 			},
 		},
-		TestCase{
+
+		TestCase{ // 12
 			region:  testRegion[9],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 10, 12, 10, 12, 1, 4, 1, 4, 8, -1, 8, -1, 4, 3, 4, 3, 1},
@@ -193,7 +201,7 @@ func TestCliplinestring(t *testing.T) {
 				[]float64{5, 2, 5, 9, 11, 9, 11, 2},
 			},
 		},
-		TestCase{
+		TestCase{ // 13
 			region:  testRegion[0],
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, -3, -3, 10, 12, 10, 12, 1, 4, 1, 4, 8, -1, 8, -1, 4, 3, 4, 3, 3},
@@ -202,7 +210,7 @@ func TestCliplinestring(t *testing.T) {
 				[]float64{0, 4, 3, 4, 3, 3, 0, 0},
 			},
 		},
-		TestCase{
+		TestCase{ // 14
 			region:  testRegion[10],
 			winding: maths.Clockwise,
 			subject: []float64{-1, -1, 12, -1, 12, 12, -1, 12},
@@ -210,20 +218,23 @@ func TestCliplinestring(t *testing.T) {
 				[]float64{-1, 11, -1, -1, 11, -1, 11, 11},
 			},
 		},
-		TestCase{
+
+		TestCase{ // 15
 			region:  testRegion[11],
 			winding: maths.Clockwise,
 			subject: []float64{7848, 19609, 7340, 18835, 6524, 17314, 6433, 17163, 5178, 15057, 5147, 15006, 4680, 14226, 3861, 12766, 2471, 10524, 2277, 10029, 1741, 8281, 1655, 8017, 1629, 7930, 1437, 7368, 973, 5481, 325, 4339, -497, 3233, -1060, 2745, -1646, 2326, -1883, 2156, -2002, 2102, -2719, 1774, -3638, 1382, -3795, 1320, -5225, 938, -6972, 295, -7672, -88, -8243, -564, -8715, -1112, -9019, -1573, -9235, -2067, -9293, -2193, -9408, -2570, -9823, -4630, -10118, -5927, -10478, -7353, -10909, -8587, -11555, -9743, -11837, -10005, -12277, -10360, -13748, -11189, -14853, -12102, -15806, -12853, -16711, -13414},
 			e: [][]float64{
-				[]float64{-2, 3899, 145, 4098},
+				[]float64{145, 4098, -2, 3899, -2, 4098},
 			},
+			dontdraw: true,
 		},
 	)
+	//test.RunOrder = "3"
 
 	test.Run(func(i int, tc TestCase) {
 		var drawPng bool
 		t.Log("Starting test ", i)
-		got, _ := linestring(tc.winding, tc.subject, tc.region.Min, tc.region.Max)
+		got, _ := linestring(tc.subject, tc.region.Min, tc.region.Max)
 		if len(tc.e) != len(got) {
 			t.Errorf("Test %v: Expected number of slices to be %v got: %v -- %+v", i, len(tc.e), len(got), got)
 			drawTestCase(&tc, got, fmt.Sprintf("testcase%v.png", i))
@@ -246,11 +257,10 @@ func TestCliplinestring(t *testing.T) {
 			}
 		}
 		_ = drawPng
-		/*
-			if drawPng || *showPng {
-				drawTestCase(&tc, got, fmt.Sprintf("testcase%v.png", i))
-			}
-		*/
+
+		if !tc.dontdraw && (drawPng || *showPng) {
+			drawTestCase(&tc, got, fmt.Sprintf("testcase%v.png", i))
+		}
 
 	})
 }
