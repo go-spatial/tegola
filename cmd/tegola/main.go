@@ -33,7 +33,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//	log.Println("config webserver port", conf.Webserver.Port)
+	//	validate our config
+	if err = conf.Validate(); err != nil {
+		log.Fatal(err)
+	}
 
 	//	init our providers
 	providers, err := initProviders(conf.Providers)
