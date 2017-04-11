@@ -45,7 +45,7 @@ type Config struct {
 	// LocationName is the file name or http server that the config was read from. If this is "", it means that the location was unknown. This is the case if the Prase() function is used
 	// directly.
 	LocationName string
-	Webserver    Webserver `webserver`
+	Webserver    Webserver `toml:"webserver"`
 	// Map of providers.
 	Providers []map[string]interface{}
 	Maps      []Map
@@ -90,8 +90,7 @@ func (c *Config) Validate() error {
 			}
 
 			//	check if already have this layer
-			val, ok := layerNames[plParts[1]]
-			if ok {
+			if val, ok := layerNames[plParts[1]]; ok {
 				//	we have a hit
 				//	check for zoom range overlap
 				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
@@ -100,10 +99,11 @@ func (c *Config) Validate() error {
 						ProviderLayer2: l.ProviderLayer,
 					}
 				}
-			} else {
-				//	add the MapLayer to our map
-				layerNames[plParts[1]] = l
+				continue
 			}
+
+			//	add the MapLayer to our map
+			layerNames[plParts[1]] = l
 		}
 	}
 
