@@ -15,10 +15,29 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-var ErrMapNotFound error
+type ErrMapNotFound struct {
+	MapName string
+}
 
-func init() {
-	ErrMapNotFound = fmt.Errorf("Did not find map")
+func (e ErrMapNotFound) Error() string {
+	return fmt.Sprintf("config: map (%v) not found", e.MapName)
+}
+
+type ErrInvalidProviderLayerName struct {
+	ProviderLayerName string
+}
+
+func (e ErrInvalidProviderLayerName) Error() string {
+	return fmt.Sprintf("config: invalid provider layer name (%v)", e.ProviderLayerName)
+}
+
+type ErrLayerCollision struct {
+	ProviderLayer1 string
+	ProviderLayer2 string
+}
+
+func (e ErrLayerCollision) Error() string {
+	return fmt.Sprintf("config: layer collision (%v) and (%v)", e.ProviderLayer1, e.ProviderLayer2)
 }
 
 // A Config represents the a Tegola Config file.
@@ -54,9 +73,41 @@ type MapLayer struct {
 	DefaultTags   interface{} `toml:"default_tags"`
 }
 
-//	checks the config for various issues
+//	checks the config for issues
 func (c *Config) Validate() error {
 
+	//	check for map layer name / zoom collisions
+	//	map of layers to providers
+	layerNames := map[string]MapLayer{}
+	for _, m := range c.Maps {
+		for _, l := range m.Layers {
+			//	split the provider layer (syntax is provider.layer)
+			plParts := strings.Split(l.ProviderLayer, ".")
+			if len(plParts) != 2 {
+				return ErrInvalidProviderLayerName{
+					ProviderLayerName: l.ProviderLayer,
+				}
+			}
+
+			//	check if already have this layer
+			val, ok := layerNames[plParts[1]]
+			if ok {
+				//	we have a hit
+				//	check for zoom range overlap
+				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
+					return ErrLayerCollision{
+						ProviderLayer1: val.ProviderLayer,
+						ProviderLayer2: l.ProviderLayer,
+					}
+				}
+			} else {
+				//	add the MapLayer to our map
+				layerNames[plParts[1]] = l
+			}
+		}
+	}
+
+	return nil
 }
 
 // Parse will parse the Tegola config file provided by the io.Reader.
@@ -64,6 +115,7 @@ func Parse(reader io.Reader, location string) (conf Config, err error) {
 	//	decode conf file, don't care about the meta data.
 	_, err = toml.DecodeReader(reader, &conf)
 	conf.LocationName = location
+
 	return conf, err
 }
 
@@ -101,6 +153,7 @@ func Load(location string) (conf Config, err error) {
 			return conf, fmt.Errorf("error opening local config file (%v): %v ", location, err)
 		}
 	}
+
 	return Parse(reader, location)
 }
 
@@ -111,10 +164,14 @@ func (cfg *Config) FindMap(name string) (Map, error) {
 	if name == "" && len(cfg.Maps) > 0 {
 		return cfg.Maps[0], nil
 	}
+
 	for _, m := range cfg.Maps {
 		if m.Name == name {
 			return m, nil
 		}
 	}
-	return Map{}, ErrMapNotFound
+
+	return Map{}, ErrMapNotFound{
+		MapName: name,
+	}
 }
