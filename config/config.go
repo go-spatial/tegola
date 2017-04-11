@@ -26,14 +26,16 @@ type Config struct {
 	// LocationName is the file name or http server that the config was read from. If this is "", it means that the location was unknown. This is the case if the Prase() function is used
 	// directly.
 	LocationName string
-	Webserver    struct {
-		Port      string
-		LogFile   string `toml:"log_file"`
-		LogFormat string `toml:"log_format"`
-	}
+	Webserver    Webserver `webserver`
 	// Map of providers.
 	Providers []map[string]interface{}
 	Maps      []Map
+}
+
+type Webserver struct {
+	Port      string `toml:"port"`
+	LogFile   string `toml:"log_file"`
+	LogFormat string `toml:"log_format"`
 }
 
 // A Map represents a map in the Tegola Config file.
@@ -42,12 +44,19 @@ type Map struct {
 	Attribution string     `toml:"attribution"`
 	Bounds      []float64  `toml:"bounds"`
 	Center      [3]float64 `toml:"center"`
-	Layers      []struct {
-		ProviderLayer string      `toml:"provider_layer"`
-		MinZoom       int         `toml:"min_zoom"`
-		MaxZoom       int         `toml:"max_zoom"`
-		DefaultTags   interface{} `toml:"default_tags"`
-	} `toml:"layers"`
+	Layers      []MapLayer `toml:"layers"`
+}
+
+type MapLayer struct {
+	ProviderLayer string      `toml:"provider_layer"`
+	MinZoom       int         `toml:"min_zoom"`
+	MaxZoom       int         `toml:"max_zoom"`
+	DefaultTags   interface{} `toml:"default_tags"`
+}
+
+//	checks the config for various issues
+func (c *Config) Validate() error {
+
 }
 
 // Parse will parse the Tegola config file provided by the io.Reader.
