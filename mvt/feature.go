@@ -35,6 +35,8 @@ type Feature struct {
 	// Does not support the collection geometry, for this you have to create a feature for each
 	// geometry in the collection.
 	Geometry tegola.Geometry
+	// Unsimplifed weather the Geometry is simple already and thus does not need to be simplified.
+	Unsimplifed *bool
 }
 
 func (f Feature) String() string {
@@ -306,7 +308,7 @@ func bubbleSplitter(ls basic.Line) basic.MultiLine {
 
 }
 
-func (c *cursor) scalelinestr(g tegola.LineString) basic.MultiLine {
+func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine {
 
 	var ls basic.Line
 	var lpt basic.Point
@@ -322,22 +324,58 @@ func (c *cursor) scalelinestr(g tegola.LineString) basic.MultiLine {
 		ls = append(ls, npt)
 		lpt = npt
 	}
-	//return bubbleSplitter(ls)
-	//return bubbleSplitter(cleanLine(ls))
-	lines := bubbleSplitter(cleanLine(ls))
 	var multiline basic.MultiLine
+	//return bubbleSplitter(ls)
+
+	//return bubbleSplitter(cleanLine(ls))
+	/*
+		lines := bubbleSplitter(cleanLine(ls))
+
+		for i := range lines {
+			var line []maths.Pt
+			for _, p := range lines[i] {
+				line = append(line, p.AsPt())
+			}
+
+			sline := maths.DouglasPeucker(line, c.tile.Epsilon)
+			if len(sline) >= 2 {
+				multiline = append(multiline, basic.NewLineFromPt(sline...))
+			}
+		}
+	*/
+	lines := bubbleSplitter(cleanLine(ls))
 	for i := range lines {
+		ln := lines[i]
+
+		simplify := true
+		if len(ln) <= 4 {
+			simplify = false
+		}
+
+		if polygon {
+			sqTolerance := c.tile.Epsilon * c.tile.Epsilon
+			area := maths.AreaOfPolygonLineString(ln)
+			simplify = simplify && area < sqTolerance
+		} else {
+			dist := maths.DistOfLine(ln)
+			simplify = simplify && dist < c.tile.Epsilon
+		}
+
+		if !simplify {
+			multiline = append(multiline, ln)
+			continue
+		}
+
 		var line []maths.Pt
-		for _, p := range lines[i] {
+		for _, p := range ln {
 			line = append(line, p.AsPt())
 		}
 
-		sline := maths.DouglasPeucker(line, c.tile.Epsilon)
-		if len(sline) >= 2 {
-			multiline = append(multiline, basic.NewLineFromPt(sline...))
-		}
+		nls := basic.NewLineFromPt(maths.DouglasPeucker(line, c.tile.Epsilon)...)
+		multiline = append(multiline, nls)
 	}
 	return multiline
+
 }
 
 func (c *cursor) scalePolygon(g tegola.Polygon) basic.MultiPolygon {
@@ -350,14 +388,14 @@ func (c *cursor) scalePolygon(g tegola.Polygon) basic.MultiPolygon {
 	}
 
 	// should check the winding order here
-	mainLines := c.scalelinestr(lines[0])
+	mainLines := c.scalelinestr(lines[0], true)
 	for i, _ := range mainLines {
 		p := basic.Polygon{mainLines[i]}
 		mp = append(mp, p)
 	}
 
 	for k := 1; k < len(lines); k++ {
-		lns := c.scalelinestr(lines[k])
+		lns := c.scalelinestr(lines[k], true)
 	nextLine:
 		for i, _ := range lns {
 			for j, _ := range mp {
@@ -385,11 +423,11 @@ func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
 		}
 		return mp
 	case tegola.LineString:
-		return c.scalelinestr(g)
+		return c.scalelinestr(g, false)
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		for _, l := range g.Lines() {
-			ml = append(ml, c.scalelinestr(l)...)
+			ml = append(ml, c.scalelinestr(l, false)...)
 		}
 		return ml
 	case tegola.Polygon:
