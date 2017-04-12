@@ -63,3 +63,21 @@ func CloneMultiPolygon(mpolygon tegola.MultiPolygon) (mply MultiPolygon) {
 	}
 	return mply
 }
+
+func Clone(geo tegola.Geometry) Geometry {
+	switch g := geo.(type) {
+	case tegola.Point:
+		return ClonePoint(g)
+	case tegola.MultiPoint:
+		return CloneMultiPoint(g)
+	case tegola.LineString:
+		return CloneLine(g)
+	case tegola.MultiLine:
+		return CloneMultiLine(g)
+	case tegola.Polygon:
+		return ClonePolygon(g)
+	case tegola.MultiPolygon:
+		return CloneMultiPolygon(g)
+	}
+	return nil
+}

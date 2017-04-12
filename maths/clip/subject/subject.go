@@ -1,34 +1,40 @@
 package subject
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/terranodo/tegola/container/list/point/list"
 	"github.com/terranodo/tegola/maths"
 )
+
+// ErrInvalidCoordsNumber is the error produced when the number of coordinates provided is not even or large enough to from a linestring.
+var ErrInvalidCoordsNumber = errors.New("Event number of coords expected.")
 
 type Subject struct {
 	winding maths.WindingOrder
 	list.List
 }
 
-func New(winding maths.WindingOrder, coords []float64) (*Subject, error) {
-	return new(Subject).Init(winding, coords)
+func New(coords []float64) (*Subject, error) {
+	return new(Subject).Init(coords)
 }
 
-func (s *Subject) Init(winding maths.WindingOrder, coords []float64) (*Subject, error) {
-	s.winding = winding
-	s.List.Init()
+func (s *Subject) Init(coords []float64) (*Subject, error) {
 	if len(coords)%2 != 0 {
-		return nil, fmt.Errorf("Even number of coords expected.")
+		return nil, ErrInvalidCoordsNumber
 	}
+	s.winding = maths.WindingOrderOf(coords)
+	s.List.Init()
+
 	for x, y := 0, 1; x < len(coords); x, y = x+2, y+2 {
 		s.PushBack(list.NewPoint(coords[x], coords[y]))
 	}
 	return s, nil
 }
 
-func (s *Subject) FirstPair() *pair {
+func (s *Subject) Winding() maths.WindingOrder { return s.winding }
+
+func (s *Subject) FirstPair() *Pair {
 	if s == nil {
 		return nil
 	}
@@ -41,11 +47,10 @@ func (s *Subject) FirstPair() *pair {
 	if first, ok = f.(*list.Pt); !ok {
 		return nil
 	}
-	return &pair{
+	return &Pair{
 		l:   &(s.List),
 		pts: [2]*list.Pt{last, first},
 	}
-
 }
 
 // Contains will test to see if the point if fully contained by the subject. If the point is on the broader it is not considered as contained.

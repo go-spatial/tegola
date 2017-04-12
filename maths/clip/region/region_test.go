@@ -59,19 +59,19 @@ func TestNewRegion(t *testing.T) {
 
 	a0 := cr.Axis(0)
 	if a0.region != cr {
-		t.Errorf("Expected axis 0's region to be the same.")
+		t.Errorf("Expected Axis 0's region to be the same.")
 	}
 	if a0.idx != 0 {
-		t.Errorf("Expected axis 0's index to be 0, go: %v", a0.idx)
+		t.Errorf("Expected Axis 0's index to be 0, go: %v", a0.idx)
 	}
 	if a0.downOrRight != cr.aDownOrRight[0] {
-		t.Errorf("axis 0's downOrRight %v want: %v", a0.downOrRight, cr.aDownOrRight[0])
+		t.Errorf("Axis 0's downOrRight %v want: %v", a0.downOrRight, cr.aDownOrRight[0])
 	}
 	if a0.pt0 != cr.sentinelPoints[0] || a0.pt1 != cr.sentinelPoints[1] {
-		t.Errorf("axis 0's (%v,%v) want (%v,%v)", a0.pt0, a0.pt1, cr.sentinelPoints[0], cr.sentinelPoints[1])
+		t.Errorf("Axis 0's (%v,%v) want (%v,%v)", a0.pt0, a0.pt1, cr.sentinelPoints[0], cr.sentinelPoints[1])
 	}
 	if a0.winding != cr.winding {
-		t.Errorf("axis 0's winding (%v) want %v", a0.winding, cr.winding)
+		t.Errorf("Axis 0's winding (%v) want %v", a0.winding, cr.winding)
 	}
 	a0.PushInBetween(list.NewPoint(0, 5))
 	expectedPt = []maths.Pt{maths.Pt{0, 0}, maths.Pt{0, 5}, maths.Pt{0, 10}, maths.Pt{10, 10}, maths.Pt{10, 0}}

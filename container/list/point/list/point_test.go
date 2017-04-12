@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gdey/tbltest"
 	"github.com/terranodo/tegola/maths"
 )
 
-func checkListLen(t *testing.T, desc string, l *List, len int) bool {
-	if n := l.Len(); n != len {
-		t.Errorf("%v: l.Len() = %d, want %d: %#v", desc, n, len, l)
+func checkListLen(t *testing.T, desc string, l *List, es []*Pt) bool {
+	eslen := len(es)
+	if n := l.Len(); n != eslen {
+		t.Errorf("%v: got l.Len() = %d, want %d: %#v,%#v", desc, n, eslen, l, es)
 
 		return false
 	}
@@ -18,7 +20,7 @@ func checkListLen(t *testing.T, desc string, l *List, len int) bool {
 
 func checkListPointers(t *testing.T, desc string, l *List, es []*Pt) {
 
-	if !checkListLen(t, desc, l, len(es)) {
+	if !checkListLen(t, desc, l, es) {
 		return
 	}
 	if len(es) == 0 {
@@ -74,17 +76,94 @@ func checkListInBetween(t *testing.T, desc string, i maths.Pt, loc int, mpts ...
 		}
 
 	}
+	if loc >= len(mpts) {
+		cpts[loc] = insert
+	}
+
 	checkListPointers(t, fmt.Sprintf("list check: %v", desc), l, pts)
 	l.PushInBetween(pts[0], pts[len(pts)-1], insert)
 	checkListPointers(t, desc, l, cpts)
 }
 
 func TestPushInBetween(t *testing.T) {
-	checkListInBetween(t, "Simple two point(3,1), after 1,1.", maths.Pt{3, 1}, 1, maths.Pt{1, 1}, maths.Pt{4, 1})
-	checkListInBetween(t, "Simple three point(3,1), after 2,1.", maths.Pt{3, 1}, 2, maths.Pt{1, 1}, maths.Pt{2, 1}, maths.Pt{4, 1})
-	checkListInBetween(t, "Simple three point(-1,1), Not included.", maths.Pt{-1, 1}, -1, maths.Pt{1, 1}, maths.Pt{2, 1}, maths.Pt{4, 1})
-	checkListInBetween(t, "Simple three point(5,1), Not included.", maths.Pt{4, 1}, 2, maths.Pt{1, 1}, maths.Pt{2, 1}, maths.Pt{4, 1})
-	checkListInBetween(t, "Dup three point(1,1), after 1,1.", maths.Pt{1, 1}, 1, maths.Pt{1, 1}, maths.Pt{2, 1}, maths.Pt{4, 1})
-	checkListInBetween(t, "Dup three point(2,1), after 2,1.", maths.Pt{2, 1}, 1, maths.Pt{1, 1}, maths.Pt{2, 1}, maths.Pt{4, 1})
-	checkListInBetween(t, "Dup three point(4,1), after 2,1.", maths.Pt{4, 1}, 2, maths.Pt{1, 1}, maths.Pt{2, 1}, maths.Pt{4, 1})
+
+	type testcase struct {
+		desc      string
+		insertPt  maths.Pt
+		pointList []maths.Pt
+		pos       int
+	}
+	tests := tbltest.Cases(testcase{
+		"Simple two point(3,1), after 1,1.",
+		maths.Pt{3, 1},
+		[]maths.Pt{
+			maths.Pt{1, 1},
+			maths.Pt{4, 1},
+		},
+		1,
+	},
+		testcase{
+			"Simple three point(3,1), after 2,1.",
+			maths.Pt{3, 1},
+			[]maths.Pt{
+				maths.Pt{1, 1},
+				maths.Pt{2, 1},
+				maths.Pt{4, 1},
+			},
+			2,
+		},
+		testcase{
+			"Simple three point(-1,1), Not included.",
+			maths.Pt{-1, 1},
+			[]maths.Pt{
+				maths.Pt{1, 1},
+				maths.Pt{2, 1},
+				maths.Pt{4, 1},
+			},
+			-1,
+		},
+		testcase{
+			"Simple three point(5,1), Not included.",
+			maths.Pt{4, 1},
+			[]maths.Pt{
+				maths.Pt{1, 1},
+				maths.Pt{2, 1},
+				maths.Pt{4, 1},
+			},
+			3,
+		},
+		testcase{
+			"Dup three point(1,1), after 1,1.",
+			maths.Pt{1, 1},
+			[]maths.Pt{
+				maths.Pt{1, 1},
+				maths.Pt{2, 1},
+				maths.Pt{4, 1},
+			},
+			1,
+		},
+		testcase{
+			"Dup three point(2,1), after 2,1.",
+			maths.Pt{2, 1},
+			[]maths.Pt{
+				maths.Pt{1, 1},
+				maths.Pt{2, 1},
+				maths.Pt{4, 1},
+			},
+			2,
+		},
+		testcase{
+			"Dup three point(4,1), after 2,1.",
+			maths.Pt{4, 1},
+			[]maths.Pt{
+				maths.Pt{1, 1},
+				maths.Pt{2, 1},
+				maths.Pt{4, 1},
+			},
+			3,
+		},
+	)
+	tests.Run(func(idx int, test testcase) {
+		checkListInBetween(t, test.desc, test.insertPt, test.pos, test.pointList...)
+	})
 }

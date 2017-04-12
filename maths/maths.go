@@ -20,66 +20,6 @@ const (
 	PiDiv4      = math.Pi / 4.0
 )
 
-// WindingOrder the direction the line strings.
-type WindingOrder uint8
-
-const (
-	_ WindingOrder = iota
-	Clockwise
-	CounterClockwise
-)
-
-func (w WindingOrder) String() string {
-	switch w {
-	case Clockwise:
-		return "clockwise"
-	case CounterClockwise:
-		return "counter clockwise"
-	}
-	return "unknown"
-}
-
-func (w WindingOrder) IsClockwise() bool        { return w == Clockwise }
-func (w WindingOrder) IsCounterClockwise() bool { return w == CounterClockwise }
-func (w WindingOrder) Not() WindingOrder {
-	if w == Clockwise {
-		return CounterClockwise
-	}
-	return Clockwise
-}
-
-func WindingOrderOf(sub []float64) WindingOrder {
-	sum := 0
-	for x, y := 0, 1; y < len(sub); x, y = x+2, y+2 {
-		nx, ny := x+2, y+2
-		if y == (len(sub) - 1) {
-			nx, ny = 0, 1
-		}
-		sum += int((sub[nx] - sub[x]) * (sub[ny] + sub[y]))
-	}
-	if sum < 0 {
-		return Clockwise
-	}
-	return CounterClockwise
-}
-
-func WindingOrderOfLine(l tegola.LineString) WindingOrder {
-	sum := 0
-	pts := l.Subpoints()
-	for i, pt := range pts {
-		ni := i + 1
-		if ni == len(pts) {
-			ni = 0
-		}
-		npt := pts[ni]
-		sum += int((npt.X() - pt.X()) * (npt.Y() + pt.Y()))
-	}
-	if sum < 0 {
-		return Clockwise
-	}
-	return CounterClockwise
-}
-
 // Pt describes a 2d Point.
 type Pt struct {
 	X float64 `json:"x"`
@@ -94,6 +34,13 @@ func (pt Pt) IsEqual(pt2 Pt) bool {
 	return pt.X == pt2.X && pt.Y == pt2.Y
 }
 
+func (pt Pt) Truncate() Pt {
+	return Pt{
+		X: float64(int64(pt.X)),
+		Y: float64(int64(pt.Y)),
+	}
+}
+
 func (pt Pt) Delta(pt2 Pt) (d Pt) {
 	return Pt{
 		X: pt.X - pt2.X,
@@ -103,6 +50,12 @@ func (pt Pt) Delta(pt2 Pt) (d Pt) {
 
 func (pt Pt) String() string {
 	return fmt.Sprintf("(%v,%v)", pt.X, pt.Y)
+}
+func (pt *Pt) GoString() string {
+	if pt == nil {
+		return "(nil)"
+	}
+	return fmt.Sprintf("[%v,%v]", pt.X, pt.Y)
 }
 
 type Pointer interface {
@@ -162,6 +115,16 @@ func (l Line) Clamp(pt Pt) (p Pt) {
 		p.Y = gy
 	}
 	return p
+}
+
+// DistanceFromPoint will return the perpendicular distance from the point.
+func (l Line) DistanceFromPoint(pt Pt) float64 {
+
+	deltaX := l[1].X - l[0].X
+	deltaY := l[1].Y - l[0].Y
+	denom := math.Abs((deltaY * pt.X) - (deltaX * pt.Y) + (l[1].X * l[0].Y) - (l[1].Y * l[0].X))
+	num := math.Sqrt(math.Pow(deltaY, 2) + math.Pow(deltaX, 2))
+	return denom / num
 }
 
 // AreaOfPolygon will calculate the Area of a polygon using the surveyor's formula

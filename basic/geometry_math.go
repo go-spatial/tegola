@@ -2,7 +2,6 @@ package basic
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"errors"
@@ -130,7 +129,6 @@ func CloneGeometry(geometry tegola.Geometry) (G, error) {
 	case tegola.Polygon:
 		var poly Polygon
 		for i, line := range geo.Sublines() {
-			log.Printf("Cloning %T:%[1]t\n", line)
 			geom, err := CloneGeometry(line)
 			if err != nil {
 				return G{}, fmt.Errorf("Got error converting line(%v) of polygon: %v", i, err)
@@ -160,8 +158,10 @@ func ToWebMercator(SRID int, geometry tegola.Geometry) (G, error) {
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
 		// in the same SRID.
+
 		return CloneGeometry(geometry)
 	case tegola.WGS84:
+
 		return ApplyToPoints(geometry, webmercator.PToXY)
 	}
 }

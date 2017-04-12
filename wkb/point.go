@@ -33,6 +33,10 @@ func (p Point) String() string {
 	return WKT(p) // If we have a failure we don't care
 }
 
+func (p Point) GoString() string {
+	return fmt.Sprintf("(%v %v)", p.Point[0], p.Point[1])
+}
+
 //NewPoint creates a new point structure.
 func NewPoint(x, y float64) Point {
 	return Point{basic.Point{x, y}}

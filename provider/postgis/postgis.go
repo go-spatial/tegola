@@ -415,6 +415,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				}
 				// TODO: Need to move this from being the responsiblity of the provider to the responsibility of the feature. But that means a feature should know
 				// how the points are encoded.
+				// log.Printf("layer SRID %v Default: %v\n", plyr.SRID, DefaultSRID)
 				if plyr.SRID != DefaultSRID {
 					// We need to convert our points to Webmercator.
 					g, err := basic.ToWebMercator(plyr.SRID, geom)

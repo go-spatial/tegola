@@ -16,7 +16,7 @@ func TestNewIntersect(t *testing.T) {
 	l.PushBack(pt)
 	rl := region.New(maths.CounterClockwise, maths.Pt{0, 0}, maths.Pt{10, 10})
 	rl.Axis(0).PushInBetween(pt.AsRegionPoint())
-	sl, err := subject.New(maths.CounterClockwise, []float64{0, 0, 0, 10, 10, 10})
+	sl, err := subject.New([]float64{0, 0, 0, 10, 10, 10})
 	if err != nil {
 		t.Errorf("Got unexpected error: %v", err)
 		return
