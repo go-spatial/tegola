@@ -37,6 +37,12 @@
 			"path": "github.com/jackc/pgx",
 			"revision": "558d5550cf5c08e7192eb2eb8635f21f4b700ff5",
 			"revisionTime": "2016-07-15T19:51:40Z"
+		},
+		{
+			"checksumSHA1": "je0xBtM96GQebMKfmSVzdthg3Rs=",
+			"path": "github.com/logrusorgru/aurora",
+			"revision": "962a6974312dde57d1f6f5738b4f83e1af9f38a4",
+			"revisionTime": "2016-12-16T17:00:44Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"
