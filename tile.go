@@ -1,9 +1,11 @@
 package tegola
 
-import "math"
+import (
+	"math"
+)
 
 const (
-	DefaultEpislon = 3.0
+	DefaultEpislon = 5
 	DefaultExtent  = 4096
 )
 
@@ -61,6 +63,10 @@ func (t *Tile) ZRes() float64 {
 }
 
 func (t *Tile) ZEpislon() float64 {
+
+	if t.Z == 20 {
+		return 0
+	}
 	epi := float64(DefaultEpislon)
 	if t.Tolerance != nil {
 		epi = *t.Tolerance
@@ -72,5 +78,8 @@ func (t *Tile) ZEpislon() float64 {
 	if t.Extent != nil {
 		ext = *t.Extent
 	}
-	return epi / (math.Pow(float64(t.Z), 2) * ext)
+	denom := (math.Exp2(float64(t.Z)) * ext)
+	e := epi / denom
+	return e
+
 }

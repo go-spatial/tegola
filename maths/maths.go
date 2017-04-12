@@ -130,10 +130,18 @@ func (l Line) DistanceFromPoint(pt Pt) float64 {
 // AreaOfPolygon will calculate the Area of a polygon using the surveyor's formula
 // (https://en.wikipedia.org/wiki/Shoelace_formula)
 func AreaOfPolygon(p tegola.Polygon) (area float64) {
-	var points []tegola.Point
-	for _, l := range p.Sublines() {
-		points = append(points, l.Subpoints()...)
+	sublines := p.Sublines()
+	if len(sublines) == 0 {
+		return 0
 	}
+	// Only care about the outer ring.
+	return AreaOfPolygonLineString(sublines[0])
+}
+
+func AreaOfPolygonLineString(line tegola.LineString) (area float64) {
+	// Only care about the outer ring.
+	points := line.Subpoints()
+
 	n := len(points)
 	for i := range points {
 		j := (i + 1) % n
@@ -142,6 +150,20 @@ func AreaOfPolygon(p tegola.Polygon) (area float64) {
 	}
 	return math.Abs(area) / 2.0
 }
+
+// DistOfLine will calculate the Manhattan distance of a line.
+func DistOfLine(l tegola.LineString) (dist float64) {
+	points := l.Subpoints()
+	if len(points) == 0 {
+		return 0
+	}
+	for i, j := 0, 1; j < len(points); i, j = i+1, j+1 {
+		dist += math.Abs(points[j].X()-points[i].X()) + math.Abs(points[j].Y()-points[i].Y())
+	}
+	return dist
+}
+
+// DistOfLine will calculate the
 
 func RadToDeg(rad float64) float64 {
 	return rad * Rad2Deg
@@ -152,7 +174,7 @@ func DegToRad(deg float64) float64 {
 }
 
 // SlopeIntercept will find the slop (if there is one) and the intercept of the two provided lines. If there isn't a slope because the lines are verticle, the slopeDefined will be false.
-func (l Line) SlopeIntercep() (m, b float64, defined bool) {
+func (l Line) SlopeIntercept() (m, b float64, defined bool) {
 	dx := l[1].X - l[0].X
 	dy := l[1].Y - l[0].Y
 	if dx == 0 || dy == 0 {
@@ -184,8 +206,8 @@ func Intersect(l1, l2 Line) (pt Pt, ok bool) {
 			return Pt{X: l2[1].X, Y: l1[0].Y}, true
 		}
 	}
-	m1, b1, sdef1 := l1.SlopeIntercep()
-	m2, b2, sdef2 := l2.SlopeIntercep()
+	m1, b1, sdef1 := l1.SlopeIntercept()
+	m2, b2, sdef2 := l2.SlopeIntercept()
 
 	// if the slopes are the smae then they are parallel so, they don't intersect.
 	if sdef1 == sdef2 && m1 == m2 {
