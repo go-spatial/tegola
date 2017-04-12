@@ -10,13 +10,13 @@ const (
 //Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
-	Z       int
-	X       int
-	Y       int
-	Lat     float64
-	Long    float64
-	Epislon *float64
-	Extent  *float64
+	Z         int
+	X         int
+	Y         int
+	Lat       float64
+	Long      float64
+	Tolerance *float64
+	Extent    *float64
 }
 
 func (t *Tile) Deg2Num() (x, y int) {
@@ -62,8 +62,8 @@ func (t *Tile) ZRes() float64 {
 
 func (t *Tile) ZEpislon() float64 {
 	epi := float64(DefaultEpislon)
-	if t.Epislon != nil {
-		epi = *t.Epislon
+	if t.Tolerance != nil {
+		epi = *t.Tolerance
 	}
 	if epi <= 0 {
 		return 0
