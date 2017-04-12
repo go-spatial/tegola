@@ -365,7 +365,7 @@ func TestClipPolygon(t *testing.T) {
 					{22, 1059},  // inside
 					{47, 1059},  // inside
 					{74, 1080},  // inside
-					{101, 1115}, //inside
+					{101, 1115}, // inside
 					{137, 1176}, // inside
 					{139, 1187}, // inside
 					{131, 1196}, // inside
@@ -374,7 +374,7 @@ func TestClipPolygon(t *testing.T) {
 					{67, 1238},  // inside
 					{50, 1246},  // inside
 					{4, 1248},   // inside
-					// intersection here
+					// intersection here {-2, 1249}
 					{-15, 1254}, // outside
 					{-43, 1258},
 					{-73, 1252},

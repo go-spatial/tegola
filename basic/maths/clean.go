@@ -75,23 +75,25 @@ func cleanMultiPolygon(mpolygon tegola.MultiPolygon) (mp basic.MultiPolygon, err
 	return mp, nil
 }
 
-func MakeValid(geo tegola.Geometry) basic.Geometry {
+func MakeValid(geo tegola.Geometry) (basic.Geometry, error) {
 	switch g := geo.(type) {
-	case tegola.Point:
-		return basic.Point{g.X(), g.Y()}
-	case tegola.LineString:
-		return basic.CloneLine(g)
-	case tegola.Polygon:
-		// We are going to make the polygon OGC valid
-		/*
-			pl, invalids := cleanPolygon(g)
-			if len(invalids) > 0 {
-				// If there is one or more invalid polygon, we are going to assume that
-				// it is the first polygon, and the that the firt line of the polygon is
+	/*
+		case tegola.Point:
+			return basic.Point{g.X(), g.Y()}
+		case tegola.LineString:
+			return basic.CloneLine(g)
+		case tegola.Polygon:
+			// We are going to make the polygon OGC valid
 
-			}
-		*/
+				pl, invalids := cleanPolygon(g)
+				if len(invalids) > 0 {
+					// If there is one or more invalid polygon, we are going to assume that
+					// it is the first polygon, and the that the firt line of the polygon is
 
+				}
+	*/
+	case tegola.MultiPolygon:
+		return cleanMultiPolygon(g)
 	}
-	return nil
+	return basic.Clone(geo), nil
 }

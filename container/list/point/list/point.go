@@ -81,8 +81,9 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 	xIncreasing := deltaX > 0
 	yIncreasing := deltaY > 0
 
+	// fmt.Printf("// start:  mpt,ept %f,%f,%f,%f,%v\n", mpt.X, ept.X, mpt.Y, ept.Y, mpt.X == ept.X && mpt.Y == ept.Y)
 	// If it's equal to the end point, we will push it after the end point
-	if mpt.X == ept.X && mpt.Y == ept.Y {
+	if int64(mpt.X) == int64(ept.X) && int64(mpt.Y) == int64(ept.Y) {
 		l.InsertAfter(element, end)
 		return true
 	}
@@ -90,11 +91,13 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 	// Need to check that the point equal to or ahead of the start point
 	if deltaX != 0 {
 		if xIncreasing {
-			if mpt.X < spt.X {
+			if int64(mpt.X) < int64(spt.X) {
+				// fmt.Println("// X: mpt > spt", mpt, spt)
 				return false
 			}
 		} else {
-			if mpt.X > spt.X {
+			if int64(mpt.X) > int64(spt.X) {
+				// fmt.Println("// X: mpt < spt", mpt, spt)
 				return false
 			}
 		}
@@ -102,11 +105,13 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 	// There is no change in Y when deltaY == 0; so it's always good.
 	if deltaY != 0 {
 		if yIncreasing {
-			if mpt.Y < spt.Y {
+			if int64(mpt.Y) < int64(spt.Y) {
+				// fmt.Println("// Y: mpt > spt", mpt, spt)
 				return false
 			}
 		} else {
-			if mpt.Y > spt.Y {
+			if int64(mpt.Y) > int64(spt.Y) {
+				// fmt.Println("// Y: mpt > spt", mpt, spt)
 				return false
 			}
 		}
@@ -115,11 +120,13 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 	// Need to check that the point equal to or behind of the end point
 	if deltaX != 0 {
 		if xIncreasing {
-			if mpt.X > ept.X {
+			if int64(mpt.X) > int64(ept.X) {
+				// fmt.Println("// X: mpt > ept", mpt, ept)
 				return false
 			}
 		} else {
-			if mpt.X < ept.X {
+			if int64(mpt.X) < int64(ept.X) {
+				// fmt.Println("// X: mpt < ept", mpt, ept)
 				return false
 			}
 		}
@@ -127,11 +134,13 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 	// There is no change in Y when deltaY == 0; so it's always good.
 	if deltaY != 0 {
 		if yIncreasing {
-			if mpt.Y > ept.Y {
+			if int64(mpt.Y) > int64(ept.Y) {
+				// fmt.Println("// Y: mpt > ept", mpt, ept)
 				return false
 			}
 		} else {
-			if mpt.Y < ept.Y {
+			if int64(mpt.Y) < int64(ept.Y) {
+				// fmt.Println("// Y: mpt < ept", mpt, ept)
 				return false
 			}
 		}
@@ -145,29 +154,45 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 			// There is not change in X when deltaX == 0; so it's always good.
 			if deltaX != 0 {
 				if xIncreasing {
-					goodX = mpt.X < pt.X
+					goodX = int64(mpt.X) < int64(pt.X)
 				} else {
-					goodX = mpt.X > pt.X
+					goodX = int64(mpt.X) > int64(pt.X)
 				}
 			}
 			// There is no change in Y when deltaY == 0; so it's always good.
 			if deltaY != 0 {
 				if yIncreasing {
-					goodY = mpt.Y < pt.Y
+					goodY = int64(mpt.Y) < int64(pt.Y)
 				} else {
-					goodY = mpt.Y > pt.Y
+					goodY = int64(mpt.Y) > int64(pt.Y)
 				}
 			}
 			return goodX && goodY
 		}
+
 		return false
 	})
 	if mark == nil {
 		// check to see if the point is equal to start.
-		if mpt.X == spt.X && mpt.Y == spt.Y {
+		if int64(mpt.X) == int64(spt.X) && int64(mpt.Y) == int64(spt.Y) {
 			l.InsertAfter(element, start)
 			return true
 		}
+
+		switch {
+		case deltaX != 0 && xIncreasing && int64(mpt.X) <= int64(ept.X):
+			fallthrough
+		case deltaX != 0 && !xIncreasing && int64(mpt.X) >= int64(ept.X):
+			fallthrough
+		case deltaY != 0 && yIncreasing && int64(mpt.Y) <= int64(ept.Y):
+			fallthrough
+		case deltaX != 0 && !yIncreasing && int64(mpt.Y) >= int64(ept.Y):
+			l.InsertBefore(element, end)
+			return true
+		}
+
+		//fmt.Printf("// Did not find mark: S: %v E: %v ele: %v\n", spt, ept, mpt)
+		//fmt.Println("//", mpt.X, ept.X, mpt.Y, ept.Y)
 		return false
 	}
 

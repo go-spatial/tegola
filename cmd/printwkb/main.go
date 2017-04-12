@@ -3,46 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
+	"log"
 	"strings"
 
 	"github.com/jackc/pgx"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/cmd/printwkb/utils"
 	"github.com/terranodo/tegola/config"
-	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/wkb"
 )
-
-func print(srid int, geostr string, tile tegola.BoundingBox) {
-
-	rd1 := strings.NewReader(geostr)
-	geo, err := wkb.Decode(rd1)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding goemetry: %v", err)
-		os.Exit(2)
-	}
-	if geo == nil {
-		fmt.Fprintf(os.Stderr, "Geo is nil.")
-		os.Exit(0)
-	}
-	gwm, err := basic.ToWebMercator(srid, geo)
-	c := mvt.NewCursor(tile, 4096)
-	g := c.ScaleGeo(gwm.Geometry)
-	cmin, cmax := c.MinMax()
-	fmt.Printf("Rec: %v,%v\n", cmin, cmax)
-	fmt.Printf("Scle GEO: %T: %#[1]v\n", g)
-	cg, err := c.ClipGeo(g)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Clip GEO:%T: %#[1]v\n", cg)
-}
 
 var configFile string
 var mapName string
 var providerLayer string
 var coords [3]int
+var isolateGeo int
 
 func init() {
 	const (
@@ -58,6 +33,7 @@ func init() {
 	flag.IntVar(&(coords[0]), "z", 0, "The Z coord")
 	flag.IntVar(&(coords[1]), "x", 0, "The X coord")
 	flag.IntVar(&(coords[2]), "y", 0, "The Y coord")
+	flag.IntVar(&isolateGeo, "g", -1, "Only grab the geo described. -1 means all of them.")
 }
 
 func splitProviderLayer(providerLayer string) (provider, layer string) {
@@ -96,7 +72,7 @@ func (pl ProviderLayer) pgxConfig() pgx.ConnPoolConfig {
 	}
 }
 
-func LoadProvider(configfile string, providerlayer string) (pl ProviderLayer, err error) {
+func LoadProvider(configFile string, providerlayer string) (pl ProviderLayer, err error) {
 	cfg, err := config.Load(configFile)
 	if err != nil {
 		return pl, err
@@ -145,7 +121,7 @@ func LoadProvider(configfile string, providerlayer string) (pl ProviderLayer, er
 		}
 		pl.srid = int(srid)
 	} else {
-		pl.srid = 4326
+		pl.srid = tegola.WebMercator
 	}
 
 	port, ok := provider["port"].(int64)
@@ -192,6 +168,7 @@ func LoadProvider(configfile string, providerlayer string) (pl ProviderLayer, er
 	}
 	return pl, nil
 }
+
 func main() {
 
 	flag.Parse()
@@ -231,7 +208,7 @@ func main() {
 		maxPt.Y(),
 		provider.srid,
 	)
-	fmt.Println("Running:", sql)
+	fmt.Println("// SQL:", sql)
 	rows, err := pool.Query(sql)
 	if err != nil {
 		panic(fmt.Sprintf("Got the following error (%v) running this sql (%v)", err, sql))
@@ -240,16 +217,21 @@ func main() {
 	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	var geobytes []byte
 	var ok bool
+	var count = -1
 	for rows.Next() {
+		count++
+		if isolateGeo != -1 && isolateGeo != count {
+			log.Printf("Skipping %v", count)
+			continue
+		}
 		vals, err := rows.Values()
 		if err != nil {
 			panic(fmt.Sprintf("Got an error trying to run SQL: %v ; %v", sql, err))
 		}
-		println("Vals:", vals)
-
 		if geobytes, ok = vals[0].([]byte); !ok {
 			panic("Was unable to convert geometry field into bytes.")
 		}
-		print(provider.srid, string(geobytes), bbox)
+		utils.PrintWkbDesc(fmt.Sprintf("wkb%v", count), provider.srid, coords[0], coords[1], coords[2], geobytes)
 	}
+	fmt.Println("// Number of geometries found:", count+1)
 }

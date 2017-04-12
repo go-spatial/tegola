@@ -134,7 +134,7 @@ type cursor struct {
 	x int64
 	y int64
 
-	// The diamentions for the screen tile.
+	// The dimensions for the screen tile.
 	tile tegola.BoundingBox
 
 	// The extent — it is an int, but to make computations easier and not lose precision
@@ -170,10 +170,10 @@ func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
 }
 
 func (c *cursor) MinMax() (min, max maths.Pt) {
-	return maths.Pt{-2, -2},
+	return maths.Pt{-8, -8},
 		maths.Pt{
-			float64(c.extent + 2),
-			float64(c.extent + 2),
+			float64(c.extent + 8),
+			float64(c.extent + 8),
 		}
 }
 
@@ -200,12 +200,176 @@ func (c *cursor) scalept(g tegola.Point) basic.Point {
 		float64(int64((g.Y() - c.tile.Miny) * c.extent / c.yspan)),
 	}
 }
-func (c *cursor) scalelinestr(g tegola.LineString) basic.Line {
-	var ls basic.Line
-	for _, p := range g.Subpoints() {
-		ls = append(ls, c.scalept(p))
+
+func chk3Pts(pt1, pt2, pt3 basic.Point) int {
+	// If the first and third points are equal we only care about
+	// the first point.
+	if tegola.IsPointEqual(pt1, pt3) {
+		return 1
 	}
-	return ls
+	if tegola.IsPointEqual(pt1, pt2) || tegola.IsPointEqual(pt2, pt3) {
+		return 2
+	}
+	return 3
+}
+
+func cleanLine(ols basic.Line) (newline basic.Line) {
+	ls := ols
+	loop := 0
+Restart:
+	count := 0
+	//log.Println("Line:", ls.GoString())
+	if len(ls) < 3 {
+		for i := range ls {
+			newline = append(newline, ls[i])
+		}
+		return newline
+	}
+	for i := 0; i < len(ls); i = i + 1 {
+		//log.Println(len(ls), "I:", i)
+		j, k := i+1, i+2
+		switch {
+		case i == len(ls)-2:
+			k = 0
+		case i == len(ls)-1:
+			j, k = 0, 1
+		}
+
+		// Always add the first point.
+		addFirstPt := true
+		skip := 3 - chk3Pts(ls[i], ls[j], ls[k])
+		//log.Println("Skip returned: ", skip, "I:", i)
+
+		switch {
+		case (k == 0 || k == 1) && skip == 2:
+			addFirstPt = false
+		case k == 1 && skip == 1:
+			// remove the first point from newline
+			newline = newline[1:]
+		case skip == 0:
+			count++
+		}
+		if addFirstPt {
+			newline = append(newline, ls[i])
+		}
+		i += skip
+		//log.Println(len(ls), "EI:", i)
+	}
+	//log.Println("Out of loop")
+
+	if len(ls) != count {
+		ls = newline
+		newline = basic.Line{}
+		loop++
+		if loop > 100 {
+			panic(fmt.Sprintf("infi (%v:%v)?\n%v\n%v", len(ls), count, ols.GoString(), ls.GoString()))
+		}
+		goto Restart
+	}
+	return newline
+}
+
+func bubbleSplitter(ls basic.Line) basic.MultiLine {
+	//return basic.MultiLine{ls}
+
+	seen := make(map[string][]int)
+	key := func(x, y float64) string {
+		return fmt.Sprintf("%v,%v", x, y)
+	}
+	// create a map of all points
+	for i, pt := range ls {
+		k := key(pt.X(), pt.Y())
+		seen[k] = append(seen[k], i)
+	}
+	newlines := make([]basic.Line, 1)
+	for i := 0; i < len(ls); i++ {
+		k := key(ls[i].X(), ls[i].Y())
+		newlines[0] = append(newlines[0], ls[i])
+		idxs := seen[k]
+		if len(idxs) <= 1 {
+			continue
+		}
+		if idxs[len(idxs)-1] == i {
+			continue
+		}
+		// find the next index
+		for j, v := range idxs {
+			if v == i {
+				nextIdx := idxs[j+1]
+				newlines = append(newlines, cleanLine(ls[i:nextIdx]))
+				i = nextIdx + 1
+				break
+			}
+		}
+	}
+	return basic.MultiLine(newlines)
+
+}
+
+func (c *cursor) scalelinestr(g tegola.LineString) basic.MultiLine {
+
+	var ls basic.Line
+	var lpt basic.Point
+
+	for i, p := range g.Subpoints() {
+		npt := c.scalept(p)
+		if i != 0 { // skip check for the first point.
+			if tegola.IsPointEqual(lpt, npt) {
+				// drop any duplicate points.
+				continue
+			}
+		}
+		ls = append(ls, npt)
+		lpt = npt
+	}
+	//return bubbleSplitter(ls)
+	//return bubbleSplitter(cleanLine(ls))
+	lines := bubbleSplitter(cleanLine(ls))
+	var multiline basic.MultiLine
+	for i := range lines {
+		var line []maths.Pt
+		for _, p := range lines[i] {
+			line = append(line, p.AsPt())
+		}
+
+		sline := maths.DouglasPeucker(line, c.tile.Epsilon)
+		if len(sline) >= 2 {
+			multiline = append(multiline, basic.NewLineFromPt(sline...))
+		}
+	}
+	return multiline
+}
+
+func (c *cursor) scalePolygon(g tegola.Polygon) basic.MultiPolygon {
+
+	var mp basic.MultiPolygon
+
+	lines := g.Sublines()
+	if len(lines) == 0 {
+		return basic.MultiPolygon{}
+	}
+
+	// should check the winding order here
+	mainLines := c.scalelinestr(lines[0])
+	for i, _ := range mainLines {
+		p := basic.Polygon{mainLines[i]}
+		mp = append(mp, p)
+	}
+
+	for k := 1; k < len(lines); k++ {
+		lns := c.scalelinestr(lines[k])
+	nextLine:
+		for i, _ := range lns {
+			for j, _ := range mp {
+				if mp[j][0].ContainsLine(lns[i]) {
+					mp[j] = append(mp[j], lns[i])
+					continue nextLine
+				}
+			}
+		}
+	}
+	return mp
+
 }
 
 func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
@@ -225,23 +389,17 @@ func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		for _, l := range g.Lines() {
-			ml = append(ml, c.scalelinestr(l))
+			ml = append(ml, c.scalelinestr(l)...)
 		}
 		return ml
 	case tegola.Polygon:
-		var p basic.Polygon
-		for _, l := range g.Sublines() {
-			p = append(p, c.scalelinestr(l))
-		}
-		return p
+		return c.scalePolygon(g)
+
 	case tegola.MultiPolygon:
 		var mp basic.MultiPolygon
 		for _, p := range g.Polygons() {
-			var np basic.Polygon
-			for _, l := range p.Sublines() {
-				np = append(np, c.scalelinestr(l))
-			}
-			mp = append(mp, np)
+			nmp := c.scalePolygon(p)
+			mp = append(mp, nmp...)
 		}
 		return mp
 	}
@@ -329,9 +487,11 @@ func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent
 
 	//	new cursor
 	c := NewCursor(extent, layerExtent)
+	// We are scaling separately, no need to scale in cursor.
 	c.DisableScaling = true
 
 	geo := c.ScaleGeo(geom)
+
 	if os.Getenv("TEGOLA_CLIPPING") == "mvt" {
 		geo, err = c.ClipGeo(geo)
 		if geo == nil {

@@ -2,14 +2,21 @@ package tegola
 
 import "math"
 
+const (
+	DefaultEpislon = 3.0
+	DefaultExtent  = 4096
+)
+
 //Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
-	Z    int
-	X    int
-	Y    int
-	Lat  float64
-	Long float64
+	Z       int
+	X       int
+	Y       int
+	Lat     float64
+	Long    float64
+	Epislon *float64
+	Extent  *float64
 }
 
 func (t *Tile) Deg2Num() (x, y int) {
@@ -38,10 +45,11 @@ func (t *Tile) BoundingBox() BoundingBox {
 	res := (max * 2) / math.Exp2(float64(t.Z))
 
 	return BoundingBox{
-		Minx: -max + (float64(t.X) * res),
-		Miny: max - (float64(t.Y) * res),
-		Maxx: -max + (float64(t.X) * res) + res,
-		Maxy: max - (float64(t.Y) * res) - res,
+		Minx:    -max + (float64(t.X) * res),
+		Miny:    max - (float64(t.Y) * res),
+		Maxx:    -max + (float64(t.X) * res) + res,
+		Maxy:    max - (float64(t.Y) * res) - res,
+		Epsilon: t.ZEpislon(),
 	}
 }
 
@@ -50,4 +58,19 @@ func (t *Tile) BoundingBox() BoundingBox {
 //	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
 func (t *Tile) ZRes() float64 {
 	return 40075016.6855785 / (256 * math.Exp2(float64(t.Z)))
+}
+
+func (t *Tile) ZEpislon() float64 {
+	epi := float64(DefaultEpislon)
+	if t.Epislon != nil {
+		epi = *t.Epislon
+	}
+	if epi <= 0 {
+		return 0
+	}
+	ext := float64(DefaultExtent)
+	if t.Extent != nil {
+		ext = *t.Extent
+	}
+	return epi / (math.Pow(float64(t.Z), 2) * ext)
 }
