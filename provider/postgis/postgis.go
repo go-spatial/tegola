@@ -385,12 +385,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	layer = new(mvt.Layer)
 	layer.Name = layerName
 
-	var count int
-	// var didEnd bool
-	//log.Printf("Running SQL:\n%v", sql)
-
 	for rows.Next() {
-		count++
 		var geom tegola.Geometry
 		var gid uint64
 
@@ -455,7 +450,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 					continue
 				}
 
-				//	hstore is a special case
+				//	hstore
 				if fdescs[i].DataTypeName == "hstore" {
 					//	parse our Hstore values into keys and values
 					keys, values, err := pgx.ParseHstore(v.(string))
@@ -469,6 +464,19 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 							gtags[k] = values[i].String
 						}
 					}
+					continue
+				}
+
+				//	decimal support
+				//	pgx returns numeric datatypes as strings so we need to handle parsing them ourselves
+				//	https://github.com/jackc/pgx/issues/56
+				if fdescs[i].DataTypeName == "numeric" {
+					num, err := strconv.ParseFloat(v.(string), 64)
+					if err != nil {
+						return nil, fmt.Errorf("Unable to parse numeric (%v) to float64 err: %v", v.(string), err)
+					}
+
+					gtags[fdescs[i].Name] = num
 					continue
 				}
 
@@ -494,10 +502,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 			Geometry: geom,
 		})
 	}
-	/*
-		didEnd = true
-		log.Printf("Got %v rows running:\n%v\nDid complete %v\n", count, sql, didEnd)
-	*/
+
 	return layer, err
 }
 

@@ -73,6 +73,7 @@ func TestMVTLayer(t *testing.T) {
 			},
 			expectedFeatureCount: 614,
 		},
+		//	scalerank test
 		{
 			config: map[string]interface{}{
 				postgis.ConfigKeyHost:     "localhost",
@@ -93,6 +94,29 @@ func TestMVTLayer(t *testing.T) {
 				Y: 1,
 			},
 			expectedFeatureCount: 23,
+		},
+		//	decode numeric(x,x) types
+		{
+			config: map[string]interface{}{
+				postgis.ConfigKeyHost:     "localhost",
+				postgis.ConfigKeyPort:     int64(5432),
+				postgis.ConfigKeyDB:       "tegola",
+				postgis.ConfigKeyUser:     "postgres",
+				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyLayers: []map[string]interface{}{
+					{
+						postgis.ConfigKeyLayerName:   "buildings",
+						postgis.ConfigKeyGeomIDField: "osm_id",
+						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, nullif(as_numeric(height),-1) AS height, type FROM osm_buildings_test WHERE geometry && !BBOX!",
+					},
+				},
+			},
+			tile: tegola.Tile{
+				Z: 16,
+				X: 11241,
+				Y: 26168,
+			},
+			expectedFeatureCount: 101,
 		},
 	}
 
