@@ -51,3 +51,9 @@ func (t *Tile) BoundingBox() BoundingBox {
 func (t *Tile) ZRes() float64 {
 	return 40075016.6855785 / (256 * math.Exp2(float64(t.Z)))
 }
+
+//ZRes takes a web mercator zoom level and returns the pixel resolution (geodetic) for that
+//	scale, assuming 256x256 pixel tiles. Non-integer zoom levels are accepted.
+func (t *Tile) ZResGeodetic() float64 {
+	return 180 / 256.0 / math.Pow(2, float64(t.Z))
+}
