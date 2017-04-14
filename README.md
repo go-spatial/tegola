@@ -1,6 +1,9 @@
 # Tegola
 
 [![Build Status](https://travis-ci.org/terranodo/tegola.svg?branch=master)](https://travis-ci.org/terranodo/tegola)
+[![Report Card](https://goreportcard.com/badge/github.com/terranodo/tegola)](https://goreportcard.com/report/github.com/terranodo/tegola)
+[![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/terranodo/tegola)
+[![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/terranodo/tegola/blob/master/LICENSE.md)
 
 Tegola is a high performance vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) leveraging PostGIS as the data provider.
 
@@ -165,6 +168,18 @@ The requested tile will be encode a layer with the `name` value set to `debug` a
  - `debug_outline`: a line feature that traces the border of the tile
  - `debug_text`: a point feature in the middle of the tile with the following tags:
    - `zxy`: a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
+
+## Building from source
+
+Tegola is written in [Go](https://golang.org/) and requires Go 1.7+ to compile from source. To build tegola from source, make sure you have Go installed and have cloned the repository to your `$GOPATH` or `$GOROOT`. Navigate to the repository then run the following commands:
+
+```bash
+cd cmd/tegola/
+go build -o tegola *.go
+```
+
+You will now have a binary named `tegola` in the current directory which is [ready for running](#running-tegola).
+
 
 ## Specifications
 - [Well Known Binary (WKB)](http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm)

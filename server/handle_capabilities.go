@@ -48,6 +48,15 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		var capabilities Capabilities
 		capabilities.Version = Version
 
+		var rScheme string
+		//	check if the request is http or https. the scheme is needed for the TileURLs and
+		//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
+		if r.TLS != nil {
+			rScheme = "https://"
+		} else {
+			rScheme = "http://"
+		}
+
 		//	iterate our registered maps
 		for _, m := range maps {
 			//	build the map details
@@ -57,9 +66,9 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				Bounds:      m.Bounds,
 				Center:      m.Center,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, m.Name),
+					fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name),
 				},
-				Capabilities: fmt.Sprintf("%v%v/capabilities/%v.json", r.URL.Scheme, r.Host, m.Name),
+				Capabilities: fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, r.Host, m.Name),
 			}
 
 			for _, layer := range m.Layers {
@@ -67,7 +76,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				cLayer := CapabilitiesLayer{
 					Name: layer.Name,
 					Tiles: []string{
-						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, m.Name, layer.Name),
+						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name, layer.Name),
 					},
 					MinZoom: layer.MinZoom,
 					MaxZoom: layer.MaxZoom,

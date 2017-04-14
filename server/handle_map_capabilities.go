@@ -40,6 +40,15 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	//	build payload
 	case "GET":
+		var rScheme string
+		//	check if the request is http or https. the scheme is needed for the TileURLs and
+		//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
+		if r.TLS != nil {
+			rScheme = "https://"
+		} else {
+			rScheme = "http://"
+		}
+
 		params := httptreemux.ContextParams(r.Context())
 
 		//	read the map_name value from the request
@@ -102,7 +111,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				MinZoom: l.MinZoom,
 				MaxZoom: l.MaxZoom,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, req.mapName, l.Name),
+					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName, l.Name),
 				},
 			}
 
@@ -111,7 +120,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		}
 
 		//	build our URL scheme for the tile grid
-		tileJSON.Tiles = append(tileJSON.Tiles, fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", r.URL.Scheme, r.Host, req.mapName))
+		tileJSON.Tiles = append(tileJSON.Tiles, fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName))
 
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header
