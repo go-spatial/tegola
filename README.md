@@ -13,7 +13,7 @@ Tegola is a high performance vector tile server delivering [Mapbox Vector Tiles]
 - [x] Support for PostGIS data provider.
 
 ## Running Tegola
-1. Download the appropriate binary of tegola for your platoform via the [release page](https://github.com/terranodo/tegola/releases).
+1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/terranodo/tegola/releases).
 2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
@@ -57,7 +57,7 @@ Will return a JSON encoded list of the server's configured maps and layers with 
 ## Configuration
 The tegola config file uses the [TOML](https://github.com/toml-lang/toml) format. The following example shows how to configure a PostGIS data provider with two layers. The first layer includes a `tablename`, `geometry_field` and an `id_field`. The second layer uses a custom `sql` statement instead of the `tablename` property.
 
-Under the `maps` section, map layers are associated with dataprovider layers and their `min_zoom` and `max_zoom` values are defined. Optionally, `custom_tags` can be setup which will be encoded into the layer. If the same tags are returned from a data provider, the dataprovider's values will take precidence.
+Under the `maps` section, map layers are associated with dataprovider layers and their `min_zoom` and `max_zoom` values are defined. Optionally, `custom_tags` can be setup which will be encoded into the layer. If the same tags are returned from a data provider, the data provider's values will take precedence.
 
 ```toml
 
