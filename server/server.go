@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/dimfeld/httptreemux"
 )
@@ -17,8 +18,12 @@ const (
 	MaxZoom = 20
 )
 
-//	set at runtime from main
-var Version string
+var (
+	//	set at runtime from main
+	Version string
+	//	configurable via the tegola config.toml file
+	HostName string
+)
 
 //	incoming requests are associated with a map
 var maps = map[string]Map{}
@@ -64,4 +69,25 @@ func Start(port string) {
 
 	//	start our server
 	log.Fatal(http.ListenAndServe(port, r))
+}
+
+//	determins the hostname to return based on the following hierarchy
+//	- HostName var as configured vai the config file
+//	- Last entry in the X-Forwarded-For header of the request
+//	- The request host
+func hostName(r *http.Request) string {
+	//	configured
+	if HostName != "" {
+		return HostName
+	}
+
+	//	check the forwarded header
+	if r.Header.Get("X-Forwarded-For") != "" {
+		forwarded := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+		//	use the last entry in the list
+		return strings.TrimSpace(forwarded[len(forwarded)-1])
+	}
+
+	//	default to the Host provided in the request
+	return r.Host
 }

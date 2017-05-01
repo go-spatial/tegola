@@ -16,6 +16,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 	//	setup a new provider
 	testcases := []struct {
 		handler    http.Handler
+		hostName   string
 		uri        string
 		uriPattern string
 		reqMethod  string
@@ -23,6 +24,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 	}{
 		{
 			handler:    server.HandleCapabilities{},
+			hostName:   "",
 			uri:        "http://localhost:8080/capabilities/test-map.json",
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
@@ -77,6 +79,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 		},
 		{
 			handler:    server.HandleCapabilities{},
+			hostName:   "cdn.tegola.io",
 			uri:        "http://localhost:8080/capabilities/test-map.json?debug=true",
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
@@ -92,7 +95,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				Scheme:      "zxy",
 				TileJSON:    tilejson.Version,
 				Tiles: []string{
-					"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
+					"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
 				},
 				Grids:    []string{},
 				Data:     []string{},
@@ -110,7 +113,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						MinZoom:      testLayer1.MinZoom,
 						MaxZoom:      testLayer1.MaxZoom,
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf?debug=true",
+							"http://cdn.tegola.io/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf?debug=true",
 						},
 					},
 					{
@@ -123,7 +126,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf?debug=true",
+							"http://cdn.tegola.io/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf?debug=true",
 						},
 					},
 					{
@@ -136,7 +139,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						MinZoom:      0,
 						MaxZoom:      server.MaxZoom,
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/debug/{z}/{x}/{y}.pbf?debug=true",
+							"http://cdn.tegola.io/maps/test-map/debug/{z}/{x}/{y}.pbf?debug=true",
 						},
 					},
 				},
@@ -146,6 +149,8 @@ func TestHandleMapCapabilities(t *testing.T) {
 
 	for i, test := range testcases {
 		var err error
+
+		server.HostName = test.hostName
 
 		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
