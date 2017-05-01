@@ -49,10 +49,10 @@ func TestParse(t *testing.T) {
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					ServerName: "cdn.tegola.io",
-					Port:       ":8080",
-					LogFile:    "/var/log/tegola/tegola.log",
-					LogFormat:  "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
+					HostName:  "cdn.tegola.io",
+					Port:      ":8080",
+					LogFile:   "/var/log/tegola/tegola.log",
+					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
 				},
 				Providers: []map[string]interface{}{
 					{
