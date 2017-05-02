@@ -89,7 +89,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 		//	determing the min and max zoom for this map
 		for i, l := range m.Layers {
-			var tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName, l.Name)
+			var tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName, l.Name)
 
 			//	if we have a debug param add it to our URLs
 			if query.Get("debug") == "true" {
@@ -112,7 +112,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				tileJSON.MaxZoom = l.MaxZoom
 			}
 
-			tiles := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName, l.Name)
+			tiles := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName, l.Name)
 			if r.URL.Query().Get("debug") != "" {
 				tiles = tiles + "?debug=true"
 			}
@@ -133,13 +133,13 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 		}
 
-		tileURL := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName)
+		tileURL := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName)
 
 		//	if we have a debug param add it to our URLs
 		if query.Get("debug") == "true" {
 			tileURL = tileURL + "?debug=true"
 
-			debugTileURL := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, r.Host, req.mapName, "debug")
+			debugTileURL := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), req.mapName, "debug")
 
 			//	we also need to add a debug vector layer
 			//	build our vector layer details
@@ -159,7 +159,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 		}
 
-		tiles := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName)
+		tiles := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName)
 		if r.URL.Query().Get("debug") != "" {
 			tiles = tiles + "?debug=true"
 		}
