@@ -199,7 +199,7 @@ func main() {
 		panic(fmt.Sprintf("Failed while creating connection pool: %v", err))
 	}
 	sql := fmt.Sprintf(
-		`SELECT  ST_AsBinary("%v") AS "geometry" from %v WHERE "%[1]v" && ST_MakeEnvelope(%[3]v,%v,%v,%v,%v)`,
+		`SELECT  ST_AsBinary("%v") AS "geometry" from "%v" WHERE "%[1]v" && ST_MakeEnvelope(%[3]v,%v,%v,%v,%v)`,
 		provider.geoField,
 		provider.table,
 		minPt.X(),

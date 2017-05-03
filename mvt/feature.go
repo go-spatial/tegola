@@ -22,9 +22,18 @@ var (
 	ErrNilGeometryType     = fmt.Errorf("Nil geometry passed")
 )
 
+var EnableClipping = false
+
+func init() {
+	if os.Getenv("TEGOLA_CLIPPING") == "mvt" {
+		log.Println("Clipping has been enabled.")
+		EnableClipping = true
+	}
+}
+
 // TODO: Need to put in validation for the Geometry, at current the system
 // does not check to make sure that the geometry is following the rules as
-// laided out by the spec. It just assumes the user is good.
+// laid out by the spec. It just assumes the user is good.
 
 // Feature describes a feature of a Layer. A layer will contain multiple features
 // each of which has a geometry describing the interesting thing, and the metadata
@@ -272,7 +281,7 @@ Restart:
 }
 
 func bubbleSplitter(ls basic.Line) basic.MultiLine {
-	//return basic.MultiLine{ls}
+	return basic.MultiLine{ls}
 
 	seen := make(map[string][]int)
 	key := func(x, y float64) string {
@@ -308,6 +317,44 @@ func bubbleSplitter(ls basic.Line) basic.MultiLine {
 
 }
 
+func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
+	line := basic.CloneLine(g)
+	if len(line) <= 4 || maths.DistOfLine(g) < tolerance {
+		return line
+	}
+	return basic.NewLineFromPt(maths.DouglasPeucker(line.AsPts(), tolerance, true)...)
+}
+
+func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
+
+	lines := g.Sublines()
+	if len(lines) == 0 {
+		return nil
+	}
+
+	// HMMJ
+	sqTolerance := tolerance * tolerance
+
+	// First lets look the first line, then we will simplify the other lines.
+	area := maths.AreaOfPolygonLineString(lines[0])
+	if area < sqTolerance {
+		return basic.ClonePolygon(g)
+	}
+	var poly basic.Polygon
+	poly = append(poly, basic.NewLineFromPt(maths.DouglasPeucker(basic.CloneLine(lines[0]).AsPts(), sqTolerance, true)...))
+	for i := 1; i < len(lines); i++ {
+		area := maths.AreaOfPolygonLineString(lines[0])
+		l := basic.CloneLine(lines[i])
+		if area < sqTolerance {
+			// don't simplify the internal line
+			poly = append(poly, l)
+			continue
+		}
+		poly = append(poly, basic.NewLineFromPt(maths.DouglasPeucker(l.AsPts(), sqTolerance, true)...))
+	}
+	return poly
+}
+
 func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine {
 
 	var ls basic.Line
@@ -324,8 +371,8 @@ func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine
 		ls = append(ls, npt)
 		lpt = npt
 	}
-	var multiline basic.MultiLine
-	//return bubbleSplitter(ls)
+	// var multiline basic.MultiLine
+	return bubbleSplitter(ls)
 
 	//return bubbleSplitter(cleanLine(ls))
 	/*
@@ -343,38 +390,34 @@ func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine
 			}
 		}
 	*/
-	lines := bubbleSplitter(cleanLine(ls))
-	for i := range lines {
-		ln := lines[i]
+	/*
+		lines := bubbleSplitter(cleanLine(ls))
+		for i := range lines {
 
-		simplify := true
-		if len(ln) <= 4 {
-			simplify = false
+			simplify := true
+			if len(lines[i]) <= 4 {
+				simplify = false
+			}
+
+			if polygon {
+				sqTolerance := c.tile.Epsilon * c.tile.Epsilon
+				area := maths.AreaOfPolygonLineString(lines[i])
+				simplify = simplify && area < sqTolerance
+			} else {
+				dist := maths.DistOfLine(lines[i])
+				simplify = simplify && dist < c.tile.Epsilon
+			}
+
+			if !simplify {
+				multiline = append(multiline, lines[i])
+				continue
+			}
+
+			nls := basic.NewLineFromPt(maths.DouglasPeucker(lines[i].AsPts(), c.tile.Epsilon, simplify)...)
+			multiline = append(multiline, nls)
 		}
-
-		if polygon {
-			sqTolerance := c.tile.Epsilon * c.tile.Epsilon
-			area := maths.AreaOfPolygonLineString(ln)
-			simplify = simplify && area < sqTolerance
-		} else {
-			dist := maths.DistOfLine(ln)
-			simplify = simplify && dist < c.tile.Epsilon
-		}
-
-		if !simplify {
-			multiline = append(multiline, ln)
-			continue
-		}
-
-		var line []maths.Pt
-		for _, p := range ln {
-			line = append(line, p.AsPt())
-		}
-
-		nls := basic.NewLineFromPt(maths.DouglasPeucker(line, c.tile.Epsilon)...)
-		multiline = append(multiline, nls)
-	}
-	return multiline
+		return multiline
+	*/
 
 }
 
@@ -423,19 +466,24 @@ func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
 		}
 		return mp
 	case tegola.LineString:
+		// return c.scalelinestr(simplifyLineString(g, c.tile.Epsilon), false)
 		return c.scalelinestr(g, false)
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		for _, l := range g.Lines() {
+			//ml = append(ml, c.scalelinestr(simplifyLineString(l, c.tile.Epsilon), false)...)
 			ml = append(ml, c.scalelinestr(l, false)...)
 		}
 		return ml
 	case tegola.Polygon:
+		//return c.scalePolygon(simplifyPolygon(g, c.tile.Epsilon))
 		return c.scalePolygon(g)
 
 	case tegola.MultiPolygon:
 		var mp basic.MultiPolygon
 		for _, p := range g.Polygons() {
+
+			// nmp := c.scalePolygon(simplifyPolygon(p, c.tile.Epsilon))
 			nmp := c.scalePolygon(p)
 			mp = append(mp, nmp...)
 		}
@@ -530,7 +578,7 @@ func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent
 
 	geo := c.ScaleGeo(geom)
 
-	if os.Getenv("TEGOLA_CLIPPING") == "mvt" {
+	if EnableClipping {
 		geo, err = c.ClipGeo(geo)
 		if geo == nil {
 			return []uint32{}, -1, nil

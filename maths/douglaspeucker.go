@@ -1,7 +1,7 @@
 package maths
 
-func DouglasPeucker(points []Pt, tolerence float64) []Pt {
-	if tolerence <= 0 || len(points) <= 2 {
+func DouglasPeucker(points []Pt, tolerence float64, simplify bool) []Pt {
+	if tolerence <= 0 || len(points) <= 2 || !simplify {
 		return points
 	}
 
@@ -19,8 +19,8 @@ func DouglasPeucker(points []Pt, tolerence float64) []Pt {
 		}
 	}
 	if dmax > epsilon {
-		rec1 := DouglasPeucker(points[0:idx], epsilon)
-		rec2 := DouglasPeucker(points[idx:len(points)-1], epsilon)
+		rec1 := DouglasPeucker(points[0:idx], epsilon, simplify)
+		rec2 := DouglasPeucker(points[idx:len(points)-1], epsilon, simplify)
 
 		newpts := append(rec1, rec2...)
 		return newpts

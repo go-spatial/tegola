@@ -426,6 +426,8 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				}
 			case plyr.IDFieldName:
 				switch aval := v.(type) {
+				case float64:
+					gid = uint64(aval)
 				case int64:
 					gid = uint64(aval)
 				case uint64:
@@ -446,8 +448,15 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 					gid = uint64(aval)
 				case uint32:
 					gid = uint64(aval)
+				case string:
+					var err error
+					gid, err = strconv.ParseUint(aval, 10, 64)
+					if err != nil {
+						return nil, err
+					}
+
 				default:
-					return nil, fmt.Errorf("Unable to convert geometry ID field (%v) into a uint64 for layer (%v)", plyr.IDFieldName, layerName)
+					return nil, fmt.Errorf("Unable to convert geometry ID field (%v [%T]) into a uint64 for layer (%v)", plyr.IDFieldName, v, layerName)
 				}
 			default:
 				if vals[i] == nil {

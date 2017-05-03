@@ -542,7 +542,7 @@ func LineString(line tegola.LineString, min, max maths.Pt, extant int) (ls []bas
 	emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
 	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
 	r := region.New(maths.Clockwise, emin, emax)
-	// I don't think this makes sense for a unconnected pollygon
+	// I don't think this makes sense for a unconnected polygon
 	// Linestrings are not connected. So, for these we just need to walk each point and see if it's within the clipping rectangle.
 	// When we enter the clipping rectangle, we need to calculate the interaction point, and start a new line.
 	// When we leave the clipping rectangle, we need to calculated the interaction point, and stop the line.
@@ -672,7 +672,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 }
 func Geometry(geo tegola.Geometry, min, max maths.Pt) (basic.Geometry, error) {
 	// log.Println("Clipping Geometry")
-	var extant = 0
+	var extant = 2
 	switch g := geo.(type) {
 
 	case tegola.Point:

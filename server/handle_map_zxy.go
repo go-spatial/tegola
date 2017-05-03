@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/dustin/go-humanize"
 	"github.com/golang/protobuf/proto"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
 )
@@ -28,6 +32,16 @@ type HandleMapZXY struct {
 	extension string
 	//	debug
 	debug bool
+}
+
+// Weather to show timing data for generating tiles.
+var DisplayTiming = false
+
+func init() {
+	if os.Getenv("TEGOLA_TIMING") != "" {
+		log.Println("Timing   has been enabled.")
+		DisplayTiming = true
+	}
 }
 
 //	parseURI reads the request URI and extracts the various values for the request
@@ -172,11 +186,16 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	generate our vector tile
+		start := time.Now()
 		vtile, err := mvtTile.VTile(tile.BoundingBox())
 		if err != nil {
 			log.Printf("Error Getting VTile: %v", err)
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
+		}
+		elapsed := time.Since(start)
+		if DisplayTiming {
+			log.Printf("Generate tile for maps/%v/%v/%v/%v [%s]", req.mapName, tile.Z, tile.X, tile.Y, elapsed)
 		}
 
 		//	marshal our tile into a protocol buffer
@@ -199,7 +218,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//	check for tile size warnings
 		if len(pbyte) > MaxTileSize {
-			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
+			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, humanize.Bytes(uint64(len(pbyte))))
 		}
 
 		//	log the request

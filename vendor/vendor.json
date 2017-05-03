@@ -21,6 +21,12 @@
 			"revisionTime": "2016-10-04T02:10:53Z"
 		},
 		{
+			"checksumSHA1": "rhLUtXvcmouYuBwOq9X/nYKzvNg=",
+			"path": "github.com/dustin/go-humanize",
+			"revision": "259d2a102b871d17f30e3cd9881a642961a1e486",
+			"revisionTime": "2017-02-28T07:34:54Z"
+		},
+		{
 			"checksumSHA1": "/TU0r8yAEpNvUWbxosqlXi416Os=",
 			"path": "github.com/gdey/tbltest",
 			"revision": "af8abc47b052b70d6527a2113c2cc417849889f2",

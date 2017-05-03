@@ -17,6 +17,14 @@ func (Line) basicType()                      {}
 func (Line) String() string                  { return "Line" }
 func (l Line) Direction() maths.WindingOrder { return maths.WindingOrderOfLine(l) }
 
+func (l Line) AsPts() []maths.Pt {
+	var line []maths.Pt
+	for _, p := range l {
+		line = append(line, p.AsPt())
+	}
+	return line
+}
+
 // Contains tells you weather the given point is contained by the Linestring.
 // This assumes the linestring is a connected linestring.
 func (l Line) Contains(pt Point) bool {
