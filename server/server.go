@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/dimfeld/httptreemux"
 )
@@ -72,20 +71,12 @@ func Start(port string) {
 }
 
 //	determins the hostname to return based on the following hierarchy
-//	- HostName var as configured vai the config file
-//	- Last entry in the X-Forwarded-For header of the request
+//	- HostName var as configured via the config file
 //	- The request host
 func hostName(r *http.Request) string {
 	//	configured
 	if HostName != "" {
 		return HostName
-	}
-
-	//	check the forwarded header
-	if r.Header.Get("X-Forwarded-For") != "" {
-		forwarded := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
-		//	use the last entry in the list
-		return strings.TrimSpace(forwarded[len(forwarded)-1])
 	}
 
 	//	default to the Host provided in the request
