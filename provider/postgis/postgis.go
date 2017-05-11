@@ -350,21 +350,21 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	}
 
 	textent := tile.BoundingBox()
-	minGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Minx, textent.Miny})
+	minGeo, err := basic.FromWebMercator(plyr.SRID, basic.Point{textent.Minx, textent.Miny})
 	if err != nil {
 		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
 	}
-	maxGeo, err := basic.FromWebMercator(plyr.SRID, &basic.Point{textent.Maxx, textent.Maxy})
+	maxGeo, err := basic.FromWebMercator(plyr.SRID, basic.Point{textent.Maxx, textent.Maxy})
 	if err != nil {
 		return nil, fmt.Errorf("Got error trying to convert tile point. %v ", err)
 	}
-	minPt, ok := minGeo.(*basic.Point)
+	minPt, ok := minGeo.(basic.Point)
 	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", minGeo)
+		return nil, fmt.Errorf("Expected Point, got %t %[1]v", minGeo)
 	}
-	maxPt, ok := maxGeo.(*basic.Point)
+	maxPt, ok := maxGeo.(basic.Point)
 	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo)
+		return nil, fmt.Errorf("Expected Point, got %t %[1]v", maxGeo)
 	}
 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)

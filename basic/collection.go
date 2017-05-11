@@ -8,10 +8,10 @@ type Collection []interface {
 }
 
 //Geometeries return a set of geometeies that make that collection.
-func (c *Collection) Geometeries() (geometeries []tegola.Geometry) {
-	geometeries = make([]tegola.Geometry, 0, len(*c))
-	for i := range *c {
-		geometeries = append(geometeries, &((*c)[i]))
+func (c Collection) Geometeries() (geometeries []tegola.Geometry) {
+	geometeries = make([]tegola.Geometry, 0, len(c))
+	for i := range c {
+		geometeries = append(geometeries, c[i])
 	}
 	return geometeries
 }
