@@ -173,6 +173,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//	generate our vector tile
 		vtile, err := mvtTile.VTile(tile.BoundingBox())
+		//vtile, err := mvtTile.VTileWithContext(ctx, tile.BoundingBox())
 		if err != nil {
 			log.Printf("Error Getting VTile: %v", err)
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)

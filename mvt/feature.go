@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
@@ -68,15 +70,19 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 	return f
 }
 
-// VTileFeature will return a vectorTile.Feature that would represent the Feature
 func (f *Feature) VTileFeature(keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
+	return f.VTileFeatureWithContext(context.Background(), keys, vals, extent, layerExtent)
+}
+
+// VTileFeature will return a vectorTile.Feature that would represent the Feature
+func (f *Feature) VTileFeatureWithContext(ctx context.Context, keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keys, vals, f); err != nil {
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(f.Geometry, extent, layerExtent)
+	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent)
 	if err != nil {
 		return tf, err
 	}
@@ -517,7 +523,7 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 
 	if geom == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
@@ -531,6 +537,9 @@ func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent
 	geo := c.ScaleGeo(geom)
 
 	if os.Getenv("TEGOLA_CLIPPING") == "mvt" {
+		if ctx.Err() != nil {
+			return []uint32{}, -1, ctx.Err()
+		}
 		geo, err = c.ClipGeo(geo)
 		if geo == nil {
 			return []uint32{}, -1, nil
@@ -539,6 +548,10 @@ func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent
 			log.Printf("We got the following error clipping: %v", err)
 			return nil, vectorTile.Tile_UNKNOWN, err
 		}
+
+	}
+	if ctx.Err() != nil {
+		return []uint32{}, -1, ctx.Err()
 	}
 	switch t := geo.(type) {
 	case tegola.Point:

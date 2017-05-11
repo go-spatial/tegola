@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
@@ -359,7 +361,9 @@ func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 	}
 }
 
-func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
+
+
+func (p Provider) MVTLayerWithContext(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
 
 	plyr, ok := p.layers[layerName]
 	if !ok {
@@ -369,6 +373,11 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	sql, err := replaceTokens(&plyr, tile)
 	if err != nil {
 		return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
+	}
+
+	// do a quick context check:
+	if ctx.Err() != nil {
+		return nil, mvt.ErrCanceled
 	}
 
 	rows, err := p.pool.Query(sql)
@@ -385,7 +394,14 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	layer = new(mvt.Layer)
 	layer.Name = layerName
 
+
+
+
 	for rows.Next() {
+		// do a quick context check:
+		if ctx.Err() != nil {
+			return nil, mvt.ErrCanceled
+		}
 		var geom tegola.Geometry
 		var gid uint64
 
@@ -399,6 +415,10 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 
 		//	iterate the values returned from our row
 		for i, v := range vals {
+			// do a quick context check:
+			if ctx.Err() != nil {
+				return nil, mvt.ErrCanceled
+			}
 			switch fdescs[i].Name {
 			case plyr.GeomFieldName:
 				if geobytes, ok = v.([]byte); !ok {
@@ -504,6 +524,10 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	}
 
 	return layer, err
+}
+
+func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
+	return p.MVTLayerWithContext(context.Background(),layerName, tile,tags)
 }
 
 //	replaceTokens replaces tokens in the provided SQL string
