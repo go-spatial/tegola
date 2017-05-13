@@ -88,7 +88,7 @@ func PToXY(c ...float64) ([]float64, error) {
 	if len(c) < 2 {
 		return c, ErrCoordsRequire2Values
 	}
-	log.Println("Lon/Lat", c)
+	//	log.Println("Lon/Lat", c)
 	//x, y := PLonToX(c[0]), PLatToY(c[1])
 
 	crds := []float64{PLonToX(c[0]), PLatToY(c[1])}

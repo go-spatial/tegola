@@ -1,12 +1,11 @@
 package mvt
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-
-	"context"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
@@ -538,6 +537,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 
 	if os.Getenv("TEGOLA_CLIPPING") == "mvt" {
 		if ctx.Err() != nil {
+			log.Println("encodeGeometry ctx.Err()", ctx.Err())
 			return []uint32{}, -1, ctx.Err()
 		}
 		geo, err = c.ClipGeo(geo)

@@ -60,7 +60,7 @@ const Name = "postgis"
 const (
 	DefaultPort    = 5432
 	DefaultSRID    = tegola.WebMercator
-	DefaultMaxConn = 5
+	DefaultMaxConn = 100
 )
 
 const (
@@ -361,8 +361,6 @@ func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 	}
 }
 
-
-
 func (p Provider) MVTLayerWithContext(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
 
 	plyr, ok := p.layers[layerName]
@@ -394,14 +392,13 @@ func (p Provider) MVTLayerWithContext(ctx context.Context, layerName string, til
 	layer = new(mvt.Layer)
 	layer.Name = layerName
 
-
-
-
 	for rows.Next() {
 		// do a quick context check:
 		if ctx.Err() != nil {
+			log.Println("MVTLayerWithContext err:", err)
 			return nil, mvt.ErrCanceled
 		}
+
 		var geom tegola.Geometry
 		var gid uint64
 
@@ -527,7 +524,7 @@ func (p Provider) MVTLayerWithContext(ctx context.Context, layerName string, til
 }
 
 func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
-	return p.MVTLayerWithContext(context.Background(),layerName, tile,tags)
+	return p.MVTLayerWithContext(context.Background(), layerName, tile, tags)
 }
 
 //	replaceTokens replaces tokens in the provided SQL string

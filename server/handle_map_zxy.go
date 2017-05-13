@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -171,11 +172,26 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			mvtTile.AddLayers(debugLayer)
 		}
 
+		//	log.Printf("context %+v", r.Context())
+		ctx, cancel := context.WithCancel(r.Context())
+
+		req := r.WithContext(ctx)
+
+		notifyCancel := w.(http.CloseNotifier).CloseNotify()
+		go func() {
+			select {
+			case <-notifyCancel:
+				cancel()
+			case <-ctx.Done():
+				//	work complete
+			}
+		}()
+
 		//	generate our vector tile
-		vtile, err := mvtTile.VTile(tile.BoundingBox())
-		//vtile, err := mvtTile.VTileWithContext(ctx, tile.BoundingBox())
+		//	vtile, err := mvtTile.VTile(tile.BoundingBox())
+		vtile, err := mvtTile.VTileWithContext(req.Context(), tile.BoundingBox())
 		if err != nil {
-			log.Printf("Error Getting VTile: %v", err)
+			//	log.Printf("Error Getting VTile: %v", err)
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}

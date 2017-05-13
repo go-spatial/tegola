@@ -6,7 +6,7 @@ name = "bonn_osm"
 type = "postgis"
 host = "localhost"
 port = 5432
-database = "bonn_osm" 
+database = "bonn_osm"
 user = "ARolek"
 password = ""
 
