@@ -70,12 +70,8 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 	return f
 }
 
-func (f *Feature) VTileFeature(keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
-	return f.VTileFeatureWithContext(context.Background(), keys, vals, extent, layerExtent)
-}
-
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeatureWithContext(ctx context.Context, keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keys, vals, f); err != nil {

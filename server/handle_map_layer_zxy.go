@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"context"
+
 	"github.com/dimfeld/httptreemux"
 	"github.com/golang/protobuf/proto"
 	"github.com/terranodo/tegola"
@@ -161,7 +163,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					defer wg.Done()
 
 					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
+					mvtLayer, err := l.Provider.MVTLayer(context.Background(), l.Name, tile, l.DefaultTags)
 					if err != nil {
 						errMsg := fmt.Sprintf("Error Getting MVTLayer: %v", err)
 						log.Println(errMsg)
@@ -188,7 +190,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	generate our vector tile
-		vtile, err := mvtTile.VTile(tile.BoundingBox())
+		vtile, err := mvtTile.VTile(context.Background(), tile.BoundingBox())
 		if err != nil {
 			errMsg := fmt.Sprintf("Error Getting VTile: %v", err.Error())
 			log.Println(errMsg)

@@ -17,10 +17,7 @@ const (
 
 type testMVTProvider struct{}
 
-func (tp *testMVTProvider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
-	return tp.MVTLayerWithContext(context.Background(), layerName, tile, tags)
-}
-func (tp *testMVTProvider) MVTLayerWithContext(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
+func (tp *testMVTProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
 	var layer mvt.Layer
 
 	return &layer, nil
