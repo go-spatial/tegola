@@ -67,7 +67,7 @@ func (tc *PolygonTestCase) DrawTestCase(got []basic.Polygon, filename string) {
 	for _, p := range got {
 		draw.Polygon(m, tc.min, &p, GotColor)
 	}
-	draw.Orgin(m, tc.min, nil)
+	draw.Origin(m, tc.min, nil)
 	f, err := os.Create(filename)
 	if err != nil {
 		log.Printf("Error creating file %v: %v\n", filename, err)

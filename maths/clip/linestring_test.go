@@ -38,7 +38,7 @@ func drawTestCase(tc *TestCase, got [][]float64, filename string) {
 	for _, i := range got {
 		draw.Segment(m, minx, miny, i, GotColor)
 	}
-	draw.Orgin(m, min, nil)
+	draw.Origin(m, min, nil)
 	f, err := os.Create(filename)
 	if err != nil {
 		log.Printf("Error creating file %v: %v\n", filename, err)

@@ -11,7 +11,7 @@ import (
 
 const PixelWidth = 10
 
-// Drawing routings.
+// Drawing routines.
 func Minmax(s []float64, mix, miy, mx, my int) (minx, miny, maxx, maxy int) {
 	minx = mix
 	miny = miy
@@ -137,7 +137,7 @@ func Polygon(img *image.RGBA, min maths.Pt, polygon tegola.Polygon, c color.RGBA
 	}
 }
 
-func Orgin(img *image.RGBA, min maths.Pt, c *color.RGBA) {
+func Origin(img *image.RGBA, min maths.Pt, c *color.RGBA) {
 	cc := color.RGBA{255, 0, 255, 100}
 	if c != nil {
 		cc = *c
