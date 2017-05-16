@@ -19,6 +19,9 @@ func (t *Tile) AddLayers(layers ...*Layer) error {
 	// Need to make sure that all layer names are unique.
 	for i := range layers {
 		nl := layers[i]
+		if nl == nil {
+			continue
+		}
 		for i, l := range t.layers {
 			if l.Name == nl.Name {
 				return fmt.Errorf("Layer %v, already is named %v, new layer not added.", i, l.Name)

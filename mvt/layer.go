@@ -98,6 +98,10 @@ func (l *Layer) Features() (f []Feature) {
 //Any already in the Layer, it will ignore those features.
 //If the id fields is nil, the feature will always be added.
 func (l *Layer) AddFeatures(features ...Feature) (skipped bool) {
+
+	b := make([]Feature, len(l.features), len(l.features)+len(features))
+	copy(b, l.features)
+	l.features = b
 FEATURES_LOOP:
 	for _, f := range features {
 		if f.ID == nil {
