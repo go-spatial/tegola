@@ -28,6 +28,8 @@ func main() {
 	//	parse our command line flags
 	flag.Parse()
 
+	defer setupProfiler().Stop()
+
 	conf, err := config.Load(configFile)
 	if err != nil {
 		log.Fatal(err)
