@@ -361,8 +361,7 @@ func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 	}
 }
 
-func (p Provider) MVTLayerWithContext(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
-
+func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
 	plyr, ok := p.layers[layerName]
 	if !ok {
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
@@ -395,7 +394,6 @@ func (p Provider) MVTLayerWithContext(ctx context.Context, layerName string, til
 	for rows.Next() {
 		// do a quick context check:
 		if ctx.Err() != nil {
-			log.Println("MVTLayerWithContext err:", err)
 			return nil, mvt.ErrCanceled
 		}
 
@@ -521,10 +519,6 @@ func (p Provider) MVTLayerWithContext(ctx context.Context, layerName string, til
 	}
 
 	return layer, err
-}
-
-func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
-	return p.MVTLayerWithContext(context.Background(), layerName, tile, tags)
 }
 
 //	replaceTokens replaces tokens in the provided SQL string

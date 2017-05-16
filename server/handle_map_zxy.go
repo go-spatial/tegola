@@ -115,6 +115,23 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//	decorate our request context to make it cancelable
+		ctx, cancel := context.WithCancel(r.Context())
+
+		//	shallow copy of the request with the cancel context
+		rCtx := r.WithContext(ctx)
+
+		//	listen for the cancel event
+		notifyCancel := w.(http.CloseNotifier).CloseNotify()
+		go func() {
+			select {
+			case <-notifyCancel:
+				cancel()
+			case <-ctx.Done():
+				//	work complete
+			}
+		}()
+
 		//	new tile
 		tile := tegola.Tile{
 			Z: req.z,
@@ -147,7 +164,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					defer wg.Done()
 
 					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
+					mvtLayer, err := l.Provider.MVTLayer(rCtx.Context(), l.Name, tile, l.DefaultTags)
 					if err != nil {
 						log.Printf("Error Getting MVTLayer: %v", err)
 						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
@@ -172,24 +189,8 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			mvtTile.AddLayers(debugLayer)
 		}
 
-		//	log.Printf("context %+v", r.Context())
-		ctx, cancel := context.WithCancel(r.Context())
-
-		req := r.WithContext(ctx)
-
-		notifyCancel := w.(http.CloseNotifier).CloseNotify()
-		go func() {
-			select {
-			case <-notifyCancel:
-				cancel()
-			case <-ctx.Done():
-				//	work complete
-			}
-		}()
-
 		//	generate our vector tile
-		//	vtile, err := mvtTile.VTile(tile.BoundingBox())
-		vtile, err := mvtTile.VTileWithContext(req.Context(), tile.BoundingBox())
+		vtile, err := mvtTile.VTile(rCtx.Context(), tile.BoundingBox())
 		if err != nil {
 			//	log.Printf("Error Getting VTile: %v", err)
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
