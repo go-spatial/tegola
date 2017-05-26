@@ -87,6 +87,13 @@ func (l Line) Subpoints() (points []tegola.Point) {
 // MultiLine is a set of lines.
 type MultiLine []Line
 
+func NewMultiLine(pointPairLines ...[]float64) (ml MultiLine) {
+	for _, pp := range pointPairLines {
+		ml = append(ml, NewLine(pp...))
+	}
+	return ml
+}
+
 func (MultiLine) String() string { return "MultiLine" }
 
 // Just to make basic collection only usable with basic types.

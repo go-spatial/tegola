@@ -122,8 +122,13 @@ func (l Line) DistanceFromPoint(pt Pt) float64 {
 
 	deltaX := l[1].X - l[0].X
 	deltaY := l[1].Y - l[0].Y
+	//log.Println("delta X/Y :  pt - line", deltaX, deltaY, pt, l)
 	denom := math.Abs((deltaY * pt.X) - (deltaX * pt.Y) + (l[1].X * l[0].Y) - (l[1].Y * l[0].X))
 	num := math.Sqrt(math.Pow(deltaY, 2) + math.Pow(deltaX, 2))
+	//log.Println("denim/num", denom, num)
+	if num == 0 {
+		return 0
+	}
 	return denom / num
 }
 

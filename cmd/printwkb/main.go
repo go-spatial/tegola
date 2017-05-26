@@ -158,7 +158,7 @@ func LoadProvider(configFile string, providerlayer string) (pl ProviderLayer, er
 		}
 	}
 	if pl.geoField, ok = providerLayer["geometry_fieldname"].(string); !ok {
-		return pl, fmt.Errorf("was not able to convert geometry_fieldsname to string %v.", providerLayer["geometry_fieldname"])
+		return pl, fmt.Errorf("was not able to convert geometry_fieldname to string %v.", providerLayer["geometry_fieldname"])
 	}
 	if pl.geoID, ok = providerLayer["id_fieldname"].(string); !ok || pl.geoID == "" {
 		pl.geoID = "gid"

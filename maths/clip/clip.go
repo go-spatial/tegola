@@ -14,6 +14,7 @@ import (
 	"fmt"
 
 	colour "github.com/logrusorgru/aurora"
+	"github.com/terranodo/tegola/maths/validate"
 )
 
 /*
@@ -349,6 +350,9 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 	// split into their own lines to be clipped separately.
 
 	// log.Println("Subject Length to clip", len(sub))
+	if len(sub) <= 2 {
+		return clippedSubjects, nil
+	}
 	sl, err := subject.New(sub)
 	if err != nil {
 		// log.Printf("Returning zero subjects was not able to create Subject List %v", err)
@@ -357,11 +361,12 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 	il := intersect.New()
 	rl := region.New(sl.Winding(), rMinPt, rMaxPt)
 
-	// log.Println(rl.GoString())
-	// log.Println(sl.GoString())
+	/*
+		log.Println(rl.GoString())
+		log.Println(sl.GoString())
 
-	// log.Println("Starting to work through the pair of points.")
-
+		log.Println("Starting to work through the pair of points.")
+	*/
 	// BuildOutLists returns weather all subject points are contained by the region.
 	if buildOutLists(sl, rl, il) {
 		clippedSubjects = append(clippedSubjects, sub)
@@ -374,7 +379,6 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 		*/
 		return clippedSubjects, nil
 	}
-
 	/*
 		log.Println("Done working through the pair of points.")
 		log.Printf("intersect: %#v\n", il)
@@ -384,7 +388,7 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 	// Need to check if there are no intersection points, it could be for two reason.
 	// 2. The region points are all inside the subject.
 	if il.Len() == 0 {
-		// log.Println("The number of inbound points is zero.")
+		//log.Println("The number of inbound points is zero.")
 		spts := rl.SentinalPoints()
 		if !sl.Contains(spts[0]) {
 			/*
@@ -413,9 +417,9 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 		clippedSubjects = append(clippedSubjects, rl.LineString())
 		return clippedSubjects, nil
 	}
-	// log.Println("Walking through the Inbound Intersection points.")
+	//log.Println("Walking through the Inbound Intersection points.")
 	for w := il.FirstInboundPtWalker(); w != nil; w = w.Next() {
-		// log.Printf("Looking at Inbound pt: %v", w.GoString())
+		//log.Printf("Looking at Inbound pt: %v", w.GoString())
 		var s []float64
 		var opt *maths.Pt
 		w.Walk(func(idx int, pt maths.Pt) bool {
@@ -423,28 +427,35 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 			// or the first point in s.
 			if (opt == nil || !opt.IsEqual(pt)) &&
 				(len(s) < 2 || s[0] != pt.X || s[1] != pt.Y) {
-				// log.Printf("Adding point(%v): %v\n", idx, pt)
+				//log.Printf("Adding point(%v): %v\n", idx, pt)
 				s = append(s, pt.X, pt.Y)
 
 			}
 			opt = &pt
 			if idx == sl.Len() {
-				// log.Printf("Return because we are at the end. %v %v", idx, sl.Len())
+				log.Printf("Return because we are at the end. %v %v", idx, sl.Len())
 				return false
 			}
 			return true
 		})
+
 		// Must have at least 3 points for it to be a valid runstring. (3 *2 = 6)
+		s, err = validate.CleanLinestring(s)
+		if err != nil {
+			return nil, err
+		}
 		if quickValidityCheck(s) {
-			// log.Printf("Adding s with len(%v)", len(s))
+			//log.Printf("Adding s with len(%v)", len(s))
 
 			clippedSubjects = append(clippedSubjects, s)
+		} else {
+			log.Printf("Did not add s with len(%v) failed validityCheck", len(s))
 		}
 	}
-	/*
-		log.Println("Done walking through the Inbound Intersection points.")
-		log.Printf("Returning subjects(%v)", len(clippedSubjects))
-	*/
+
+	//log.Println("Done walking through the Inbound Intersection points.")
+	//log.Printf("Returning subjects(%v)", len(clippedSubjects))
+
 	return clippedSubjects, nil
 }
 func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Intersect) bool {
@@ -497,18 +508,19 @@ func highlightPoints(s []float64, x, y float64) string {
 func quickValidityCheck(s []float64) bool {
 
 	if len(s) < 6 {
-		// log.Println("Number of elements smaller then 6", s)
+		log.Println("Number of elements smaller then 6", s)
 		return false
 	}
+
 	for x, y := 0, 1; y < len(s)-2; x, y = x+2, y+2 {
 		for x1, y1 := x+2, y+2; y1 < len(s); x1, y1 = x1+2, y1+2 {
 			if s[x] == s[x1] && s[y] == s[y1] {
-				/*
-					log.Printf("Subject isn't Valid \n%v\n",
-						highlightPoints(s, s[x], s[y]),
-					)
-					log.Printf("Found two points that are repeated. (%v,%v)[%v %v] (%v,%v)[%v %v]", x, y, s[x], s[y], x1, y1, s[x1], s[y1])
-				*/
+
+				log.Printf("Subject isn't Valid \n%v\n",
+					highlightPoints(s, s[x], s[y]),
+				)
+				log.Printf("Found two points that are repeated. (%v,%v)[%v %v] (%v,%v)[%v %v]", x, y, s[x], s[y], x1, y1, s[x1], s[y1])
+
 				return false
 			}
 		}
@@ -584,7 +596,7 @@ func LineString(line tegola.LineString, min, max maths.Pt, extant int) (ls []bas
 			cpts = cpts[:0]
 		case !cptIsIn && !lptIsIn:
 			// if they are both outside the clipping region, they could cross the clipping region.
-			// Which means we need to get the itersections twp points.
+			// Which means we need to get the intersections two points.
 			line := maths.Line{lpt, cpt}
 			var seenpts []maths.Pt
 			for a := r.FirstAxis(); a != nil; a = a.Next() {
@@ -631,7 +643,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
 	//log.Printf("Starting to clip main line to %v, %v", emin, emax)
 	plstrs, err := linestring(linestring2floats(sls[0]), emin, emax)
-	//log.Printf("Done to clipping main line to %v, %v", emin, emax)
+	//log.Printf("Done to clipping main line to %v, %v;err:%v;%t", emin, emax, err, plstrs)
 	if err != nil {
 		return nil, err
 	}
@@ -640,7 +652,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	}
 	for _, ls := range plstrs {
 		if len(ls) < 6 {
-			// log.Println("Skipping main linestring size too small.", len(ls), ls)
+			//log.Println("Skipping main linestring size too small.", len(ls), ls)
 			continue
 		}
 		p = append(p, basic.Polygon{basic.NewLine(ls...)})

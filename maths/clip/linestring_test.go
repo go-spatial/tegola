@@ -3,48 +3,52 @@ package clip
 import (
 	"flag"
 	"fmt"
-	"image/png"
-	"log"
-	"os"
 	"testing"
 
+	"os"
+
+	"log"
+
 	"github.com/gdey/tbltest"
+	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/draw/svg"
 	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/clip/internal/draw"
 	"github.com/terranodo/tegola/maths/clip/region"
 )
 
 var showPng = flag.Bool("drawPNG", false, "Draw the PNG for the test cases even if the testcase passes.")
 
 func drawTestCase(tc *TestCase, got [][]float64, filename string) {
-	log.Println("Creating png: ", filename)
+	/*
+		log.Println("Creating png: ", filename)
 
-	s := tc.subject
-	r := tc.ClipRegion().LineString()
-	minx, miny, maxx, maxy := draw.Minmax(s, int(r[0]), int(r[1]), int(r[2]), int(r[3]))
+		s := tc.subject
+		r := tc.ClipRegion().LineString()
+		minx, miny, maxx, maxy := draw.Minmax(s, int(r[0]), int(r[1]), int(r[2]), int(r[3]))
 
-	for _, i := range got {
-		minx, miny, maxx, maxy = draw.Minmax(i, minx, miny, maxx, maxy)
-	}
-	min := maths.Pt{float64(minx), float64(miny)}
-	max := maths.Pt{float64(maxx), float64(maxy)}
-	m := draw.NewImage(min, max)
-	draw.Region(m, minx, miny, tc.ClipRegion(), RegionColor)
-	draw.Segment(m, minx, miny, tc.subject, SegmentColor)
+		for _, i := range got {
+			minx, miny, maxx, maxy = draw.Minmax(i, minx, miny, maxx, maxy)
+		}
+		min := maths.Pt{float64(minx), float64(miny)}
+		max := maths.Pt{float64(maxx), float64(maxy)}
+		m := draw.NewImage(min, max)
+		draw.Region(m, minx, miny, tc.ClipRegion(), RegionColor)
+		draw.Segment(m, minx, miny, tc.subject, SegmentColor)
 
-	for _, i := range tc.e {
-		draw.Segment(m, minx, miny, i, ExpectedColor)
-	}
-	for _, i := range got {
-		draw.Segment(m, minx, miny, i, GotColor)
-	}
-	draw.Origin(m, min, nil)
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Printf("Error creating file %v: %v\n", filename, err)
-		return
-	}
-	png.Encode(f, m)
+		for _, i := range tc.e {
+			draw.Segment(m, minx, miny, i, ExpectedColor)
+		}
+		for _, i := range got {
+			draw.Segment(m, minx, miny, i, GotColor)
+		}
+		draw.Origin(m, min, nil)
+		f, err := os.Create(filename)
+		if err != nil {
+			log.Printf("Error creating file %v: %v\n", filename, err)
+			return
+		}
+		png.Encode(f, m)
+	*/
 }
 
 type Region struct {
@@ -64,7 +68,8 @@ var testRegion = []Region{
 	Region{Min: maths.Pt{X: -1, Y: 4}, Max: maths.Pt{X: 5, Y: 8}, Extant: 1},
 	Region{Min: maths.Pt{X: 5, Y: 2}, Max: maths.Pt{X: 11, Y: 9}, Extant: 1},
 	Region{Min: maths.Pt{X: -1, Y: -1}, Max: maths.Pt{X: 11, Y: 11}, Extant: 1},
-	/*11*/ Region{Min: maths.Pt{X: -2, Y: -2}, Max: maths.Pt{X: 4098, Y: 4098}, Extant: 0},
+	/*11*/ Region{Min: maths.Pt{X: 0, Y: 0}, Max: maths.Pt{X: 4096, Y: 4096}, Extant: 0},
+	/*12*/ Region{Min: maths.Pt{X: 0, Y: 0}, Max: maths.Pt{X: 4096, Y: 4096}, Extant: 0},
 }
 
 func (r *Region) ClipRegion(w maths.WindingOrder) *region.Region {
@@ -84,6 +89,44 @@ type TestCase struct {
 
 func (tc *TestCase) ClipRegion() *region.Region {
 	return tc.region.ClipRegion(tc.winding)
+}
+
+func (tc *TestCase) DrawSVG(t *testing.T, n int, gotpp [][]float64) {
+	filename := fmt.Sprintf("linestring_testcase_%v.svg", n)
+	mm := svg.MinMax{
+		int64(tc.region.Min.X),
+		int64(tc.region.Min.Y),
+		int64(tc.region.Max.X),
+		int64(tc.region.Max.Y),
+	}
+	board := mm
+	board.ExpandBy(100)
+	t.Log("Drawing testcase", n, filename)
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Printf("Unable to create test file.%v", err)
+		return
+	}
+	defer file.Close()
+
+	canvas := &svg.Canvas{
+		Board:  board,
+		Region: mm,
+	}
+
+	canvas.Init(file, 1440, 900, false)
+
+	original := basic.NewLine(tc.subject...)
+	canvas.DrawGeometry(original, "original", "fill:yellow;opacity:1", "fill:black", false)
+	canvas.DrawRegion(true)
+
+	expected := basic.NewMultiLine(tc.e...)
+	canvas.DrawGeometry(expected, "expected", "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
+
+	got := basic.NewMultiLine(gotpp...)
+	canvas.DrawGeometry(got, "got", "fill:blue;opacity:0.5", "fill:blue;opacity:0.5", false)
+	canvas.End()
+	return
 }
 
 func TestClipLinestring(t *testing.T) {
@@ -229,21 +272,26 @@ func TestClipLinestring(t *testing.T) {
 			dontdraw: true,
 		},
 	)
-	//test.RunOrder = "3"
+	test.RunOrder = "1"
 
 	test.Run(func(i int, tc TestCase) {
-		var drawPng bool
+		var drawSvg bool
 		t.Log("Starting test ", i)
 		got, _ := linestring(tc.subject, tc.region.Min, tc.region.Max)
+		defer func() {
+			if drawSvg || *showPng {
+				tc.DrawSVG(t, i, got)
+			}
+		}()
 		if len(tc.e) != len(got) {
+			drawSvg = true
 			t.Errorf("Test %v: Expected number of slices to be %v got: %v -- %+v", i, len(tc.e), len(got), got)
-			drawTestCase(&tc, got, fmt.Sprintf("testcase%v.png", i))
 			return
 		}
 		for j := range tc.e {
 
 			if len(tc.e[j]) != len(got[j]) {
-				drawPng = true
+				drawSvg = true
 				t.Errorf("Test %v: Expected slice %v to have %v items got: %v -- %+v", i, i, len(tc.e[j]), len(got[j]), got[j])
 				continue
 			}
@@ -251,16 +299,10 @@ func TestClipLinestring(t *testing.T) {
 				k1 := k * 2
 				k2 := k1 + 1
 				if (tc.e[j][k1] != got[j][k1]) || (tc.e[j][k2] != got[j][k2]) {
-					drawPng = true
+					drawSvg = true
 					t.Errorf("Test %v: Expected Sice: %v  item: %v to be ( %v %v ) got: ( %v %v)", i, j, k, tc.e[j][k1], tc.e[j][k2], got[j][k1], got[j][k2])
 				}
 			}
 		}
-		_ = drawPng
-
-		if !tc.dontdraw && (drawPng || *showPng) {
-			drawTestCase(&tc, got, fmt.Sprintf("testcase%v.png", i))
-		}
-
 	})
 }

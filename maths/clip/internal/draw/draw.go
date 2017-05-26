@@ -1,14 +1,15 @@
 package draw
 
 import (
-	"image"
-	"image/color"
+	"fmt"
+	"io"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/draw/svg"
 	"github.com/terranodo/tegola/maths/clip/region"
 )
 
+/*
 const PixelWidth = 10
 
 // Drawing routines.
@@ -145,4 +146,40 @@ func Origin(img *image.RGBA, min maths.Pt, c *color.RGBA) {
 	cc.A = 255
 	orn := ScaleToPoint(int(min.X), int(min.Y), 0, 0)
 	img.Set(orn.X, orn.Y, cc)
+}
+*/
+
+func DrawPolygonTest(writer io.Writer, w, h int, r *region.Region, original tegola.Polygon, expected []tegola.Polygon, got []tegola.Polygon) {
+
+	reg := svg.MinMax{
+		MinX: int64(r.Min().X),
+		MinY: int64(r.Min().Y),
+		MaxX: int64(r.Max().X),
+		MaxY: int64(r.Max().Y),
+	}
+	mm := svg.MinMax{reg.MaxX, reg.MaxY, reg.MinX, reg.MinY}
+	mm.OfGeometry(original)
+
+	mm.ExpandBy(100)
+
+	canvas := &svg.Canvas{
+		Board:  mm,
+		Region: svg.MinMax{0, 0, 4096, 4096},
+	}
+
+	canvas.Init(writer, w, h, false)
+
+	canvas.DrawGeometry(original, "original", "fill:yellow;opacity:1", "fill:black", true)
+	canvas.DrawRegion(true)
+	canvas.Gid("expected")
+	for i, p := range expected {
+		canvas.DrawGeometry(p, fmt.Sprintf("%v_expected", i), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
+	}
+	canvas.Gend()
+	canvas.Gid("got")
+	for i, p := range got {
+		canvas.DrawGeometry(p, fmt.Sprintf("%v_got", i), "fill:blue;opacity:0.5", "fill:blue;opacity:0.5", true)
+	}
+	canvas.Gend()
+	canvas.End()
 }

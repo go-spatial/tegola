@@ -10,6 +10,7 @@ import (
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/clip"
+	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 	"github.com/terranodo/tegola/wkb"
 )
@@ -322,26 +323,45 @@ func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
 	if len(line) <= 4 || maths.DistOfLine(g) < tolerance {
 		return line
 	}
-	return basic.NewLineFromPt(maths.DouglasPeucker(line.AsPts(), tolerance, true)...)
+	pts := line.AsPts()
+	log.Println("Simplifying Line Pointcount:", len(pts))
+	pts = maths.DouglasPeucker(pts, tolerance, true)
+	if len(pts) == 0 {
+		return nil
+	}
+	return basic.NewLineFromPt(pts...)
 }
 
 func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 
 	lines := g.Sublines()
-	if len(lines) == 0 {
+	if len(lines) <= 0 {
 		return nil
 	}
+	sqTolerance := tolerance
 
-	// HMMJ
-	sqTolerance := tolerance * tolerance
+	/*
+		sqTolerance := tolerance * tolerance
 
-	// First lets look the first line, then we will simplify the other lines.
-	area := maths.AreaOfPolygonLineString(lines[0])
-	if area < sqTolerance {
-		return basic.ClonePolygon(g)
-	}
+		// First lets look the first line, then we will simplify the other lines.
+		area := maths.AreaOfPolygonLineString(lines[0])
+		if area < sqTolerance {
+			return basic.ClonePolygon(g)
+		}
+	*/
 	var poly basic.Polygon
-	poly = append(poly, basic.NewLineFromPt(maths.DouglasPeucker(basic.CloneLine(lines[0]).AsPts(), sqTolerance, true)...))
+	pts := basic.CloneLine(lines[0]).AsPts()
+	if len(pts) <= 2 {
+		return nil
+	}
+	//log.Println("Simplifying Polygon Point count:", len(pts))
+	pts = maths.DouglasPeucker(pts, sqTolerance, true)
+	//log.Println("\t After Pointcount:", len(pts))
+	if len(pts) <= 2 {
+		//log.Println("\t Skipping polygon.")
+		return nil
+	}
+	poly = append(poly, basic.NewLineFromPt(pts...))
 	for i := 1; i < len(lines); i++ {
 		area := maths.AreaOfPolygonLineString(lines[0])
 		l := basic.CloneLine(lines[i])
@@ -350,9 +370,62 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 			poly = append(poly, l)
 			continue
 		}
-		poly = append(poly, basic.NewLineFromPt(maths.DouglasPeucker(l.AsPts(), sqTolerance, true)...))
+		pts := basic.CloneLine(lines[0]).AsPts()
+		if len(pts) <= 2 {
+			continue
+		}
+		//log.Println("Simplifying Polygon subline Point count:", len(pts))
+		pts = maths.DouglasPeucker(pts, sqTolerance, true)
+		//log.Println("\t After Pointcount:", len(pts))
+		if len(pts) <= 2 {
+			//log.Println("\t Skipping polygon subline.")
+			continue
+		}
+		poly = append(poly, basic.NewLineFromPt(pts...))
+	}
+	if len(poly) == 0 {
+		return nil
 	}
 	return poly
+}
+
+func SimplifyGeometry(g tegola.Geometry, tolerance float64) tegola.Geometry {
+	if g == nil {
+		return nil
+	}
+	switch gg := g.(type) {
+	case tegola.Polygon:
+		return simplifyPolygon(gg, tolerance)
+	case tegola.MultiPolygon:
+		var newMP basic.MultiPolygon
+		for _, p := range gg.Polygons() {
+			sp := simplifyPolygon(p, tolerance)
+			if sp == nil {
+				continue
+			}
+			newMP = append(newMP, sp)
+		}
+		if len(newMP) == 0 {
+			return nil
+		}
+		return newMP
+	case tegola.LineString:
+		return simplifyLineString(gg, tolerance)
+	case tegola.MultiLine:
+		var newML basic.MultiLine
+		for _, l := range gg.Lines() {
+			sl := simplifyLineString(l, tolerance)
+			if sl == nil {
+				continue
+			}
+			newML = append(newML, sl)
+		}
+		if len(newML) == 0 {
+			return nil
+		}
+		return newML
+	}
+	return g
 }
 
 func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine {
@@ -527,6 +600,9 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 }
 
 func (c *cursor) ClipGeo(geo tegola.Geometry) (basic.Geometry, error) {
+	if geo == nil {
+		return nil, nil
+	}
 	min, max := c.MinMax()
 	g, err := clip.Geometry(geo, min, max)
 	if g == nil {
@@ -576,7 +652,20 @@ func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent
 	// We are scaling separately, no need to scale in cursor.
 	c.DisableScaling = true
 
+	/*
+	   geom, err = maths.Project(geom, bbox)
+	   geom, err = maths.Simplify(geom, bbox)
+	   geom, err = maths.Clip(geom, bbox)
+	*/
+
+	// Project Geom
 	geo := c.ScaleGeo(geom)
+	sg := SimplifyGeometry(geo, extent.Epsilon)
+	cg, err := validate.CleanGeometry(sg)
+	if err != nil {
+		return nil, vectorTile.Tile_UNKNOWN, err
+	}
+	geo = basic.Clone(cg)
 
 	if EnableClipping {
 		geo, err = c.ClipGeo(geo)
