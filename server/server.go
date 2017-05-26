@@ -17,8 +17,12 @@ const (
 	MaxZoom = 20
 )
 
-//	set at runtime from main
-var Version string
+var (
+	//	set at runtime from main
+	Version string
+	//	configurable via the tegola config.toml file
+	HostName string
+)
 
 //	incoming requests are associated with a map
 var maps = map[string]Map{}
@@ -64,4 +68,17 @@ func Start(port string) {
 
 	//	start our server
 	log.Fatal(http.ListenAndServe(port, r))
+}
+
+//	determins the hostname to return based on the following hierarchy
+//	- HostName var as configured via the config file
+//	- The request host
+func hostName(r *http.Request) string {
+	//	configured
+	if HostName != "" {
+		return HostName
+	}
+
+	//	default to the Host provided in the request
+	return r.Host
 }

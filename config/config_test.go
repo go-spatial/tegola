@@ -16,6 +16,7 @@ func TestParse(t *testing.T) {
 		{
 			config: `
 				[webserver]
+				hostname = "cdn.tegola.io"
 				port = ":8080"
 				log_file = "/var/log/tegola/tegola.log"
 				log_format = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
@@ -48,6 +49,7 @@ func TestParse(t *testing.T) {
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
+					HostName:  "cdn.tegola.io",
 					Port:      ":8080",
 					LogFile:   "/var/log/tegola/tegola.log",
 					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
@@ -123,7 +125,6 @@ func TestParse(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-
 	testcases := []struct {
 		config   config.Config
 		expected error

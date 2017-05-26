@@ -2,7 +2,6 @@ package mvt
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -19,7 +18,7 @@ func (t *Tile) AddLayers(layers ...*Layer) error {
 	for i := range layers {
 		nl := layers[i]
 		if nl == nil {
-			log.Printf("Got a nil layer for %v", i)
+			// log.Printf("Got a nil layer for %v", i)
 			continue
 		}
 		for i, l := range t.layers {

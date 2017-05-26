@@ -661,21 +661,22 @@ func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent
 	// Project Geom
 	geo := c.ScaleGeo(geom)
 	sg := SimplifyGeometry(geo, extent.Epsilon)
+
 	cg, err := validate.CleanGeometry(sg)
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
-	geo = basic.Clone(cg)
-
 	if EnableClipping {
+		geo = basic.Clone(cg)
+
 		geo, err = c.ClipGeo(geo)
-		if geo == nil {
-			return []uint32{}, -1, nil
-		}
 		if err != nil {
 			log.Printf("We got the following error clipping: %v", err)
 			return nil, vectorTile.Tile_UNKNOWN, err
 		}
+	}
+	if geo == nil {
+		return []uint32{}, -1, nil
 	}
 	switch t := geo.(type) {
 	case tegola.Point:

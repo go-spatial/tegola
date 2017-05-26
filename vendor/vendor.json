@@ -49,6 +49,12 @@
 			"path": "github.com/logrusorgru/aurora",
 			"revision": "962a6974312dde57d1f6f5738b4f83e1af9f38a4",
 			"revisionTime": "2016-12-16T17:00:44Z"
+		},
+		{
+			"checksumSHA1": "C3yiSMdTQxSY3xqKJzMV9T+KnIc=",
+			"path": "github.com/pkg/profile",
+			"revision": "5b67d428864e92711fcbd2f8629456121a56d91f",
+			"revisionTime": "2017-05-09T09:25:25Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"

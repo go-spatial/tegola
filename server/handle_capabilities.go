@@ -62,8 +62,8 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 		//	iterate our registered maps
 		for _, m := range maps {
-			var tileURL = fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name)
-			var capabilitiesURL = fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, r.Host, m.Name)
+			var tileURL = fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), m.Name)
+			var capabilitiesURL = fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, hostName(r), m.Name)
 
 			//	if we have a debug param add it to our URLs
 			if query.Get("debug") == "true" {
@@ -84,7 +84,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			}
 
 			for _, layer := range m.Layers {
-				tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, m.Name, layer.Name)
+				tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), m.Name, layer.Name)
 
 				//	if we have a debug param add it to our tileURL
 				if query.Get("debug") == "true" {

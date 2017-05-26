@@ -28,6 +28,8 @@ func main() {
 	//	parse our command line flags
 	flag.Parse()
 
+	defer setupProfiler().Stop()
+
 	conf, err := config.Load(configFile)
 	if err != nil {
 		log.Fatal(err)
@@ -58,6 +60,7 @@ func main() {
 
 	//	set our server version
 	server.Version = Version
+	server.HostName = conf.Webserver.HostName
 
 	//	start our webserver
 	server.Start(port)

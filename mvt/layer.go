@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -34,7 +35,11 @@ func (l *Layer) VTileLayer(extent tegola.BoundingBox) (*vectorTile.Tile_Layer, e
 	}
 	valmap := valMapToVTileValue(vmap)
 	var features = make([]*vectorTile.Tile_Feature, 0, len(l.features))
-	for _, f := range l.features {
+	for i, f := range l.features {
+		if f.Geometry == nil {
+			log.Println("Skipping feature", i, "Geometry is nil.")
+			continue
+		}
 		vtf, err := f.VTileFeature(kmap, vmap, extent, l.Extent())
 		if err != nil {
 			return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
@@ -93,6 +98,10 @@ func (l *Layer) Features() (f []Feature) {
 //Any already in the Layer, it will ignore those features.
 //If the id fields is nil, the feature will always be added.
 func (l *Layer) AddFeatures(features ...Feature) (skipped bool) {
+
+	b := make([]Feature, len(l.features), len(l.features)+len(features))
+	copy(b, l.features)
+	l.features = b
 FEATURES_LOOP:
 	for _, f := range features {
 		if f.ID == nil {
