@@ -367,9 +367,10 @@ func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Ti
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
 
+	//	replace the various tokens we support (i.e. !BBOX!, !ZOOM!) with balues
 	sql, err := replaceTokens(&plyr, tile)
 	if err != nil {
-		return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
+		return nil, err
 	}
 
 	// do a quick context check:
@@ -414,6 +415,7 @@ func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Ti
 			if ctx.Err() != nil {
 				return nil, mvt.ErrCanceled
 			}
+
 			switch fdescs[i].Name {
 			case plyr.GeomFieldName:
 				if geobytes, ok = v.([]byte); !ok {

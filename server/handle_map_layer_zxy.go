@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"context"
-
 	"github.com/dimfeld/httptreemux"
 	"github.com/golang/protobuf/proto"
 	"github.com/terranodo/tegola"
@@ -146,6 +144,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					errMsg := fmt.Sprintf("layer (%v) not configured for map (%v)", req.layerName, req.mapName)
 					log.Println(errMsg)
 					http.Error(w, errMsg, http.StatusBadRequest)
+					return
 				}
 			}
 
@@ -163,13 +162,16 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					defer wg.Done()
 
 					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(context.Background(), l.Name, tile, l.DefaultTags)
-					if err != nil {
-						errMsg := fmt.Sprintf("Error Getting MVTLayer: %v", err)
-						log.Println(errMsg)
-						http.Error(w, errMsg, http.StatusBadRequest)
+					mvtLayer, err := l.Provider.MVTLayer(r.Context(), l.Name, tile, l.DefaultTags)
+					if err == mvt.ErrCanceled {
 						return
 					}
+					if err != nil {
+						log.Printf("Error Getting MVTLayer: %v", err)
+						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusInternalServerError)
+						return
+					}
+
 					//	add the layer to the slice position
 					mvtLayers[i] = mvtLayer
 				}(i, l)
@@ -177,6 +179,13 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			//	wait for the waitgroup to finish
 			wg.Wait()
+
+			//	stop processing if the context has an error. this check is necessary
+			//	otherwise the server continues processing even if the request was canceled
+			//	as the waitgroup was not notified of the cancel
+			if r.Context().Err() != nil {
+				return
+			}
 
 			//	add layers to our tile
 			mvtTile.AddLayers(mvtLayers...)
@@ -190,7 +199,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	generate our vector tile
-		vtile, err := mvtTile.VTile(context.Background(), tile.BoundingBox())
+		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
 		if err != nil {
 			errMsg := fmt.Sprintf("Error Getting VTile: %v", err.Error())
 			log.Println(errMsg)
