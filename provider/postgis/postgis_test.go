@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/provider/postgis"
 )
@@ -131,7 +133,7 @@ func TestMVTLayer(t *testing.T) {
 		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
 			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
 
-			l, err := p.MVTLayer(layerName, tc.tile, map[string]interface{}{})
+			l, err := p.MVTLayer(context.Background(), layerName, tc.tile, map[string]interface{}{})
 			if err != nil {
 				t.Errorf("Failed to create mvt layer. %v", err)
 				return

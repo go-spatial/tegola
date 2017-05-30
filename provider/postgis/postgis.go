@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
@@ -58,7 +60,7 @@ const Name = "postgis"
 const (
 	DefaultPort    = 5432
 	DefaultSRID    = tegola.WebMercator
-	DefaultMaxConn = 5
+	DefaultMaxConn = 100
 )
 
 const (
@@ -359,16 +361,21 @@ func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 	}
 }
 
-func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
-
+func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
 	plyr, ok := p.layers[layerName]
 	if !ok {
 		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
 	}
 
+	//	replace the various tokens we support (i.e. !BBOX!, !ZOOM!) with balues
 	sql, err := replaceTokens(&plyr, tile)
 	if err != nil {
-		return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
+		return nil, err
+	}
+
+	// do a quick context check:
+	if ctx.Err() != nil {
+		return nil, mvt.ErrCanceled
 	}
 
 	rows, err := p.pool.Query(sql)
@@ -386,6 +393,11 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	layer.Name = layerName
 
 	for rows.Next() {
+		// do a quick context check:
+		if ctx.Err() != nil {
+			return nil, mvt.ErrCanceled
+		}
+
 		var geom tegola.Geometry
 		var gid uint64
 
@@ -399,6 +411,11 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 
 		//	iterate the values returned from our row
 		for i, v := range vals {
+			// do a quick context check:
+			if ctx.Err() != nil {
+				return nil, mvt.ErrCanceled
+			}
+
 			switch fdescs[i].Name {
 			case plyr.GeomFieldName:
 				if geobytes, ok = v.([]byte); !ok {

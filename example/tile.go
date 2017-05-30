@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"log"
 
+	"context"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
@@ -71,7 +73,7 @@ func TileExample() {
 		Maxx: 4096,
 		Maxy: 4096,
 	}
-	vtile, err := tile.VTile(bbox)
+	vtile, err := tile.VTile(context.Background(), bbox)
 	if err != nil {
 		panic(err)
 	}
