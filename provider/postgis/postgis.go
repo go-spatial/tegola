@@ -546,13 +546,13 @@ func (p Provider) ForEachFeature(layerName string, tile tegola.Tile, fn func(lay
 	return nil
 }
 
-func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
-
+func (p Provider) MVTLayer(layerName string, tile tegola.Tile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
 	//	new mvt.Layer
 	layer = &mvt.Layer{
 		Name: layerName,
 	}
 	err = p.ForEachFeature(layerName, tile, func(lyr Layer, gid uint64, wgeom wkb.Geometry, gtags map[string]interface{}) error {
+
 		// TODO: Need to move this from being the responsibility of the provider to the responsibility of the feature. But that means a feature should know
 		// how the points are encoded.
 		// log.Printf("layer SRID %v Default: %v\n", plyr.SRID, DefaultSRID)
@@ -566,6 +566,13 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 			geom = g.Geometry
 		}
 
+		//	copy our default tags to a tags map
+		tags := map[string]interface{}{}
+		for k, v := range dtags {
+			tags[k] = v
+		}
+
+		//	add feature tags to our map
 		for k := range gtags {
 			tags[k] = gtags[k]
 		}
