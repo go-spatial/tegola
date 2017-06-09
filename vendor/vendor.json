@@ -9,6 +9,12 @@
 			"revisionTime": "2016-04-26T10:16:13Z"
 		},
 		{
+			"checksumSHA1": "6qccqKKVnwL9ECLdP+lVzTegdwk=",
+			"path": "github.com/ajstarks/svgo",
+			"revision": "2489f1e6d405e953ac052d1e7ae3769672bf43bb",
+			"revisionTime": "2017-05-07T10:33:33Z"
+		},
+		{
 			"checksumSHA1": "67Ufp7gCzJyjLVW3iW3og8uVtkw=",
 			"path": "github.com/dimfeld/httppath",
 			"revision": "c8e499c3ef3c3e272ed8bdcc1ccf39f73c88debc",
