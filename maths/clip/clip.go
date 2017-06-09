@@ -373,57 +373,17 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 	allIn, allOut := buildOutLists(sl, rl, il)
 	if allIn {
 		clippedSubjects = append(clippedSubjects, sub)
-		/*
-			if len(clippedSubjects) < 100 {
-				log.Printf("All points are contained returning subject(%v) %v", len(clippedSubjects), sub)
-			} else {
-				log.Printf("All points are contained returning subject(%v) …", len(clippedSubjects))
-			}
-		*/
 		return clippedSubjects, nil
 	}
 	if allOut {
-		return clippedSubjects, nil
-	}
-	/*
-		log.Println("Done working through the pair of points.")
-		log.Printf("intersect: %#v\n", il)
-		log.Println(rl.GoString())
-		log.Println(sl.GoString())
-	*/
-	// Need to check if there are no intersection points, it could be for two reason.
-	// 2. The region points are all inside the subject.
-	if il.Len() == 0 {
-		//log.Println("The number of inbound points is zero.")
+		// We need to see if the subject contains at least one of the region points.
 		spts := rl.SentinalPoints()
-		if !sl.Contains(spts[0]) {
-			/*
-				log.Printf("pt(%v) was not contained in subject.\n%v\n%v",
-					spts[0],
-					sl.DebugStringAugmented(func(idx int, pt maths.Pt) string {
-						if rl.Contains(pt) {
-							return fmt.Sprintf("[%v,%v]", colour.Bold(pt.X), colour.Bold(pt.Y))
-						}
-						return fmt.Sprintf("[%v,%v]", pt.X, pt.Y)
-					}),
-					rl.DebugStringAugmented(func(idx int, pt maths.Pt) string {
-						if sl.Contains(pt) {
-							return fmt.Sprintf("[%v,%v]", colour.Bold(pt.X), colour.Bold(pt.Y))
-						}
-						return fmt.Sprintf("[%v,%v]", pt.X, pt.Y)
-					}),
-				)
-			*/
-			// Since we don't have any inbound points it means that if the entire region is contained by the subject,
-			// any region point should be contained by the subject. Otherwise, the subject should be eliminated.
-			return clippedSubjects, nil
+		if sl.Contains(spts[0]) {
+			clippedSubjects = append(clippedSubjects, rl.LineString())
 		}
-
-		// All region points are in the subject, so just return the region.
-		clippedSubjects = append(clippedSubjects, rl.LineString())
 		return clippedSubjects, nil
 	}
-	//log.Println("Walking through the Inbound Intersection points.")
+
 	for w := il.FirstInboundPtWalker(); w != nil; w = w.Next() {
 		//log.Printf("Looking at Inbound pt: %v", w.GoString())
 		var s []float64

@@ -2,10 +2,10 @@ package subject
 
 import (
 	"errors"
+	"log"
 
 	"github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/debug/log"
 )
 
 // ErrInvalidCoordsNumber is the error produced when the number of coordinates provided is not even or large enough to from a linestring.
@@ -67,16 +67,34 @@ func (s *Subject) GetPair(idx int) *Pair {
 
 // Contains will test to see if the point if fully contained by the subject. If the point is on the broader it is not considered as contained.
 func (s *Subject) Contains(pt maths.Pt) bool {
+
 	line := maths.Line{pt, maths.Pt{pt.X - 1, pt.Y}}
 	count := 0
+	var lpt maths.Pt
+	var haveLpt bool
 	for p := s.FirstPair(); p != nil; p = p.Next() {
 		pline := p.AsLine()
 		if ipt, ok := maths.Intersect(line, pline); ok {
+			ipt = ipt.Truncate()
+			if haveLpt {
+				if lpt.IsEqual(ipt) {
+					// skip repeat intersections points. These may be an intersection point that lies on the end pt.
+					continue
+				}
+			}
 			// We only care about intersect points that are left of the point being tested.
 			if pline.InBetween(ipt) && ipt.X < pt.X {
 				count++
 			}
+			lpt = ipt
+			haveLpt = true
+
 		}
+	}
+
+	// We did not hit anything.
+	if count == 0 {
+		return false
 	}
 	// If it's odd then it's inside of the polygon, otherwise it's outside of the polygon.
 	return count%2 != 0
