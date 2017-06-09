@@ -87,6 +87,7 @@ func IsMultiPolygonEqual(mp1, mp2 MultiPolygon) bool {
 // recursive structures if there are any recursive structures it will hang. If the type of the geometry is unknown, it is assumed
 // that it does not match any other geometries.
 func IsGeometryEqual(g1, g2 Geometry) bool {
+
 	switch geo1 := g1.(type) {
 	case Point:
 		geo2, ok := g2.(Point)

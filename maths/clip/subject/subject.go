@@ -3,8 +3,9 @@ package subject
 import (
 	"errors"
 
-	"github.com/terranodo/tegola/container/list/point/list"
+	"github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/debug/log"
 )
 
 // ErrInvalidCoordsNumber is the error produced when the number of coordinates provided is not even or large enough to from a linestring.
@@ -24,7 +25,6 @@ func (s *Subject) Init(coords []float64) (*Subject, error) {
 		return nil, ErrInvalidCoordsNumber
 	}
 	s.winding = maths.WindingOrderOf(coords)
-	s.List.Init()
 
 	for x, y := 0, 1; x < len(coords); x, y = x+2, y+2 {
 		s.PushBack(list.NewPoint(coords[x], coords[y]))
@@ -51,6 +51,18 @@ func (s *Subject) FirstPair() *Pair {
 		l:   &(s.List),
 		pts: [2]*list.Pt{last, first},
 	}
+}
+
+func (s *Subject) GetPair(idx int) *Pair {
+	p := s.FirstPair()
+	log.Println(p)
+	for i := 0; i < idx; i++ {
+		p = p.Next()
+		if p == nil {
+			return p
+		}
+	}
+	return p
 }
 
 // Contains will test to see if the point if fully contained by the subject. If the point is on the broader it is not considered as contained.

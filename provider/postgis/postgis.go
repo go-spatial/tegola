@@ -481,6 +481,7 @@ func (p Provider) ForEachFeatureBytes(layerName string, tile tegola.Tile, fn fun
 	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 
+
 	for rows.Next() {
 
 		//	fetch row values

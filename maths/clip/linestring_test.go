@@ -57,7 +57,7 @@ type Region struct {
 }
 
 var testRegion = []Region{
-	Region{Min: maths.Pt{X: 0, Y: 0}, Max: maths.Pt{X: 10, Y: 10}, Extant: 1},
+	Region{Min: maths.Pt{X: 1, Y: 1}, Max: maths.Pt{X: 9, Y: 9}, Extant: 1},
 	Region{Min: maths.Pt{X: 2, Y: 2}, Max: maths.Pt{X: 8, Y: 8}, Extant: 1},
 	Region{Min: maths.Pt{X: -1, Y: -1}, Max: maths.Pt{X: 11, Y: 11}, Extant: 1},
 	Region{Min: maths.Pt{X: -2, Y: -2}, Max: maths.Pt{X: 12, Y: 12}, Extant: 1},
@@ -65,7 +65,7 @@ var testRegion = []Region{
 	Region{Min: maths.Pt{X: -4, Y: -4}, Max: maths.Pt{X: 14, Y: 14}, Extant: 1},
 	Region{Min: maths.Pt{X: 5, Y: 1}, Max: maths.Pt{X: 7, Y: 3}, Extant: 1},
 	Region{Min: maths.Pt{X: 0, Y: 5}, Max: maths.Pt{X: 2, Y: 7}, Extant: 1},
-	Region{Min: maths.Pt{X: -1, Y: 4}, Max: maths.Pt{X: 5, Y: 8}, Extant: 1},
+	Region{Min: maths.Pt{X: 0, Y: 5}, Max: maths.Pt{X: 2, Y: 7}, Extant: 1},
 	Region{Min: maths.Pt{X: 5, Y: 2}, Max: maths.Pt{X: 11, Y: 9}, Extant: 1},
 	Region{Min: maths.Pt{X: -1, Y: -1}, Max: maths.Pt{X: 11, Y: 11}, Extant: 1},
 	/*11*/ Region{Min: maths.Pt{X: 0, Y: 0}, Max: maths.Pt{X: 4096, Y: 4096}, Extant: 0},
@@ -118,7 +118,7 @@ func (tc *TestCase) DrawSVG(t *testing.T, n int, gotpp [][]float64) {
 
 	original := basic.NewLine(tc.subject...)
 	canvas.DrawGeometry(original, "original", "fill:yellow;opacity:1", "fill:black", false)
-	canvas.DrawRegion(true)
+	canvas.DrawRegion(false)
 
 	expected := basic.NewMultiLine(tc.e...)
 	canvas.DrawGeometry(expected, "expected", "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
@@ -138,8 +138,8 @@ func TestClipLinestring(t *testing.T) {
 			winding: maths.Clockwise,
 			subject: []float64{-2, 1, 2, 1, 2, 2, -1, 2, -1, 11, 2, 11, 2, 4, 4, 4, 4, 13, -2, 13},
 			e: [][]float64{
-				{0, 1, 2, 1, 2, 2, 0, 2},
-				{2, 10, 2, 4, 4, 4, 4, 10},
+				{1, 1, 2, 1, 2, 2, 1, 2},
+				{2, 9, 2, 4, 4, 4, 4, 9},
 			},
 		},
 		TestCase{ // 1
@@ -172,7 +172,7 @@ func TestClipLinestring(t *testing.T) {
 		},
 
 		TestCase{ // 4
-			region:  testRegion[2],
+			region:  Region{Min: maths.Pt{X: 0, Y: 0}, Max: maths.Pt{X: 11, Y: 11}, Extant: 1},
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1},
 			e: [][]float64{
@@ -241,7 +241,7 @@ func TestClipLinestring(t *testing.T) {
 			winding: maths.CounterClockwise,
 			subject: []float64{-3, 1, -3, 10, 12, 10, 12, 1, 4, 1, 4, 8, -1, 8, -1, 4, 3, 4, 3, 1},
 			e: [][]float64{
-				[]float64{5, 2, 5, 9, 11, 9, 11, 2},
+				[]float64{4, 10, 12, 10, 12, 1, 4, 1, 4, 8},
 			},
 		},
 		TestCase{ // 13
@@ -272,7 +272,7 @@ func TestClipLinestring(t *testing.T) {
 			dontdraw: true,
 		},
 	)
-	test.RunOrder = "1"
+	test.RunOrder = "10"
 
 	test.Run(func(i int, tc TestCase) {
 		var drawSvg bool

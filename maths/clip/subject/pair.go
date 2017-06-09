@@ -3,7 +3,7 @@ package subject
 import (
 	"fmt"
 
-	"github.com/terranodo/tegola/container/list/point/list"
+	"github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
 )
 
@@ -19,7 +19,7 @@ func (p *Pair) Next() *Pair {
 	pt1 := p.pts[1]
 	pt2e := pt1.Next()
 RetryPt2E:
-	if pt2e == nil {
+	if pt2e == p.l.Front() {
 		return nil
 	}
 	pt2, ok := pt2e.(*list.Pt)

@@ -77,8 +77,8 @@ func (canvas *Canvas) DrawGrid(n int, label bool, style string) {
 
 func (canvas *Canvas) DrawRegion(withGrid bool) {
 
-	canvas.Gid("region")
-	recColor := canvas.RGBA(10, 10, 10, 0.3)
+	canvas.Group(`id="region"`, `style="opacity:0.2"`)
+	//	recColor := canvas.RGBA(10, 10, 10, 0.3)
 	//canvas.Rect(5, 5, 90, 90, "fill:"+recColor+";stroke:"+recColor)
 	canvas.Rect(int(canvas.Region.MinX), int(canvas.Region.MinY), int(canvas.Region.Width()), int(canvas.Region.Height()), "stroke-dasharray:5,5;fill:red;opacity:0.3;"+fmt.Sprintf(";stroke:rgb(%v,%v,%v)", 0, 200, 0))
 
@@ -86,15 +86,17 @@ func (canvas *Canvas) DrawRegion(withGrid bool) {
 		drawGrid(canvas, &canvas.Region, 10, false, "region_10", "stroke:red;opacity:0.2", "text-anchor:middle;font-size:8;fill:white;stroke:red", "stroke:red")
 		drawGrid(canvas, &canvas.Region, 100, true, "region_100", "stroke:red;opacity:0.3", "text-anchor:middle;font-size:8;fill:white;stroke:red", "stroke:red")
 	}
-	for _, pt := range canvas.Region.SentinalPts() {
-		canvas.DrawPoint(int(pt[0]), int(pt[1]), recColor)
-	}
+	/*
+		for _, pt := range canvas.Region.SentinalPts() {
+			canvas.DrawPoint(int(pt[0]), int(pt[1]), recColor)
+		}
+	*/
 	canvas.Gend()
 }
 
 func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, pointStyle string, drawPoints bool) {
 	var points []maths.Pt
-	canvas.Gid(id)
+	canvas.Group(`id="`+id+`"`, `style="opacity:1"`)
 	canvas.Gid("polygon_path")
 	path := ""
 	pointCount := 0
@@ -103,10 +105,10 @@ func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, poi
 		if len(pts) == 0 {
 			continue
 		}
-		idx := len(pts) - 1
+		idx := len(pts)
 		// If the first and last point is the same skipp the last point.
-		if pts[0].X() == pts[idx].X() && pts[0].Y() == pts[idx].Y() {
-			idx = len(pts) - 2
+		if pts[0].X() == pts[idx-1].X() && pts[0].Y() == pts[idx-1].Y() {
+			idx = len(pts) - 1
 		}
 		if idx <= 0 {
 			continue
@@ -126,23 +128,25 @@ func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, poi
 	}
 	canvas.Commentf("Point Count: %v", pointCount)
 	log.Println("PointCount: ", pointCount)
-	canvas.Path(path, style)
+	canvas.Path(path, fmt.Sprintf(`id="%v_%v"`, id, pointCount), style)
 	canvas.Gend()
-	if pointStyle == "" {
-		pointStyle = "fill:black"
-	}
-	if drawPoints {
-		canvas.Gid("Points")
-		for _, pt := range points {
-			x, y := int(pt.X), int(pt.Y)
-
-			canvas.Circle(x, y, 1, pointStyle)
-			//canvas.Group(fmt.Sprintf(`id="pt%v_%v" style="text-anchor:middle;font-size:8;fill:white;stroke:black;opacity:0"`, x, y))
-			//canvas.Text(x, y+5, fmt.Sprintf("(%v %v)", x, y))
-			//canvas.Gend()
+	/*
+		if pointStyle == "" {
+			pointStyle = "fill:black"
 		}
-		canvas.Gend()
-	}
+		if drawPoints {
+			canvas.Gid("Points")
+			for _, pt := range points {
+				x, y := int(pt.X), int(pt.Y)
+
+				canvas.Circle(x, y, 1, pointStyle)
+				//canvas.Group(fmt.Sprintf(`id="pt%v_%v" style="text-anchor:middle;font-size:8;fill:white;stroke:black;opacity:0"`, x, y))
+				//canvas.Text(x, y+5, fmt.Sprintf("(%v %v)", x, y))
+				//canvas.Gend()
+			}
+			canvas.Gend()
+		}
+	*/
 	canvas.Gend()
 }
 
@@ -230,10 +234,20 @@ func (canvas *Canvas) Init(writer io.Writer, w, h int, grid bool) *Canvas {
 
 	canvas.Startview(w, h, int(canvas.Board.MinX-20), int(canvas.Board.MinY-20), int(canvas.Board.MaxX+20), int(canvas.Board.MaxY+20))
 	if grid {
-		canvas.Gid("grid")
-		canvas.DrawGrid(10, false, "stroke:gray")
-		canvas.DrawGrid(100, true, "stroke:black")
-		canvas.Gend()
+		canvas.GroupFn([]string{
+			`id="grid"`,
+		}, func(canvas *Canvas) {
+			canvas.DrawGrid(10, false, "stroke:gray")
+			canvas.DrawGrid(100, true, "stroke:black")
+		},
+		)
+
 	}
 	return canvas
+}
+
+func (canvas *Canvas) GroupFn(attr []string, fn func(c *Canvas)) {
+	canvas.SVG.Group(attr...)
+	fn(canvas)
+	canvas.SVG.Gend()
 }

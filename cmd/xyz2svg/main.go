@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/draw/svg"
 	"github.com/terranodo/tegola/config"
+	"github.com/terranodo/tegola/draw/svg"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/provider/postgis"
@@ -188,7 +188,7 @@ func DrawGeometries() {
 		canvas.DrawGeometry(sg, fmt.Sprintf("%v_simplifed", gid), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
 
 		log.Println("\tDrawing clipped version.")
-		canvas.DrawGeometry(cg, fmt.Sprintf("%v_clipped", gid), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
+		canvas.DrawGeometry(cg, fmt.Sprintf("clipped_%v", gid), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
 		canvas.End()
 		return nil
 	}); err != nil {

@@ -344,6 +344,7 @@ func CleanLineString(sub []float64) [][]float64 {
 	return retsub
 }
 
+// linestring does the majority of the clipping of the subject array to the square bounds defined by the rMinPt and rMaxPt.
 func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]float64, err error) {
 
 	// We need to run through clip to see if there are simplification artifacts that should be
@@ -353,6 +354,7 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 	if len(sub) <= 2 {
 		return clippedSubjects, nil
 	}
+
 	sl, err := subject.New(sub)
 	if err != nil {
 		// log.Printf("Returning zero subjects was not able to create Subject List %v", err)
@@ -361,14 +363,15 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 	il := intersect.New()
 	rl := region.New(sl.Winding(), rMinPt, rMaxPt)
 
+	//log.Println("Region: ", rl.GoString())
 	/*
-		log.Println(rl.GoString())
 		log.Println(sl.GoString())
 
 		log.Println("Starting to work through the pair of points.")
 	*/
 	// BuildOutLists returns weather all subject points are contained by the region.
-	if buildOutLists(sl, rl, il) {
+	allIn, allOut := buildOutLists(sl, rl, il)
+	if allIn {
 		clippedSubjects = append(clippedSubjects, sub)
 		/*
 			if len(clippedSubjects) < 100 {
@@ -377,6 +380,9 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 				log.Printf("All points are contained returning subject(%v) …", len(clippedSubjects))
 			}
 		*/
+		return clippedSubjects, nil
+	}
+	if allOut {
 		return clippedSubjects, nil
 	}
 	/*
@@ -425,15 +431,23 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 		w.Walk(func(idx int, pt maths.Pt) bool {
 			// Only add point if it's not the same as the last point
 			// or the first point in s.
-			if (opt == nil || !opt.IsEqual(pt)) &&
-				(len(s) < 2 || s[0] != pt.X || s[1] != pt.Y) {
-				//log.Printf("Adding point(%v): %v\n", idx, pt)
-				s = append(s, pt.X, pt.Y)
-
+			if opt != nil && opt.IsEqual(pt) {
+				return true
 			}
+
+			/*
+				if (opt == nil || !opt.IsEqual(pt)) &&
+					(len(s) < 2 || s[0] != pt.X || s[1] != pt.Y) {
+					log.Printf("Adding point(%v): %v\n", idx, pt)
+					s = append(s, pt.X, pt.Y)
+
+				}
+			*/
+			//log.Printf("Adding point(%v): %v\n", idx, pt)
+			s = append(s, pt.X, pt.Y)
 			opt = &pt
 			if idx == sl.Len() {
-				log.Printf("Return because we are at the end. %v %v", idx, sl.Len())
+				// log.Printf("Return because we are at the end. %v %v", idx, sl.Len())
 				return false
 			}
 			return true
@@ -446,10 +460,7 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 		}
 		if quickValidityCheck(s) {
 			//log.Printf("Adding s with len(%v)", len(s))
-
 			clippedSubjects = append(clippedSubjects, s)
-		} else {
-			log.Printf("Did not add s with len(%v) failed validityCheck", len(s))
 		}
 	}
 
@@ -458,40 +469,122 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 
 	return clippedSubjects, nil
 }
-func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Intersect) bool {
-	allSubjectsPtsIn := true
+
+// buildOutLists takes the three lists and populates then from from each other.
+func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Intersect) (allIn bool, allOut bool) {
+
+	// assume all subjects points are in the region.
+	atLeastOneIn := false
+
+	type isectype struct {
+		pt  maths.Pt
+		in  bool
+		idx int
+		p   *subject.Pair
+		l   maths.Line
+	}
+
+	var ismap = make(map[string]isectype)
+
+	// generates a key for the map above. This is use to lookup and intersect points for dedup and elimination
+	var keysgen = func(p maths.Pt, in bool) (mykey, otherkey string) {
+		tp := p.Truncate()
+		return fmt.Sprintf("%v_%v_%v", tp.X, tp.Y, in), fmt.Sprintf("%v_%v_%v", tp.X, tp.Y, !in)
+	}
+
+	var keys []string
+	// Iterate through all the point pairs in the subject.
 	for i, p := 0, sl.FirstPair(); p != nil; p, i = p.Next(), i+1 {
-		//log.Printf("Looking pair %v : %#v ", i, p)
+
 		line := p.AsLine()
 		pt1, pt2 := p.Pt1().Point(), p.Pt2().Point()
-		containsPt1, containsPt2 := rl.Contains(pt1), rl.Contains(pt2)
-		_ = containsPt2
-		if !containsPt1 {
-			allSubjectsPtsIn = false
+		//log.Printf("Looking pair %v : [%v,%v] ", i, pt1,pt2)
+		// check to see if the points are in the region excluding the boundary.
+		pt1InRegion, pt2InRegion := rl.Contains(pt1), rl.Contains(pt2)
+		// Both points are in the region, we can skip them.
+		if pt1InRegion && pt2InRegion {
+			atLeastOneIn = true
+			continue
 		}
-		for a := rl.FirstAxis(); a != nil; a = a.Next() {
 
-			pt, doesIntersect := a.Intersect(line)
-			if !doesIntersect {
+		intersects := rl.Intersections(line)
+
+		for _, isect := range intersects {
+			mykey, otherkey := keysgen(isect.Pt, isect.Inward)
+			addKey := true
+
+			// cancel out points
+			if _, ok := ismap[otherkey]; ok {
+				addKey = false
+				/*
+					log.Printf("Found cancellation point \n%#v\n\t<=>\n%#v\n\n", ss, isectype{
+						pt:  isect.Pt.Truncate(),
+						in:  isect.Inward,
+						idx: isect.Idx,
+						p:   p,
+						l:   line,
+					})
+				*/
+				delete(ismap, otherkey)
 				continue
 			}
-			// lastIDirection = a.IsInward(line)
-			inward, err := a.IsInward(line)
-			if err != nil {
-				continue
+			// dedup points
+			if _, ok := ismap[mykey]; ok {
+				addKey = false
+				/*
+					log.Printf("Found duplication point \n%#v\n\t===\n%#v\n\n", ss, isectype{
+						pt:  isect.Pt.Truncate(),
+						in:  isect.Inward,
+						idx: isect.Idx,
+						p:   p,
+						l:   line,
+					})
+				*/
+				//continue
 			}
-			ipt := intersect.NewPt(pt.Truncate(), inward)
-			//log.Printf("Found Intersect (%p)%[1]v\n%v,%v", ipt, a.AsLine(), line)
-			insertIntersectPoint(ipt, il, p, a)
+			if addKey {
+				keys = append(keys, mykey)
+			}
+
+			ismap[mykey] = isectype{
+				pt:  isect.Pt.Truncate(),
+				in:  isect.Inward,
+				idx: isect.Idx,
+				p:   p,
+				l:   line,
+			}
+			//log.Printf("Found intersect pt%v", ismap[mykey])
 		}
 	}
-	/*
-		log.Println(rl.GoString())
-		log.Println(sl.GoString())
-	*/
-	return allSubjectsPtsIn
+
+	icount := 0
+
+	for _, key := range keys {
+		isect, ok := ismap[key]
+		if !ok {
+			continue
+		}
+		a := rl.Axis(isect.idx)
+		ipt := intersect.NewPt(isect.pt, isect.in)
+		icount++
+		//log.Printf("Found intersect pts[%v]:(%p)%[2]v : Subject: %#v Axises: %#v", i, ipt, isect.l, a.GoString())
+		insertIntersectPoint(ipt, il, isect.p, a)
+		//ipt.PrintNeighbors()
+
+	}
+	if icount == 0 {
+		return atLeastOneIn, !atLeastOneIn
+	}
+	return false, false
 }
 
+/*
+func DrawSVGGraphs(sl *subject.Subject, rl *region.Region, il *intersect.Intersect) {
+	// build out the lists.
+	allin := buildOutLists(sl, rl, il)
+
+}
+*/
 func highlightPoints(s []float64, x, y float64) string {
 	str := ""
 	for i, j := 0, 1; j < len(s); i, j = i+2, j+2 {
@@ -508,19 +601,19 @@ func highlightPoints(s []float64, x, y float64) string {
 func quickValidityCheck(s []float64) bool {
 
 	if len(s) < 6 {
-		log.Println("Number of elements smaller then 6", s)
+		//log.Println("Number of elements smaller then 6", s)
 		return false
 	}
 
 	for x, y := 0, 1; y < len(s)-2; x, y = x+2, y+2 {
 		for x1, y1 := x+2, y+2; y1 < len(s); x1, y1 = x1+2, y1+2 {
 			if s[x] == s[x1] && s[y] == s[y1] {
-
-				log.Printf("Subject isn't Valid \n%v\n",
-					highlightPoints(s, s[x], s[y]),
-				)
-				log.Printf("Found two points that are repeated. (%v,%v)[%v %v] (%v,%v)[%v %v]", x, y, s[x], s[y], x1, y1, s[x1], s[y1])
-
+				/*
+					log.Printf("Subject isn't Valid \n%v\n",
+						highlightPoints(s, s[x], s[y]),
+					)
+					log.Printf("Found two points that are repeated. (%v,%v)[%v %v] (%v,%v)[%v %v]", x, y, s[x], s[y], x1, y1, s[x1], s[y1])
+				*/
 				return false
 			}
 		}
@@ -643,7 +736,12 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
 	//log.Printf("Starting to clip main line to %v, %v", emin, emax)
 	plstrs, err := linestring(linestring2floats(sls[0]), emin, emax)
-	//log.Printf("Done to clipping main line to %v, %v;err:%v;%t", emin, emax, err, plstrs)
+	/*
+		log.Printf("Done to clipping main line to %v, %v;err:%v;%v", emin, emax, err, len(plstrs))
+		for i, str := range plstrs {
+			log.Printf("\tline (%v), %v", i, len(str))
+		}
+	*/
 	if err != nil {
 		return nil, err
 	}
@@ -652,7 +750,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	}
 	for _, ls := range plstrs {
 		if len(ls) < 6 {
-			//log.Println("Skipping main linestring size too small.", len(ls), ls)
+			//		log.Println("Skipping main linestring size too small.", len(ls), ls)
 			continue
 		}
 		p = append(p, basic.Polygon{basic.NewLine(ls...)})
@@ -662,9 +760,11 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 		}
 		subls = append(subls, nsub)
 	}
+	//log.Println("The number of new polygons", len(p))
 	emin = maths.Pt{min.X - (float64(extant) - 1), min.Y - (float64(extant) - 1)}
 	emax = maths.Pt{max.X + (float64(extant) - 1), max.Y + (float64(extant) - 1)}
 	for _, s := range sls[1:] {
+		//	log.Println("Into conterclockwise lines.")
 		slines, err := linestring(linestring2floats(s), min, max)
 		if err != nil {
 			return nil, err

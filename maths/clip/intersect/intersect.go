@@ -1,6 +1,8 @@
 package intersect
 
-import "github.com/terranodo/tegola/container/list/point/list"
+import (
+	"github.com/terranodo/tegola/container/singlelist/point/list"
+)
 
 type Intersect struct {
 	list.List
@@ -8,7 +10,7 @@ type Intersect struct {
 
 func New() *Intersect {
 	l := new(Intersect)
-	l.List.Init()
+
 	return l
 }
 
@@ -19,10 +21,34 @@ func (i *Intersect) FirstInboundPtWalker() *Inbound {
 	// We have to find the first Inbound Pt.
 	var ok bool
 	var pt *Point
-	for p := i.Front(); p != nil; p = p.Next() {
+	for p := i.Front(); ; p = p.Next() {
 		if pt, ok = p.(*Point); ok && pt.Inward {
 			break
+		}
+		if p == i.Back() {
+			// did not find a point.
+			return nil
 		}
 	}
 	return NewInbound(pt)
 }
+
+func (i *Intersect) ForEach(fn func(*Point) bool) {
+	i.List.ForEach(func(e list.ElementerPointer) bool {
+		pt, ok := e.(*Point)
+		if !ok {
+			// Skip things that are not Intersect points.
+			return true
+		}
+		return fn(pt)
+	})
+}
+
+/*
+func (i *Intersect) ResetSeen() {
+	i.ForEach(func(pt *Point) bool {
+		pt.Seen = false
+		return true
+	})
+}
+*/

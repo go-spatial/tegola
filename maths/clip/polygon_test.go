@@ -52,7 +52,7 @@ func (tc *PolygonTestCase) DrawTestCase(got []basic.Polygon, filename string) {
 	}
 	var teps = make([]tegola.Polygon, 0, len(tc.eps))
 	for i := range tc.eps {
-		tgot = append(tgot, tc.eps[i])
+		teps = append(teps, tc.eps[i])
 	}
 	tr := tc.Region()
 	r := region.New(maths.Clockwise, tr.Min, tr.Max)
@@ -472,8 +472,43 @@ func TestClipPolygon(t *testing.T) {
 				}),
 			},
 		},
+
+		PolygonTestCase{ // 7
+			desc: "Hit's the region and goes right out.",
+			// For the image to be drawn.
+			min:  maths.Pt{0, 0},
+			max:  maths.Pt{4096, 4096},
+			ridx: 12,
+			p: basic.NewPolygon(
+				[]maths.Pt{
+					{3000, 2000},
+					{3000, 4096},
+					{3000, 4190},
+					{2900, 4200},
+					{2800, 4096},
+					{2000, 4190},
+					{-10, 4190},
+					{-10, -10},
+					{4200, -10},
+					{4200, 2000},
+				},
+			),
+			eps: []basic.Polygon{
+				basic.NewPolygon(
+					[]maths.Pt{
+
+						{4096, 2000},
+						{3000, 2000},
+						{3000, 4096},
+						{0, 4096},
+						{0, 0},
+						{4096, 0},
+					},
+				),
+			},
+		},
 	)
-	test.RunOrder = "6"
+	test.RunOrder = "7"
 	test.Run(func(i int, tc PolygonTestCase) {
 		var drawPng bool
 		drawPng = true

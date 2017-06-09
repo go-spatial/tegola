@@ -2,10 +2,10 @@ package intersect
 
 import (
 	"fmt"
+	"log"
 
-	"github.com/terranodo/tegola/container/list"
-	ptList "github.com/terranodo/tegola/container/list/point/list"
-
+	"github.com/terranodo/tegola/container/singlelist"
+	ptList "github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
 )
 
@@ -33,9 +33,17 @@ func (p *Point) AsRegionPoint() *RegionPoint   { return (*RegionPoint)(p) }
 
 func (p *Point) NextWalk() list.Elementer {
 	if p.Inward {
+		//	log.Println("Selecting Subject...")
 		return p.subject.Next()
 	}
+	//log.Println("Selecting Region...")
 	return p.region.Next()
+}
+
+func (p *Point) PrintNeighbors() {
+	log.Println("Me:", p.String())
+	log.Println("\tRegion Neighbor. ->", p.region.Next())
+	log.Println("\tSubject Neighbor. ->", p.subject.Next())
 }
 
 /*
@@ -58,14 +66,11 @@ func (i *Point) Walk() (w Walker) {
 // RegionPoint causes an intersect point to "act" like a region point so that it can be inserted into a region list.
 type RegionPoint Point
 
-func (i *RegionPoint) Prev() list.Elementer { return i.region.Prev() }
 func (i *RegionPoint) Next() list.Elementer { return i.region.Next() }
 func (i *RegionPoint) SetNext(e list.Elementer) list.Elementer {
 	return i.region.SetNext(e)
 }
-func (i *RegionPoint) SetPrev(e list.Elementer) list.Elementer {
-	return i.region.SetPrev(e)
-}
+
 func (i *RegionPoint) List() *list.List                { return i.region.List() }
 func (i *RegionPoint) SetList(l *list.List) *list.List { return i.region.SetList(l) }
 func (i *RegionPoint) AsSubjectPoint() *SubjectPoint {
@@ -80,14 +85,11 @@ func (i *RegionPoint) GoString() string {
 // SubjectPoing causes an intersect point to "act" like a subject point so that it can be inserted into a subject list.
 type SubjectPoint Point
 
-func (i *SubjectPoint) Prev() list.Elementer { return i.subject.Prev() }
 func (i *SubjectPoint) Next() list.Elementer { return i.subject.Next() }
 func (i *SubjectPoint) SetNext(e list.Elementer) list.Elementer {
 	return i.subject.SetNext(e)
 }
-func (i *SubjectPoint) SetPrev(e list.Elementer) list.Elementer {
-	return i.subject.SetPrev(e)
-}
+
 func (i *SubjectPoint) List() *list.List                { return i.subject.List() }
 func (i *SubjectPoint) SetList(l *list.List) *list.List { return i.subject.SetList(l) }
 func (i *SubjectPoint) AsRegionPoint() *RegionPoint {

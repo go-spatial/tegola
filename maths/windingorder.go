@@ -6,8 +6,7 @@ import "github.com/terranodo/tegola"
 type WindingOrder uint8
 
 const (
-	_ WindingOrder = iota
-	Clockwise
+	Clockwise WindingOrder = iota
 	CounterClockwise
 )
 

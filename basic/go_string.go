@@ -101,3 +101,4 @@ func (p MultiPolygon) GoStringTyped(withType bool, indent int, lineComment strin
 	return fmt.Sprintf(polygonFormat, indentString, typeName, len(p), lineComment, polygons, indentString)
 }
 func (p MultiPolygon) GoString() string { return p.GoStringTyped(true, 0, "") }
+

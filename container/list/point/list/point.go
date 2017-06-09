@@ -2,6 +2,7 @@ package list
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/terranodo/tegola/container/list"
@@ -59,7 +60,7 @@ type List struct {
 	list.List
 }
 
-// ForEachPt will iteratate forward through the list, call the fn for each pt.
+// ForEachPt will iterate forward through the list, call the fn for each pt.
 // If fn returns false, the iteration will stop.
 func (l *List) ForEachPt(fn func(idx int, pt maths.Pt) (cont bool)) {
 	for i, p := 0, l.Front(); p != nil; i, p = i+1, p.Next() {
@@ -70,10 +71,30 @@ func (l *List) ForEachPt(fn func(idx int, pt maths.Pt) (cont bool)) {
 	}
 }
 
-func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPointer) bool {
-	spt := start.Point()
-	ept := end.Point()
-	mpt := element.Point()
+func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPointer) (r bool) {
+	spt := start.Point().Truncate()
+	ept := end.Point().Truncate()
+	var mark Elementer
+
+	defer func() {
+		if r && (element.Prev() == nil || element.Next() == nil) {
+			log.Println("nil!")
+			log.Printf("\tstart: %v[%[1]p] %v[%[2]p] %v[%[3]p]", start.Prev(), start, start.Next())
+			log.Printf("\t   pt: %v[%[1]p] %v[%[2]p] %v[%[3]p]", element.Prev(), element, element.Next())
+			log.Printf("\t  end: %v[%[1]p] %v[%[2]p] %v[%[3]p]", end.Prev(), end, end.Next())
+			log.Printf("\t mark: %v[%[1]p] %v[%[2]p] %v[%[3]p]", mark.Prev(), mark, mark.Next())
+			panic("Stop!")
+		}
+	}()
+
+	mpt := element.Point().Truncate()
+	{
+		line := maths.Line{spt, ept}
+		// Make sure the point is in between the starting and ending point.
+		if !line.InBetween(mpt) {
+			return false
+		}
+	}
 
 	// Need to figure out if points are increasing or decreasing in the x direction.
 	deltaX := ept.X - spt.X
@@ -82,71 +103,20 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 	yIncreasing := deltaY > 0
 
 	// fmt.Printf("// start:  mpt,ept %f,%f,%f,%f,%v\n", mpt.X, ept.X, mpt.Y, ept.Y, mpt.X == ept.X && mpt.Y == ept.Y)
-	// If it's equal to the end point, we will push it after the end point
-	if int64(mpt.X) == int64(ept.X) && int64(mpt.Y) == int64(ept.Y) {
-		l.InsertAfter(element, end)
+
+	// If it's equal to the end point, we will push it before the end point
+	if ept.IsEqual(mpt) {
+		l.InsertBefore(element, end)
 		return true
 	}
 
-	// Need to check that the point equal to or ahead of the start point
-	if deltaX != 0 {
-		if xIncreasing {
-			if int64(mpt.X) < int64(spt.X) {
-				// fmt.Println("// X: mpt > spt", mpt, spt)
-				return false
-			}
-		} else {
-			if int64(mpt.X) > int64(spt.X) {
-				// fmt.Println("// X: mpt < spt", mpt, spt)
-				return false
-			}
-		}
-	}
-	// There is no change in Y when deltaY == 0; so it's always good.
-	if deltaY != 0 {
-		if yIncreasing {
-			if int64(mpt.Y) < int64(spt.Y) {
-				// fmt.Println("// Y: mpt > spt", mpt, spt)
-				return false
-			}
-		} else {
-			if int64(mpt.Y) > int64(spt.Y) {
-				// fmt.Println("// Y: mpt > spt", mpt, spt)
-				return false
-			}
-		}
+	// If it's equal to the start point we need to push it after the start.
+	if spt.IsEqual(mpt) {
+		l.InsertAfter(element, start)
+		return true
 	}
 
-	// Need to check that the point equal to or behind of the end point
-	if deltaX != 0 {
-		if xIncreasing {
-			if int64(mpt.X) > int64(ept.X) {
-				// fmt.Println("// X: mpt > ept", mpt, ept)
-				return false
-			}
-		} else {
-			if int64(mpt.X) < int64(ept.X) {
-				// fmt.Println("// X: mpt < ept", mpt, ept)
-				return false
-			}
-		}
-	}
-	// There is no change in Y when deltaY == 0; so it's always good.
-	if deltaY != 0 {
-		if yIncreasing {
-			if int64(mpt.Y) > int64(ept.Y) {
-				// fmt.Println("// Y: mpt > ept", mpt, ept)
-				return false
-			}
-		} else {
-			if int64(mpt.Y) < int64(ept.Y) {
-				// fmt.Println("// Y: mpt < ept", mpt, ept)
-				return false
-			}
-		}
-	}
-
-	mark := l.FindElementForward(start.Next(), end, func(e list.Elementer) bool {
+	mark = l.FindElementForward(start.Next(), end, func(e list.Elementer) bool {
 		var goodX, goodY = true, true
 		if ele, ok := e.(maths.Pointer); ok {
 			pt := ele.Point()
@@ -172,31 +142,14 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 
 		return false
 	})
+	// This should not happen?
 	if mark == nil {
-		// check to see if the point is equal to start.
-		if int64(mpt.X) == int64(spt.X) && int64(mpt.Y) == int64(spt.Y) {
-			l.InsertAfter(element, start)
-			return true
-		}
-
-		switch {
-		case deltaX != 0 && xIncreasing && int64(mpt.X) <= int64(ept.X):
-			fallthrough
-		case deltaX != 0 && !xIncreasing && int64(mpt.X) >= int64(ept.X):
-			fallthrough
-		case deltaY != 0 && yIncreasing && int64(mpt.Y) <= int64(ept.Y):
-			fallthrough
-		case deltaX != 0 && !yIncreasing && int64(mpt.Y) >= int64(ept.Y):
-			l.InsertBefore(element, end)
-			return true
-		}
-
-		//fmt.Printf("// Did not find mark: S: %v E: %v ele: %v\n", spt, ept, mpt)
-		//fmt.Println("//", mpt.X, ept.X, mpt.Y, ept.Y)
-		return false
+		l.InsertBefore(element, end)
+		return true
 	}
 
 	l.InsertBefore(element, mark)
+
 	return true
 }
 

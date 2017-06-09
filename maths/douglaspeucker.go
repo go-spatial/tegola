@@ -39,3 +39,5 @@ func DouglasPeucker(points []Pt, epsilon float64, simplify bool) []Pt {
 	//log.Println("Just returning the endpoints.")
 	return []Pt{points[0], points[len(points)-1]}
 }
+
+

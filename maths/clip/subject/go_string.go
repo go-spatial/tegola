@@ -4,27 +4,25 @@ import (
 	"fmt"
 
 	colour "github.com/logrusorgru/aurora"
-	"github.com/terranodo/tegola/container/list/point/list"
+
+	"github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
 )
 
 func (s *Subject) GoString() string {
 	str := fmt.Sprintf("  Subject:(%v)", s.winding)
-	for i, p := 0, s.List.Front(); p != nil; i, p = i+1, p.Next() {
-		str += fmt.Sprintf("[%v](%#v)", i, colour.Green(p))
-	}
-
+	s.ForEachIdx(func(idx int, pt list.ElementerPointer) bool {
+		str += fmt.Sprintf("[%v](%#v)", idx, colour.Green(pt))
+		return true
+	})
 	return str
 }
 
 func (s *Subject) DebugStringAugmented(augmenter func(idx int, e maths.Pt) string) string {
 	str := fmt.Sprintf("  Subject:(%v)", s.winding)
-	for i, p := 0, s.List.Front(); p != nil; i, p = i+1, p.Next() {
-		pt, ok := p.(list.ElementerPointer)
-		if !ok {
-			continue
-		}
+	s.ForEachIdx(func(i int, pt list.ElementerPointer) bool {
 		str += augmenter(i, pt.Point())
-	}
+		return true
+	})
 	return str
 }

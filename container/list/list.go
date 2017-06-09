@@ -2,6 +2,7 @@ package list
 
 import (
 	"fmt"
+	"log"
 )
 
 type Elementer interface {
@@ -207,11 +208,13 @@ func (l *List) PushBack(e Elementer) Elementer {
 // If mark is not an element of , the list is not modified.
 func (l *List) InsertBefore(e Elementer, mark Elementer) Elementer {
 	if mark.List() != l {
+		log.Println("List don't match.")
 		return nil
 	}
 	// see comment in List.Remove about initialization of l
 	p := mark.Prev()
 	if p == nil {
+		log.Println("Using root for previous.")
 		p = l.root
 	}
 	return l.insert(e, p)

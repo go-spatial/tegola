@@ -3,26 +3,24 @@ package region
 import (
 	"fmt"
 
-	"github.com/terranodo/tegola/container/list/point/list"
+	"github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
 )
 
 func (r *Region) GoString() string {
 	str := fmt.Sprintf("   Region:(%v)", r.winding)
-	for i, p := 0, r.List.Front(); p != nil; i, p = i+1, p.Next() {
-		str += fmt.Sprintf("[%v](%#v)", i, p)
-	}
+	r.ForEachIdx(func(idx int, p list.ElementerPointer) bool {
+		str += fmt.Sprintf("[%v](%#v)", idx, p)
+		return true
+	})
 	return str
 }
 
 func (r *Region) DebugStringAugmented(augmenter func(idx int, e maths.Pt) string) string {
 	str := fmt.Sprintf("  Region:(%v)", r.winding)
-	for i, p := 0, r.List.Front(); p != nil; i, p = i+1, p.Next() {
-		pt, ok := p.(list.ElementerPointer)
-		if !ok {
-			continue
-		}
-		str += augmenter(i, pt.Point())
-	}
+	r.ForEachIdx(func(idx int, pt list.ElementerPointer) bool {
+		str += augmenter(idx, pt.Point())
+		return true
+	})
 	return str
 }

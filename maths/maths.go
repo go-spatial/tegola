@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math"
 
+	"errors"
+
 	"github.com/terranodo/tegola"
 )
 
@@ -62,7 +64,35 @@ type Pointer interface {
 	Point() Pt
 }
 
+func NewPoints(f []float64) (pts []Pt, err error) {
+	if len(f)%2 != 0 {
+		return pts, errors.New("Expected even number of points.")
+	}
+	for x, y := 0, 1; y < len(f); x, y = x+2, y+2 {
+		pts = append(pts, Pt{f[x], f[y]})
+	}
+	return pts, nil
+}
+func NewSegments(f []float64) (lines []Line, err error) {
+	if len(f)%2 != 0 {
+		return lines, errors.New("Expected even number of points.")
+	}
+	lx, ly := len(f)-2, len(f)-1
+	for x, y := 0, 1; y < len(f); x, y = x+2, y+2 {
+		lines = append(lines, NewLine(f[lx], f[ly], f[x], f[y]))
+		lx, ly = x, y
+	}
+	return lines, nil
+}
+
 type Line [2]Pt
+
+func NewLine(x1, y1, x2, y2 float64) Line {
+	return Line{
+		Pt{x1, y1},
+		Pt{x2, y2},
+	}
+}
 
 // InBetween will check to see if the given point lies the line provided inbetween the endpoints.
 func (l Line) InBetween(pt Pt) bool {
@@ -86,8 +116,25 @@ func (l Line) ExInBetween(pt Pt) bool {
 	if l[0].Y > l[1].Y {
 		ly, gy = l[1].Y, l[0].Y
 	}
-	return lx < pt.X && pt.X < gx && ly < pt.Y && pt.Y < gy
 
+	goodx, goody := lx < pt.X && pt.X < gx, ly < pt.Y && pt.Y < gy
+	if gx-lx == 0 {
+		goodx = true
+	}
+	if gy-ly == 0 {
+		goody = true
+	}
+
+	//log.Println(l, pt, ":", lx, "<", pt.X, "&&", pt.X, "<", gx, "&&", ly, "<", pt.Y, "&&", pt.Y, "<", gy, goodx, goody)
+	return goodx && goody
+
+}
+
+func (l Line) IsVertical() bool {
+	return l[0].X == l[1].X
+}
+func (l Line) IsHorizontal() bool {
+	return l[0].Y == l[1].Y
 }
 
 //Clamp will return a point that is on the line based on pt. It will do this by restricting each of the coordiantes to the line.
@@ -195,7 +242,14 @@ func (l Line) SlopeIntercept() (m, b float64, defined bool) {
 
 // Intersect find the intersection point (x,y) between two lines if there is one. Ok will be true if it found an intersection point, and false if it did not.
 func Intersect(l1, l2 Line) (pt Pt, ok bool) {
-	if l1[0].X == l1[1].X {
+
+	// if the l1 is vertical.
+	if l1.IsVertical() {
+
+		if l2.IsVertical() {
+			return pt, false
+		}
+
 		if l1[0].X == l2[0].X {
 			return Pt{X: l1[0].X, Y: l2[0].Y}, true
 		}
@@ -203,7 +257,11 @@ func Intersect(l1, l2 Line) (pt Pt, ok bool) {
 			return Pt{X: l1[0].X, Y: l2[1].Y}, true
 		}
 	}
-	if l1[0].Y == l1[1].Y {
+	if l1.IsHorizontal() {
+
+		if l2.IsHorizontal() {
+			return pt, false
+		}
 		if l1[0].Y == l2[0].Y {
 			return Pt{X: l2[0].X, Y: l1[0].Y}, true
 		}

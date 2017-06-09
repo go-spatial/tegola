@@ -1,7 +1,7 @@
 package region
 
 import (
-	"github.com/terranodo/tegola/container/list/point/list"
+	"github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
 )
 
@@ -48,7 +48,7 @@ func New(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
 // Init initilizes the region struct.
 func (r *Region) Init(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
 	r.winding = winding
-	r.List.Init()
+	//r.List.Init()
 	r.max = Max
 	r.min = Min
 	var pts [4][2]float64
@@ -119,12 +119,107 @@ func (r *Region) Max() maths.Pt                    { return r.max }
 func (r *Region) Min() maths.Pt                    { return r.min }
 func (r *Region) WindingOrder() maths.WindingOrder { return r.winding }
 func (r *Region) Contains(pt maths.Pt) bool {
-	return r.max.X >= pt.X && pt.X >= r.min.X &&
-		r.max.Y >= pt.Y && pt.Y >= r.min.Y
+	return r.max.X > pt.X && pt.X > r.min.X &&
+		r.max.Y > pt.Y && pt.Y > r.min.Y
 }
 func (r *Region) SentinalPoints() (pts []maths.Pt) {
 	for _, p := range r.sentinelPoints {
 		pts = append(pts, p.Point())
 	}
 	return pts
+}
+
+// Intersect holds the intersect point and the direction of the vector it's on. Into or out of the clipping region.
+type Intersect struct {
+	// Pt is the intersect point.
+	Pt maths.Pt
+	// Is the vector this point is on heading into the region.
+	Inward bool
+	// Index of the Axis this point was found on.
+	Idx       int
+	isNotZero bool
+}
+
+// Intersections returns zero to four intersections points.
+// You should remove any duplicate and cancelling intersections points afterwards.
+func (r *Region) Intersections(l maths.Line) (out []Intersect) {
+	pt1, pt2 := l[0], l[1]
+
+	if r.Contains(pt1) && r.Contains(pt2) {
+		return out
+	}
+	var ai [4]Intersect
+	for i := 0; i < len(ai); i++ {
+
+		a := r.Axis(i)
+
+		pt, doesIntersect := a.Intersect(l)
+		if !doesIntersect {
+			continue
+		}
+		inward, err := a.IsInward(l)
+		if err != nil {
+			continue
+		}
+
+		out = append(out, Intersect{
+			Pt:        pt,
+			Inward:    inward,
+			Idx:       i,
+			isNotZero: true,
+		})
+		/*
+				// special case, if the vector is inward and the endpoint is the intersect, we need to ignore the intersect.
+				if inward && pt2.IsEqual(pt) {
+					continue
+				}
+
+
+			ai[i] = Intersect{
+				Pt:        pt,
+				Inward:    inward,
+				Idx:       i,
+				isNotZero: true,
+			}
+		*/
+	}
+	/*
+			NextI:
+				for i := 0; i < len(ai); i++ {
+					// skip zero values
+					if !ai[i].isNotZero {
+						continue
+					}
+
+					for j := i + 1; j < len(ai); j++ {
+						// skip zero values
+						if !ai[j].isNotZero {
+							continue
+						}
+
+						pi, pj := ai[i], ai[j]
+
+						if pi.Pt.IsEqual(pj.Pt) {
+							// These cancel out.
+							if pi.Inward != pj.Inward {
+								ai[i].isNotZero = false
+								ai[j].isNotZero = false
+								continue NextI
+							}
+							// These are the same, just need to eliminate the j one.
+							// dedup
+							ai[j].isNotZero = false
+						}
+					}
+				}
+
+		for i := 0; i < len(ai); i++ {
+			// skip zero values
+			if !ai[i].isNotZero {
+				continue
+			}
+			out = append(out, ai[i])
+		}
+	*/
+	return out
 }
