@@ -1,6 +1,7 @@
 package mvt
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -79,14 +80,14 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keys, vals, f); err != nil {
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(f.Geometry, extent, layerExtent)
+	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent)
 	if err != nil {
 		return tf, err
 	}
@@ -641,7 +642,7 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 
 	if geom == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
@@ -668,12 +669,19 @@ func encodeGeometry(geom tegola.Geometry, extent tegola.BoundingBox, layerExtent
 	}
 	if EnableClipping {
 		geo = basic.Clone(cg)
-
+		if ctx.Err() != nil {
+			return []uint32{}, -1, ctx.Err()
+		}
 		geo, err = c.ClipGeo(geo)
 		if err != nil {
 			log.Printf("We got the following error clipping: %v", err)
 			return nil, vectorTile.Tile_UNKNOWN, err
 		}
+
+	}
+
+	if ctx.Err() != nil {
+		return []uint32{}, -1, ctx.Err()
 	}
 	if geo == nil {
 		return []uint32{}, -1, nil

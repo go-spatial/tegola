@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/cmd/config"
@@ -68,6 +70,7 @@ func GenerateTestCase(dir string) error {
 	}
 
 	err = p.ForEachFeatureBytes(
+		context.Background(),
 		name,
 		cfg.Tile(),
 		func(layer postgis.Layer, gid uint64, geom []byte, tags map[string]interface{}) error {

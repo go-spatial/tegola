@@ -153,26 +153,36 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			wg.Add(len(ls))
 
 			//	iterate our layers
-			for i, l := range ls {
-				//	go routine for rendering the layer
+			for i, layer := range ls {
+				//	go routine for fetching the layer concurrently
 				go func(i int, l Layer) {
 					//	on completion let the wait group know
 					defer wg.Done()
 
 					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
+					mvtLayer, err := l.Provider.MVTLayer(r.Context(), l.Name, tile, l.DefaultTags)
+					if err == mvt.ErrCanceled {
+						return
+					}
 					if err != nil {
 						log.Printf("Error Getting MVTLayer: %v", err)
-						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusInternalServerError)
 						return
 					}
 					//	add the layer to the slice position
 					mvtLayers[i] = mvtLayer
-				}(i, l)
+				}(i, layer)
 			}
 
 			//	wait for the waitgroup to finish
 			wg.Wait()
+
+			//	stop processing if the context has an error. this check is necessary
+			//	otherwise the server continues processing even if the request was canceled
+			//	as the waitgroup was not notified of the cancel
+			if r.Context().Err() != nil {
+				return
+			}
 
 			//	add layers to our tile
 			mvtTile.AddLayers(mvtLayers...)
@@ -186,10 +196,12 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	generate our vector tile
+
 		start := time.Now()
-		vtile, err := mvtTile.VTile(tile.BoundingBox())
+		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
+
 		if err != nil {
-			log.Printf("Error Getting VTile: %v", err)
+			//	log.Printf("Error Getting VTile: %v", err)
 			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}

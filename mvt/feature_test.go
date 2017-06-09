@@ -3,6 +3,8 @@ package mvt
 import (
 	"testing"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -151,7 +153,7 @@ func TestEncodeGeometry(t *testing.T) {
 	}
 	for i, tcase := range testcases {
 
-		g, gtype, err := encodeGeometry(tcase.geo, tcase.bbox, 4096)
+		g, gtype, err := encodeGeometry(context.Background(), tcase.geo, tcase.bbox, 4096)
 		if tcase.eerr != err {
 			t.Errorf("(%v) Expected error (%v) got (%v) instead", i, tcase.eerr, err)
 		}

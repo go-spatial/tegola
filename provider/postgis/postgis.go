@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
@@ -21,10 +23,9 @@ import (
 type Provider struct {
 	config pgx.ConnPoolConfig
 	pool   *pgx.ConnPool
-	// map of layer name and corresponding sql
-	layers map[string]Layer
-	srid   int
-
+	// map of layer name and corrosponding sql
+	layers     map[string]Layer
+	srid       int
 	firstlayer string
 }
 
@@ -60,7 +61,7 @@ const Name = "postgis"
 const (
 	DefaultPort    = 5432
 	DefaultSRID    = tegola.WebMercator
-	DefaultMaxConn = 5
+	DefaultMaxConn = 100
 )
 
 const (
@@ -461,7 +462,7 @@ func GID(v interface{}) (gid uint64, err error) {
 	return gid, err
 }
 
-func (p Provider) ForEachFeatureBytes(layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom []byte, tags map[string]interface{}) error) error {
+func (p Provider) ForEachFeatureBytes(ctx context.Context, layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom []byte, tags map[string]interface{}) error) error {
 	plyr, ok := p.Layer(layerName)
 	if !ok {
 		return fmt.Errorf("Don't know of the layer “%v”", layerName)
@@ -470,6 +471,11 @@ func (p Provider) ForEachFeatureBytes(layerName string, tile tegola.Tile, fn fun
 	sql, err := ReplaceTokens(&plyr, tile)
 	if err != nil {
 		return fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
+	}
+
+	// do a quick context check:
+	if ctx.Err() != nil {
+		return mvt.ErrCanceled
 	}
 
 	rows, err := p.pool.Query(sql)
@@ -481,8 +487,11 @@ func (p Provider) ForEachFeatureBytes(layerName string, tile tegola.Tile, fn fun
 	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 
-
 	for rows.Next() {
+		// do a quick context check:
+		if ctx.Err() != nil {
+			return mvt.ErrCanceled
+		}
 
 		//	fetch row values
 		vals, err := rows.Values()
@@ -502,7 +511,7 @@ func (p Provider) ForEachFeatureBytes(layerName string, tile tegola.Tile, fn fun
 	return nil
 }
 
-func (p Provider) ForEachFeature(layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom wkb.Geometry, tags map[string]interface{}) error) error {
+func (p Provider) ForEachFeature(ctx context.Context, layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom wkb.Geometry, tags map[string]interface{}) error) error {
 	plyr, ok := p.Layer(layerName)
 	if !ok {
 		return fmt.Errorf("Don't know of the layer named “%v”", layerName)
@@ -511,6 +520,11 @@ func (p Provider) ForEachFeature(layerName string, tile tegola.Tile, fn func(lay
 	sql, err := ReplaceTokens(&plyr, tile)
 	if err != nil {
 		return fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
+	}
+
+	// do a quick context check:
+	if ctx.Err() != nil {
+		return mvt.ErrCanceled
 	}
 
 	rows, err := p.pool.Query(sql)
@@ -523,6 +537,10 @@ func (p Provider) ForEachFeature(layerName string, tile tegola.Tile, fn func(lay
 	fdescs := rows.FieldDescriptions()
 
 	for rows.Next() {
+		// do a quick context check:
+		if ctx.Err() != nil {
+			return mvt.ErrCanceled
+		}
 
 		//	fetch row values
 		vals, err := rows.Values()
@@ -547,12 +565,12 @@ func (p Provider) ForEachFeature(layerName string, tile tegola.Tile, fn func(lay
 	return nil
 }
 
-func (p Provider) MVTLayer(layerName string, tile tegola.Tile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
+func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
 	//	new mvt.Layer
 	layer = &mvt.Layer{
 		Name: layerName,
 	}
-	err = p.ForEachFeature(layerName, tile, func(lyr Layer, gid uint64, wgeom wkb.Geometry, gtags map[string]interface{}) error {
+	err = p.ForEachFeature(ctx, layerName, tile, func(lyr Layer, gid uint64, wgeom wkb.Geometry, gtags map[string]interface{}) error {
 
 		// TODO: Need to move this from being the responsibility of the provider to the responsibility of the feature. But that means a feature should know
 		// how the points are encoded.
@@ -589,7 +607,8 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, dtags map[string]
 	return layer, err
 }
 
-// replaceTokens replaces tokens in the provided SQL string
+//	replaceTokens replaces tokens in the provided SQL string
+//
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
 func ReplaceTokens(plyr *Layer, tile tegola.Tile) (string, error) {
