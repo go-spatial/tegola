@@ -299,7 +299,7 @@ func TestRegion_UniqueIntersections(t *testing.T) {
 	//test.RunOrder = "19"
 	test.Run(func(idx int, tc testcase) {
 		r := New(tc.winding, maths.Pt{0, 0}, maths.Pt{100, 100})
-		got := r.Intersections(tc.line)
+		got, _, _ := r.Intersections(tc.line)
 		if len(tc.Intersections) != len(got) {
 			t.Errorf("Test(%v) incorrect number of intersections got %v [%#v] want %v", idx, len(got), got, len(tc.Intersections))
 			return

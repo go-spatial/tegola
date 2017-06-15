@@ -30,7 +30,8 @@ func TestIsSimple(t *testing.T) {
 			expected: false,
 		},
 		testcase{ // 4
-			tc: []float64{3921, 3879, 3922, 3879, 3921, 3880, 3920, 3880, 0, 0},
+			tc:       []float64{3921, 3879, 3922, 3879, 3921, 3880, 3920, 3880, 0, 0},
+			expected: true,
 		},
 	)
 	//tests.RunOrder = "1"
@@ -100,7 +101,6 @@ func TestDoesIntersect(t *testing.T) {
 				maths.NewLine(3921, 3880, 3920, 3880),
 			},
 		},
-
 	)
 	tests.Run(func(idx int, tc testcase) {
 
