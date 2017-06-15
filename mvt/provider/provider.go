@@ -35,7 +35,7 @@ func Drivers() (l []string) {
 	return l
 }
 
-// For function returns a configed provider of the given type, provided the correct config map.
+// For function returns a configured provider of the given type, provided the correct config map.
 func For(name string, config map[string]interface{}) (mvt.Provider, error) {
 	if providers == nil {
 		return nil, fmt.Errorf("No providers registered.")

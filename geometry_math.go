@@ -13,3 +13,17 @@ func LineAsPointPairs(l LineString) (pp []float64) {
 	}
 	return pp
 }
+
+/*
+This is causing an import cycle. Seems maths is relying on tegola. Maths library should work on []float64 point pairs I think.
+func LineAsSegments(l LineString) (lines []maths.Line) {
+	spts := l.Subpoints()
+	lpt := spts[len(spts)-1]
+
+	for _, pt := range spts {
+		lines = append(lines, maths.NewLine(lpt.X(), lpt.Y(), pt.X(), pt.Y()))
+		lpt = pt
+	}
+	return lines
+}
+*/

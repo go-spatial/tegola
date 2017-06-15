@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"log"
-
 	svg "github.com/ajstarks/svgo"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths"
@@ -94,7 +92,7 @@ func (canvas *Canvas) DrawRegion(withGrid bool) {
 	canvas.Gend()
 }
 
-func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, pointStyle string, drawPoints bool) {
+func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, pointStyle string, drawPoints bool) int {
 	var points []maths.Pt
 	canvas.Group(`id="`+id+`"`, `style="opacity:1"`)
 	canvas.Gid("polygon_path")
@@ -127,7 +125,6 @@ func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, poi
 		path += "Z "
 	}
 	canvas.Commentf("Point Count: %v", pointCount)
-	log.Println("PointCount: ", pointCount)
 	canvas.Path(path, fmt.Sprintf(`id="%v_%v"`, id, pointCount), style)
 	canvas.Gend()
 	/*
@@ -148,14 +145,17 @@ func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, poi
 		}
 	*/
 	canvas.Gend()
+	return pointCount
 }
 
-func (canvas *Canvas) DrawMultiPolygon(mp tegola.MultiPolygon, id string, style string, pointStyle string, drawPoints bool) {
+func (canvas *Canvas) DrawMultiPolygon(mp tegola.MultiPolygon, id string, style string, pointStyle string, drawPoints bool) int {
 	canvas.Gid(id)
+	count := 0
 	for i, p := range mp.Polygons() {
-		canvas.DrawPolygon(p, fmt.Sprintf("%v_mp_%v", id, i), style, pointStyle, drawPoints)
+		count += canvas.DrawPolygon(p, fmt.Sprintf("%v_mp_%v", id, i), style, pointStyle, drawPoints)
 	}
 	canvas.Gend()
+	return count
 }
 
 func (canvas *Canvas) DrawLine(l tegola.LineString, id string, style string, pointStyle string, drawPoints bool) {
@@ -201,14 +201,15 @@ func (canvas *Canvas) DrawMultiLine(ml tegola.MultiLine, id string, style string
 	canvas.Gend()
 }
 
-func (canvas *Canvas) DrawGeometry(geo tegola.Geometry, id string, style string, pointStyle string, drawPoints bool) {
+func (canvas *Canvas) DrawGeometry(geo tegola.Geometry, id string, style string, pointStyle string, drawPoints bool) int {
+	count := 0
 	switch g := geo.(type) {
 	case tegola.MultiLine:
 		canvas.DrawMultiLine(g, "multiline_"+id, style, pointStyle, drawPoints)
 	case tegola.MultiPolygon:
-		canvas.DrawMultiPolygon(g, "multipolygon_"+id, style, pointStyle, drawPoints)
+		count += canvas.DrawMultiPolygon(g, "multipolygon_"+id, style, pointStyle, drawPoints)
 	case tegola.Polygon:
-		canvas.DrawPolygon(g, "polygon_"+id, style, pointStyle, drawPoints)
+		count += canvas.DrawPolygon(g, "polygon_"+id, style, pointStyle, drawPoints)
 	case tegola.LineString:
 		canvas.DrawLine(g, "line_"+id, style, pointStyle, drawPoints)
 	case tegola.Point:
@@ -224,6 +225,7 @@ func (canvas *Canvas) DrawGeometry(geo tegola.Geometry, id string, style string,
 		}
 		canvas.Gend()
 	}
+	return count
 }
 
 func (canvas *Canvas) Init(writer io.Writer, w, h int, grid bool) *Canvas {

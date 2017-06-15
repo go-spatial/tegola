@@ -147,6 +147,52 @@ func (a *Axis) inside(pt maths.Pt) bool {
 
 var ErrNoDirection = errors.New("Line does not have direction on that coordinate.")
 
+type PlacementCode uint8
+
+const (
+	PCInside      PlacementCode = 0x00               // 0000
+	PCBottom                    = 0x01               // 0001
+	PCTop                       = 0x02               // 0010
+	PCRight                     = 0x04               // 0100
+	PCLeft                      = 0x08               // 1000
+	PCTopRight                  = PCTop | PCRight    // 0110
+	PCTopLeft                   = PCTop | PCLeft     // 1010
+	PCBottomRight               = PCBottom | PCRight // 0101
+	PCBottomLeft                = PCBottom | PCLeft  // 1001
+
+	PCAllAround = PCTop | PCLeft | PCRight | PCBottom // 1111
+)
+
+// Placement returns where according to the region axis the point is.
+//
+//			                     0010
+//
+//				       pt   ______  pt
+//				           |      |
+//				    1000   | 0000 |    0100
+//				           |______|
+//				       pt           pt
+//				             0001
+//
+func (a *Axis) Placement(pt maths.Pt) PlacementCode {
+
+	idx := a.idx % 4
+	switch {
+	case idx == 0 && pt.X <= a.pt0.X:
+		return PCLeft
+	case idx == 2 && pt.X >= a.pt0.X:
+		return PCRight
+
+	case ((a.winding.IsClockwise() && a.idx == 3) || a.idx == 1) && pt.Y <= a.pt0.Y:
+		return PCTop
+	case ((a.winding.IsClockwise() && a.idx == 1) || a.idx == 3) && pt.Y >= a.pt0.Y:
+		return PCBottom
+	default:
+		return PCInside
+	}
+
+}
+
 // IsInward returns weather the line described by pt1,pt2 is headed inward with respect to the Axis.
 func (a *Axis) IsInward(line maths.Line) (bool, error) {
 	p1, p2 := line[0], line[1]
@@ -164,13 +210,14 @@ func (a *Axis) IsInward(line maths.Line) (bool, error) {
 				0pt     3    3pt
 
 		  Counter Clockwise
-
-					3
-				0pt   _____  3pt
-				     |     |
-				   0 |     | 2
-				     |_____|
-				1pt     1    2pt
+				             0010
+				              3
+				      0pt   ______  3pt
+				           |      |
+				    1000 0 | 0000 | 2  0100
+				           |______|
+				      1pt     1     2pt
+				             0001
 	*/
 
 	dx := p2.X - p1.X

@@ -370,18 +370,30 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 		log.Println("Starting to work through the pair of points.")
 	*/
 	// BuildOutLists returns weather all subject points are contained by the region.
-	allIn, allOut := buildOutLists(sl, rl, il)
-	if allIn {
-		clippedSubjects = append(clippedSubjects, sub)
-		return clippedSubjects, nil
-	}
-	if allOut {
-		// We need to see if the subject contains at least one of the region points.
-		spts := rl.SentinalPoints()
-		if sl.Contains(spts[0]) {
-			clippedSubjects = append(clippedSubjects, rl.LineString())
+	placement, icount := buildOutLists(sl, rl, il)
+	//log.Printf("Placement Code  %08b %08b %v", placement, PCSurrounded, icount)
+	// If there were no intersect points, we need to determine were the points are in relation to the region.
+	if icount == 0 {
+		switch placement {
+		case region.PCInside:
+			clippedSubjects = append(clippedSubjects, sub)
+			return clippedSubjects, nil
+		case region.PCAllAround:
+
+			// We have seen point in pretty much every sector, we need to run a contains check for a point,
+			// in the region against the subject.
+			// err is ignored because we know sub is good already.
+			if ok, _ := maths.Contains(sub, rl.Min()); ok {
+				clippedSubjects = append(clippedSubjects, rl.LineString())
+				//log.Println("Returing entire region.", clippedSubjects)
+				return clippedSubjects, nil
+			}
+			// Nothing to clip
+			return clippedSubjects, nil
+
+		default: // There are not crossings.
+			return clippedSubjects, nil
 		}
-		return clippedSubjects, nil
 	}
 
 	for w := il.FirstInboundPtWalker(); w != nil; w = w.Next() {
@@ -395,14 +407,6 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 				return true
 			}
 
-			/*
-				if (opt == nil || !opt.IsEqual(pt)) &&
-					(len(s) < 2 || s[0] != pt.X || s[1] != pt.Y) {
-					log.Printf("Adding point(%v): %v\n", idx, pt)
-					s = append(s, pt.X, pt.Y)
-
-				}
-			*/
 			//log.Printf("Adding point(%v): %v\n", idx, pt)
 			s = append(s, pt.X, pt.Y)
 			opt = &pt
@@ -431,10 +435,7 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 }
 
 // buildOutLists takes the three lists and populates then from from each other.
-func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Intersect) (allIn bool, allOut bool) {
-
-	// assume all subjects points are in the region.
-	atLeastOneIn := false
+func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Intersect) (placement region.PlacementCode, intersectCount int) {
 
 	type isectype struct {
 		pt  maths.Pt
@@ -457,17 +458,9 @@ func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Interse
 	for i, p := 0, sl.FirstPair(); p != nil; p, i = p.Next(), i+1 {
 
 		line := p.AsLine()
-		pt1, pt2 := p.Pt1().Point(), p.Pt2().Point()
-		//log.Printf("Looking pair %v : [%v,%v] ", i, pt1,pt2)
-		// check to see if the points are in the region excluding the boundary.
-		pt1InRegion, pt2InRegion := rl.Contains(pt1), rl.Contains(pt2)
-		// Both points are in the region, we can skip them.
-		if pt1InRegion && pt2InRegion {
-			atLeastOneIn = true
-			continue
-		}
+		intersects, pcpt1, pcpt2 := rl.Intersections(line)
 
-		intersects := rl.Intersections(line)
+		placement |= pcpt1 | pcpt2
 
 		for _, isect := range intersects {
 			mykey, otherkey := keysgen(isect.Pt, isect.Inward)
@@ -500,7 +493,6 @@ func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Interse
 						l:   line,
 					})
 				*/
-				//continue
 			}
 			if addKey {
 				keys = append(keys, mykey)
@@ -517,25 +509,20 @@ func buildOutLists(sl *subject.Subject, rl *region.Region, il *intersect.Interse
 		}
 	}
 
-	icount := 0
-
 	for _, key := range keys {
 		isect, ok := ismap[key]
 		if !ok {
 			continue
 		}
+		intersectCount++
 		a := rl.Axis(isect.idx)
 		ipt := intersect.NewPt(isect.pt, isect.in)
-		icount++
 		//log.Printf("Found intersect pts[%v]:(%p)%[2]v : Subject: %#v Axises: %#v", i, ipt, isect.l, a.GoString())
 		insertIntersectPoint(ipt, il, isect.p, a)
 		//ipt.PrintNeighbors()
 
 	}
-	if icount == 0 {
-		return atLeastOneIn, !atLeastOneIn
-	}
-	return false, false
+	return placement, intersectCount
 }
 
 /*
@@ -710,7 +697,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	}
 	for _, ls := range plstrs {
 		if len(ls) < 6 {
-			//		log.Println("Skipping main linestring size too small.", len(ls), ls)
+			//log.Println("Skipping main linestring size too small.", len(ls), ls)
 			continue
 		}
 		p = append(p, basic.Polygon{basic.NewLine(ls...)})
@@ -724,7 +711,7 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 	emin = maths.Pt{min.X - (float64(extant) - 1), min.Y - (float64(extant) - 1)}
 	emax = maths.Pt{max.X + (float64(extant) - 1), max.Y + (float64(extant) - 1)}
 	for _, s := range sls[1:] {
-		//	log.Println("Into conterclockwise lines.")
+		//log.Println("Into conterclockwise lines.")
 		slines, err := linestring(linestring2floats(s), min, max)
 		if err != nil {
 			return nil, err

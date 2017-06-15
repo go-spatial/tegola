@@ -20,11 +20,12 @@ import (
 )
 
 var configStruct struct {
-	ConfigFile string
-	Layer      string
-	Coords     [3]int
-	IsolateGeo int64
-	ToClip     bool
+	ConfigFile  string
+	Layer       string
+	Coords      [3]int
+	IsolateGeo  int64
+	ToClip      bool
+	KeepNilClip bool
 }
 
 func splitProviderLayer(providerLayer string) (provider, layer string) {
@@ -115,6 +116,7 @@ func init() {
 	flag.IntVar(&(configStruct.Coords[2]), "y", 0, "The Y coord")
 	flag.Int64Var(&configStruct.IsolateGeo, "g", -1, "Only grab the geo described. -1 means all of them.")
 	flag.BoolVar(&configStruct.ToClip, "clip", false, "Scale image to clipping region.")
+	flag.BoolVar(&configStruct.KeepNilClip, "all", false, "Generate images for features that are clipped to nil.")
 }
 
 func DrawGeometries() {
@@ -155,7 +157,7 @@ func DrawGeometries() {
 		if err != nil {
 			return err
 		}
-		if cg == nil {
+		if !configStruct.KeepNilClip && cg == nil {
 			skipped = append(skipped, gid)
 			return nil
 		}

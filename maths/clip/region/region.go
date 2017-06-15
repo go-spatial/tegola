@@ -142,16 +142,19 @@ type Intersect struct {
 
 // Intersections returns zero to four intersections points.
 // You should remove any duplicate and cancelling intersections points afterwards.
-func (r *Region) Intersections(l maths.Line) (out []Intersect) {
+func (r *Region) Intersections(l maths.Line) (out []Intersect, Pt1Placement, Pt2Placement PlacementCode) {
 	pt1, pt2 := l[0], l[1]
 
 	if r.Contains(pt1) && r.Contains(pt2) {
-		return out
+		return out, Pt1Placement, Pt2Placement
 	}
 	var ai [4]Intersect
 	for i := 0; i < len(ai); i++ {
 
 		a := r.Axis(i)
+
+		Pt1Placement |= a.Placement(pt1)
+		Pt2Placement |= a.Placement(pt2)
 
 		pt, doesIntersect := a.Intersect(l)
 		if !doesIntersect {
@@ -168,58 +171,7 @@ func (r *Region) Intersections(l maths.Line) (out []Intersect) {
 			Idx:       i,
 			isNotZero: true,
 		})
-		/*
-				// special case, if the vector is inward and the endpoint is the intersect, we need to ignore the intersect.
-				if inward && pt2.IsEqual(pt) {
-					continue
-				}
 
-
-			ai[i] = Intersect{
-				Pt:        pt,
-				Inward:    inward,
-				Idx:       i,
-				isNotZero: true,
-			}
-		*/
 	}
-	/*
-			NextI:
-				for i := 0; i < len(ai); i++ {
-					// skip zero values
-					if !ai[i].isNotZero {
-						continue
-					}
-
-					for j := i + 1; j < len(ai); j++ {
-						// skip zero values
-						if !ai[j].isNotZero {
-							continue
-						}
-
-						pi, pj := ai[i], ai[j]
-
-						if pi.Pt.IsEqual(pj.Pt) {
-							// These cancel out.
-							if pi.Inward != pj.Inward {
-								ai[i].isNotZero = false
-								ai[j].isNotZero = false
-								continue NextI
-							}
-							// These are the same, just need to eliminate the j one.
-							// dedup
-							ai[j].isNotZero = false
-						}
-					}
-				}
-
-		for i := 0; i < len(ai); i++ {
-			// skip zero values
-			if !ai[i].isNotZero {
-				continue
-			}
-			out = append(out, ai[i])
-		}
-	*/
-	return out
+	return out, Pt1Placement, Pt2Placement
 }

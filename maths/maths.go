@@ -85,100 +85,6 @@ func NewSegments(f []float64) (lines []Line, err error) {
 	return lines, nil
 }
 
-type Line [2]Pt
-
-func NewLine(x1, y1, x2, y2 float64) Line {
-	return Line{
-		Pt{x1, y1},
-		Pt{x2, y2},
-	}
-}
-
-// InBetween will check to see if the given point lies the line provided inbetween the endpoints.
-func (l Line) InBetween(pt Pt) bool {
-	lx, gx := l[0].X, l[1].X
-	if l[0].X > l[1].X {
-		lx, gx = l[1].X, l[0].X
-	}
-	ly, gy := l[0].Y, l[1].Y
-	if l[0].Y > l[1].Y {
-		ly, gy = l[1].Y, l[0].Y
-	}
-	return lx <= pt.X && pt.X <= gx && ly <= pt.Y && pt.Y <= gy
-
-}
-func (l Line) ExInBetween(pt Pt) bool {
-	lx, gx := l[0].X, l[1].X
-	if l[0].X > l[1].X {
-		lx, gx = l[1].X, l[0].X
-	}
-	ly, gy := l[0].Y, l[1].Y
-	if l[0].Y > l[1].Y {
-		ly, gy = l[1].Y, l[0].Y
-	}
-
-	goodx, goody := lx < pt.X && pt.X < gx, ly < pt.Y && pt.Y < gy
-	if gx-lx == 0 {
-		goodx = true
-	}
-	if gy-ly == 0 {
-		goody = true
-	}
-
-	//log.Println(l, pt, ":", lx, "<", pt.X, "&&", pt.X, "<", gx, "&&", ly, "<", pt.Y, "&&", pt.Y, "<", gy, goodx, goody)
-	return goodx && goody
-
-}
-
-func (l Line) IsVertical() bool {
-	return l[0].X == l[1].X
-}
-func (l Line) IsHorizontal() bool {
-	return l[0].Y == l[1].Y
-}
-
-//Clamp will return a point that is on the line based on pt. It will do this by restricting each of the coordiantes to the line.
-func (l Line) Clamp(pt Pt) (p Pt) {
-	p = pt
-	lx, gx := l[0].X, l[1].X
-	if l[0].X > l[1].X {
-		lx, gx = l[1].X, l[0].X
-	}
-	ly, gy := l[0].Y, l[1].Y
-	if l[0].Y > l[1].Y {
-		ly, gy = l[1].Y, l[0].Y
-	}
-
-	if pt.X < lx {
-		p.X = lx
-	}
-	if pt.X > gx {
-		p.X = gx
-	}
-	if pt.Y < ly {
-		p.Y = ly
-	}
-	if pt.Y > gy {
-		p.Y = gy
-	}
-	return p
-}
-
-// DistanceFromPoint will return the perpendicular distance from the point.
-func (l Line) DistanceFromPoint(pt Pt) float64 {
-
-	deltaX := l[1].X - l[0].X
-	deltaY := l[1].Y - l[0].Y
-	//log.Println("delta X/Y :  pt - line", deltaX, deltaY, pt, l)
-	denom := math.Abs((deltaY * pt.X) - (deltaX * pt.Y) + (l[1].X * l[0].Y) - (l[1].Y * l[0].X))
-	num := math.Sqrt(math.Pow(deltaY, 2) + math.Pow(deltaX, 2))
-	//log.Println("denim/num", denom, num)
-	if num == 0 {
-		return 0
-	}
-	return denom / num
-}
-
 // AreaOfPolygon will calculate the Area of a polygon using the surveyor's formula
 // (https://en.wikipedia.org/wiki/Shoelace_formula)
 func AreaOfPolygon(p tegola.Polygon) (area float64) {
@@ -223,21 +129,6 @@ func RadToDeg(rad float64) float64 {
 
 func DegToRad(deg float64) float64 {
 	return deg * Deg2Rad
-}
-
-// SlopeIntercept will find the slop (if there is one) and the intercept of the two provided lines. If there isn't a slope because the lines are verticle, the slopeDefined will be false.
-func (l Line) SlopeIntercept() (m, b float64, defined bool) {
-	dx := l[1].X - l[0].X
-	dy := l[1].Y - l[0].Y
-	if dx == 0 || dy == 0 {
-		// if dx == 0 then m == 0; and the intercept is y.
-		// However if the lines are verticle then the slope is not defined.
-		return 0, l[0].Y, dx != 0
-	}
-	m = dy / dx
-	// b = y - mx
-	b = l[0].Y - (m * l[0].X)
-	return m, b, true
 }
 
 // Intersect find the intersection point (x,y) between two lines if there is one. Ok will be true if it found an intersection point, and false if it did not.
@@ -310,4 +201,70 @@ func Intersect(l1, l2 Line) (pt Pt, ok bool) {
 	x := db / dm
 	y := (m1 * x) + b1
 	return Pt{X: x, Y: y}, true
+}
+
+// Contains takes a subject (made up of point pairs) and a pt, and returns weather the pt is contained by the subject.
+func Contains(subject []float64, pt Pt) (bool, error) {
+	segments, err := NewSegments(subject)
+	if err != nil {
+		return false, err
+	}
+	count := 0
+	ray := Line{pt, Pt{0, pt.Y}}
+	// eliminate segments we don't need touch.
+	for i := range segments {
+
+		line := segments[i]
+
+		deltaY := line[1].Y - line[0].Y
+		// If the line is horizontal skipp it.
+		if deltaY == 0 {
+			continue
+		}
+		// if both points are greater or equal to the pts x we can remove it.
+		if line[0].X >= pt.X && line[1].X >= pt.X {
+			continue
+		}
+		// if the line is above ray, we don't need to consider it.
+		if line[0].Y <= pt.Y && line[1].Y <= pt.Y {
+			continue
+		}
+		ray[1].X = line[0].X
+		if ray[1].X > line[1].X {
+			ray[1].X = line[1].X
+		}
+		// move the point out by 10
+		ray[1].X -= 10
+
+		pt, ok := Intersect(ray, line)
+		if !ok || !line.InBetween(pt) || !ray.InBetween(pt) {
+			continue
+		}
+
+		count++
+	}
+	// Even means outside, odd means the point is contained.
+	return count%2 != 0, nil
+}
+
+func XYOrder(pt1, pt2 Pt) int {
+
+	switch {
+
+	// Test the x-coord first
+	case pt1.X > pt2.X:
+		return 1
+	case pt1.X < pt2.X:
+		return -1
+
+		// Test the y-coord second
+	case pt1.Y > pt2.Y:
+		return 1
+	case pt1.Y < pt2.Y:
+		return -1
+
+	}
+
+	// when you exclude all other possibilities, what remains  is...
+	return 0 // they are the same point
 }

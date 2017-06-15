@@ -4,6 +4,10 @@ import (
 	"context"
 	"sync"
 
+	"log"
+
+	"sort"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
@@ -101,107 +105,133 @@ func CleanCrossOvers(ctx context.Context, g []float64, batchsize int) (l []float
 	if err != nil {
 		return l, err
 	}
+	//log.Printf("Cleaning: segs length %v", len(segs))
 
-	crxPtChan := make(chan crxPt)
+	if IsSimple(segs) {
+		return g, nil
+	}
 
-	var wgProcessor sync.WaitGroup
-	wgProcessor.Add(1)
-	var intersectionMap = make(map[int]crxPt)
-	go func() {
-		// Keep working till the channel is closed.
-		for item := range crxPtChan {
-			intersectionMap[item.srcIdx] = item
+	intersectionMap := make(map[int]crxPt)
+
+	FindIntersects(segs, func(srcIdx, destIdx int, ptfn func() maths.Pt) bool {
+
+		src := segs[srcIdx]
+		dest := segs[destIdx]
+		pt := ptfn()
+		if !src.InBetween(pt) || !dest.InBetween(pt) { // ignore this intersection.
+			return true
 		}
-		wgProcessor.Done()
-	}()
 
-	var wgWorker sync.WaitGroup
-	if batchsize <= 0 {
-		batchsize = 100
-	}
+		//log.Printf("Found intersection for (%v)[%v] -> (%v)[%v] @ %v", srcIdx, src, destIdx, dest, pt)
 
-	if batchsize > len(segs) {
-		batchsize = 1
-		if len(segs) > 20 {
-			batchsize = len(segs) - 10
+		intersectionMap[srcIdx] = crxPt{
+			srcIdx:  srcIdx,
+			destIdx: destIdx,
+			pt:      pt.Truncate(),
 		}
-	}
-
-	idxChan := make(chan int, batchsize)
-	wgWorker.Add(batchsize)
-	for i := 0; i < batchsize; i++ {
-		go cleanWorker(ctx, &wgWorker, idxChan, crxPtChan, segs)
-	}
-	for i := 0; i < len(segs)-1; i++ {
-		idxChan <- i
-	}
-	close(idxChan)
-	wgWorker.Wait()
-	close(crxPtChan)
-	wgProcessor.Wait()
+		if ctx.Err() != nil {
+			return false
+		}
+		return true
+	})
 
 	if ctx.Err() != nil {
 		return g, context.Canceled
 	}
 
 	// segment zero is special as it's endpt, startpt. We want to ignore this segment anyway.
-
-	startIdx := 1
-	if item, ok := intersectionMap[startIdx]; ok {
-		//log.Printf("index: %v Line:%v,ok:%v,item:%v", 1, segs[startIdx], ok, item)
-		if item2, ok := intersectionMap[item.destIdx]; ok {
-			//log.Printf("index: %v Line:%v,ok:%v,item:%v", item.destIdx, segs[item.destIdx], ok, item2)
-			// we need to modify the map value.
-			item2.pt = item.pt
-			startIdx = item.destIdx - 1
-		} else {
-			//log.Printf("index: %v Line:%v,ok:%v,item:%v", item.destIdx, segs[item.destIdx], ok, item2)
-			l = append(l, item.pt.X, item.pt.Y)
-			startIdx = item.destIdx
+	keys := make([]int, len(intersectionMap))
+	{
+		i := 0
+		for k := range intersectionMap {
+			keys[i] = k
+			i++
 		}
+		sort.Ints(keys)
 	}
-	for i := startIdx; i < len(segs); i++ {
 
-		if ctx.Err() != nil {
-			return l, context.Canceled
-		}
-
-		line := segs[i]
+	for i := 1; i < len(segs); {
+		//log.Println(i, ":\tAdding:", segs[i][0].X, segs[i][0].Y)
+		l = append(l, segs[i][0].X, segs[i][0].Y)
 		item, ok := intersectionMap[i]
-		//log.Printf("index: %v Line:%v,ok:%v,item:%v", i, line, ok, item)
-		l = append(l, line[0].X, line[0].Y)
-		if !ok {
-			// Both points are good.
+		if !ok { // segment does not intersect with anything. We can just add it to our line.
+			i++
 			continue
 		}
-		if _, ok := intersectionMap[item.destIdx]; ok {
+		if segs[item.srcIdx][0].IsEqual(item.pt) || segs[item.destIdx][1].IsEqual(item.pt) {
+			// skip dest completly.
+			i = item.destIdx + 1
+			continue
+		}
 
-			// modify the start point of the segment.
-			segs[item.destIdx][0] = item.pt
-			i = item.destIdx - 1
-			continue
-		}
-		l = append(l, item.pt.X, item.pt.Y)
+		segs[item.destIdx][0].X = item.pt.X
+		segs[item.destIdx][0].Y = item.pt.Y
 		i = item.destIdx
-
 	}
 	l = append(l, segs[0][0].X, segs[0][0].Y)
+	/*
+		{
+			lsegs, _ := maths.NewSegments(l)
+
+			//CleanCrossOvers(ctx, l, batchsize+1)
+			var simple bool = true
+
+			log.Println("Testing new polygon: ", len(lsegs), "vs", len(segs))
+			FindIntersects(lsegs, func(sidx, didx int, ptfn func() maths.Pt) bool {
+
+				simple = false
+
+					src := lsegs[sidx]
+					dest := lsegs[didx]
+					pt := ptfn()
+
+						if !src.InBetween(pt) || !dest.InBetween(pt) { // ignore this intersection.
+							log.Println("Is my simple function wrong?", src, dest, pt)
+							return true
+						}
+
+
+				//	log.Printf("Found intersection for (%v)[%v] -> (%v)[%v] @ %v", sidx, src, didx, dest, pt.Truncate())
+				return false
+			})
+			if !simple {
+				log.Println("Not simple.")
+			}
+
+		}
+	*/
 	//log.Printf("Final line %#v", l)
 	return l, nil
 }
 
 func CleanPolygon(g tegola.Polygon) (p basic.Polygon, err error) {
 
-	for _, ln := range g.Sublines() {
+	sublines := g.Sublines()
+	for i, _ := range sublines {
+		ln := sublines[i]
 		ppln := tegola.LineAsPointPairs(ln)
+
+		segs, err := maths.NewSegments(ppln)
+		if err != nil {
+			return p, err
+		}
+
+		if IsSimple(segs) { // No need to clean line.
+			p = append(p, basic.NewLine(ppln...))
+			continue
+		}
+
 		cln, err := CleanLinestring(ppln)
 		if err != nil {
+			log.Println("Got error cleaning linestring", err)
 			return p, err
 		}
-		cln, err = CleanCrossOvers(context.Background(), cln, 10)
+		cln, err = CleanCrossOvers(context.Background(), cln, 0)
 		if err != nil {
+			log.Println("Got error removing crossings", err)
 			return p, err
 		}
+
 		p = append(p, basic.NewLine(cln...))
 	}
 
@@ -215,6 +245,7 @@ func CleanGeometry(g tegola.Geometry) (geo tegola.Geometry, err error) {
 	switch gg := g.(type) {
 
 	case tegola.Polygon:
+
 		return CleanPolygon(gg)
 	case tegola.MultiPolygon:
 		var mp basic.MultiPolygon

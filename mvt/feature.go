@@ -667,8 +667,10 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
+	geo = basic.Clone(cg)
+
 	if EnableClipping {
-		geo = basic.Clone(cg)
+
 		if ctx.Err() != nil {
 			return []uint32{}, -1, ctx.Err()
 		}

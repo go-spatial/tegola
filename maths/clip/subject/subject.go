@@ -82,6 +82,8 @@ func (s *Subject) Contains(pt maths.Pt) bool {
 					continue
 				}
 			}
+			//log.Println("Got Intersect ", count, ipt, pline.InBetween(ipt) && ipt.X < pt.X, pt.X, pline)
+
 			// We only care about intersect points that are left of the point being tested.
 			if pline.InBetween(ipt) && ipt.X < pt.X {
 				count++
@@ -92,10 +94,8 @@ func (s *Subject) Contains(pt maths.Pt) bool {
 		}
 	}
 
-	// We did not hit anything.
-	if count == 0 {
-		return false
-	}
+	log.Println("Contains Count:", count)
+
 	// If it's odd then it's inside of the polygon, otherwise it's outside of the polygon.
 	return count%2 != 0
 }

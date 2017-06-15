@@ -65,7 +65,7 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 func (*Layer) Version() int {
 	// Quick fix till we can get full version 2 compatibility.
 	// TODO: gdey — look at issue #102 to get implementation to 2.1 spec.
-	return 1
+	return 2
 }
 
 // Extent defaults to 4096
