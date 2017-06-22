@@ -28,9 +28,15 @@ func main() {
 	//	parse our command line flags
 	flag.Parse()
 
+	//	if the user looking for tegola version info, print it and exit
+	if *version {
+		fmt.Println(Version)
+		os.Exit(0)
+	}
+
 	defer setupProfiler().Stop()
 
-	conf, err := config.Load(configFile)
+	conf, err := config.Load(*configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,11 +57,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	initLogger(logFile, logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
+	initLogger(*logFile, *logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
 
 	//	check config for port setting
-	if port == defaultHTTPPort && conf.Webserver.Port != "" {
-		port = conf.Webserver.Port
+	if *port == defaultHTTPPort && conf.Webserver.Port != "" {
+		port = &conf.Webserver.Port
 	}
 
 	//	set our server version
@@ -63,7 +69,7 @@ func main() {
 	server.HostName = conf.Webserver.HostName
 
 	//	start our webserver
-	server.Start(port)
+	server.Start(*port)
 }
 
 //	initMaps registers maps with our server
