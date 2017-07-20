@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Tegola: MVT Tile Server</title>
+		<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+		<style>
+			body { margin:0; padding:0; }
+			#map { position:absolute; top:0; bottom:0; width:100%; }
+		</style>
+		<link href='lib/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+		<link href='lib/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+		<link href='css/tegola.css' rel='stylesheet' />
+	</head>
+	<body>
+		<div id="app" v-cloak>
+			<div id="header">Tegola ({{capabilities.version}})</div>
+			<div id="main">
+				<div id="left-nav">
+					<h2>Maps</h2>
+					<ul id="maps">
+						<li v-for="map in maps">{{map.name}}
+							<ul class="map-layers">
+								<li v-for="layer in map.layers" @click="toggleLayerVisibility(layer.name)"><span class="layer-color" v-bind:style="{'background-color': layer.color}">&nbsp;</span>{{layer.name}}</li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+				<div id='map'></div>
+			</div>
+		</div>
+	</body>
+	<script src='lib/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
+	<script src='https://unpkg.com/vue@2.4.1'></script>
+	<script src='js/tegola.js'></script>
+</html>

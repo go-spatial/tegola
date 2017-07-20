@@ -1,0 +1,82 @@
+body, html {
+	font-family: Helvetica, Arial, sans-serif;
+	background-color: #000;
+}
+
+/* https://vuejs.org/v2/api/#v-cloak*/
+[v-cloak] {
+	display: none;
+}
+
+#main {
+	margin-top: 50px;
+}
+
+#header {
+	opacity:.95;
+	height: 40px;
+	width: 100%;
+	padding: 8px;
+	z-index: 1000;
+	position: fixed;
+	top: 0;
+	line-height: 48px;
+	font-weight: bold;
+	color: #fff;
+	font-size: 16px;
+}
+
+#left-nav {
+	z-index: 100;
+	width: 300px;
+	position: fixed;
+	opacity:.95;
+}
+#left-nav h2 {
+	padding: 10px;
+	color: #fff;
+	margin: 0;
+	font-size: 14px;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+#maps {
+	margin: 0;
+	padding: 0;
+}
+#maps li {
+	list-style: none;
+	color: #fff;
+	padding: 10px;
+	border-radius: 3px;
+	cursor: pointer;
+	background-color: rgba(0,0,0,0.5);
+}
+#maps>li:hover {
+	box-shadow: 0 0 4px rgba(255,255,255,0.5);
+	-webkit-box-shadow: 0 0 4px rgba(255,255,255,0.5);
+	cursor: pointer;
+}
+
+ul.map-layers {
+	margin:0;
+	padding:0;
+	list-style: none;
+}
+ul.map-layers li {
+	padding-left: 1em; 
+	text-indent: -.7em;
+}
+ul.map-layers li:hover {
+	padding-left: 1em; 
+	text-indent: -.7em;
+	cursor: pointer;
+}
+ul.map-layers li span {
+    width: 0.25em;
+    height: 1em;
+    display: inline-block;
+    border-radius: .5em;
+    margin-right: .5em;
+    border: 1px;
+}

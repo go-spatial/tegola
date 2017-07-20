@@ -104,8 +104,8 @@ password = ""
 
 [[maps]]
 name = "bonn_osm"
-attribution = "<div>Test attribution</div>" # map attribution
-center = [-76.275329586789, 39.153492567373, 8.0] # optional center value. part of the TileJSON spec
+attribution = "Test attribution" # map attribution
+center = [7.0733624, 50.7024327, 8.0] # optional center value. part of the TileJSON spec
 
 	[[maps.layers]]
 	provider_layer = "bonn_osm.building"
