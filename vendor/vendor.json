@@ -21,6 +21,12 @@
 			"revisionTime": "2016-10-04T02:10:53Z"
 		},
 		{
+			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
+			"path": "github.com/elazarl/go-bindata-assetfs",
+			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
+			"revisionTime": "2017-02-27T21:27:28Z"
+		},
+		{
 			"checksumSHA1": "/TU0r8yAEpNvUWbxosqlXi416Os=",
 			"path": "github.com/gdey/tbltest",
 			"revision": "af8abc47b052b70d6527a2113c2cc417849889f2",
