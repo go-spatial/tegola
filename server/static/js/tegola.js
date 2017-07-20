@@ -92,7 +92,7 @@ var app = new Vue({
 			}
 
 			me.map.on('load', me.setData);
-			//me.map.on('zoomend', me.setData)
+			me.map.on('zoomend', me.setData)
 		},
 		toggleLayerVisibility: function(layerName){
 			if(!layerName){

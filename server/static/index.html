@@ -14,14 +14,14 @@
 	</head>
 	<body>
 		<div id="app" v-cloak>
-			<div id="header">Tegola ({{capabilities.version}})</div>
 			<div id="main">
 				<div id="left-nav">
+					<h1>Tegola ({{capabilities.version}})</h1>
 					<h2>Maps</h2>
 					<ul id="maps">
-						<li v-for="map in maps">{{map.name}}
+						<li v-for="map in maps" v-on:click.self="loadMap(map.name)"><span>{{map.name}}</span>
 							<ul class="map-layers">
-								<li v-for="layer in map.layers" @click="toggleLayerVisibility(layer.name)"><span class="layer-color" v-bind:style="{'background-color': layer.color, 'visibility': layer.visibility}">&nbsp;</span>{{layer.name}}</li>
+								<li v-for="layer in map.layers" v-on:click.self="toggleLayerVisibility(layer.name)"><span class="layer-color" v-bind:style="{'background-color': layer.color, 'visibility': layer.visibility}">&nbsp;</span>{{layer.name}}</li>
 							</ul>
 						</li>
 					</ul>

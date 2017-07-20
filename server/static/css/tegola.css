@@ -8,22 +8,16 @@ body, html {
 	display: none;
 }
 
-#main {
-	margin-top: 50px;
-}
+#main {}
 
-#header {
-	opacity:.95;
-	height: 40px;
-	width: 100%;
-	padding: 8px;
-	z-index: 1000;
-	position: fixed;
-	top: 0;
-	line-height: 48px;
-	font-weight: bold;
-	color: #fff;
-	font-size: 16px;
+#left-nav h1 {
+    padding: 8px;
+    top: 0;
+    line-height: 40px;
+    font-weight: bold;
+    color: #ccc;
+    font-size: 16px;
+    margin: 0;
 }
 
 #left-nav {
@@ -31,31 +25,32 @@ body, html {
 	width: 300px;
 	position: fixed;
 	opacity:.95;
+	background-color: rgba(0,0,0,0.5);
 }
 #left-nav h2 {
 	padding: 10px;
-	color: #fff;
+	color: #ccc;
 	margin: 0;
 	font-size: 14px;
-	border-bottom: 1px solid #f0f0f0;
+	border-bottom: 1px solid #ccc;
 }
 
 #maps {
 	margin: 0;
 	padding: 0;
 }
-#maps li {
+#maps>li {
 	list-style: none;
-	color: #fff;
+	color: #ccc;
 	padding: 10px;
 	border-radius: 3px;
 	cursor: pointer;
-	background-color: rgba(0,0,0,0.5);
 }
-#maps>li:hover {
-	box-shadow: 0 0 4px rgba(255,255,255,0.5);
-	-webkit-box-shadow: 0 0 4px rgba(255,255,255,0.5);
-	cursor: pointer;
+#maps>li>span {
+	display: block;
+}
+#maps>li>span:hover {
+	color: #fff;
 }
 
 ul.map-layers {
@@ -63,14 +58,15 @@ ul.map-layers {
 	padding:0;
 	list-style: none;
 }
-ul.map-layers li {
-	padding-left: 1em; 
-	text-indent: -.7em;
+ul.map-layers>li {
+	list-style: none;
+	color: #ccc;
+	padding: 10px 10px 10px 0;
+	border-radius: 3px;
+	cursor: pointer;
 }
 ul.map-layers li:hover {
-	padding-left: 1em; 
-	text-indent: -.7em;
-	cursor: pointer;
+	color: #fff;
 }
 ul.map-layers li span {
     width: 0.25em;
