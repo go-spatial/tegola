@@ -21,7 +21,7 @@
 					<ul id="maps">
 						<li v-for="map in maps">{{map.name}}
 							<ul class="map-layers">
-								<li v-for="layer in map.layers" @click="toggleLayerVisibility(layer.name)"><span class="layer-color" v-bind:style="{'background-color': layer.color}">&nbsp;</span>{{layer.name}}</li>
+								<li v-for="layer in map.layers" @click="toggleLayerVisibility(layer.name)"><span class="layer-color" v-bind:style="{'background-color': layer.color, 'visibility': layer.visibility}">&nbsp;</span>{{layer.name}}</li>
 							</ul>
 						</li>
 					</ul>
@@ -31,8 +31,8 @@
 		</div>
 	</body>
 	<script src='lib/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
-	<!--script src='lib/vue/v2.3.0/vue.min.js'></script-->
+	<script src='lib/vue/v2.3.0/vue.min.js'></script>
 	<!-- uncomment for dev -->
-	<script src='https://unpkg.com/vue@2.4.1'></script>
+	<!--script src='https://unpkg.com/vue@2.4.1'></script-->
 	<script src='js/tegola.js'></script>
 </html>

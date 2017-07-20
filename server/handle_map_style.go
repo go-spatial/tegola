@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
@@ -83,7 +85,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Visibility: style.LayoutVisible,
 			},
 			Paint: &style.LayerPaint{
-				LineColor: "#259b24",
+				LineColor: stringToColor(l.Name),
 			},
 		}
 
@@ -101,4 +103,25 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err = json.NewEncoder(w).Encode(mapboxStyle); err != nil {
 		log.Printf("error encoding tileJSON for map (%v)", req.mapName)
 	}
+}
+
+func randomColor() string {
+	val := int64(rand.Float64() * 16777215)
+
+	return "#" + strconv.FormatInt(val, 16)
+}
+
+//	port of https://stackoverflow.com/questions/3426404/create-a-hexadecimal-colour-based-on-a-string-with-javascript
+func stringToColor(str string) string {
+	var hash uint
+	for i := range []rune(str) {
+		hash = uint(str[i]) + ((hash << 5) - hash)
+	}
+	var color string
+	for i := 0; i < 3; i++ {
+		value := (hash >> (uint(i) * 8)) & 0xFF
+		val := "00" + strconv.FormatUint(uint64(value), 16)
+		color += val[len(val)-2:]
+	}
+	return "#" + color
 }

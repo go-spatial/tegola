@@ -3,33 +3,27 @@
 var app = new Vue({
 	el: '#app',
 	map: null,		//	map reference
-	data: function(){
-		/*	//	data structure
+	data: {
+		//	stored reference from the capabilities endpoint response
+		capabilities: {
+			version: null,
+			maps: []
+		},
+		//	built out based on the /capabilities response and style.json response
+		maps:[
+		/*	data model 
 			{
-				capabilities: {},
-				maps: [
+				name: '',
+				layers: [
 					{
 						name: '',
-						layers: [
-							{
-								name: '',
-								visible: 'none / visibile',
-								color: '#fff'
-							}
-						]
+						visibility: '',	// 'none' / 'visibile'
+						color: ''		//	hex value, i.e. #fff
 					}
 				]
 			}
 		*/
-		return {
-			//	stored reference from the capabilities endpoint response
-			capabilities: {
-				version: null,
-				maps: []
-			},
-			//	map and layer data from the capabilities endpoint and style.json
-			maps:[]
-		}
+		]
 	},
 	created: function(){
 		var me = this;
@@ -62,12 +56,13 @@ var app = new Vue({
 				for (var j=0, l=layers.length; j<l; j++){
 					mapItem.layers.push({
 						name: layers[j].name,
-						visibility: this.map.getLayoutProperty(layers[j].name, 'visibility'),
+						visibility: this.map.getLayoutProperty(layers[j].name, 'visibility') === 'visible' ? 'visible' : 'hidden',
 						color: this.map.getPaintProperty(layers[j].name, 'line-color')
 					})				
 				}
 				mapsList.push(mapItem);
 			}
+
 			//	update our app data
 			this.$data.maps = mapsList;
 		},
@@ -97,14 +92,12 @@ var app = new Vue({
 			}
 
 			me.map.on('load', me.setData);
-			me.map.on('zoomend', me.setData)
+			//me.map.on('zoomend', me.setData)
 		},
 		toggleLayerVisibility: function(layerName){
 			if(!layerName){
 				return;
 			}
-
-			console.log(layerName, this.map);
 
 			var visibility = this.map.getLayoutProperty(layerName, 'visibility');
 			if (visibility === 'visible') {
@@ -112,7 +105,8 @@ var app = new Vue({
 			} else {
 				this.map.setLayoutProperty(layerName, 'visibility', 'visible');
 			}
-			console.log(layerName, visibility);
+
+			this.setData();
 		}
 	}
 });
