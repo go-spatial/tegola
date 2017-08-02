@@ -133,6 +133,9 @@ func DegToRad(deg float64) float64 {
 
 // Intersect find the intersection point (x,y) between two lines if there is one. Ok will be true if it found an intersection point, and false if it did not.
 func Intersect(l1, l2 Line) (pt Pt, ok bool) {
+	if !l1.DoesIntersect(l2) {
+		return pt, false
+	}
 
 	// if the l1 is vertical.
 	if l1.IsVertical() {
@@ -263,6 +266,26 @@ func XYOrder(pt1, pt2 Pt) int {
 	case pt1.Y < pt2.Y:
 		return -1
 
+	}
+
+	// when you exclude all other possibilities, what remains  is...
+	return 0 // they are the same point
+}
+
+func YXorder(pt1, pt2 Pt) int {
+
+	// Test the y-coord first
+	switch {
+	case pt1.Y > pt2.Y:
+		return 1
+	case pt1.Y < pt2.Y:
+		return -1
+
+		// Test the x-coord second
+	case pt1.X > pt2.X:
+		return 1
+	case pt1.X < pt2.X:
+		return -1
 	}
 
 	// when you exclude all other possibilities, what remains  is...

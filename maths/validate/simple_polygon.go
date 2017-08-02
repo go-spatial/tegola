@@ -1,11 +1,10 @@
 package validate
 
 import (
-	"sort"
-
 	"github.com/terranodo/tegola/maths"
 )
 
+/*
 func xyorder(pt1, pt2 maths.Pt) int {
 
 	switch {
@@ -55,18 +54,22 @@ const (
 	RIGHT
 )
 
+// TODO:gdey — This is currently duplicated in maths. We need to remove this once we have moved all the functions to maths.
 type event struct {
 	edge     int
 	edgeType eventType //
 	ev       *maths.Pt // event vertex
 }
 
+// TODO:gdey — This is currently duplicated in maths. We need to remove this once we have moved all the functions to maths.
 type XYOrderedEventPtr []event
 
+// TODO:gdey — This is currently duplicated in maths. We need to remove this once we have moved all the functions to maths.
 func (a XYOrderedEventPtr) Len() int           { return len(a) }
 func (a XYOrderedEventPtr) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a XYOrderedEventPtr) Less(i, j int) bool { return xyorder(*(a[i].ev), *(a[j].ev)) == -1 }
 
+// TODO:gdey — This is currently duplicated in maths. We need to remove this once we have moved all the functions to maths.
 // Code adapted from http://geomalgorithms.com/a09-_intersect-3.html#simple_Polygon()
 func NewEventQueue(segments []maths.Line) []event {
 
@@ -93,6 +96,7 @@ func NewEventQueue(segments []maths.Line) []event {
 	return eq
 }
 
+// TODO:gdey — This is currently duplicated in maths. We need to remove this once we have moved all the functions to maths.
 func DoesIntersect(s1, s2 maths.Line) bool {
 
 	as2 := s2.LeftRightMostAsLine()
@@ -114,6 +118,7 @@ func DoesIntersect(s1, s2 maths.Line) bool {
 
 }
 
+// TODO:gdey — This is currently duplicated by maths.FindPolygonIntersects Need to replace.
 func FindIntersects(segments []maths.Line, fn func(srcIdx, destIdx int, ptfn func() maths.Pt) bool) {
 
 	eq := NewEventQueue(segments)
@@ -125,8 +130,6 @@ func FindIntersects(segments []maths.Line, fn func(srcIdx, destIdx int, ptfn fun
 
 	isegmap := make(map[int]struct{})
 	for _, ev := range eq {
-		//for ev := eq.Next(); ev != nil; ev = eq.Next() {
-
 		_, ok := isegmap[ev.edge]
 
 		if !ok {
@@ -143,12 +146,9 @@ func FindIntersects(segments []maths.Line, fn func(srcIdx, destIdx int, ptfn fun
 			continue
 		}
 		edge := segments[ev.edge]
-		var segs = make([]int, 0, len(isegmap))
-		for l := range isegmap {
-			segs = append(segs, l)
-		}
 
-		for _, s := range segs {
+		for s := range isegmap {
+
 			src, dest := (s+1)%ns, (ev.edge+1)%ns
 
 			if ev.edge == s || src == ev.edge || dest == s {
@@ -175,12 +175,18 @@ func FindIntersects(segments []maths.Line, fn func(srcIdx, destIdx int, ptfn fun
 	}
 	return
 }
-
+*/
 func IsSimple(segments []maths.Line) bool {
 	var found bool = true
-	FindIntersects(segments, func(_, _ int, _ func() maths.Pt) bool {
+	maths.FindPolygonIntersects(segments, func(_, _ int, _ func() maths.Pt) bool {
 		found = false
 		return false
 	})
+	/*
+		FindIntersects(segments, func(_, _ int, _ func() maths.Pt) bool {
+			found = false
+			return false
+		})
+	*/
 	return found
 }

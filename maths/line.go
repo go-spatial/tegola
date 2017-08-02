@@ -166,3 +166,4 @@ func (l1 Line) LeftRightMostAsLine() Line {
 	l,r := l1.LeftRightMostPts()
 	return Line{l,r}
 }
+

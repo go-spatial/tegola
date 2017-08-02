@@ -13,7 +13,7 @@ import (
 	"github.com/terranodo/tegola/maths"
 )
 
-// CleanLinstring will remove duplicate points, and points between the duplicate points. The exception to this, is the first and last points,
+// CleanLine will remove duplicate points, and points between the duplicate points. The exception to this, is the first and last points,
 // are the same.
 func CleanLine(g tegola.LineString) (l basic.Line, err error) {
 
@@ -113,7 +113,7 @@ func CleanCrossOvers(ctx context.Context, g []float64, batchsize int) (l []float
 
 	intersectionMap := make(map[int]crxPt)
 
-	FindIntersects(segs, func(srcIdx, destIdx int, ptfn func() maths.Pt) bool {
+	maths.FindPolygonIntersects(segs, func(srcIdx, destIdx int, ptfn func() maths.Pt) bool {
 
 		src := segs[srcIdx]
 		dest := segs[destIdx]
