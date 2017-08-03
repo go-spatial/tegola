@@ -2,13 +2,17 @@
 
 var app = new Vue({
 	el: '#app',
-	map: null,		//	map reference
+	//	map reference
+	map: null,
+	//	tooltip for displaying properties during inspect mode
+	inspecter: null,
 	data: {
 		//	stored reference from the capabilities endpoint response
 		capabilities: {
 			version: null,
 			maps: []
 		},
+		hideMapsList: false,
 		//	built out based on the /capabilities response and style.json response
 		maps:[
 		/*	data model 
@@ -23,7 +27,8 @@ var app = new Vue({
 				]
 			}
 		*/
-		]
+		],
+		hoverLayers: []
 	},
 	created: function(){
 		var me = this;
@@ -92,7 +97,52 @@ var app = new Vue({
 			}
 
 			me.map.on('load', me.setData);
-			me.map.on('zoomend', me.setData)
+			me.map.on('zoomend', me.setData);
+
+			me.inspecter = new mapboxgl.Popup();
+			me.map.on('mousemove', function(e) {
+				var html = '';
+				var bbox = {
+					width: 10,
+					height: 10
+				}
+
+				//	query within a few pixels of the mouse to give us some tolerance to work with
+				var features = me.map.queryRenderedFeatures([
+					[e.point.x - bbox.width / 2, e.point.y - bbox.height / 2],
+					[e.point.x + bbox.width / 2, e.point.y + bbox.height / 2]
+				]);
+
+				for (var i=0, l=features.length; i<l; i++){
+					html += '<h4>'+features[i].layer.id+'</h4>';
+
+					html += '<ul>';
+					html += '<li>feature id <span class="float-r">'+features[i].id+'</span></li>'
+					for (var key in features[i].properties){
+						html += '<li>'+key+'<span class="float-r">'+features[i].properties[key]+'</span></li>';
+					}
+					html += '</ul>';
+				}
+
+				if (html != '') {
+					me.inspecter.setLngLat(e.lngLat)
+						.setHTML(html)
+						.addTo(me.map);					
+				} else {
+					if (me.inspecter.isOpen()){
+						me.inspecter.remove();
+					}
+				}
+			});
+		},
+		//	show / hide the maps list
+		toggleMapsVisibility: function(){
+			var hidden = this.$data.hideMapsList;
+			if (hidden){
+				this.$data.hideMapsList = false;
+			} else {
+				this.$data.hideMapsList = true;
+			}
 		},
 		toggleLayerVisibility: function(layerName){
 			if(!layerName){
