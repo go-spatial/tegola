@@ -19,6 +19,8 @@ import (
 	"github.com/terranodo/tegola/wkb"
 )
 
+const Name = "postgis"
+
 // Provider provides the postgis data provider.
 type Provider struct {
 	config pgx.ConnPoolConfig
@@ -28,25 +30,6 @@ type Provider struct {
 	srid   int
 }
 
-// layer holds information about a query.
-type layer struct {
-	// The Name of the layer
-	Name string
-	// The SQL to use when querying PostGIS for this layer
-	SQL string
-	// The ID field name, this will default to 'gid' if not set to something other then empty string.
-	IDFieldName string
-	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
-	GeomFieldName string
-	// The SRID that the data in the table is stored in. This will default to WebMercator
-	SRID int
-}
-
-const (
-	bboxToken = "!BBOX!"
-	zoomToken = "!ZOOM!"
-)
-
 const (
 	// We quote the field and table names to prevent colliding with postgres keywords.
 	stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + bboxToken
@@ -54,8 +37,6 @@ const (
 	// SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
 	fldsSQL = `SELECT * FROM %[1]v LIMIT 0;`
 )
-
-const Name = "postgis"
 
 const (
 	DefaultPort    = 5432
@@ -82,59 +63,6 @@ const (
 
 func init() {
 	provider.Register(Name, NewProvider)
-}
-
-// genSQL will fill in the SQL field of a layer given a pool, and list of fields.
-func genSQL(l *layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
-
-	if len(flds) == 0 {
-		// We need to hit the database to see what the fields are.
-		rows, err := pool.Query(fmt.Sprintf(fldsSQL, tblname))
-		if err != nil {
-			return "", err
-		}
-		defer rows.Close()
-
-		fdescs := rows.FieldDescriptions()
-		if len(fdescs) == 0 {
-			return "", fmt.Errorf("No fields were returned for table %v", tblname)
-		}
-		//	to avoid field names possibly colliding with Postgres keywords,
-		//	we wrap the field names in quotes
-		for i, _ := range fdescs {
-			flds = append(flds, fdescs[i].Name)
-		}
-	}
-	for i := range flds {
-		flds[i] = fmt.Sprintf(`"%v"`, flds[i])
-	}
-
-	var fgeom int = -1
-	var fgid bool
-	for i, f := range flds {
-		if f == `"`+l.GeomFieldName+`"` {
-			fgeom = i
-		}
-		if f == `"`+l.IDFieldName+`"` {
-			fgid = true
-		}
-	}
-
-	//	to avoid field names possibly colliding with Postgres keywords,
-	//	we wrap the field names in quotes
-	if fgeom == -1 {
-		flds = append(flds, fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.GeomFieldName))
-	} else {
-		flds[fgeom] = fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.GeomFieldName)
-	}
-
-	if !fgid {
-		flds = append(flds, fmt.Sprintf(`"%v"`, l.IDFieldName))
-	}
-
-	selectClause := strings.Join(flds, ", ")
-
-	return fmt.Sprintf(stdSQL, selectClause, tblname, l.GeomFieldName), nil
 }
 
 //	NewProvider Setups and returns a new postgis provider or an error; if something
@@ -273,10 +201,10 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		}
 
 		l := layer{
-			Name:          lname,
-			IDFieldName:   idfld,
-			GeomFieldName: geomfld,
-			SRID:          int(lsrid),
+			name:      lname,
+			idField:   idfld,
+			geomField: geomfld,
+			srid:      int(lsrid),
 		}
 		if sql != "" {
 			// make sure that the sql has a !BBOX! token
@@ -291,20 +219,24 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
 				}
 			}
-			l.SQL = sql
+			l.sql = sql
 		} else {
 			// Tablename and Fields will be used to
 			// We need to do some work. We need to check to see Fields contains the geom and gid fields
 			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field
 			// list.
-			l.SQL, err = genSQL(&l, p.pool, tblName, fields)
+			l.sql, err = genSQL(&l, p.pool, tblName, fields)
 			if err != nil {
 				return nil, fmt.Errorf("Could not generate sql, for layer(%v): %v", lname, err)
 			}
 		}
 		if strings.Contains(os.Getenv("SQL_DEBUG"), "LAYER_SQL") {
-			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.SQL)
+			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.sql)
 		}
+
+		//	run a query to fetch the geometry type from the SQL
+		log.Printf("SQL: %v", l.sql)
+
 		lyrs[lname] = l
 	}
 	p.layers = lyrs
@@ -312,53 +244,35 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	return p, nil
 }
 
-func (p Provider) LayerNames() (names []string) {
-	for k, _ := range p.layers {
-		names = append(names, k)
+//	layerGeomType fetches the geometry that will be returned from running the layer SQL
+func (p Provider) layerGeomType(l *layer) tegola.Geometry {
+	// We need to hit the database to see what the fields are.
+	rows, err := p.pool.Query(fmt.Sprintf(fldsSQL, tblname))
+	if err != nil {
+		return "", err
 	}
-	return names
+	defer rows.Close()
+
+	fdescs := rows.FieldDescriptions()
+	if len(fdescs) == 0 {
+		return "", fmt.Errorf("No fields were returned for table %v", tblname)
+	}
+	//	to avoid field names possibly colliding with Postgres keywords,
+	//	we wrap the field names in quotes
+	for i, _ := range fdescs {
+		flds = append(flds, fdescs[i].Name)
+	}
+
 }
 
-func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
-	switch valType {
-	default:
-		switch vt := val.(type) {
-		default:
-			log.Printf("%v type is not supported. (Expected it to be a stringer type)", valType)
-			return nil, fmt.Errorf("%v type is not supported. (Expected it to be a stringer type)", valType)
-		case fmt.Stringer:
-			return vt.String(), nil
-		case string:
-			return vt, nil
-		}
-	case pgx.BoolOid, pgx.ByteaOid, pgx.TextOid, pgx.OidOid, pgx.VarcharOid, pgx.JsonbOid:
-		return val, nil
-	case pgx.Int8Oid, pgx.Int2Oid, pgx.Int4Oid, pgx.Float4Oid, pgx.Float8Oid:
-		switch vt := val.(type) {
-		default: // should never happen.
-			return nil, fmt.Errorf("%v type is not supported. (should never happen)", valType)
-		case int8:
-			return int64(vt), nil
-		case int16:
-			return int64(vt), nil
-		case int32:
-			return int64(vt), nil
-		case int64, uint64:
-			return vt, nil
-		case uint8:
-			return int64(vt), nil
-		case uint16:
-			return int64(vt), nil
-		case uint32:
-			return int64(vt), nil
-		case float32:
-			return float64(vt), nil
-		case float64:
-			return vt, nil
-		}
-	case pgx.DateOid, pgx.TimestampOid, pgx.TimestampTzOid:
-		return fmt.Sprintf("%v", val), nil
+func (p Provider) Layers() []mvt.LayerInfo {
+	var ls []mvt.LayerInfo
+
+	for i := range p.layers {
+		ls = append(ls, p.layers[i])
 	}
+
+	return ls
 }
 
 func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
@@ -417,26 +331,26 @@ func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Ti
 			}
 
 			switch fdescs[i].Name {
-			case plyr.GeomFieldName:
+			case plyr.geomField:
 				if geobytes, ok = v.([]byte); !ok {
-					return nil, fmt.Errorf("Was unable to convert geometry field (%v) into bytes for layer (%v)", plyr.GeomFieldName, layerName)
+					return nil, fmt.Errorf("Was unable to convert geometry field (%v) into bytes for layer (%v)", plyr.geomField, layerName)
 				}
 				//	decode our WKB
 				if geom, err = wkb.DecodeBytes(geobytes); err != nil {
-					return nil, fmt.Errorf("Was unable to decode geometry field (%v) into wkb for layer (%v)", plyr.GeomFieldName, layerName)
+					return nil, fmt.Errorf("Was unable to decode geometry field (%v) into wkb for layer (%v)", plyr.geomField, layerName)
 				}
 				// TODO: Need to move this from being the responsiblity of the provider to the responsibility of the feature. But that means a feature should know
 				// how the points are encoded.
 				// log.Printf("layer SRID %v Default: %v\n", plyr.SRID, DefaultSRID)
-				if plyr.SRID != DefaultSRID {
+				if plyr.srid != DefaultSRID {
 					// We need to convert our points to Webmercator.
-					g, err := basic.ToWebMercator(plyr.SRID, geom)
+					g, err := basic.ToWebMercator(plyr.srid, geom)
 					if err != nil {
-						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", plyr.SRID, layerName)
+						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", plyr.srid, layerName)
 					}
 					geom = g.Geometry
 				}
-			case plyr.IDFieldName:
+			case plyr.idField:
 				switch aval := v.(type) {
 				case int64:
 					gid = uint64(aval)
@@ -459,7 +373,7 @@ func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Ti
 				case uint32:
 					gid = uint64(aval)
 				default:
-					return nil, fmt.Errorf("Unable to convert geometry ID field (%v) into a uint64 for layer (%v)", plyr.IDFieldName, layerName)
+					return nil, fmt.Errorf("Unable to convert geometry ID field (%v) into a uint64 for layer (%v)", plyr.idField, layerName)
 				}
 			default:
 				if vals[i] == nil {
@@ -521,34 +435,4 @@ func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Ti
 	}
 
 	return layer, err
-}
-
-//	replaceTokens replaces tokens in the provided SQL string
-//
-//	!BBOX! - the bounding box of the tile
-//	!ZOOM! - the tile Z value
-func replaceTokens(plyr *layer, tile tegola.Tile) (string, error) {
-
-	textent := tile.BoundingBox()
-
-	minGeo, err := basic.FromWebMercator(plyr.SRID, basic.Point{textent.Minx, textent.Miny})
-	if err != nil {
-		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
-	}
-	maxGeo, err := basic.FromWebMercator(plyr.SRID, basic.Point{textent.Maxx, textent.Maxy})
-	if err != nil {
-		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
-	}
-
-	minPt, maxPt := minGeo.AsPoint(), maxGeo.AsPoint()
-
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)
-
-	//	replace query string tokens
-	tokenReplacer := strings.NewReplacer(
-		bboxToken, bbox,
-		zoomToken, strconv.Itoa(tile.Z),
-	)
-
-	return tokenReplacer.Replace(plyr.SQL), nil
 }

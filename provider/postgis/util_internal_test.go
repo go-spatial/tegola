@@ -14,8 +14,8 @@ func TestReplaceTokens(t *testing.T) {
 	}{
 		{
 			layer: layer{
-				SQL:  "SELECT * FROM foo WHERE geom && !BBOX!",
-				SRID: tegola.WebMercator,
+				sql:  "SELECT * FROM foo WHERE geom && !BBOX!",
+				srid: tegola.WebMercator,
 			},
 			tile: tegola.Tile{
 				Z: 2,
@@ -26,8 +26,8 @@ func TestReplaceTokens(t *testing.T) {
 		},
 		{
 			layer: layer{
-				SQL:  "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
-				SRID: tegola.WebMercator,
+				sql:  "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
+				srid: tegola.WebMercator,
 			},
 			tile: tegola.Tile{
 				Z: 2,
