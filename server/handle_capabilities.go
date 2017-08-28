@@ -48,14 +48,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		var capabilities Capabilities
 		capabilities.Version = Version
 
-		var rScheme string
-		//	check if the request is http or https. the scheme is needed for the TileURLs and
-		//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
-		if r.TLS != nil {
-			rScheme = "https://"
-		} else {
-			rScheme = "http://"
-		}
+		var rScheme = scheme(r)
 
 		//	parse our query string
 		var query = r.URL.Query()
