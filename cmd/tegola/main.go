@@ -104,12 +104,15 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 			}
 
 			//	read the provider's layer names
-			names := provider.LayerNames()
+			layerInfos, err := provider.Layers()
+			if err != nil {
+				return fmt.Errorf("error fetching layer info from provider (%v)", providerLayer[0])
+			}
 
 			//	confirm our providerLayer name is registered
 			var found bool
-			for i := range names {
-				if names[i] == providerLayer[1] {
+			for i := range layerInfos {
+				if layerInfos[i].Name() == providerLayer[1] {
 					found = true
 				}
 			}

@@ -234,8 +234,10 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.sql)
 		}
 
-		//	run a query to fetch the geometry type from the SQL
-		log.Printf("SQL: %v", l.sql)
+		//	set the layer geom type
+		if err = p.layerGeomType(&l); err != nil {
+			return nil, err
+		}
 
 		lyrs[lname] = l
 	}
@@ -244,35 +246,76 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	return p, nil
 }
 
-//	layerGeomType fetches the geometry that will be returned from running the layer SQL
-func (p Provider) layerGeomType(l *layer) tegola.Geometry {
-	// We need to hit the database to see what the fields are.
-	rows, err := p.pool.Query(fmt.Sprintf(fldsSQL, tblname))
+//	layerGeomType sets the geomType field on the layer
+func (p Provider) layerGeomType(l *layer) error {
+	var err error
+
+	//	we need a tile to run our sql through the replacer
+	tile := tegola.Tile{Z: 0, X: 0, Y: 0}
+
+	sql, err := replaceTokens(l, tile)
 	if err != nil {
-		return "", err
+		return err
+	}
+
+	//	we want to know the geom type instead of returning the geom data so we modify the SQL
+	sql = strings.Replace(strings.ToLower(sql), "st_asbinary", "st_geometrytype", 1)
+
+	//	we only need a single result set to sniff out the geometry type
+	sql = fmt.Sprintf("%v LIMIT 1", sql)
+
+	rows, err := p.pool.Query(sql)
+	if err != nil {
+		return err
 	}
 	defer rows.Close()
 
+	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
-	if len(fdescs) == 0 {
-		return "", fmt.Errorf("No fields were returned for table %v", tblname)
-	}
-	//	to avoid field names possibly colliding with Postgres keywords,
-	//	we wrap the field names in quotes
-	for i, _ := range fdescs {
-		flds = append(flds, fdescs[i].Name)
+	for rows.Next() {
+
+		vals, err := rows.Values()
+		if err != nil {
+			return fmt.Errorf("error running SQL: %v ; %v", sql, err)
+		}
+
+		//	iterate the values returned from our row, sniffing for the geomField or st_geometrytype field name
+		for i, v := range vals {
+			switch fdescs[i].Name {
+			case l.geomField, "st_geometrytype":
+				switch v {
+				case "ST_Point":
+					l.geomType = basic.Point{}
+				case "ST_LineString":
+					l.geomType = basic.Line{}
+				case "ST_Polygon":
+					l.geomType = basic.Polygon{}
+				case "ST_MultiPoint":
+					l.geomType = basic.MultiPoint{}
+				case "ST_MultiLineString":
+					l.geomType = basic.MultiLine{}
+				case "ST_MultiPolygon":
+					l.geomType = basic.MultiPolygon{}
+				case "ST_GeometryCollection":
+					l.geomType = basic.Collection{}
+				default:
+					return fmt.Errorf("layer (%v) returned unsupported geometry type (%v)", l.name, v)
+				}
+			}
+		}
 	}
 
+	return nil
 }
 
-func (p Provider) Layers() []mvt.LayerInfo {
+func (p Provider) Layers() ([]mvt.LayerInfo, error) {
 	var ls []mvt.LayerInfo
 
 	for i := range p.layers {
 		ls = append(ls, p.layers[i])
 	}
 
-	return ls
+	return ls, nil
 }
 
 func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {

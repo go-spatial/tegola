@@ -13,7 +13,7 @@ type Provider interface {
 	// MVTLayer returns a layer object based
 	MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*Layer, error)
 	// LayerNames returns a list of layer name the Provider knows about.
-	Layers() []LayerInfo
+	Layers() ([]LayerInfo, error)
 }
 
 type LayerInfo interface {
