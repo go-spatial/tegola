@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+	"gopkg.in/go-playground/colors.v1"
 
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mapbox/style"
 )
 
@@ -79,13 +81,43 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ID:          l.Name,
 			Source:      req.mapName,
 			SourceLayer: l.Name,
-			Type:        style.LayerTypeLine,
 			Layout: &style.LayerLayout{
 				Visibility: style.LayoutVisible,
 			},
-			Paint: &style.LayerPaint{
-				LineColor: stringToColor(l.Name),
-			},
+		}
+
+		//	chose our paint type based on the geometry type
+		switch l.GeomType.(type) {
+		case tegola.Point, tegola.Point3, tegola.MultiPoint:
+			layer.Type = style.LayerTypeLine
+			layer.Paint = &style.LayerPaint{
+				LineColor: stringToColorHex(l.Name),
+			}
+		case tegola.LineString, tegola.MultiLine:
+			layer.Type = style.LayerTypeLine
+			layer.Paint = &style.LayerPaint{
+				LineColor: stringToColorHex(l.Name),
+			}
+		case tegola.Polygon, tegola.MultiPolygon:
+			layer.Type = style.LayerTypeFill
+			hexColor := stringToColorHex(l.Name)
+
+			hex, err := colors.ParseHEX(hexColor)
+			if err != nil {
+				log.Println("error parsing hex color (%v)", hexColor)
+				hex, _ = colors.ParseHEX("#fff") //	default to white on error
+			}
+
+			rgba := hex.ToRGBA()
+			//	set the opacity to 10%
+			rgba.A = 0.10
+
+			layer.Paint = &style.LayerPaint{
+				FillColor:        rgba.String(),
+				FillOutlineColor: hexColor,
+			}
+		default:
+			log.Printf("layer (%v) has unsupported geometry type (%v)", l.Name, l.GeomType)
 		}
 
 		//	add our layer to our tile layer response
@@ -105,7 +137,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 //	port of https://stackoverflow.com/questions/3426404/create-a-hexadecimal-colour-based-on-a-string-with-javascript
-func stringToColor(str string) string {
+func stringToColorHex(str string) string {
 	var hash uint
 	for i := range []rune(str) {
 		hash = uint(str[i]) + ((hash << 5) - hash)

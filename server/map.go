@@ -1,6 +1,9 @@
 package server
 
-import "github.com/terranodo/tegola/mvt"
+import (
+	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/mvt"
+)
 
 //	NewMap creates a new map with the necessary default values
 func NewMap(name string) Map {
@@ -56,4 +59,5 @@ type Layer struct {
 	Provider mvt.Provider
 	//	default tags to include when encoding the layer. provider tags take precedence
 	DefaultTags map[string]interface{}
+	GeomType    tegola.Geometry
 }

@@ -246,7 +246,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	return p, nil
 }
 
-//	layerGeomType sets the geomType field on the layer
+//	layerGeomType sets the geomType field on the layer by running the SQL and reading the geom type in the result set
 func (p Provider) layerGeomType(l *layer) error {
 	var err error
 
@@ -259,6 +259,7 @@ func (p Provider) layerGeomType(l *layer) error {
 	}
 
 	//	we want to know the geom type instead of returning the geom data so we modify the SQL
+	//	TODO: this strategy wont work if remove the requirement of wrapping ST_AsBinary(geom) in the SQL statements.
 	sql = strings.Replace(strings.ToLower(sql), "st_asbinary", "st_geometrytype", 1)
 
 	//	we only need a single result set to sniff out the geometry type

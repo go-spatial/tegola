@@ -7,7 +7,7 @@ const (
 	LayerTypeCircle        = "circle"
 	LayerTypeFillExtrusion = "fill-extrusion"
 	LayerTypeRaster        = "raster"
-	LayerTypeBackgroudn    = "background"
+	LayerTypeBackground    = "background"
 )
 
 type Layer struct {
@@ -20,8 +20,10 @@ type Layer struct {
 }
 
 type LayerPaint struct {
-	LineColor string `json:"line-color,omitempty"`
-	FillColor string `json:"fill-color,omitempty"`
+	LineColor        string `json:"line-color,omitempty"`
+	FillColor        string `json:"fill-color,omitempty"`
+	FillOutlineColor string `json:"fill-outline-color,omitempty"`
+	FillOpacity      uint8  `json:"fill-opacity,omitempty"`
 }
 
 const (
