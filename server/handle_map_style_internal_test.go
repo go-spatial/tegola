@@ -2,7 +2,7 @@ package server
 
 import "testing"
 
-func TestStringToColor(t *testing.T) {
+func TestStringToColorHex(t *testing.T) {
 	testcases := []struct {
 		input    string
 		expected string
@@ -14,7 +14,7 @@ func TestStringToColor(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		output := stringToColor(tc.input)
+		output := stringToColorHex(tc.input)
 
 		if tc.expected != output {
 			t.Errorf("testcase (%v) failed. exected (%v) does not match output (%v)", i, tc.expected, output)

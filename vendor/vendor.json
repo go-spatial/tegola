@@ -55,6 +55,12 @@
 			"path": "github.com/pkg/profile",
 			"revision": "5b67d428864e92711fcbd2f8629456121a56d91f",
 			"revisionTime": "2017-05-09T09:25:25Z"
+		},
+		{
+			"checksumSHA1": "a9pyC/XvFSy6/wgxMt9qepohioQ=",
+			"path": "gopkg.in/go-playground/colors.v1",
+			"revision": "b53ecfb396233c24c77594af27dd0f5731fafaf1",
+			"revisionTime": "2015-09-24T11:17:26Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"

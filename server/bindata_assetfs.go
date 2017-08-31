@@ -95,7 +95,7 @@ func staticCssTegolaCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/css/tegola.css", size: 2082, mode: os.FileMode(420), modTime: time.Unix(1501716708, 0)}
+	info := bindataFileInfo{name: "static/css/tegola.css", size: 2082, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -115,7 +115,7 @@ func staticFaviconIco() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/favicon.ico", size: 1150, mode: os.FileMode(420), modTime: time.Unix(1499887909, 0)}
+	info := bindataFileInfo{name: "static/favicon.ico", size: 1150, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -135,7 +135,7 @@ func staticIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/index.html", size: 1496, mode: os.FileMode(420), modTime: time.Unix(1501714440, 0)}
+	info := bindataFileInfo{name: "static/index.html", size: 1496, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -155,7 +155,7 @@ func staticJsTegolaJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/js/tegola.js", size: 4669, mode: os.FileMode(420), modTime: time.Unix(1501717567, 0)}
+	info := bindataFileInfo{name: "static/js/tegola.js", size: 4669, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -175,7 +175,7 @@ func staticLibMapboxGlJsIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/index.html", size: 794, mode: os.FileMode(420), modTime: time.Unix(1498245970, 0)}
+	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/index.html", size: 794, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -195,7 +195,7 @@ func staticLibMapboxGlJsV0380MapboxGlCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/v0.38.0/mapbox-gl.css", size: 32780, mode: os.FileMode(420), modTime: time.Unix(1498170409, 0)}
+	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/v0.38.0/mapbox-gl.css", size: 32780, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -215,7 +215,7 @@ func staticLibMapboxGlJsV0380MapboxGlJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/v0.38.0/mapbox-gl.js", size: 530918, mode: os.FileMode(420), modTime: time.Unix(1498170373, 0)}
+	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/v0.38.0/mapbox-gl.js", size: 530918, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -235,7 +235,7 @@ func staticLibOpenLayersIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/open-layers/index.html", size: 1525, mode: os.FileMode(420), modTime: time.Unix(1498176275, 0)}
+	info := bindataFileInfo{name: "static/lib/open-layers/index.html", size: 1525, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -255,7 +255,7 @@ func staticLibOpenLayersV420OlDebugJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/open-layers/v4.2.0/ol-debug.js", size: 2584637, mode: os.FileMode(493), modTime: time.Unix(1497311616, 0)}
+	info := bindataFileInfo{name: "static/lib/open-layers/v4.2.0/ol-debug.js", size: 2584637, mode: os.FileMode(493), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -275,7 +275,7 @@ func staticLibOpenLayersV420OlCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/open-layers/v4.2.0/ol.css", size: 3861, mode: os.FileMode(493), modTime: time.Unix(1497311616, 0)}
+	info := bindataFileInfo{name: "static/lib/open-layers/v4.2.0/ol.css", size: 3861, mode: os.FileMode(493), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -295,7 +295,7 @@ func staticLibOpenLayersV420OlJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/open-layers/v4.2.0/ol.js", size: 515485, mode: os.FileMode(493), modTime: time.Unix(1497311616, 0)}
+	info := bindataFileInfo{name: "static/lib/open-layers/v4.2.0/ol.js", size: 515485, mode: os.FileMode(493), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -315,7 +315,7 @@ func staticLibVueV230VueMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/vue/v2.3.0/vue.min.js", size: 78479, mode: os.FileMode(420), modTime: time.Unix(1498251935, 0)}
+	info := bindataFileInfo{name: "static/lib/vue/v2.3.0/vue.min.js", size: 78479, mode: os.FileMode(420), modTime: time.Unix(1504052352, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

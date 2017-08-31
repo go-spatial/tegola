@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/server"
 )
@@ -23,10 +24,14 @@ func (tp *testMVTProvider) MVTLayer(ctx context.Context, layerName string, tile 
 	return &layer, nil
 }
 
-func (tp *testMVTProvider) LayerNames() []string {
-	return []string{
-		"test-layer",
-	}
+func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
+	return []mvt.LayerInfo{
+		layer{
+			name:     "test-layer",
+			geomType: basic.Polygon{},
+			srid:     tegola.WebMercator,
+		},
+	}, nil
 }
 
 var testLayer1 = server.Layer{
@@ -57,6 +62,24 @@ var testMap = server.Map{
 		testLayer1,
 		testLayer2,
 	},
+}
+
+type layer struct {
+	name     string
+	geomType tegola.Geometry
+	srid     int
+}
+
+func (l layer) Name() string {
+	return l.name
+}
+
+func (l layer) GeomType() tegola.Geometry {
+	return l.geomType
+}
+
+func (l layer) SRID() int {
+	return l.srid
 }
 
 func init() {

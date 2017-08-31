@@ -146,3 +146,30 @@ func TestMVTLayer(t *testing.T) {
 		}
 	}
 }
+
+/*
+func TestLayers(t *testing.T) {
+	if os.Getenv("RUN_POSTGIS_TEST") != "yes" {
+		return
+	}
+
+	testcases := []struct {
+		config map[string]interface{},
+		layers []mvt.LayerInfo,
+	}{
+		{
+			postgis.ConfigKeyHost:     "localhost",
+			postgis.ConfigKeyPort:     int64(5432),
+			postgis.ConfigKeyDB:       "tegola",
+			postgis.ConfigKeyUser:     "postgres",
+			postgis.ConfigKeyPassword: "",
+			postgis.ConfigKeyLayers: []map[string]interface{}{
+				{
+					postgis.ConfigKeyLayerName: "land",
+					postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
+				},
+			},
+		},
+	}
+}
+*/

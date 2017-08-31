@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
@@ -28,7 +29,7 @@ func main() {
 	//	parse our command line flags
 	flag.Parse()
 
-	//	if the user looking for tegola version info, print it and exit
+	//	if the user is looking for tegola version info, print it and exit
 	if *version {
 		fmt.Println(Version)
 		os.Exit(0)
@@ -86,7 +87,6 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 			serverMap.Bounds = [4]float64{m.Bounds[0], m.Bounds[1], m.Bounds[2], m.Bounds[3]}
 		}
 
-		//	var layers []server.Layer
 		//	iterate our layers
 		for _, l := range m.Layers {
 			//	split our provider name (provider.layer) into [provider,layer]
@@ -104,13 +104,20 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 			}
 
 			//	read the provider's layer names
-			names := provider.LayerNames()
+			layerInfos, err := provider.Layers()
+			if err != nil {
+				return fmt.Errorf("error fetching layer info from provider (%v)", providerLayer[0])
+			}
 
 			//	confirm our providerLayer name is registered
 			var found bool
-			for i := range names {
-				if names[i] == providerLayer[1] {
+			var layerGeomType tegola.Geometry
+			for i := range layerInfos {
+				if layerInfos[i].Name() == providerLayer[1] {
 					found = true
+
+					//	read the layerGeomType
+					layerGeomType = layerInfos[i].GeomType()
 				}
 			}
 			if !found {
@@ -133,6 +140,7 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 				MaxZoom:     l.MaxZoom,
 				Provider:    provider,
 				DefaultTags: defaultTags,
+				GeomType:    layerGeomType,
 			})
 		}
 
