@@ -16,6 +16,30 @@ body, html {
 .hide {
 	display: none;
 }
+.btn {
+	color: #ccc;
+	background-color: rgba(0,0,0,0.5);
+	display: block;
+	padding: 6px 12px;
+	margin-bottom: 0;
+	font-size: 14px;
+	font-weight: 400;
+	line-height: 1.42857143;
+	text-align: center;
+	white-space: nowrap;
+	vertical-align: middle;
+	cursor: pointer;
+	user-select: none;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+}
+.btn:hover {
+	border-color: #fff;
+	color: #fff;
+}
+.btn.active {
+	color: #259b24;
+}
 
 #map canvas {
 	/*cursor: crosshair;*/
@@ -25,7 +49,16 @@ body, html {
 	width: 300px;
 	position: fixed;
 	background-color: rgba(0,0,0,0.5);
+	display: flex;
+	flex-flow: column;
+	height:100%;
 }
+	#left-nav #left-nav-header {
+		flex: 0 1 auto;
+	}
+	#left-nav #toggle-feature-inspector {
+
+	}
 	#left-nav h1 {
 		padding: 8px;
 		top: 0;
@@ -44,11 +77,15 @@ body, html {
 	}
 	#left-nav .container {
 		width: 100%;
+		flex: 1 1 auto;
+		overflow-y: scroll;
 	}
 	#maps {
 		margin: 0;
 		padding: 0;
 		font-size: 14px;
+		overflow-y:scroll;
+		height:100%;
 	}
 		#maps>li {
 			list-style: none;
@@ -95,6 +132,9 @@ body, html {
 			margin-right: .5em;
 			border: 1px;
 		}
+	#left-nav #left-nav-footer {
+		flex: 0 1 40px;
+	}
 
 .mapboxgl-popup-content {
 	position: relative;

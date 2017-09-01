@@ -8,17 +8,18 @@
 			body { margin:0; padding:0; }
 			#map { position:absolute; top:0; bottom:0; width:100%; }
 		</style>
-		<link href='lib/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
-		<link href='lib/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+		<link href='lib/mapbox-gl-js/v0.39.1/mapbox-gl.css' rel='stylesheet' />
 		<link href='css/tegola.css' rel='stylesheet' />
 	</head>
 	<body>
 		<div id="app" v-cloak>
 			<div id="main">
 				<div id="left-nav">
-					<h1>Tegola ({{capabilities.version}})</h1>
-					<div class="float-l container">
+					<div id="left-nav-header">
+						<h1>Tegola ({{capabilities.version}})</h1>
 						<h2 v-on:click="toggleMapsVisibility">Maps</h2>
+					</div>
+					<div class="container">
 						<ul id="maps" v-bind:class="{'hide': hideMapsList}">
 							<li v-for="map in maps" v-on:click.self="loadMap(map.name)"><span>{{map.name}}</span>
 								<ul class="map-layers">
@@ -27,14 +28,17 @@
 							</li>
 						</ul>
 					</div>
+					<div id="left-nav-footer">
+						<div v-on:click="toggleFeatureInspector" class="btn" v-bind:class="{active: inspectorIsActive}" id="toggle-feature-inspector">Inspect Features</div>
+					</div>
 				</div>
 				<div id='map'></div>
 			</div>
 		</div>
 	</body>
-	<script src='lib/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
-	<!--script src='lib/vue/v2.3.0/vue.min.js'></script-->
+	<script src='lib/mapbox-gl-js/v0.39.1/mapbox-gl.js'></script>
+	<script src='lib/vue/v2.3.0/vue.min.js'></script>
 	<!-- uncomment for dev -->
-	<script src='https://unpkg.com/vue@2.4.1'></script>
+	<!--script src='https://unpkg.com/vue@2.4.1'></script-->
 	<script src='js/tegola.js'></script>
 </html>

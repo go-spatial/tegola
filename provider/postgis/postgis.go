@@ -236,7 +236,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 
 		//	set the layer geom type
 		if err = p.layerGeomType(&l); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error fetching geometry type for layer (%v): %v", l.name, err)
 		}
 
 		lyrs[lname] = l

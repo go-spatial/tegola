@@ -5,7 +5,7 @@ var app = new Vue({
 	//	map reference
 	map: null,
 	//	tooltip for displaying properties during inspect mode
-	inspecter: null,
+	inspector: null,
 	data: {
 		//	stored reference from the capabilities endpoint response
 		capabilities: {
@@ -13,6 +13,7 @@ var app = new Vue({
 			maps: []
 		},
 		hideMapsList: false,
+		inspectorIsActive: false,
 		//	built out based on the /capabilities response and style.json response
 		maps:[
 		/*	data model 
@@ -99,41 +100,7 @@ var app = new Vue({
 			me.map.on('load', me.setData);
 			me.map.on('zoomend', me.setData);
 
-			me.inspecter = new mapboxgl.Popup();
-			me.map.on('mousemove', function(e) {
-				var html = '';
-				var bbox = {
-					width: 10,
-					height: 10
-				}
-
-				//	query within a few pixels of the mouse to give us some tolerance to work with
-				var features = me.map.queryRenderedFeatures([
-					[e.point.x - bbox.width / 2, e.point.y - bbox.height / 2],
-					[e.point.x + bbox.width / 2, e.point.y + bbox.height / 2]
-				]);
-
-				for (var i=0, l=features.length; i<l; i++){
-					html += '<h4>'+features[i].layer.id+'</h4>';
-
-					html += '<ul>';
-					html += '<li>feature id <span class="float-r">'+features[i].id+'</span></li>'
-					for (var key in features[i].properties){
-						html += '<li>'+key+'<span class="float-r">'+features[i].properties[key]+'</span></li>';
-					}
-					html += '</ul>';
-				}
-
-				if (html != '') {
-					me.inspecter.setLngLat(e.lngLat)
-						.setHTML(html)
-						.addTo(me.map);					
-				} else {
-					if (me.inspecter.isOpen()){
-						me.inspecter.remove();
-					}
-				}
-			});
+			me.inspector = new mapboxgl.Popup();
 		},
 		//	show / hide the maps list
 		toggleMapsVisibility: function(){
@@ -157,6 +124,55 @@ var app = new Vue({
 			}
 
 			this.setData();
+		},
+		toggleFeatureInspector: function() {
+			var me = this;
+
+			if (!me.$data.inspectorIsActive){
+				me.map.on('mousemove', me.inspectFeatures);
+				me.$data.inspectorIsActive = true;
+			} else {
+				me.map.off('mousemove', me.inspectFeatures);
+				me.$data.inspectorIsActive = false;
+				if (me.inspector.isOpen()){
+					me.inspector.remove();
+				}
+			}
+		},
+		inspectFeatures: function(e){
+			var me = this;
+			var html = '';
+			var bbox = {
+				width: 10,
+				height: 10
+			}
+
+			//	query within a few pixels of the mouse to give us some tolerance to work with
+			var features = me.map.queryRenderedFeatures([
+				[e.point.x - bbox.width / 2, e.point.y - bbox.height / 2],
+				[e.point.x + bbox.width / 2, e.point.y + bbox.height / 2]
+			]);
+
+			for (var i=0, l=features.length; i<l; i++){
+				html += '<h4>'+features[i].layer.id+'</h4>';
+
+				html += '<ul>';
+				html += '<li>feature id <span class="float-r">'+features[i].id+'</span></li>'
+				for (var key in features[i].properties){
+					html += '<li>'+key+'<span class="float-r">'+features[i].properties[key]+'</span></li>';
+				}
+				html += '</ul>';
+			}
+
+			if (html != '') {
+				me.inspector.setLngLat(e.lngLat)
+					.setHTML(html)
+					.addTo(me.map);					
+			} else {
+				if (me.inspector.isOpen()){
+					me.inspector.remove();
+				}
+			}
 		}
 	}
 });
