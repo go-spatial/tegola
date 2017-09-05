@@ -14,6 +14,9 @@ services:
 addons:
   postgresql: "9.4"
 
+before_install:
+  - psql -U postgres -c "create extension postgis"  
+
 install:
   - bash ci/build_bindata.sh
   - bash ci/config_postgis.sh
