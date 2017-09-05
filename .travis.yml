@@ -15,6 +15,7 @@ addons:
   postgresql: "9.4"
 
 install:
+  - bash ci/build_bindata.sh
   - bash ci/config_postgis.sh
 
 before_deploy:
