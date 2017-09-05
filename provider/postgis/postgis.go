@@ -176,7 +176,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			return nil, fmt.Errorf("For layer (%v) %v : %v", i, lname, err)
 		}
 		if idfld == geomfld {
-			return nil, fmt.Errorf("For layer (%v) %v: %v (%v) and %v field (%v) is the same!", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+			return nil, fmt.Errorf("For layer (%v) %v : %v (%v) and %v field (%v) is the same!", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
 		}
 
 		var tblName string
@@ -214,9 +214,6 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			if !strings.Contains(sql, "*") {
 				if !strings.Contains(sql, geomfld) {
 					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the geometry field: %v", i, lname, geomfld)
-				}
-				if !strings.Contains(sql, idfld) {
-					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
 				}
 			}
 			l.sql = sql
