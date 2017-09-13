@@ -57,14 +57,18 @@ var app = new Vue({
 					layers: []
 				};
 
-				var layers = maps[i].layers
+				var layers = maps[i].layers;
 				//	iterate our map layers
 				for (var j=0, l=layers.length; j<l; j++){
+					var color = this.map.getPaintProperty(layers[j].name, 'line-color') || 
+						this.map.getPaintProperty(layers[j].name, 'fill-outline-color') ||
+						this.map.getPaintProperty(layers[j].name, 'circle-color');
+
 					mapItem.layers.push({
 						name: layers[j].name,
 						visibility: this.map.getLayoutProperty(layers[j].name, 'visibility') === 'visible' ? 'visible' : 'hidden',
-						color: this.map.getPaintProperty(layers[j].name, 'line-color')
-					})				
+						color: color
+					});
 				}
 				mapsList.push(mapItem);
 			}

@@ -1,4 +1,3 @@
 package style
 
-type Transition struct {
-}
+type Transition struct{}

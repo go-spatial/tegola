@@ -11,9 +11,11 @@ import (
 	"github.com/terranodo/tegola/server"
 )
 
+//	test server config
 const (
-	httpPort      = ":8080"
-	serverVersion = "0.3.0"
+	httpPort       = ":8080"
+	serverVersion  = "0.4.0"
+	serverHostName = "tegola.io"
 )
 
 type testMVTProvider struct{}
@@ -39,6 +41,7 @@ var testLayer1 = server.Layer{
 	MinZoom:  4,
 	MaxZoom:  9,
 	Provider: &testMVTProvider{},
+	GeomType: basic.Point{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
@@ -49,6 +52,7 @@ var testLayer2 = server.Layer{
 	MinZoom:  10,
 	MaxZoom:  20,
 	Provider: &testMVTProvider{},
+	GeomType: basic.Line{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
@@ -84,6 +88,7 @@ func (l layer) SRID() int {
 
 func init() {
 	server.Version = serverVersion
+	server.HostName = serverHostName
 
 	//	register a map with layers
 	if err := server.RegisterMap(testMap); err != nil {

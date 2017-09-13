@@ -24,6 +24,8 @@ type LayerPaint struct {
 	FillColor        string `json:"fill-color,omitempty"`
 	FillOutlineColor string `json:"fill-outline-color,omitempty"`
 	FillOpacity      uint8  `json:"fill-opacity,omitempty"`
+	CircleRadius     uint8  `json:"circle-radius,omitempty"`
+	CircleColor      string `json:"circle-color,omitempty"`
 }
 
 const (

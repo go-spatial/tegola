@@ -89,9 +89,10 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	chose our paint type based on the geometry type
 		switch l.GeomType.(type) {
 		case tegola.Point, tegola.Point3, tegola.MultiPoint:
-			layer.Type = style.LayerTypeLine
+			layer.Type = style.LayerTypeCircle
 			layer.Paint = &style.LayerPaint{
-				LineColor: stringToColorHex(l.Name),
+				CircleRadius: 3,
+				CircleColor:  stringToColorHex(l.Name),
 			}
 		case tegola.LineString, tegola.MultiLine:
 			layer.Type = style.LayerTypeLine
