@@ -10,6 +10,10 @@ const adjustBBoxBy = 10
 
 type Triangle [3]Pt
 
+func init() {
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
+}
+
 func (t *Triangle) Edge(n int) Line {
 	if n < 0 || n == 0 {
 		return Line{t[0], t[1]}
@@ -283,7 +287,7 @@ func (tg *TriangleGraph) Rings() (rings [][]Line) {
 			}
 			seen[node.Key()] = struct{}{}
 			for j := range node.Neighbors {
-				if node.Neighbors[j].Node.Label == node.Label {
+				if node.Neighbors[j].Node != nil && node.Neighbors[j].Node.Label == node.Label {
 					nodesToProcess = append(nodesToProcess, node.Neighbors[j].Node)
 				} else {
 					log.Println("Found edge to process: ", node.Edge(j))

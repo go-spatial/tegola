@@ -220,6 +220,7 @@ const (
 // 2. No ring has duplicate points.
 // 3. No ring is self intersecting.
 func PolygonIsSimple(g tegola.Polygon) (ok bool, reason SimplicityReason) {
+	ok = true
 MainLoop:
 	for i, l := range g.Sublines() {
 		// 0 is the outer ring.
@@ -326,10 +327,11 @@ func makePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
 	return mp, err
 }
 func flipWindingOrderForPolygonLines(reason SimplicityReason, lines []tegola.LineString) (np basic.Polygon) {
-	var lns []basic.Line
+	var lns basic.Polygon
 	for i := range lines {
 		lns = append(lns, basic.NewLineFromSubPoints(lines[i].Subpoints()...))
 	}
+	log.Println("LNS:", lns)
 	if reason&OuterRingNotClockwise == OuterRingNotClockwise {
 		lns[0] = FlipWindingOrderOfLine(lns[0])
 	}
@@ -340,7 +342,8 @@ func flipWindingOrderForPolygonLines(reason SimplicityReason, lines []tegola.Lin
 			}
 		}
 	}
-	return np
+	log.Println("LNS:", lns)
+	return lns
 }
 func MakePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
 
@@ -361,9 +364,12 @@ func MakePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
 func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err error) {
 	var reason SimplicityReason
 	var ok bool
+	var needToFix bool
+	var updated bool
 	polygons := g.Polygons()
 	for i := range polygons {
 		if ok, reason = PolygonIsSimple(polygons[i]); ok {
+			log.Printf("Adding line to mp: %#v", mp)
 			mp = append(mp, basic.NewPolygonFromSubLines(polygons[i].Sublines()...))
 			continue
 		}
@@ -371,13 +377,20 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 		// able to fix it really quickly.
 		// First check to see it's not a quick fix.
 		if (reason&DuplicatePoints == DuplicatePoints) || (reason&SelfIntersecting == SelfIntersecting) || (reason&OtherError == OtherError) {
+			needToFix = true
 			break
 		}
 		if (reason&OuterRingNotClockwise == OuterRingNotClockwise) || (reason&InnerRingsNotCounterClockwise == InnerRingsNotCounterClockwise) {
 			mp = append(mp, flipWindingOrderForPolygonLines(reason, polygons[i].Sublines()))
+			updated = true
+			log.Printf("Just inverting winding order. %#v", mp)
 		}
 	}
-	if len(mp) == len(polygons) {
+	if !needToFix || !updated {
+		log.Printf("No update! %#v", mp)
+		return mp, nil
+	}
+	if !needToFix {
 		return mp, nil
 	}
 	// Repair will provide a new multipolygon.
