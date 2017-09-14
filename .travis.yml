@@ -13,8 +13,12 @@ services:
 
 addons:
   postgresql: "9.4"
+  apt:
+    packages:
+    - postgresql-9.4-postgis-2.3
 
 install:
+  - bash ci/build_bindata.sh
   - bash ci/config_postgis.sh
 
 before_deploy:

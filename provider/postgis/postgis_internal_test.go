@@ -1,53 +1,62 @@
 package postgis
 
 import (
+	"os"
+	"reflect"
 	"testing"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 )
 
-func TestReplaceTokens(t *testing.T) {
+func TestLayerGeomType(t *testing.T) {
+	if os.Getenv("RUN_POSTGIS_TEST") != "yes" {
+		return
+	}
+
 	testcases := []struct {
-		layer    Layer
-		tile     tegola.Tile
-		expected string
+		config    map[string]interface{}
+		layerName string
+		geom      tegola.Geometry
 	}{
 		{
-			layer: Layer{
-				SQL:  "SELECT * FROM foo WHERE geom && !BBOX!",
-				SRID: tegola.WebMercator,
+			config: map[string]interface{}{
+				ConfigKeyHost:     "localhost",
+				ConfigKeyPort:     int64(5432),
+				ConfigKeyDB:       "tegola",
+				ConfigKeyUser:     "postgres",
+				ConfigKeyPassword: "",
+				ConfigKeyLayers: []map[string]interface{}{
+					{
+						ConfigKeyLayerName: "land",
+						ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE geom && !BBOX!",
+					},
+				},
 			},
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
-			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,1.001875417e+07,0,0,3857)",
-		},
-		{
-			layer: Layer{
-				SQL:  "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
-				SRID: tegola.WebMercator,
-			},
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
-			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,1.001875417e+07,0,0,3857)",
+			layerName: "land",
+			geom:      basic.MultiPolygon{},
 		},
 	}
 
 	for i, tc := range testcases {
-		sql, err := ReplaceTokens(&tc.layer, tc.tile)
+		provider, err := NewProvider(tc.config)
 		if err != nil {
-			t.Errorf("Failed test %v. err: %v", i, err)
-			return
+			t.Errorf("testcase (%v) failed on NewProvider. err: %v", i, err)
+			continue
 		}
 
-		if sql != tc.expected {
-			t.Errorf("Failed test %v. Expected (%v), got (%v)", i, tc.expected, sql)
-			return
+		p := provider.(Provider)
+		layer := p.layers[tc.layerName]
+		if err := p.layerGeomType(&layer); err != nil {
+			t.Errorf("testcase (%v) failed on layerGeomType. err: %v", i, err)
+			continue
+		}
+
+		expectedGeomType := reflect.TypeOf(tc.geom)
+		outputGeomType := reflect.TypeOf(layer.geomType)
+
+		if expectedGeomType != outputGeomType {
+			t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", i, outputGeomType, expectedGeomType)
 		}
 	}
 }

@@ -57,14 +57,15 @@ func Start(port string) {
 	//	map tiles
 	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HandleMapStyle{})
 
 	//	map layer tiles
 	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
 
 	//	static convenience routes
-	group.UsingContext().Handler("GET", "/", http.FileServer(http.Dir("static")))
-	group.UsingContext().Handler("GET", "/*path", http.FileServer(http.Dir("static")))
+	group.UsingContext().Handler("GET", "/", http.FileServer(assetFS()))
+	group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
 
 	//	start our server
 	log.Fatal(http.ListenAndServe(port, r))

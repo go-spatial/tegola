@@ -6,13 +6,16 @@ import (
 	"context"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/server"
 )
 
+//	test server config
 const (
-	httpPort      = ":8080"
-	serverVersion = "0.3.0"
+	httpPort       = ":8080"
+	serverVersion  = "0.4.0"
+	serverHostName = "tegola.io"
 )
 
 type testMVTProvider struct{}
@@ -23,10 +26,14 @@ func (tp *testMVTProvider) MVTLayer(ctx context.Context, layerName string, tile 
 	return &layer, nil
 }
 
-func (tp *testMVTProvider) LayerNames() []string {
-	return []string{
-		"test-layer",
-	}
+func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
+	return []mvt.LayerInfo{
+		layer{
+			name:     "test-layer",
+			geomType: basic.Polygon{},
+			srid:     tegola.WebMercator,
+		},
+	}, nil
 }
 
 var testLayer1 = server.Layer{
@@ -34,6 +41,7 @@ var testLayer1 = server.Layer{
 	MinZoom:  4,
 	MaxZoom:  9,
 	Provider: &testMVTProvider{},
+	GeomType: basic.Point{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
@@ -44,6 +52,7 @@ var testLayer2 = server.Layer{
 	MinZoom:  10,
 	MaxZoom:  20,
 	Provider: &testMVTProvider{},
+	GeomType: basic.Line{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
@@ -59,8 +68,27 @@ var testMap = server.Map{
 	},
 }
 
+type layer struct {
+	name     string
+	geomType tegola.Geometry
+	srid     int
+}
+
+func (l layer) Name() string {
+	return l.name
+}
+
+func (l layer) GeomType() tegola.Geometry {
+	return l.geomType
+}
+
+func (l layer) SRID() int {
+	return l.srid
+}
+
 func init() {
 	server.Version = serverVersion
+	server.HostName = serverHostName
 
 	//	register a map with layers
 	if err := server.RegisterMap(testMap); err != nil {

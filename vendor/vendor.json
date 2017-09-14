@@ -33,6 +33,12 @@
 			"revisionTime": "2017-02-28T07:34:54Z"
 		},
 		{
+			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
+			"path": "github.com/elazarl/go-bindata-assetfs",
+			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
+			"revisionTime": "2017-02-27T21:27:28Z"
+		},
+		{
 			"checksumSHA1": "/TU0r8yAEpNvUWbxosqlXi416Os=",
 			"path": "github.com/gdey/tbltest",
 			"revision": "af8abc47b052b70d6527a2113c2cc417849889f2",
@@ -61,6 +67,12 @@
 			"path": "github.com/pkg/profile",
 			"revision": "5b67d428864e92711fcbd2f8629456121a56d91f",
 			"revisionTime": "2017-05-09T09:25:25Z"
+		},
+		{
+			"checksumSHA1": "a9pyC/XvFSy6/wgxMt9qepohioQ=",
+			"path": "gopkg.in/go-playground/colors.v1",
+			"revision": "b53ecfb396233c24c77594af27dd0f5731fafaf1",
+			"revisionTime": "2015-09-24T11:17:26Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"
