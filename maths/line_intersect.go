@@ -84,11 +84,8 @@ func DoesIntersect(s1, s2 Line) bool {
 
 }
 
-func findIntersectsWithEventQueue(polygonCheck bool, eq []event, segments []Line, fn func(srcIdx, destIdx int, ptfn func() Pt) bool) {
+func FindIntersectsWithEventQueue(polygonCheck bool, eq []event, segments []Line, fn func(srcIdx, destIdx int, ptfn func() Pt) bool) {
 	ns := len(segments)
-	if ns < 3 {
-		return
-	}
 	var val struct{}
 
 	isegmap := make(map[int]struct{})
@@ -148,12 +145,14 @@ func findIntersectsWithEventQueue(polygonCheck bool, eq []event, segments []Line
 // FindIntersects call the provided function with the indexs of the lines from the segments slice that intersect with each other. If the function returns false, it will stop iteration.
 // To find the intersection point call the ptfn that is passed to the call back.
 func FindIntersects(segments []Line, fn func(srcIdx, destIdx int, ptfn func() Pt) bool) {
-	ns := len(segments)
-	if ns < 3 {
-		return
-	}
+	/*
+		ns := len(segments)
+		if ns < 3 {
+			return
+		}
+	*/
 	eq := NewEventQueue(segments)
-	findIntersectsWithEventQueue(false, eq, segments, fn)
+	FindIntersectsWithEventQueue(false, eq, segments, fn)
 	return
 }
 
@@ -166,7 +165,7 @@ func FindPolygonIntersects(segments []Line, fn func(srcIdx, destIdx int, ptfn fu
 		return
 	}
 	eq := NewEventQueue(segments)
-	findIntersectsWithEventQueue(true, eq, segments, fn)
+	FindIntersectsWithEventQueue(true, eq, segments, fn)
 	return
 }
 

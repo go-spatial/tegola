@@ -74,6 +74,21 @@ func NewLineFromPt(points ...maths.Pt) Line {
 	}
 	return line
 }
+func NewLineTruncatedFromPt(points ...maths.Pt) Line {
+	var line Line
+	for _, p := range points {
+		line = append(line, Point{float64(int64(p.X)), float64(int64(p.Y))})
+	}
+	return line
+}
+
+func NewLineFromSubPoints(points ...tegola.Point) (l Line) {
+	l = make(Line, 0, len(points))
+	for i := range points {
+		l = append(l, Point{points[i].X(), points[i].Y()})
+	}
+	return l
+}
 
 // Subpoints return the points in a line.
 func (l Line) Subpoints() (points []tegola.Point) {

@@ -1,6 +1,8 @@
 package validate
 
 import (
+	"log"
+
 	"github.com/terranodo/tegola/maths"
 )
 
@@ -178,7 +180,15 @@ func FindIntersects(segments []maths.Line, fn func(srcIdx, destIdx int, ptfn fun
 */
 func IsSimple(segments []maths.Line) bool {
 	var found bool = true
-	maths.FindPolygonIntersects(segments, func(_, _ int, _ func() maths.Pt) bool {
+	maths.FindPolygonIntersects(segments, func(i, j int, ptfn func() maths.Pt) bool {
+		line1, line2 := segments[i], segments[j]
+		// Do the lines intersect at the end points, if so we need to ignore.
+		if line1[0].IsEqual(line2[0]) || line1[0].IsEqual(line2[1]) ||
+			line1[1].IsEqual(line2[0]) || line1[1].IsEqual(line2[1]) {
+			return true
+		}
+		_ = ptfn
+		log.Println("Found Intersection at ", i, j, ":", segments[i], segments[j], ptfn())
 		found = false
 		return false
 	})

@@ -325,12 +325,11 @@ func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
 		return line
 	}
 	pts := line.AsPts()
-	log.Println("Simplifying Line Pointcount:", len(pts))
 	pts = maths.DouglasPeucker(pts, tolerance, true)
 	if len(pts) == 0 {
 		return nil
 	}
-	return basic.NewLineFromPt(pts...)
+	return basic.NewLineTruncatedFromPt(pts...)
 }
 
 func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
@@ -362,7 +361,7 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 		//log.Println("\t Skipping polygon.")
 		return nil
 	}
-	poly = append(poly, basic.NewLineFromPt(pts...))
+	poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
 	for i := 1; i < len(lines); i++ {
 		area := maths.AreaOfPolygonLineString(lines[0])
 		l := basic.CloneLine(lines[i])
@@ -382,7 +381,7 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 			//log.Println("\t Skipping polygon subline.")
 			continue
 		}
-		poly = append(poly, basic.NewLineFromPt(pts...))
+		poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
 	}
 	if len(poly) == 0 {
 		return nil

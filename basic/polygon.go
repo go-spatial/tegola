@@ -48,3 +48,20 @@ func NewPolygon(main []maths.Pt, clines ...[]maths.Pt) Polygon {
 	}
 	return p
 }
+func NewPolygonFromSubLines(lines ...tegola.LineString) (p Polygon) {
+	p = make(Polygon, 0, len(lines))
+	for i := range lines {
+		l := NewLineFromSubPoints(lines[i].Subpoints()...)
+		p = append(p, l)
+	}
+	return p
+}
+
+func NewMultiPolygonFromPolygons(polygons ...tegola.Polygon) (mp MultiPolygon) {
+	mp = make(MultiPolygon, 0, len(polygons))
+	for i := range polygons {
+		p := NewPolygonFromSubLines(polygons[i].Sublines()...)
+		mp = append(mp, p)
+	}
+	return mp
+}

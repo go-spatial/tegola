@@ -2,6 +2,7 @@ package validate
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"log"
@@ -204,6 +205,226 @@ func CleanCrossOvers(ctx context.Context, g []float64, batchsize int) (l []float
 	return l, nil
 }
 
+type SimplicityReason uint8
+
+const (
+	OuterRingNotClockwise = SimplicityReason(1 << iota)
+	InnerRingsNotCounterClockwise
+	DuplicatePoints
+	SelfIntersecting
+	OtherError
+)
+
+// PolygonIsSimple will make sure that a polygon has the following properties satified..
+// 1. The outer ring is clockwise and the interior rings are counterclockwise.
+// 2. No ring has duplicate points.
+// 3. No ring is self intersecting.
+func PolygonIsSimple(g tegola.Polygon) (ok bool, reason SimplicityReason) {
+MainLoop:
+	for i, l := range g.Sublines() {
+		// 0 is the outer ring.
+		if i == 0 {
+			if maths.WindingOrderOfLine(l) != maths.Clockwise {
+				log.Println("Line(0) is not Clockwise.")
+				ok = false
+				reason = reason | OuterRingNotClockwise
+			}
+		} else {
+			// These are interior rings.
+			if maths.WindingOrderOfLine(l) != maths.CounterClockwise {
+				log.Println("Line(0) is not CounterClockwise.")
+				ok = false
+				reason = reason | InnerRingsNotCounterClockwise
+			}
+		}
+		// Sort the points in the line to make it easier to find dups.
+		dupmap := make(map[string]struct{})
+		for i, pt := range l.Subpoints() {
+			key := fmt.Sprintf("%v,%v", pt.X(), pt.Y())
+			if _, ok := dupmap[key]; ok {
+				log.Println("Found a Duplicate point at", i, "Pt", key)
+				ok = false
+				reason = reason | DuplicatePoints
+				break MainLoop
+			}
+		}
+		// Make sure there arn't any intersections.
+		ppln := tegola.LineAsPointPairs(l)
+		segs, err := maths.NewSegments(ppln)
+		if err != nil {
+			return false, reason | OtherError
+		}
+		if !IsSimple(segs) {
+			ok = false
+			reason = reason | SelfIntersecting
+			break MainLoop
+		}
+	}
+	return ok, reason
+}
+
+/*
+func MultiPolygonIsSimple(g tegola.MultiPolygon) bool {
+	for i, p := range g.Polygons() {
+		if !PolygonIsSimple(p) {
+			log.Printf("In Multi Polygon %#v:", g)
+			log.Printf("Found Polygon(%v) to not be simple.", i)
+			return false
+		}
+	}
+	return true
+}
+*/
+
+func LineStringToSegments(l tegola.LineString) ([]maths.Line, error) {
+	ppln := tegola.LineAsPointPairs(l)
+	return maths.NewSegments(ppln)
+}
+func FlipWindingOrderOfLine(l tegola.LineString) basic.Line {
+	pts := l.Subpoints()
+	bl := basic.Line{basic.Point{pts[0].X(), pts[0].Y()}}
+	for i := len(pts) - 1; i > 0; i-- {
+		bl = append(bl, basic.Point{pts[i].X(), pts[i].Y()})
+	}
+	return bl
+}
+func makePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
+	log.Printf("Making Polygon valid\n%#v\n", g)
+	var plygLines [][]maths.Line
+	for _, l := range g.Sublines() {
+		segs, err := LineStringToSegments(l)
+		if err != nil {
+			return mp, err
+		}
+		plygLines = append(plygLines, segs)
+	}
+	plyPoints, err := maths.MakeValid(plygLines...)
+	if err != nil {
+		return mp, err
+	}
+	for i := range plyPoints {
+		// Each i is a polygon. Made up of line string points.
+		var p basic.Polygon
+		for j := range plyPoints[i] {
+			// We need to transform plyPoints[i][j] into a basic.LineString.
+			nl := basic.NewLineFromPt(plyPoints[i][j]...)
+			if j == 0 {
+				if nl.Direction() != maths.Clockwise {
+					// We need to flip the line.
+					nl = FlipWindingOrderOfLine(nl)
+				}
+			} else {
+				if nl.Direction() != maths.CounterClockwise {
+					// We need to flip the line.
+					nl = FlipWindingOrderOfLine(nl)
+				}
+			}
+			p = append(p, nl)
+		}
+		mp = append(mp, p)
+	}
+	return mp, err
+}
+func flipWindingOrderForPolygonLines(reason SimplicityReason, lines []tegola.LineString) (np basic.Polygon) {
+	var lns []basic.Line
+	for i := range lines {
+		lns = append(lns, basic.NewLineFromSubPoints(lines[i].Subpoints()...))
+	}
+	if reason&OuterRingNotClockwise == OuterRingNotClockwise {
+		lns[0] = FlipWindingOrderOfLine(lns[0])
+	}
+	if len(lns) > 1 && reason&InnerRingsNotCounterClockwise == InnerRingsNotCounterClockwise {
+		for i := range lns[1:] {
+			if maths.WindingOrderOfLine(lns[i+1]) != maths.CounterClockwise {
+				lns[i+1] = FlipWindingOrderOfLine(lns[i+1])
+			}
+		}
+	}
+	return np
+}
+func MakePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
+
+	var reason SimplicityReason
+	var ok bool
+	if ok, reason = PolygonIsSimple(g); ok {
+		return basic.NewMultiPolygonFromPolygons(g), nil
+	}
+
+	if (reason&DuplicatePoints == DuplicatePoints) || (reason&SelfIntersecting == SelfIntersecting) || (reason&OtherError == OtherError) {
+		// Need to do the fix.
+		return makePolygonValid(g)
+	}
+	mp = append(mp, flipWindingOrderForPolygonLines(reason, g.Sublines()))
+	return mp, nil
+}
+
+func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err error) {
+	var reason SimplicityReason
+	var ok bool
+	polygons := g.Polygons()
+	for i := range polygons {
+		if ok, reason = PolygonIsSimple(polygons[i]); ok {
+			mp = append(mp, basic.NewPolygonFromSubLines(polygons[i].Sublines()...))
+			continue
+		}
+		// if the polygon is not valid, depending on the reason we may be
+		// able to fix it really quickly.
+		// First check to see it's not a quick fix.
+		if (reason&DuplicatePoints == DuplicatePoints) || (reason&SelfIntersecting == SelfIntersecting) || (reason&OtherError == OtherError) {
+			break
+		}
+		if (reason&OuterRingNotClockwise == OuterRingNotClockwise) || (reason&InnerRingsNotCounterClockwise == InnerRingsNotCounterClockwise) {
+			mp = append(mp, flipWindingOrderForPolygonLines(reason, polygons[i].Sublines()))
+		}
+	}
+	if len(mp) == len(polygons) {
+		return mp, nil
+	}
+	// Repair will provide a new multipolygon.
+	mp = mp[0:0]
+
+	log.Printf("[%v,%v,%v] Making MultiPolygon valid\n%#v\n", reason&SelfIntersecting, reason&OtherError, reason&OtherError, g)
+	var plygLines [][]maths.Line
+	for _, p := range g.Polygons() {
+		for _, l := range p.Sublines() {
+			segs, err := LineStringToSegments(l)
+			if err != nil {
+				return mp, err
+			}
+			plygLines = append(plygLines, segs)
+		}
+	}
+	plyPoints, err := maths.MakeValid(plygLines...)
+	log.Printf("Got the following for MakeValid(\n%#v\n):\n%#v\n", plygLines, plyPoints)
+	if err != nil {
+		log.Printf("MPolygon %#v", g)
+		panic(fmt.Sprintln("Err", err))
+		return mp, err
+	}
+	for i := range plyPoints {
+		// Each i is a polygon. Made up of line string points.
+		var p basic.Polygon
+		for j := range plyPoints[i] {
+			// We need to transform plyPoints[i][j] into a basic.LineString.
+			nl := basic.NewLineFromPt(plyPoints[i][j]...)
+			if j == 0 {
+				if nl.Direction() != maths.Clockwise {
+					// We need to flip the line.
+					nl = FlipWindingOrderOfLine(nl)
+				}
+			} else {
+				if nl.Direction() != maths.CounterClockwise {
+					// We need to flip the line.
+					nl = FlipWindingOrderOfLine(nl)
+				}
+			}
+			p = append(p, nl)
+		}
+		mp = append(mp, p)
+	}
+	return mp, err
+}
+
 func CleanPolygon(g tegola.Polygon) (p basic.Polygon, err error) {
 
 	sublines := g.Sublines()
@@ -239,24 +460,29 @@ func CleanPolygon(g tegola.Polygon) (p basic.Polygon, err error) {
 }
 
 func CleanGeometry(g tegola.Geometry) (geo tegola.Geometry, err error) {
+	//return g, nil
 	if g == nil {
 		return nil, nil
 	}
 	switch gg := g.(type) {
 
 	case tegola.Polygon:
-
-		return CleanPolygon(gg)
-	case tegola.MultiPolygon:
-		var mp basic.MultiPolygon
-		for _, p := range gg.Polygons() {
-			cp, err := CleanPolygon(p)
-			if err != nil {
-				return mp, err
-			}
-			mp = append(mp, cp)
+		geo, err = MakePolygonValid(gg)
+		if err != nil {
+			log.Printf("Got error trying to MakePolygonValid: %v", err)
+		} else {
+			log.Printf("Got new valid polygon:\n%#v\n\tto:\n%#v ", gg, geo)
 		}
-		return mp, nil
+		return geo, err
+
+	case tegola.MultiPolygon:
+		geo, err = MakeMultiPolygonValid(gg)
+		if err != nil {
+			log.Printf("Got error trying to MakeMultiPolygonValid: %v", err)
+		} else {
+			log.Printf("Got new valid multipolygon:\n%#v\n\tto:\n%#v ", gg, geo)
+		}
+		return geo, err
 	}
 	return g, nil
 }

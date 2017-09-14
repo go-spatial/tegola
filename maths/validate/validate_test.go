@@ -1,8 +1,9 @@
 package validate
 
-import "testing"
+import (
+	"testing"
+)
 
-func TestMakePolygon(t *testing.T){
+func TestMakePolygon(t *testing.T) {
 
 }
-

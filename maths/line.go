@@ -163,7 +163,9 @@ func (l Line) LeftRightMostPts() (Pt, Pt) {
 
 // LeftRightMostAsLine returns the left most and right most points as a line going from the left to the right.
 func (l1 Line) LeftRightMostAsLine() Line {
-	l,r := l1.LeftRightMostPts()
-	return Line{l,r}
+	l, r := l1.LeftRightMostPts()
+	return Line{l, r}
 }
 
+// Ring defines a set of points that are all connected. The last point and the first point should not be duplicated.
+type Ring []Pt
