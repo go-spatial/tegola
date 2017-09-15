@@ -29,12 +29,21 @@ var app = new Vue({
 			}
 		*/
 		],
-		hoverLayers: []
+		hoverLayers: [],
+		debug: false
 	},
 	created: function(){
 		var me = this;
+		var url = "/capabilities";
+
+		var debug = this.getParameterByName('debug');
+		if (debug == 'true'){
+			me.debug = true;
+			url += '?debug=true';
+		}
+
 		//	read server capabilities
-		get("/capabilities", function(res){
+		get(url, function(res){
 			me.$data.capabilities = JSON.parse(res.response);
 
 			//	load our first map
@@ -60,6 +69,7 @@ var app = new Vue({
 				var layers = maps[i].layers;
 				//	iterate our map layers
 				for (var j=0, l=layers.length; j<l; j++){
+
 					var color = this.map.getPaintProperty(layers[j].name, 'line-color') || 
 						this.map.getPaintProperty(layers[j].name, 'fill-outline-color') ||
 						this.map.getPaintProperty(layers[j].name, 'circle-color');
@@ -91,9 +101,13 @@ var app = new Vue({
 			}
 			//	initial load
 			if (!me.map){
+				var url = '/maps/'+mapRec.name+'/style.json';
+				if (me.debug) {
+					url += '?debug=true';
+				}
 				me.map = new mapboxgl.Map({
 					container: 'map',
-					style: '/maps/'+mapRec.name+'/style.json',
+					style: url,
 					hash: true 
 				});
 				me.map.addControl(new mapboxgl.NavigationControl());
@@ -177,6 +191,15 @@ var app = new Vue({
 					me.inspector.remove();
 				}
 			}
+		},
+		getParameterByName: function(name, url) {
+			if (!url) url = window.location.href;
+			name = name.replace(/[\[\]]/g, "\\$&");
+			var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			results = regex.exec(url);
+			if (!results) return null;
+			if (!results[2]) return '';
+			return decodeURIComponent(results[2].replace(/\+/g, " "));
 		}
 	}
 });

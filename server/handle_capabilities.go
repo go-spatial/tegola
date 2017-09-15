@@ -105,6 +105,34 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				cMap.Layers = append(cMap.Layers, cLayer)
 			}
 
+			//	check for debug
+			if query.Get("debug") == "true" {
+				//	build the layer details
+				debugTileOutline := CapabilitiesLayer{
+					Name: "debug-tile-outline",
+					Tiles: []string{
+						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), m.Name, "debug-tile-outline"),
+					},
+					MinZoom: 0,
+					MaxZoom: MaxZoom,
+				}
+
+				//	add the layer to the map
+				cMap.Layers = append(cMap.Layers, debugTileOutline)
+
+				debugTileCenter := CapabilitiesLayer{
+					Name: "debug-tile-center",
+					Tiles: []string{
+						fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), m.Name, "debug-tile-center"),
+					},
+					MinZoom: 0,
+					MaxZoom: MaxZoom,
+				}
+
+				//	add the layer to the map
+				cMap.Layers = append(cMap.Layers, debugTileCenter)
+			}
+
 			//	add the map to the capabilities struct
 			capabilities.Maps = append(capabilities.Maps, cMap)
 		}
