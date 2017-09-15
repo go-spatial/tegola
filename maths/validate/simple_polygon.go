@@ -1,8 +1,6 @@
 package validate
 
 import (
-	"log"
-
 	"github.com/terranodo/tegola/maths"
 )
 
@@ -188,7 +186,7 @@ func IsSimple(segments []maths.Line) bool {
 			return true
 		}
 		_ = ptfn
-		log.Println("Found Intersection at ", i, j, ":", segments[i], segments[j], ptfn())
+		//log.Println("Found Intersection at ", i, j, ":", segments[i], segments[j], ptfn())
 		found = false
 		return false
 	})

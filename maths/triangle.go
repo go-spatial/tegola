@@ -162,10 +162,10 @@ type TriangleEdge struct {
 
 func (te *TriangleEdge) Dump() {
 	if te == nil || te.Node == nil {
-		log.Println("Triangle: nil")
+		//	log.Println("Triangle: nil")
 		return
 	}
-	log.Println("Triangle: ", te.Node.Key(), "Constrained:", te.IsConstrained)
+	//log.Println("Triangle: ", te.Node.Key(), "Constrained:", te.IsConstrained)
 }
 
 // label is the he label for the triangle. Is in "inside" or "outside".
@@ -200,16 +200,17 @@ type TriangleNode struct {
 
 func (tn *TriangleNode) Dump() {
 	if tn == nil {
-		log.Println("Tringle: nil")
+		//log.Println("Tringle: nil")
 		return
 	}
-	log.Println("Triangle:", tn.Triangle.Key(), "label:", tn.Label)
+	//log.Println("Triangle:", tn.Triangle.Key(), "label:", tn.Label)
 	for i, val := range tn.Neighbors {
+		_ = i
 		if val.Node == nil {
-			log.Printf("\t %v :  nil", i)
+			//log.Printf("\t %v :  nil", i)
 			continue
 		}
-		log.Printf("\t %v : %v \t Constrained: %v", i, val.Node.Key(), val.IsConstrained)
+		//log.Printf("\t %v : %v \t Constrained: %v", i, val.Node.Key(), val.IsConstrained)
 	}
 }
 
@@ -218,13 +219,13 @@ func (tn *TriangleNode) LabelAs(l label, force bool) (unlabled []*TriangleNode) 
 		return unlabled
 	}
 	if !force && tn.Label != unknown {
-		log.Println("Skipping labeling", force, tn.Label)
+		//log.Println("Skipping labeling", force, tn.Label)
 		return unlabled
 	}
 	tn.Label = l
-	log.Printf("Labeling as %v: Neighbors are %#v", l, tn.Neighbors)
+	//log.Printf("Labeling as %v: Neighbors are %#v", l, tn.Neighbors)
 	for i := range tn.Neighbors {
-		log.Println("Unlabed:", unlabled)
+		//log.Println("Unlabed:", unlabled)
 		if tn.Neighbors[i].IsConstrained {
 			// We add this edge to our unlabled array.
 			unlabled = append(unlabled, tn.Neighbors[i].Node)
@@ -232,7 +233,7 @@ func (tn *TriangleNode) LabelAs(l label, force bool) (unlabled []*TriangleNode) 
 		}
 		unlabled = append(unlabled, tn.Neighbors[i].Node.LabelAs(l, false)...)
 	}
-	log.Println("Unlabed:", unlabled)
+	//log.Println("Unlabed:", unlabled)
 	return unlabled
 }
 
@@ -262,19 +263,19 @@ func (tg *TriangleGraph) Outside() []*TriangleNode {
 
 func (tg *TriangleGraph) Rings() (rings [][]Line) {
 
-	log.Println("Starting TriangleGraph Rings")
-	defer log.Println("Done with TriangleGraph Rings")
+	//log.Println("Starting TriangleGraph Rings")
+	//defer log.Println("Done with TriangleGraph Rings")
 	// the key is the index of the trianlgle in the graph array.
 	seen := make(map[string]struct{})
 	// We are going to walk all triangles that are labeled as inside nodes, this will generate a set
 	// of segments. The sements may form one or more close rings. We want to be greedy in the consumption of
 	// these segments when reassembling the segments into rings.
 
-	log.Println("Going through inside.", tg.inside)
+	//log.Println("Going through inside.", tg.inside)
 	for _, i := range tg.inside {
-		log.Printf("Looking at tg.triangle[%v].Key(%v)", i, tg.triangles[i].Key())
+		//log.Printf("Looking at tg.triangle[%v].Key(%v)", i, tg.triangles[i].Key())
 		if _, ok := seen[tg.triangles[i].Key()]; ok {
-			log.Println("Skipping ", i)
+			//log.Println("Skipping ", i)
 			continue
 		}
 		nodesToProcess := []*TriangleNode{tg.triangles[i]}
@@ -290,13 +291,13 @@ func (tg *TriangleGraph) Rings() (rings [][]Line) {
 				if node.Neighbors[j].Node != nil && node.Neighbors[j].Node.Label == node.Label {
 					nodesToProcess = append(nodesToProcess, node.Neighbors[j].Node)
 				} else {
-					log.Println("Found edge to process: ", node.Edge(j))
+					//log.Println("Found edge to process: ", node.Edge(j))
 					linesToProcess = append(linesToProcess, node.Edge(j))
 				}
 			}
 		}
 		// Now need to deal with Lines.
-		log.Println("Added lines to ring.", linesToProcess)
+		//log.Println("Added lines to ring.", linesToProcess)
 		rings = append(rings, linesToProcess)
 	}
 	return rings
@@ -499,7 +500,7 @@ func (nl aNodeList) AddTriangleForPts(pt1, pt2, pt3 Pt, fnIsConstrained func(pt1
 			}
 			if node.Neighbors[k].Node != nil {
 				// return an error
-				log.Printf("More then two triangles are sharing an edge. \n\t%+v\n\t%v\n\t%+v\n\t %v %v %v", node, k, node.Neighbors[k].Node, pt1, pt2, pt3)
+				//log.Printf("More then two triangles are sharing an edge. \n\t%+v\n\t%v\n\t%+v\n\t %v %v %v", node, k, node.Neighbors[k].Node, pt1, pt2, pt3)
 				panic("More then two triangles are sharing an edge.")
 				return nil, fmt.Errorf("More then two triangles are sharing an edge. \n\t%+v\n\t%v\n\t%+v\n\t %v %v %v", node, k, node.Neighbors[k].Node, pt1, pt2, pt3)
 			}
@@ -552,14 +553,14 @@ func (em *EdgeMap) trianglesForEdge(pt1, pt2 Pt) (*Triangle, *Triangle, error) {
 	// Now we need to look at the both subpts and only keep the points that are common to both lists.
 	var larea, rarea float64
 	var triangles [2]*Triangle
-	log.Println("Looking for triangles.")
+	//log.Println("Looking for triangles.")
 NextApts:
 	for i := range apts {
 		for j := range bpts {
 			if apts[i].IsEqual(bpts[j]) {
 				tri := NewTriangle(pt1, pt2, apts[i])
 				area := AreaOfTriangle(pt1, pt2, apts[i])
-				log.Println("Tri", tri, "area:", area)
+				//log.Println("Tri", tri, "area:", area)
 				switch {
 				case area > 0 && (rarea == 0 || rarea > area):
 					rarea = area
@@ -573,17 +574,17 @@ NextApts:
 		}
 	}
 	if triangles[0] == nil && triangles[1] == nil {
-		log.Printf("generateEdgeMap(\n%#v\n)\n", em.destructured)
-		log.Println(pt1, "apts:", apts)
-		log.Println(pt2, "bpts:", bpts)
+		//log.Printf("generateEdgeMap(\n%#v\n)\n", em.destructured)
+		//log.Println(pt1, "apts:", apts)
+		//log.Println(pt2, "bpts:", bpts)
 	}
-	log.Println("Done looking for triangles.")
+	//log.Println("Done looking for triangles.")
 	return triangles[0], triangles[1], nil
 }
 
 func generateEdgeMap(destructuredLines []Line) (em EdgeMap) {
-	defer log.Println("Done building edgemap.")
-	defer em.Dump()
+	//defer log.Println("Done building edgemap.")
+	//defer em.Dump()
 	em.destructured = destructuredLines
 	em.Map = make(map[Pt]map[Pt]bool)
 	em.Segments = make([]Line, 0, len(destructuredLines))
@@ -708,37 +709,39 @@ func (em *EdgeMap) addLine(constrained bool, addSegments bool, addKeys bool, lin
 }
 
 func (em *EdgeMap) Dump() {
-	log.Println("Edge Map:")
-	log.Printf("generateEdgeMap(%#v)", em.destructured)
-	if em == nil {
-		log.Println("nil")
-	}
-	log.Println("\tKeys:", em.Keys)
-	log.Println("\tMap:")
-	var keys []Pt
-	for k := range em.Map {
-		keys = append(keys, k)
-	}
-	sort.Sort(ByXY(keys))
-	for _, k := range keys {
-		log.Println("\t\t", k, ":\t", len(em.Map[k]), em.Map[k])
-	}
-	log.Println("\tSegments:")
-	for _, seg := range em.Segments {
-		log.Println("\t\t", seg)
-	}
-	log.Printf("\tBBox:%v", em.BBox)
+	/*
+		log.Println("Edge Map:")
+		log.Printf("generateEdgeMap(%#v)", em.destructured)
+		if em == nil {
+			log.Println("nil")
+		}
+		log.Println("\tKeys:", em.Keys)
+		log.Println("\tMap:")
+		var keys []Pt
+		for k := range em.Map {
+			keys = append(keys, k)
+		}
+		sort.Sort(ByXY(keys))
+		for _, k := range keys {
+			log.Println("\t\t", k, ":\t", len(em.Map[k]), em.Map[k])
+		}
+		log.Println("\tSegments:")
+		for _, seg := range em.Segments {
+			log.Println("\t\t", seg)
+		}
+		log.Printf("\tBBox:%v", em.BBox)
+	*/
 }
 
 func (em *EdgeMap) Triangulate() {
-	defer log.Println("Done with Triangulate")
+	//defer log.Println("Done with Triangulate")
 	keys := em.Keys
-	log.Println("Starting to Triangulate. Keys", len(keys))
+	//log.Println("Starting to Triangulate. Keys", len(keys))
 	// We want to run through all the keys generating possible edges, and then
 	// collecting the ones that don't intersect with the edges in the map already.
 	for i := 0; i < len(keys)-1; i++ {
 		lookup := em.Map[keys[i]]
-		log.Println("Looking at i", i, "Lookup", lookup)
+		//log.Println("Looking at i", i, "Lookup", lookup)
 		var possibleEdges []Line
 		for j := i + 1; j < len(keys); j++ {
 			if _, ok := lookup[keys[j]]; ok {
@@ -797,8 +800,8 @@ func (em *EdgeMap) Triangulate() {
 	}
 }
 func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
-	log.Println("Starting FindTriangles")
-	defer log.Println("Done with FindTriangles")
+	//log.Println("Starting FindTriangles")
+	//defer log.Println("Done with FindTriangles")
 
 	type triEdge struct {
 		edge        int
@@ -826,9 +829,8 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 				return nil, err
 			}
 			if tr1 == nil && tr2 == nil {
-				log.Println("BUG! WTF!!!!")
-				//return nil, fmt.Errorf("WTF!!!")
-				continue
+				//log.Println("BUG! WTF!!!!")
+				return nil, fmt.Errorf("WTF!!!")
 			}
 			var trn1, trn2 *TriangleNode
 
@@ -849,7 +851,7 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 			}
 
 			if trn1 != nil && trn2 != nil {
-				log.Printf("len(nodesToLabel)=%v; Setting up Neighbors.", len(nodesToLabel)-1)
+				//log.Printf("len(nodesToLabel)=%v; Setting up Neighbors.", len(nodesToLabel)-1)
 				edgeidx1 := trn1.EdgeIdx(em.Keys[i], pts[j])
 				edgeidx2 := trn2.EdgeIdx(em.Keys[i], pts[j])
 				constrained := em.Map[em.Keys[i]][pts[j]]
@@ -862,12 +864,12 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 					IsConstrained: constrained,
 				}
 			}
-			log.Printf("tr1: %#v\n\tTr1:%#v\ntr2:%#v\n\tTr2:%#v", tr1, trn1, tr2, trn2)
+			//log.Printf("tr1: %#v\n\tTr1:%#v\ntr2:%#v\n\tTr2:%#v", tr1, trn1, tr2, trn2)
 			if em.BBox[0].IsEqual(em.Keys[i]) ||
 				em.BBox[1].IsEqual(em.Keys[i]) ||
 				em.BBox[2].IsEqual(em.Keys[i]) ||
 				em.BBox[3].IsEqual(em.Keys[i]) {
-				log.Printf("BBox(%v %v %v %v) -- key[%v] %v", em.BBox[0], em.BBox[1], em.BBox[2], em.BBox[3], i, em.Keys[i])
+				//log.Printf("BBox(%v %v %v %v) -- key[%v] %v", em.BBox[0], em.BBox[1], em.BBox[2], em.BBox[3], i, em.Keys[i])
 				if trn1 != nil {
 					nodesToLabel = append(nodesToLabel, trn1)
 				}
@@ -880,13 +882,13 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 	currentLabel := outside
 	var nextSetOfNodes []*TriangleNode
 
-	log.Printf("Number of triangles found: %v", len(nodes))
+	//log.Printf("Number of triangles found: %v", len(nodes))
 	for len(nodesToLabel) > 0 {
 		for i := range nodesToLabel {
-			log.Printf("Labeling node(%v of %v) as %v", i, len(nodesToLabel), currentLabel)
+			//log.Printf("Labeling node(%v of %v) as %v", i, len(nodesToLabel), currentLabel)
 			nextSetOfNodes = append(nextSetOfNodes, nodesToLabel[i].LabelAs(currentLabel, false)...)
 		}
-		log.Println("Next set of nodes:", nextSetOfNodes)
+		//log.Println("Next set of nodes:", nextSetOfNodes)
 		nodesToLabel, nextSetOfNodes = nextSetOfNodes, nodesToLabel[:0]
 		if currentLabel == outside {
 			currentLabel = inside

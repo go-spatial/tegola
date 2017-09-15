@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"log"
-
 	"sort"
 
 	"github.com/terranodo/tegola"
@@ -208,10 +206,10 @@ func CleanCrossOvers(ctx context.Context, g []float64, batchsize int) (l []float
 type SimplicityReason uint8
 
 const (
-	OuterRingNotClockwise = SimplicityReason(1 << iota)
-	InnerRingsNotCounterClockwise
-	DuplicatePoints
-	SelfIntersecting
+	OuterRingNotClockwise         = SimplicityReason(1 << iota) // 1
+	InnerRingsNotCounterClockwise                               // 2
+	DuplicatePoints                                             // 4
+	SelfIntersecting                                            // 8
 	OtherError
 )
 
@@ -226,14 +224,12 @@ MainLoop:
 		// 0 is the outer ring.
 		if i == 0 {
 			if maths.WindingOrderOfLine(l) != maths.Clockwise {
-				log.Println("Line(0) is not Clockwise.")
 				ok = false
 				reason = reason | OuterRingNotClockwise
 			}
 		} else {
 			// These are interior rings.
 			if maths.WindingOrderOfLine(l) != maths.CounterClockwise {
-				log.Println("Line(0) is not CounterClockwise.")
 				ok = false
 				reason = reason | InnerRingsNotCounterClockwise
 			}
@@ -241,9 +237,10 @@ MainLoop:
 		// Sort the points in the line to make it easier to find dups.
 		dupmap := make(map[string]struct{})
 		for i, pt := range l.Subpoints() {
+			_ = i
 			key := fmt.Sprintf("%v,%v", pt.X(), pt.Y())
 			if _, ok := dupmap[key]; ok {
-				log.Println("Found a Duplicate point at", i, "Pt", key)
+				//log.Println("Found a Duplicate point at", i, "Pt", key)
 				ok = false
 				reason = reason | DuplicatePoints
 				break MainLoop
@@ -290,7 +287,7 @@ func FlipWindingOrderOfLine(l tegola.LineString) basic.Line {
 	return bl
 }
 func makePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
-	log.Printf("Making Polygon valid\n%#v\n", g)
+	//log.Printf("Making Polygon valid\n%#v\n", g)
 	var plygLines [][]maths.Line
 	for _, l := range g.Sublines() {
 		segs, err := LineStringToSegments(l)
@@ -331,7 +328,6 @@ func flipWindingOrderForPolygonLines(reason SimplicityReason, lines []tegola.Lin
 	for i := range lines {
 		lns = append(lns, basic.NewLineFromSubPoints(lines[i].Subpoints()...))
 	}
-	log.Println("LNS:", lns)
 	if reason&OuterRingNotClockwise == OuterRingNotClockwise {
 		lns[0] = FlipWindingOrderOfLine(lns[0])
 	}
@@ -342,7 +338,6 @@ func flipWindingOrderForPolygonLines(reason SimplicityReason, lines []tegola.Lin
 			}
 		}
 	}
-	log.Println("LNS:", lns)
 	return lns
 }
 func MakePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
@@ -365,11 +360,11 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 	var reason SimplicityReason
 	var ok bool
 	var needToFix bool
-	var updated bool
 	polygons := g.Polygons()
+	appendedCount := 0
 	for i := range polygons {
 		if ok, reason = PolygonIsSimple(polygons[i]); ok {
-			log.Printf("Adding line to mp: %#v", mp)
+			appendedCount++
 			mp = append(mp, basic.NewPolygonFromSubLines(polygons[i].Sublines()...))
 			continue
 		}
@@ -377,18 +372,13 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 		// able to fix it really quickly.
 		// First check to see it's not a quick fix.
 		if (reason&DuplicatePoints == DuplicatePoints) || (reason&SelfIntersecting == SelfIntersecting) || (reason&OtherError == OtherError) {
+			//log.Println("Got a Major error", reason, appendedCount)
 			needToFix = true
 			break
 		}
 		if (reason&OuterRingNotClockwise == OuterRingNotClockwise) || (reason&InnerRingsNotCounterClockwise == InnerRingsNotCounterClockwise) {
 			mp = append(mp, flipWindingOrderForPolygonLines(reason, polygons[i].Sublines()))
-			updated = true
-			log.Printf("Just inverting winding order. %#v", mp)
 		}
-	}
-	if !needToFix || !updated {
-		log.Printf("No update! %#v", mp)
-		return mp, nil
 	}
 	if !needToFix {
 		return mp, nil
@@ -396,7 +386,7 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 	// Repair will provide a new multipolygon.
 	mp = mp[0:0]
 
-	log.Printf("[%v,%v,%v] Making MultiPolygon valid\n%#v\n", reason&SelfIntersecting, reason&OtherError, reason&OtherError, g)
+	//log.Printf("[%v,%v,%v] Making MultiPolygon valid\n%#v\n", reason&SelfIntersecting, reason&OtherError, reason&OtherError, g)
 	var plygLines [][]maths.Line
 	for _, p := range g.Polygons() {
 		for _, l := range p.Sublines() {
@@ -408,9 +398,9 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 		}
 	}
 	plyPoints, err := maths.MakeValid(plygLines...)
-	log.Printf("Got the following for MakeValid(\n%#v\n):\n%#v\n", plygLines, plyPoints)
+	//log.Printf("Got the following for MakeValid(\n%#v\n):\n%#v\n", plygLines, plyPoints)
 	if err != nil {
-		log.Printf("MPolygon %#v", g)
+		//log.Printf("MPolygon %#v", g)
 		panic(fmt.Sprintln("Err", err))
 		return mp, err
 	}
@@ -435,6 +425,7 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 		}
 		mp = append(mp, p)
 	}
+	//log.Printf("Fixed:\n%#v\nTo:\n%#v\n", g, mp)
 	return mp, err
 }
 
@@ -457,12 +448,12 @@ func CleanPolygon(g tegola.Polygon) (p basic.Polygon, err error) {
 
 		cln, err := CleanLinestring(ppln)
 		if err != nil {
-			log.Println("Got error cleaning linestring", err)
+			//log.Println("Got error cleaning linestring", err)
 			return p, err
 		}
 		cln, err = CleanCrossOvers(context.Background(), cln, 0)
 		if err != nil {
-			log.Println("Got error removing crossings", err)
+			//log.Println("Got error removing crossings", err)
 			return p, err
 		}
 
@@ -481,20 +472,10 @@ func CleanGeometry(g tegola.Geometry) (geo tegola.Geometry, err error) {
 
 	case tegola.Polygon:
 		geo, err = MakePolygonValid(gg)
-		if err != nil {
-			log.Printf("Got error trying to MakePolygonValid: %v", err)
-		} else {
-			log.Printf("Got new valid polygon:\n%#v\n\tto:\n%#v ", gg, geo)
-		}
 		return geo, err
 
 	case tegola.MultiPolygon:
 		geo, err = MakeMultiPolygonValid(gg)
-		if err != nil {
-			log.Printf("Got error trying to MakeMultiPolygonValid: %v", err)
-		} else {
-			log.Printf("Got new valid multipolygon:\n%#v\n\tto:\n%#v ", gg, geo)
-		}
 		return geo, err
 	}
 	return g, nil
