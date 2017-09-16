@@ -60,6 +60,13 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	debug := r.URL.Query().Get("debug")
+
+	sourceURL := fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, hostName(r), req.mapName)
+	if debug == "true" {
+		sourceURL += "?debug=true"
+	}
+
 	mapboxStyle := style.Root{
 		Name:    m.Name,
 		Version: style.Version,
@@ -68,10 +75,43 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Sources: map[string]style.Source{
 			req.mapName: style.Source{
 				Type: style.SourceTypeVector,
-				URL:  fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, hostName(r), req.mapName),
+				URL:  sourceURL,
 			},
 		},
 		Layers: []style.Layer{},
+	}
+	//	if we have a debug param create a layer style
+	if debug == "true" {
+		debugTileOutline := style.Layer{
+			ID:          "debug-tile-outline",
+			Source:      req.mapName,
+			SourceLayer: "debug-tile-outline",
+			Layout: &style.LayerLayout{
+				Visibility: style.LayoutVisible,
+			},
+			Type: style.LayerTypeLine,
+			Paint: &style.LayerPaint{
+				LineColor: stringToColorHex("debug"),
+			},
+		}
+
+		mapboxStyle.Layers = append(mapboxStyle.Layers, debugTileOutline)
+
+		debugTileCenter := style.Layer{
+			ID:          "debug-tile-center",
+			Source:      req.mapName,
+			SourceLayer: "debug-tile-center",
+			Layout: &style.LayerLayout{
+				Visibility: style.LayoutVisible,
+			},
+			Type: style.LayerTypeCircle,
+			Paint: &style.LayerPaint{
+				CircleRadius: 3,
+				CircleColor:  stringToColorHex("debug"),
+			},
+		}
+
+		mapboxStyle.Layers = append(mapboxStyle.Layers, debugTileCenter)
 	}
 
 	//	determing the min and max zoom for this map

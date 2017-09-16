@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/tilejson"
 )
 
@@ -129,39 +130,61 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				},
 			}
 
-			//	add our layer to our tile layer response
-			tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
-		}
-
-		tileURL := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName)
-
-		//	if we have a debug param add it to our URLs
-		if query.Get("debug") == "true" {
-			tileURL = tileURL + "?debug=true"
-
-			debugTileURL := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), req.mapName, "debug")
-
-			//	we also need to add a debug vector layer
-			//	build our vector layer details
-			layer := tilejson.VectorLayer{
-				Version: 2,
-				Extent:  4096,
-				ID:      "debug",
-				Name:    "debug",
-				MinZoom: 0,
-				MaxZoom: MaxZoom,
-				Tiles: []string{
-					debugTileURL,
-				},
+			switch l.GeomType.(type) {
+			case tegola.Point, tegola.MultiPoint:
+				layer.GeometryType = tilejson.GeomTypePoint
+			case tegola.LineString, tegola.MultiLine:
+				layer.GeometryType = tilejson.GeomTypeLine
+			case tegola.Polygon, tegola.MultiPolygon:
+				layer.GeometryType = tilejson.GeomTypePolygon
+			default:
+				layer.GeometryType = tilejson.GeomTypeUnknown
 			}
 
 			//	add our layer to our tile layer response
 			tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 		}
 
-		tiles := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName)
-		if r.URL.Query().Get("debug") != "" {
-			tiles = tiles + "?debug=true"
+		//	if we have a debug param add it to our URLs
+		if query.Get("debug") == "true" {
+			//	build the layer details
+			debugTileOutline := tilejson.VectorLayer{
+				Version: 2,
+				Extent:  4096,
+				ID:      "debug-tile-outline",
+				Name:    "debug-tile-outline",
+				MinZoom: 0,
+				MaxZoom: MaxZoom,
+				Tiles: []string{
+					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), m.Name, "debug-tile-outline"),
+				},
+				GeometryType: tilejson.GeomTypeLine,
+			}
+
+			//	add our layer to our tile layer response
+			tileJSON.VectorLayers = append(tileJSON.VectorLayers, debugTileOutline)
+
+			debugTileCenter := tilejson.VectorLayer{
+				Version: 2,
+				Extent:  4096,
+				ID:      "debug-tile-center",
+				Name:    "debug-tile-center",
+				MinZoom: 0,
+				MaxZoom: MaxZoom,
+				Tiles: []string{
+					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), m.Name, "debug-tile-center"),
+				},
+				GeometryType: tilejson.GeomTypePoint,
+			}
+
+			//	add our layer to our tile layer response
+			tileJSON.VectorLayers = append(tileJSON.VectorLayers, debugTileCenter)
+		}
+
+		tileURL := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName)
+
+		if r.URL.Query().Get("debug") == "true" {
+			tileURL += "?debug=true"
 		}
 
 		//	build our URL scheme for the tile grid

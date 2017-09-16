@@ -8,20 +8,21 @@ import (
 	"github.com/terranodo/tegola/mvt"
 )
 
-//	creates a debug layer with z/x/y encoded as a point
-func debugLayer(tile tegola.Tile) *mvt.Layer {
+//	creates a debug layers with z/x/y encoded as a point
+func debugLayer(tile tegola.Tile) []*mvt.Layer {
+	var layers []*mvt.Layer
+
 	//	get tile bounding box
 	ext := tile.BoundingBox()
 
-	//	create a new layer and name it
-	layer := mvt.Layer{
-		Name: "debug",
-	}
 	xlen := ext.Maxx - ext.Minx
 	ylen := ext.Maxy - ext.Miny
 
-	//	tile outlines
-	outline := mvt.Feature{
+	//	debug outlines
+	debugTileOutline := mvt.Layer{
+		Name: "debug-tile-outline",
+	}
+	debugOutline := mvt.Feature{
 		Tags: map[string]interface{}{
 			"type": "debug_outline",
 		},
@@ -32,9 +33,15 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 			basic.Point{ext.Minx, ext.Maxy},
 		},
 	}
+	debugTileOutline.AddFeatures(debugOutline)
 
-	//	new feature
-	zxy := mvt.Feature{
+	layers = append(layers, &debugTileOutline)
+
+	//	debug center points
+	debugTileCenter := mvt.Layer{
+		Name: "debug-tile-center",
+	}
+	debugCenter := mvt.Feature{
 		Tags: map[string]interface{}{
 			"type": "debug_text",
 			"zxy":  fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
@@ -44,8 +51,9 @@ func debugLayer(tile tegola.Tile) *mvt.Layer {
 			ext.Miny + (ylen / 2),
 		},
 	}
+	debugTileCenter.AddFeatures(debugCenter)
 
-	layer.AddFeatures(outline, zxy)
+	layers = append(layers, &debugTileCenter)
 
-	return &layer
+	return layers
 }
