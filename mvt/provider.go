@@ -12,7 +12,7 @@ var ErrCanceled = context.Canceled
 type Provider interface {
 	// MVTLayer returns a layer object based
 	MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*Layer, error)
-	// LayerNames returns a list of layer name the Provider knows about.
+	// Layers returns information about the various layers the provider supports
 	Layers() ([]LayerInfo, error)
 }
 
