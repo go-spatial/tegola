@@ -793,17 +793,242 @@ func TestMakeValid(t *testing.T) {
 				},
 			},
 		},
+		testcase{
+			lines: [][]Line{[]Line{
+				Line{Pt{X: 2784, Y: 960}, Pt{X: 2838, Y: 994}},
+				Line{Pt{X: 2838, Y: 994}, Pt{X: 2853, Y: 975}},
+				Line{Pt{X: 2853, Y: 975}, Pt{X: 2856, Y: 975}},
+				Line{Pt{X: 2856, Y: 975}, Pt{X: 2857, Y: 977}},
+				Line{Pt{X: 2857, Y: 977}, Pt{X: 2857, Y: 980}},
+				Line{Pt{X: 2857, Y: 980}, Pt{X: 2735, Y: 936}},
+				Line{Pt{X: 2735, Y: 936}, Pt{X: 2734, Y: 934}},
+				Line{Pt{X: 2734, Y: 934}, Pt{X: 2739, Y: 930}},
+				Line{Pt{X: 2739, Y: 930}, Pt{X: 2782, Y: 959}},
+				Line{Pt{X: 2782, Y: 959}, Pt{X: 2785, Y: 953}},
+				Line{Pt{X: 2785, Y: 953}, Pt{X: 2781, Y: 949}},
+				Line{Pt{X: 2781, Y: 949}, Pt{X: 2786, Y: 938}},
+				Line{Pt{X: 2786, Y: 938}, Pt{X: 2759, Y: 913}},
+				Line{Pt{X: 2759, Y: 913}, Pt{X: 2763, Y: 908}},
+				Line{Pt{X: 2763, Y: 908}, Pt{X: 2766, Y: 908}},
+				Line{Pt{X: 2766, Y: 908}, Pt{X: 2770, Y: 911}},
+				Line{Pt{X: 2770, Y: 911}, Pt{X: 2770, Y: 914}},
+				Line{Pt{X: 2770, Y: 914}, Pt{X: 2778, Y: 924}},
+				Line{Pt{X: 2778, Y: 924}, Pt{X: 2792, Y: 933}},
+				Line{Pt{X: 2792, Y: 933}, Pt{X: 2800, Y: 919}},
+				Line{Pt{X: 2800, Y: 919}, Pt{X: 2809, Y: 907}},
+				Line{Pt{X: 2809, Y: 907}, Pt{X: 2808, Y: 904}},
+				Line{Pt{X: 2808, Y: 904}, Pt{X: 2805, Y: 902}},
+				Line{Pt{X: 2805, Y: 902}, Pt{X: 2808, Y: 895}},
+				Line{Pt{X: 2808, Y: 895}, Pt{X: 2811, Y: 894}},
+				Line{Pt{X: 2811, Y: 894}, Pt{X: 2818, Y: 910}},
+				Line{Pt{X: 2818, Y: 910}, Pt{X: 2784, Y: 960}},
+			}},
+			polygons: [][][]Pt{
+				{
+					[]Pt{{2734, 934}, {2735, 936}, {2762, 945}, {2739, 930}},
+				},
+				{
+					[]Pt{{2762, 945}, {2782, 959}, {2784, 953}},
+				},
+				{
+					[]Pt{{2783, 960}, {2837, 993}, {2850, 977}, {2787, 954}},
+				},
+				{
+					[]Pt{{2805, 902}, {2808, 895}, {2811, 894}, {2808, 904}},
+					[]Pt{{2759, 913}, {2763, 908}, {2766, 908}, {2770, 911}, {2770, 914}, {2778, 924}, {2792, 933}, {2800, 919}, {2809, 907}, {2808, 904}, {2781, 949}, {2786, 938}},
+					[]Pt{{2781, 949}, {2785, 953}, {2784, 953}, {2787, 954}, {2818, 910}, {2811, 894}},
+				},
+				{
+					[]Pt{{2850, 977}, {2852, 975}, {2856, 975}, {2857, 977}, {2857, 980}},
+				},
+			},
+		},
+		testcase{
+			lines: [][]Line{[]Line{
+				Line{Pt{50, 66}, Pt{104, 100}},
+				Line{Pt{104, 100}, Pt{119, 81}},
+				Line{Pt{119, 81}, Pt{122, 81}},
+				Line{Pt{122, 81}, Pt{123, 83}},
+				Line{Pt{123, 83}, Pt{123, 86}},
+				Line{Pt{123, 86}, Pt{1, 42}},
+				Line{Pt{1, 42}, Pt{0, 40}},
+				Line{Pt{0, 40}, Pt{5, 36}},
+				Line{Pt{5, 36}, Pt{48, 65}},
+				Line{Pt{48, 65}, Pt{51, 59}},
+				Line{Pt{51, 59}, Pt{47, 55}},
+				Line{Pt{47, 55}, Pt{52, 44}},
+				Line{Pt{52, 44}, Pt{25, 19}},
+				Line{Pt{25, 19}, Pt{29, 14}},
+				Line{Pt{29, 14}, Pt{32, 14}},
+				Line{Pt{32, 14}, Pt{36, 17}},
+				Line{Pt{36, 17}, Pt{36, 20}},
+				Line{Pt{36, 20}, Pt{44, 30}},
+				Line{Pt{44, 30}, Pt{58, 39}},
+				Line{Pt{58, 39}, Pt{66, 25}},
+				Line{Pt{66, 25}, Pt{75, 13}},
+				Line{Pt{75, 13}, Pt{74, 10}},
+				Line{Pt{74, 10}, Pt{71, 8}},
+				Line{Pt{71, 8}, Pt{74, 1}},
+				Line{Pt{74, 1}, Pt{77, 0}},
+				Line{Pt{77, 0}, Pt{84, 16}},
+				Line{Pt{84, 16}, Pt{50, 66}},
+			}},
+			polygons: [][][]Pt{
+
+				{
+					[]Pt{{0, 40}, {1, 42}, {28, 51}, {5, 36}},
+				},
+
+				{
+					[]Pt{{28, 51}, {48, 65}, {50, 59}},
+				},
+
+				{
+					[]Pt{{49, 66}, {104, 100}, {116, 83}, {53, 60}},
+				},
+
+				{
+					[]Pt{{71, 8}, {74, 0}, {77, 0}, {74, 10}},
+					[]Pt{{25, 19}, {29, 14}, {32, 14}, {36, 17}, {36, 20}, {44, 30}, {58, 39}, {66, 25}, {75, 13}, {74, 10}, {47, 55}, {52, 44}},
+					[]Pt{{47, 55}, {51, 59}, {50, 59}, {53, 60}, {84, 16}, {77, 0}},
+				},
+
+				{
+					[]Pt{{116, 83}, {119, 81}, {122, 81}, {123, 83}, {123, 86}},
+				},
+			},
+		},
 	)
+
+	var bbox = func(lns [][]Line) (minx float64, miny float64, maxx float64, maxy float64) {
+		minx, miny, maxx, maxy = lns[0][0][0].X, lns[0][0][0].Y, lns[0][0][0].X, lns[0][0][0].Y
+		for i := range lns {
+			for j := range lns[i] {
+				if lns[i][j][0].X < minx {
+					minx = lns[i][j][0].X
+				}
+				if lns[i][j][0].Y < miny {
+					miny = lns[i][j][0].Y
+				}
+				if lns[i][j][0].X > maxx {
+					maxx = lns[i][j][0].X
+				}
+				if lns[i][j][0].Y > maxy {
+					maxy = lns[i][j][0].Y
+				}
+			}
+		}
+		return
+	}
+
+	var normalizeToOrigin = func(lns [][]Line) (nor [][]Line) {
+		var minx, miny, maxx, maxy = bbox(lns)
+		log.Println("BBox:", minx, miny, maxx, maxy)
+		//minx, miny = 0, 0
+		nor = make([][]Line, len(lns))
+		//log.Println("New BBox:", (minx+1)-minx, (miny+1)-miny, maxx-minx, maxy-miny)
+		for i := range lns {
+			nor[i] = make([]Line, len(lns[i]))
+			for j := range lns[i] {
+				nor[i][j] = Line{
+					Pt{lns[i][j][0].X - minx, lns[i][j][0].Y - miny},
+					Pt{lns[i][j][1].X - minx, lns[i][j][1].Y - miny},
+				}
+			}
+		}
+		return nor
+	}
+	_ = normalizeToOrigin
 
 	tests.Run(func(idx int, test testcase) {
 		got, err := makeValid(test.lines...)
-		if test.err != nil && err != test.err {
-			t.Errorf("Expecting and err %v, got: %v", test.err, err)
+		if err != test.err {
+			/*
+				nor := normalizeToOrigin(test.lines)
+				gnor, gerr := makeValid(nor...)
+				log.Println("Normilized:", nor)
+				log.Printf("ngon: %#v\nerr:%v", gnor, gerr)
+				log.Println("Original:", test.lines)
+			*/
+			t.Errorf("( %v ) Unexpected error: Expected: %v, got: %v", idx, test.err, err)
 			return
 		}
 		if diff := deep.Equal(got, test.polygons); diff != nil {
-			t.Error("Points do not match: Expected\n\t", test.polygons, "\ngot\n\t", got, "\n\tdiff:\t", diff)
+			t.Error("(", idx, ") Points do not match: Expected\n\t", test.polygons, "\ngot\n\t", got, "\n\tdiff:\t", diff)
 		}
 	})
 
+}
+
+func BenchmarkMakeValid5PolyA(b *testing.B) {
+
+	for n := 0; n < b.N; n++ {
+		makeValid(
+			[]Line{
+				Line{Pt{50, 66}, Pt{104, 100}},
+				Line{Pt{104, 100}, Pt{119, 81}},
+				Line{Pt{119, 81}, Pt{122, 81}},
+				Line{Pt{122, 81}, Pt{123, 83}},
+				Line{Pt{123, 83}, Pt{123, 86}},
+				Line{Pt{123, 86}, Pt{1, 42}},
+				Line{Pt{1, 42}, Pt{0, 40}},
+				Line{Pt{0, 40}, Pt{5, 36}},
+				Line{Pt{5, 36}, Pt{48, 65}},
+				Line{Pt{48, 65}, Pt{51, 59}},
+				Line{Pt{51, 59}, Pt{47, 55}},
+				Line{Pt{47, 55}, Pt{52, 44}},
+				Line{Pt{52, 44}, Pt{25, 19}},
+				Line{Pt{25, 19}, Pt{29, 14}},
+				Line{Pt{29, 14}, Pt{32, 14}},
+				Line{Pt{32, 14}, Pt{36, 17}},
+				Line{Pt{36, 17}, Pt{36, 20}},
+				Line{Pt{36, 20}, Pt{44, 30}},
+				Line{Pt{44, 30}, Pt{58, 39}},
+				Line{Pt{58, 39}, Pt{66, 25}},
+				Line{Pt{66, 25}, Pt{75, 13}},
+				Line{Pt{75, 13}, Pt{74, 10}},
+				Line{Pt{74, 10}, Pt{71, 8}},
+				Line{Pt{71, 8}, Pt{74, 1}},
+				Line{Pt{74, 1}, Pt{77, 0}},
+				Line{Pt{77, 0}, Pt{84, 16}},
+				Line{Pt{84, 16}, Pt{50, 66}},
+			},
+		)
+	}
+}
+func BenchmarkMakeValid5PolyB(b *testing.B) {
+
+	for n := 0; n < b.N; n++ {
+		makeValid(
+			[]Line{
+				Line{Pt{X: 2784, Y: 960}, Pt{X: 2838, Y: 994}},
+				Line{Pt{X: 2838, Y: 994}, Pt{X: 2853, Y: 975}},
+				Line{Pt{X: 2853, Y: 975}, Pt{X: 2856, Y: 975}},
+				Line{Pt{X: 2856, Y: 975}, Pt{X: 2857, Y: 977}},
+				Line{Pt{X: 2857, Y: 977}, Pt{X: 2857, Y: 980}},
+				Line{Pt{X: 2857, Y: 980}, Pt{X: 2735, Y: 936}},
+				Line{Pt{X: 2735, Y: 936}, Pt{X: 2734, Y: 934}},
+				Line{Pt{X: 2734, Y: 934}, Pt{X: 2739, Y: 930}},
+				Line{Pt{X: 2739, Y: 930}, Pt{X: 2782, Y: 959}},
+				Line{Pt{X: 2782, Y: 959}, Pt{X: 2785, Y: 953}},
+				Line{Pt{X: 2785, Y: 953}, Pt{X: 2781, Y: 949}},
+				Line{Pt{X: 2781, Y: 949}, Pt{X: 2786, Y: 938}},
+				Line{Pt{X: 2786, Y: 938}, Pt{X: 2759, Y: 913}},
+				Line{Pt{X: 2759, Y: 913}, Pt{X: 2763, Y: 908}},
+				Line{Pt{X: 2763, Y: 908}, Pt{X: 2766, Y: 908}},
+				Line{Pt{X: 2766, Y: 908}, Pt{X: 2770, Y: 911}},
+				Line{Pt{X: 2770, Y: 911}, Pt{X: 2770, Y: 914}},
+				Line{Pt{X: 2770, Y: 914}, Pt{X: 2778, Y: 924}},
+				Line{Pt{X: 2778, Y: 924}, Pt{X: 2792, Y: 933}},
+				Line{Pt{X: 2792, Y: 933}, Pt{X: 2800, Y: 919}},
+				Line{Pt{X: 2800, Y: 919}, Pt{X: 2809, Y: 907}},
+				Line{Pt{X: 2809, Y: 907}, Pt{X: 2808, Y: 904}},
+				Line{Pt{X: 2808, Y: 904}, Pt{X: 2805, Y: 902}},
+				Line{Pt{X: 2805, Y: 902}, Pt{X: 2808, Y: 895}},
+				Line{Pt{X: 2808, Y: 895}, Pt{X: 2811, Y: 894}},
+				Line{Pt{X: 2811, Y: 894}, Pt{X: 2818, Y: 910}},
+				Line{Pt{X: 2818, Y: 910}, Pt{X: 2784, Y: 960}},
+			},
+		)
+	}
 }

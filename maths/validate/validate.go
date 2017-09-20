@@ -3,6 +3,7 @@ package validate
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	"sort"
@@ -401,6 +402,9 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 	//log.Printf("Got the following for MakeValid(\n%#v\n):\n%#v\n", plygLines, plyPoints)
 	if err != nil {
 		//log.Printf("MPolygon %#v", g)
+		if err.Error() == "WTF!!!" {
+			log.Printf("Org:\n%#v\nValid(?):\n%#v\n", plygLines, mp)
+		}
 		panic(fmt.Sprintln("Err", err))
 		return mp, err
 	}

@@ -109,6 +109,16 @@ func AreaOfPolygonLineString(line tegola.LineString) (area float64) {
 	return math.Abs(area) / 2.0
 }
 
+func AreaOfRing(points ...Pt) (area float64) {
+	n := len(points)
+	for i := range points {
+		j := (i + 1) % n
+		area += points[i].X * points[j].Y
+		area -= points[j].X * points[i].Y
+	}
+	return math.Abs(area) / 2.0
+}
+
 // DistOfLine will calculate the Manhattan distance of a line.
 func DistOfLine(l tegola.LineString) (dist float64) {
 	points := l.Subpoints()

@@ -538,29 +538,31 @@ func (em *EdgeMap) trianglesForEdge(pt1, pt2 Pt) (*Triangle, *Triangle, error) {
 
 	apts, ok := em.SubKeys(pt1)
 	if !ok {
+		log.Println("Error 1")
 		return nil, nil, fmt.Errorf("Point one is not connected to any other points. Invalid edge? (%v  %v)", pt1, pt2)
 	}
 	bpts, ok := em.SubKeys(pt2)
 	if !ok {
+		log.Println("Error 2")
 		return nil, nil, fmt.Errorf("Point two is not connected to any other points. Invalid edge? (%v  %v)", pt1, pt2)
 	}
 
 	// Check to make sure pt1 and pt2 are connected.
 	if _, ok := em.Map[pt1][pt2]; !ok {
+		log.Println("Error 3")
 		return nil, nil, fmt.Errorf("Point one and Point do not form an edge. Invalid edge? (%v  %v)", pt1, pt2)
 	}
 
 	// Now we need to look at the both subpts and only keep the points that are common to both lists.
 	var larea, rarea float64
 	var triangles [2]*Triangle
-	//log.Println("Looking for triangles.")
 NextApts:
 	for i := range apts {
+	NextBpts:
 		for j := range bpts {
 			if apts[i].IsEqual(bpts[j]) {
 				tri := NewTriangle(pt1, pt2, apts[i])
 				area := AreaOfTriangle(pt1, pt2, apts[i])
-				//log.Println("Tri", tri, "area:", area)
 				switch {
 				case area > 0 && (rarea == 0 || rarea > area):
 					rarea = area
@@ -568,23 +570,18 @@ NextApts:
 				case area < 0 && (larea == 0 || larea < area):
 					larea = area
 					triangles[0] = &tri
+				case area == 0:
+					// Skip lines with zero area.
+					continue NextBpts
 				}
 				continue NextApts
 			}
 		}
 	}
-	if triangles[0] == nil && triangles[1] == nil {
-		//log.Printf("generateEdgeMap(\n%#v\n)\n", em.destructured)
-		//log.Println(pt1, "apts:", apts)
-		//log.Println(pt2, "bpts:", bpts)
-	}
-	//log.Println("Done looking for triangles.")
 	return triangles[0], triangles[1], nil
 }
 
 func generateEdgeMap(destructuredLines []Line) (em EdgeMap) {
-	//defer log.Println("Done building edgemap.")
-	//defer em.Dump()
 	em.destructured = destructuredLines
 	em.Map = make(map[Pt]map[Pt]bool)
 	em.Segments = make([]Line, 0, len(destructuredLines))
@@ -608,7 +605,6 @@ func generateEdgeMap(destructuredLines []Line) (em EdgeMap) {
 			continue
 		}
 
-		//log.Println("Looking at:", i, "segment:", seg)
 		em.Segments = append(em.Segments, seg)
 
 		em.Map[pt1][pt2] = true
@@ -733,6 +729,78 @@ func (em *EdgeMap) Dump() {
 	*/
 }
 
+func (em *EdgeMap) Triangulate1() {
+	//defer log.Println("Done with Triangulate")
+	keys := em.Keys
+
+	//log.Println("Starting to Triangulate. Keys", len(keys))
+	// We want to run through all the keys generating possible edges, and then
+	// collecting the ones that don't intersect with the edges in the map already.
+	var lines []Line
+	for i := 0; i < len(keys)-1; i++ {
+		lookup := em.Map[keys[i]]
+		//log.Println("Looking at i", i, "Lookup", lookup)
+		for j := i + 1; j < len(keys); j++ {
+			if _, ok := lookup[keys[j]]; ok {
+				// Already have an edge with this point
+				continue
+			}
+			l := Line{keys[i], keys[j]}
+			lines = append(lines, l)
+		}
+	}
+
+	// Now we need to do a line sweep to see which of the possible edges we want to keep.
+	offset := len(lines)
+	lines = append(lines, em.Segments...)
+	// Assume we are going to keep all the edges we generated.
+	//skiplines := make([]bool, len(lines))
+	skiplines := make(map[int]struct{}, offset)
+
+	FindIntersectsWithoutIntersect(lines, func(src, dest int) bool {
+		_, foundSrc := skiplines[src]
+		_, foundDest := skiplines[dest]
+
+		//if skiplines[src] || skiplines[dest] {
+		if foundSrc || foundDest {
+			// don't need to do anything.
+			return true
+		}
+		l1, l2 := lines[src], lines[dest]
+		if l1[0].IsEqual(l2[0]) || l1[0].IsEqual(l2[1]) ||
+			l1[1].IsEqual(l2[0]) || l1[1].IsEqual(l2[1]) {
+			// It's a simple intersection so skip
+			return true
+		}
+		switch {
+		case src >= offset && dest >= offset:
+			//these are two Segments intersecting with each other ignore.
+		case src < offset && dest < offset:
+			// drop the dest line
+			//	skiplines[dest] = true
+			skiplines[dest] = struct{}{}
+		case src < offset:
+			// need to remove this possible edge.
+			//skiplines[src] = true
+			skiplines[src] = struct{}{}
+		case dest < offset:
+			// need to remove this possible edge.
+			//	skiplines[dest] = true
+			skiplines[dest] = struct{}{}
+		}
+		return true
+	})
+	// Add the remaining possible Edges to the edgeMap.
+	for i := range lines {
+		if _, ok := skiplines[i]; ok {
+			continue
+		}
+		// Don't need to add the keys as they are already in the edgeMap, we are just adding additional edges
+		// between points.
+		em.addLine(false, true, false, lines[i])
+	}
+}
+
 func (em *EdgeMap) Triangulate() {
 	//defer log.Println("Done with Triangulate")
 	keys := em.Keys
@@ -756,9 +824,11 @@ func (em *EdgeMap) Triangulate() {
 		lines := append([]Line{}, possibleEdges...)
 		offset := len(lines)
 		lines = append(lines, em.Segments...)
-		skiplines := make(map[int]struct{})
+		skiplines := make(map[int]struct{}, offset)
 
-		FindIntersects(lines, func(src, dest int, ptfn func() Pt) bool {
+		FindIntersectsWithoutIntersect(lines, func(src, dest int) bool {
+			l1, l2 := lines[src], lines[dest]
+
 			switch {
 			case src < offset && dest < offset:
 				// These are both possibleEdges intersecting with each other at the start point, ignore.
@@ -767,13 +837,11 @@ func (em *EdgeMap) Triangulate() {
 			case src < offset:
 
 				// Need to see if the intersection is a "simple" intersection, the endpoint match.
-				l1, l2 := lines[src], lines[dest]
 				if l1[0].IsEqual(l2[0]) || l1[0].IsEqual(l2[1]) ||
 					l1[1].IsEqual(l2[0]) || l1[1].IsEqual(l2[1]) {
 					// It's a simple intersection so skip
 					return true
 				}
-
 				// need to remove this possible edge.
 				skiplines[src] = struct{}{}
 			case dest < offset:
@@ -829,8 +897,9 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 				return nil, err
 			}
 			if tr1 == nil && tr2 == nil {
-				//log.Println("BUG! WTF!!!!")
-				return nil, fmt.Errorf("WTF!!!")
+				// zero area triangle.
+				// This can happend if an edge lays on the same line as another edge.
+				continue
 			}
 			var trn1, trn2 *TriangleNode
 
@@ -907,24 +976,64 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 // will include triangles outside of the polygons provided, creating a convex hull.
 func makeValid(plygs ...[]Line) (polygons [][][]Pt, err error) {
 
-	//	polygons := BreakUpIntersects(plygs...)
 	destructuredLines := destructure(insureConnected(plygs...))
 	edgeMap := generateEdgeMap(destructuredLines)
 	edgeMap.Triangulate()
 	triangleGraph, err := edgeMap.FindTriangles()
-	if err != nil {
-		return nil, err
-	}
 	rings := triangleGraph.Rings()
 	for _, ring := range rings {
 		polygon := constructPolygon(ring)
 		polygons = append(polygons, polygon)
 	}
+	// Need to sort the polygons in the multipolygon to get a consistent order.
+	sort.Sort(plygByFirstPt(polygons))
 	return polygons, nil
 }
 
 func MakeValid(plygs ...[]Line) (polygons [][][]Pt, err error) {
 	return makeValid(plygs...)
+}
+
+type byArea [][]Pt
+
+func (r byArea) Less(i, j int) bool {
+	iarea := AreaOfRing(r[i]...)
+	jarea := AreaOfRing(r[j]...)
+	return iarea < jarea
+}
+func (r byArea) Len() int {
+	return len(r)
+}
+func (r byArea) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
+}
+
+type plygByFirstPt [][][]Pt
+
+func (p plygByFirstPt) Less(i, j int) bool {
+	p1 := p[i]
+	p2 := p[j]
+	if len(p1) == 0 && len(p2) != 0 {
+		return true
+	}
+	if len(p1) == 0 || len(p2) == 0 {
+		return false
+	}
+
+	if len(p1[0]) == 0 && len(p2[0]) != 0 {
+		return true
+	}
+	if len(p1[0]) == 0 || len(p2[0]) == 0 {
+		return false
+	}
+	return XYOrder(p1[0][0], p2[0][0]) == -1
+}
+
+func (p plygByFirstPt) Len() int {
+	return len(p)
+}
+func (p plygByFirstPt) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
 }
 
 func constructPolygon(lines []Line) [][]Pt {
@@ -976,6 +1085,7 @@ NextLine:
 		// Need to add it to a new ring.
 		rings = append(rings, []Pt{line[0], line[1]})
 	}
+
 	for i, ring := range rings {
 		minidx := 0
 		for j := 1; j < len(ring); j++ {
@@ -987,6 +1097,9 @@ NextLine:
 			rings[i] = append(ring[minidx:], ring[:minidx]...)
 		}
 	}
+	// Need to sort the rings by size. The largest ring by area needs to be the first ring.
+
+	sort.Sort(byArea(rings))
 	return rings
 }
 
