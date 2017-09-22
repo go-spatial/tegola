@@ -63,6 +63,63 @@ func NewEventQueue(segments []Line) []event {
 }
 
 // DoesIntersect does a quick intersect check using the saddle method.
+func findinter_doesNotIntersect(s1x0, s1y0, s1x1, s1y1, s2x0, s2y0, s2x1, s2y1 float64) bool {
+
+	var swap float64
+
+	// Put line 1 points in order.
+	if s1x0 > s1x1 {
+		swap = s1x0
+		s1x0 = s1x1
+		s1x1 = swap
+
+		swap = s1y0
+		s1y0 = s1y1
+		s1y1 = swap
+	} else {
+		if s1x0 == s1x1 && s1y0 > s1y1 {
+			swap = s1x0
+			s1x0 = s1x1
+			s1x1 = swap
+
+			swap = s1y0
+			s1y0 = s1y1
+			s1y1 = swap
+		}
+	}
+	// Put line 2 points in order.
+	if s2x0 > s2x1 {
+		swap = s2x0
+		s2x0 = s2x1
+		s2x1 = swap
+
+		swap = s2y0
+		s2y0 = s2y1
+		s2y1 = swap
+	} else {
+		if s2x0 == s2x1 && s2y0 > s2y1 {
+			swap = s2x0
+			s2x0 = s2x1
+			s2x1 = swap
+
+			swap = s2y0
+			s2y0 = s2y1
+			s2y1 = swap
+		}
+	}
+
+	if ((((s1x1 - s1x0) * (s2y0 - s1y0)) - ((s1y1 - s1y0) * (s2x0 - s1x0))) * (((s1x1 - s1x0) * (s2y1 - s1y0)) - ((s1y1 - s1y0) * (s2x1 - s1x0)))) > 0 {
+		return true
+	}
+	if ((((s2x1 - s2x0) * (s1y0 - s2y0)) - ((s2y1 - s2y0) * (s1x0 - s2x0))) * (((s2x1 - s2x0) * (s1y1 - s2y0)) - ((s2y1 - s2y0) * (s1x1 - s2x0)))) > 0 {
+		return true
+	}
+
+	return false
+
+}
+
+// DoesIntersect does a quick intersect check using the saddle method.
 func DoesIntersect(s1, s2 Line) bool {
 
 	// Put line 1 points in order.
@@ -322,6 +379,61 @@ func FindIntersectsWithEventQueueWithoutIntersectNotPolygon(eq []event, segments
 			if shouldReturn {
 				return
 			}
+		}
+	}
+	return
+}
+
+func FindAllIntersectsWithEventQueueWithoutIntersectNotPolygon(eq []event, segments []Line, skipfn func(srcIdx, destIdx int) bool, fn func(srcIdx, destIdx int)) {
+	ns := len(segments)
+	isegmap := make([]bool, ns)
+	seenEdgeCount := 0
+	var edgeidx, s int
+	var sv bool
+	for i := range eq {
+		edgeidx = eq[i].edge
+
+		if !isegmap[edgeidx] {
+			// have not seen this edge, let's add it to our list.
+			isegmap[edgeidx] = true
+			seenEdgeCount++
+			continue
+		}
+
+		// We have reached the end of a segment.
+		// This is the left edge.
+		isegmap[edgeidx] = false
+		seenEdgeCount = seenEdgeCount - 1
+		if seenEdgeCount <= 0 {
+			seenEdgeCount = 0
+			// no segments to test.
+			continue
+		}
+
+		for s, sv = range isegmap {
+			if !sv {
+				continue
+			}
+			if skipfn(edgeidx, s) {
+				continue
+			}
+			if segments[edgeidx][0].X == segments[s][0].X && segments[edgeidx][0].Y == segments[s][0].Y {
+				continue
+			}
+			if segments[edgeidx][0].X == segments[s][1].X && segments[edgeidx][0].Y == segments[s][1].Y {
+				continue
+			}
+			if segments[edgeidx][1].X == segments[s][0].X && segments[edgeidx][1].Y == segments[s][0].Y {
+				continue
+			}
+			if segments[edgeidx][1].X == segments[s][1].X && segments[edgeidx][1].Y == segments[s][1].Y {
+				continue
+			}
+
+			if findinter_doesNotIntersect(segments[edgeidx][0].X, segments[edgeidx][0].Y, segments[edgeidx][1].X, segments[edgeidx][1].Y, segments[s][0].X, segments[s][0].Y, segments[s][1].X, segments[s][1].Y) {
+				continue
+			}
+			fn(edgeidx, s)
 		}
 	}
 	return

@@ -4,7 +4,17 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"time"
 )
+
+func trace(msg string) func() {
+	tracer := time.Now()
+	log.Println(msg, "started at:", tracer)
+	return func() {
+		etracer := time.Now()
+		log.Println(msg, "ElapsedTime in seconds:", etracer.Sub(tracer))
+	}
+}
 
 const adjustBBoxBy = 10
 
@@ -730,13 +740,15 @@ func (em *EdgeMap) Dump() {
 }
 
 func (em *EdgeMap) Triangulate1() {
+
 	//defer log.Println("Done with Triangulate")
 	keys := em.Keys
 
 	//log.Println("Starting to Triangulate. Keys", len(keys))
 	// We want to run through all the keys generating possible edges, and then
 	// collecting the ones that don't intersect with the edges in the map already.
-	var lines []Line
+	var lines = make([]Line, 0, 2*len(keys))
+	stime := time.Now()
 	for i := 0; i < len(keys)-1; i++ {
 		lookup := em.Map[keys[i]]
 		//log.Println("Looking at i", i, "Lookup", lookup)
@@ -749,47 +761,48 @@ func (em *EdgeMap) Triangulate1() {
 			lines = append(lines, l)
 		}
 	}
+	etime := time.Now()
+	log.Println("Finding all lines took: ", etime.Sub(stime))
 
 	// Now we need to do a line sweep to see which of the possible edges we want to keep.
 	offset := len(lines)
 	lines = append(lines, em.Segments...)
 	// Assume we are going to keep all the edges we generated.
 	//skiplines := make([]bool, len(lines))
-	skiplines := make(map[int]struct{}, offset)
+	skiplines := make(map[int]bool, offset)
 
-	FindIntersectsWithoutIntersect(lines, func(src, dest int) bool {
-		_, foundSrc := skiplines[src]
-		_, foundDest := skiplines[dest]
+	stime = time.Now()
+	eq := NewEventQueue(lines)
+	etime = time.Now()
+	log.Println("building event queue took: ", etime.Sub(stime))
+	stime = etime
+	FindAllIntersectsWithEventQueueWithoutIntersectNotPolygon(eq, lines,
+		func(src, dest int) bool { return skiplines[src] || skiplines[dest] },
+		func(src, dest int) {
 
-		//if skiplines[src] || skiplines[dest] {
-		if foundSrc || foundDest {
-			// don't need to do anything.
-			return true
-		}
-		l1, l2 := lines[src], lines[dest]
-		if l1[0].IsEqual(l2[0]) || l1[0].IsEqual(l2[1]) ||
-			l1[1].IsEqual(l2[0]) || l1[1].IsEqual(l2[1]) {
-			// It's a simple intersection so skip
-			return true
-		}
-		switch {
-		case src >= offset && dest >= offset:
-			//these are two Segments intersecting with each other ignore.
-		case src < offset && dest < offset:
-			// drop the dest line
-			//	skiplines[dest] = true
-			skiplines[dest] = struct{}{}
-		case src < offset:
-			// need to remove this possible edge.
-			//skiplines[src] = true
-			skiplines[src] = struct{}{}
-		case dest < offset:
-			// need to remove this possible edge.
-			//	skiplines[dest] = true
-			skiplines[dest] = struct{}{}
-		}
-		return true
-	})
+			/*
+				if src >= offset && dest >= offset {
+					return
+				}
+				//these are two Segments intersecting with each other ignore.
+
+				if src < offset && dest < offset {
+					skiplines[dest] = true
+					return
+				}
+			*/
+			if dest < offset {
+				skiplines[dest] = true
+				return
+			}
+			if src < offset {
+				skiplines[src] = true
+				return
+			}
+		})
+	etime = time.Now()
+	log.Println("Find Intersects took: ", etime.Sub(stime))
+	stime = etime
 	// Add the remaining possible Edges to the edgeMap.
 	for i := range lines {
 		if _, ok := skiplines[i]; ok {
@@ -804,12 +817,12 @@ func (em *EdgeMap) Triangulate1() {
 func (em *EdgeMap) Triangulate() {
 	//defer log.Println("Done with Triangulate")
 	keys := em.Keys
+	lnkeys := len(keys) - 1
 	//log.Println("Starting to Triangulate. Keys", len(keys))
 	// We want to run through all the keys generating possible edges, and then
 	// collecting the ones that don't intersect with the edges in the map already.
-	for i := 0; i < len(keys)-1; i++ {
+	for i := 0; i < lnkeys; i++ {
 		lookup := em.Map[keys[i]]
-		//log.Println("Looking at i", i, "Lookup", lookup)
 		var possibleEdges []Line
 		for j := i + 1; j < len(keys); j++ {
 			if _, ok := lookup[keys[j]]; ok {
@@ -824,41 +837,53 @@ func (em *EdgeMap) Triangulate() {
 		lines := append([]Line{}, possibleEdges...)
 		offset := len(lines)
 		lines = append(lines, em.Segments...)
-		skiplines := make(map[int]struct{}, offset)
+		skiplines := make([]bool, offset)
 
-		FindIntersectsWithoutIntersect(lines, func(src, dest int) bool {
-			l1, l2 := lines[src], lines[dest]
-
-			switch {
-			case src < offset && dest < offset:
-				// These are both possibleEdges intersecting with each other at the start point, ignore.
-			case src >= offset && dest >= offset:
-				//these are two Segments intersecting with each other ignore.
-			case src < offset:
-
-				// Need to see if the intersection is a "simple" intersection, the endpoint match.
-				if l1[0].IsEqual(l2[0]) || l1[0].IsEqual(l2[1]) ||
-					l1[1].IsEqual(l2[0]) || l1[1].IsEqual(l2[1]) {
-					// It's a simple intersection so skip
+		/*
+			stime := time.Now()
+		*/
+		eq := NewEventQueue(lines)
+		/*
+			etime := time.Now()
+			log.Println(i, "of", lnkeys, "building event queue took: ", etime.Sub(stime))
+			stime = etime
+		*/
+		FindAllIntersectsWithEventQueueWithoutIntersectNotPolygon(eq, lines,
+			func(src, dest int) bool {
+				if src >= offset && dest >= offset {
 					return true
 				}
-				// need to remove this possible edge.
-				skiplines[src] = struct{}{}
-			case dest < offset:
-				// need to remove this possible edge.
-				l1, l2 := lines[src], lines[dest]
-				if l1[0].IsEqual(l2[0]) || l1[0].IsEqual(l2[1]) ||
-					l1[1].IsEqual(l2[0]) || l1[1].IsEqual(l2[1]) {
-					// It's a simple intersection so skip
+				if src < offset && skiplines[src] {
 					return true
 				}
-				skiplines[dest] = struct{}{}
-			}
-			return true
-		})
+				if dest < offset && skiplines[dest] {
+					return true
+				}
+				return false
+			},
+			func(src, dest int) {
+				if src < offset {
+					// need to remove this possible edge.
+					if dest >= offset {
+						skiplines[src] = true
+					}
+					return
+				}
+				if dest < offset {
+					// need to remove this possible edge.
+					if src >= offset {
+						skiplines[dest] = true
+					}
+					return
+				}
+			})
+		/*
+			etime = time.Now()
+			log.Println(i, "of", lnkeys, "Find Intersects took: ", etime.Sub(stime))
+		*/
 		// Add the remaining possible Edges to the edgeMap.
 		for i := range possibleEdges {
-			if _, ok := skiplines[i]; ok {
+			if skiplines[i] {
 				continue
 			}
 			// Don't need to add the keys as they are already in the edgeMap, we are just adding additional edges
@@ -975,16 +1000,42 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 // makeValid takes a set of polygons that is invalid,
 // will include triangles outside of the polygons provided, creating a convex hull.
 func makeValid(plygs ...[]Line) (polygons [][][]Pt, err error) {
+	//defer trace(fmt.Sprintf("makeValid(%v --\n%#v\n): ", len(plygs), plygs))()
 
+	//stime := time.Now()
 	destructuredLines := destructure(insureConnected(plygs...))
+	/*
+		etime := time.Now()
+		log.Println("dstructedLines took: ", etime.Sub(stime))
+		stime = etime
+	*/
 	edgeMap := generateEdgeMap(destructuredLines)
+	/*
+		etime = time.Now()
+		log.Println("generateEdgeMap took: ", etime.Sub(stime))
+		stime = etime
+	*/
 	edgeMap.Triangulate()
+	/*
+		etime = time.Now()
+		log.Println("Triangulate took: ", etime.Sub(stime))
+		stime = etime
+	*/
 	triangleGraph, err := edgeMap.FindTriangles()
+	/*
+		etime = time.Now()
+		log.Println("Find Triangles took: ", etime.Sub(stime))
+		stime = etime
+	*/
 	rings := triangleGraph.Rings()
 	for _, ring := range rings {
 		polygon := constructPolygon(ring)
 		polygons = append(polygons, polygon)
 	}
+	/*
+		etime = time.Now()
+		log.Println("Rings and ConstructPolygon took: ", etime.Sub(stime))
+	*/
 	// Need to sort the polygons in the multipolygon to get a consistent order.
 	sort.Sort(plygByFirstPt(polygons))
 	return polygons, nil
