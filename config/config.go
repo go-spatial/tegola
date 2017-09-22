@@ -68,6 +68,9 @@ type Map struct {
 }
 
 type MapLayer struct {
+	//	Name is optional. If it's not defined the name of the ProviderLayer will be used.
+	//	Name can also be used to group multiple ProviderLayers under the same namespace.
+	Name          string      `toml:"name"`
 	ProviderLayer string      `toml:"provider_layer"`
 	MinZoom       int         `toml:"min_zoom"`
 	MaxZoom       int         `toml:"max_zoom"`
@@ -92,8 +95,7 @@ func (c *Config) Validate() error {
 
 			//	check if already have this layer
 			if val, ok := layerNames[plParts[1]]; ok {
-				//	we have a hit
-				//	check for zoom range overlap
+				//	we have a hit. check for zoom range overlap
 				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
 					return ErrLayerCollision{
 						ProviderLayer1: val.ProviderLayer,
