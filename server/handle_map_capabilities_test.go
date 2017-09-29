@@ -38,7 +38,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				MaxZoom:     20,
 				Name:        &testMap.Name,
 				Description: nil,
-				Scheme:      "zxy",
+				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
 				Tiles: []string{
 					"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -93,7 +93,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				MaxZoom:     20,
 				Name:        &testMap.Name,
 				Description: nil,
-				Scheme:      "zxy",
+				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
 				Tiles: []string{
 					"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",

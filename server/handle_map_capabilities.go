@@ -78,7 +78,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			Center:      m.Center,
 			Format:      "pbf",
 			Name:        &m.Name,
-			Scheme:      "zxy",
+			Scheme:      tilejson.SchemeXYZ,
 			TileJSON:    tilejson.Version,
 			Version:     "1.0.0",
 			Grids:       make([]string, 0),

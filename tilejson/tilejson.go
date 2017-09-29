@@ -13,6 +13,11 @@ const (
 	GeomTypeUnknown GeomType = "unknown"
 )
 
+const (
+	SchemeXYZ  = "xyz"
+	SchemeTMLS = "tms"
+)
+
 type TileJSON struct {
 	// OPTIONAL. Default: null. Contains an attribution to be displayed
 	// when the map is shown to a user. Implementations MAY decide to treat this
