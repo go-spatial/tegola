@@ -84,14 +84,14 @@ func hostName(r *http.Request) string {
 	return r.Host
 }
 
-//	check if the request is http or https. the scheme is needed for the TileURLs and
+//	various checks to determin if the request is http or https. the scheme is needed for the TileURLs
 //	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
 func scheme(r *http.Request) string {
 	if r.Header.Get("X-Forwarded-Proto") != "" {
-		return r.Header.Get("X-Forwarded-Proto") + "://"
+		return r.Header.Get("X-Forwarded-Proto")
 	} else if r.TLS != nil {
-		return "https://"
-	} else {
-		return "http://"
+		return "https"
 	}
+
+	return "http"
 }

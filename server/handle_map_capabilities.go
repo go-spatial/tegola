@@ -41,8 +41,6 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	//	build payload
 	case "GET":
-		var rScheme = scheme(r)
-
 		params := httptreemux.ContextParams(r.Context())
 
 		//	read the map_name value from the request
@@ -83,7 +81,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 		//	determing the min and max zoom for this map
 		for i, l := range m.Layers {
-			var tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName, l.Name)
+			var tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.Name)
 
 			//	if we have a debug param add it to our URLs
 			if query.Get("debug") == "true" {
@@ -106,7 +104,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				tileJSON.MaxZoom = l.MaxZoom
 			}
 
-			tiles := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName, l.Name)
+			tiles := fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.Name)
 			if r.URL.Query().Get("debug") != "" {
 				tiles = tiles + "?debug=true"
 			}
@@ -149,7 +147,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				MinZoom: 0,
 				MaxZoom: MaxZoom,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), m.Name, "debug-tile-outline"),
+					fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-outline"),
 				},
 				GeometryType: tilejson.GeomTypeLine,
 			}
@@ -165,7 +163,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				MinZoom: 0,
 				MaxZoom: MaxZoom,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), m.Name, "debug-tile-center"),
+					fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-center"),
 				},
 				GeometryType: tilejson.GeomTypePoint,
 			}
@@ -174,7 +172,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			tileJSON.VectorLayers = append(tileJSON.VectorLayers, debugTileCenter)
 		}
 
-		tileURL := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName)
+		tileURL := fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName)
 
 		if r.URL.Query().Get("debug") == "true" {
 			tileURL += "?debug=true"
