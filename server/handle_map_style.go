@@ -29,14 +29,6 @@ type HandleMapStyle struct {
 //		map_name - map name in the config file
 func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var rScheme string
-	//	check if the request is http or https. the scheme is needed for the TileURLs and
-	//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
-	if r.TLS != nil {
-		rScheme = "https://"
-	} else {
-		rScheme = "http://"
-	}
 
 	params := httptreemux.ContextParams(r.Context())
 
@@ -62,7 +54,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	debug := r.URL.Query().Get("debug")
 
-	sourceURL := fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, hostName(r), req.mapName)
+	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json", scheme(r), hostName(r), req.mapName)
 	if debug == "true" {
 		sourceURL += "?debug=true"
 	}
