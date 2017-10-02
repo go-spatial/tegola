@@ -4,204 +4,11 @@ import (
 	"log"
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/gdey/tbltest"
 	"github.com/go-test/deep"
 )
-
-func TestGenerateEdgeMap(t *testing.T) {
-	type testcase struct {
-		lines   [][]Line
-		edgemap EdgeMap
-	}
-	tests := tbltest.Cases(
-		testcase{
-			lines: [][]Line{
-				{
-					{Pt{4, 4}, Pt{4, 9}},
-					{Pt{4, 9}, Pt{5, 9}},
-					{Pt{5, 9}, Pt{5, 4}},
-					//	Line{Pt{5, 4}, Pt{4, 4}},
-				},
-				{
-					{Pt{3, 1}, Pt{3, 6}},
-					{Pt{3, 6}, Pt{7, 6}},
-					{Pt{7, 6}, Pt{7, 1}},
-					//	Line{Pt{7, 1}, Pt{3, 1}},
-				},
-			},
-			edgemap: EdgeMap{
-				BBox: [4]Pt{{0 - adjustBBoxBy, 0 - adjustBBoxBy}, {7 + adjustBBoxBy, 0 - adjustBBoxBy}, {7 + adjustBBoxBy, 9 + adjustBBoxBy}, {0 - adjustBBoxBy, 9 + adjustBBoxBy}},
-				Keys: []Pt{
-					{0 - adjustBBoxBy, 0 - adjustBBoxBy}, {0 - adjustBBoxBy, 9 + adjustBBoxBy}, {3, 1}, {3, 6}, {4, 4}, {4, 6}, {4, 9}, {5, 4}, {5, 6}, {5, 9}, {7, 1}, {7, 6}, {7 + adjustBBoxBy, 0 - adjustBBoxBy}, {7 + adjustBBoxBy, 9 + adjustBBoxBy},
-				},
-				Map: map[Pt]map[Pt]bool{
-					Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}: map[Pt]bool{
-						Pt{7 + adjustBBoxBy, 0 - adjustBBoxBy}: false,
-						Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}: false,
-						Pt{3, 1}: false,
-						Pt{3, 6}: false,
-						Pt{4, 9}: false,
-						Pt{7, 1}: false,
-					},
-					Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}: map[Pt]bool{
-						Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}: false,
-						Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}: false,
-						Pt{4, 9}: false,
-						Pt{5, 9}: false,
-					},
-					Pt{3, 1}: map[Pt]bool{
-						Pt{3, 6}: true,
-						Pt{7, 1}: true,
-						Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}: false,
-						Pt{4, 4}: false,
-						Pt{4, 6}: false,
-						Pt{5, 4}: false,
-						Pt{7, 6}: false,
-					},
-					Pt{3, 6}: map[Pt]bool{
-						Pt{3, 1}: true,
-						Pt{4, 6}: true,
-						Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}: false,
-						Pt{4, 9}: false,
-					},
-					Pt{4, 4}: map[Pt]bool{
-						Pt{4, 6}: true,
-						Pt{5, 4}: true,
-						Pt{3, 1}: false,
-						Pt{5, 6}: false,
-					},
-					Pt{4, 6}: map[Pt]bool{
-						Pt{3, 6}: true,
-						Pt{4, 4}: true,
-						Pt{4, 9}: true,
-						Pt{5, 6}: true,
-						Pt{3, 1}: false,
-						Pt{5, 9}: false,
-					},
-					Pt{4, 9}: map[Pt]bool{
-						Pt{4, 6}: true,
-						Pt{5, 9}: true,
-						Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}: false,
-						Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}: false,
-						Pt{3, 6}: false,
-					},
-					Pt{5, 4}: map[Pt]bool{
-						Pt{4, 4}: true,
-						Pt{5, 6}: true,
-						Pt{3, 1}: false,
-						Pt{7, 6}: false,
-					},
-					Pt{5, 6}: map[Pt]bool{
-						Pt{4, 6}: true,
-						Pt{5, 4}: true,
-						Pt{5, 9}: true,
-						Pt{7, 6}: true,
-						Pt{4, 4}: false,
-						Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}: false,
-					},
-					Pt{5, 9}: map[Pt]bool{
-						Pt{4, 9}: true,
-						Pt{5, 6}: true,
-						Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}: false,
-						Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}: false,
-						Pt{4, 6}: false,
-					},
-					Pt{7, 1}: map[Pt]bool{
-						Pt{3, 1}: true,
-						Pt{7, 6}: true,
-						Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}: false,
-						Pt{7 + adjustBBoxBy, 0 - adjustBBoxBy}: false,
-						Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}: false,
-					},
-					Pt{7, 6}: map[Pt]bool{
-						Pt{5, 6}: true,
-						Pt{7, 1}: true,
-						Pt{3, 1}: false,
-						Pt{5, 4}: false,
-						Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}: false,
-					},
-					Pt{7 + adjustBBoxBy, 0 - adjustBBoxBy}: map[Pt]bool{
-						Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}: false,
-						Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}: false,
-						Pt{7, 1}: false,
-					},
-
-					Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}: map[Pt]bool{
-						Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}: false,
-						Pt{5, 6}: false,
-						Pt{5, 9}: false,
-						Pt{7, 1}: false,
-						Pt{7, 6}: false,
-						Pt{7 + adjustBBoxBy, 0 - adjustBBoxBy}: false,
-					},
-				},
-				Segments: []Line{
-					{Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}, Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}},
-					{Pt{7 + adjustBBoxBy, 0 - adjustBBoxBy}, Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}},
-					{Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}, Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}},
-					{Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}, Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}},
-					{Pt{3, 1}, Pt{3, 6}},
-					{Pt{3, 1}, Pt{7, 1}},
-					{Pt{3, 6}, Pt{4, 6}},
-					{Pt{4, 4}, Pt{4, 6}},
-					{Pt{4, 4}, Pt{5, 4}},
-					{Pt{4, 6}, Pt{4, 9}},
-					{Pt{4, 6}, Pt{5, 6}},
-					{Pt{4, 9}, Pt{5, 9}},
-					{Pt{5, 4}, Pt{5, 6}},
-					{Pt{5, 6}, Pt{5, 9}},
-					{Pt{5, 6}, Pt{7, 6}},
-					{Pt{7, 1}, Pt{7, 6}},
-					{Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}, Pt{3, 1}},
-					{Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}, Pt{3, 6}},
-					{Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}, Pt{4, 9}},
-					{Pt{0 - adjustBBoxBy, 0 - adjustBBoxBy}, Pt{7, 1}},
-					{Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}, Pt{4, 9}},
-					{Pt{0 - adjustBBoxBy, 9 + adjustBBoxBy}, Pt{5, 9}},
-					{Pt{3, 1}, Pt{4, 4}},
-					{Pt{3, 1}, Pt{4, 6}},
-					{Pt{3, 1}, Pt{5, 4}},
-					{Pt{3, 1}, Pt{7, 6}},
-					{Pt{3, 6}, Pt{4, 9}},
-					{Pt{4, 4}, Pt{5, 6}},
-					{Pt{4, 6}, Pt{5, 9}},
-					{Pt{5, 4}, Pt{7, 6}},
-					{Pt{5, 6}, Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}},
-					{Pt{5, 9}, Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}},
-					{Pt{7, 1}, Pt{7 + adjustBBoxBy, 0 - adjustBBoxBy}},
-					{Pt{7, 1}, Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}},
-					{Pt{7, 6}, Pt{7 + adjustBBoxBy, 9 + adjustBBoxBy}},
-				},
-			},
-		},
-	)
-
-	tests.Run(func(idx int, test testcase) {
-		polygons := destructure(insureConnected(test.lines...))
-
-		em := generateEdgeMap(polygons)
-		em.Triangulate()
-		// Check the keys first:
-		if diff := deep.Equal(em.Keys, test.edgemap.Keys); diff != nil {
-			t.Error("Keys do not match: Expected\n\t", test.edgemap.Keys, "\ngot\n\t", em.Keys, "\n\tdiff:\t", diff)
-		}
-		// Check the Map:
-		if diff := deep.Equal(em.Map, test.edgemap.Map); diff != nil {
-			t.Error("Map do not match: Expected\n\t", test.edgemap.Map, "\ngot\n\t", em.Map, "\n\tdiff:\t", strings.Join(diff, "\n\t\t"))
-		}
-		// Check the Segments:
-		if diff := deep.Equal(em.Segments, test.edgemap.Segments); diff != nil {
-			t.Error("Segments do not match: Expected\n\t", test.edgemap.Segments, "\ngot\n\t", em.Segments, "\n\tdiff:\t", diff)
-		}
-		// Check BBox
-		if diff := deep.Equal(em.BBox, test.edgemap.BBox); diff != nil {
-			t.Error("BBox do not match: Expected\n\t", test.edgemap.BBox, "\ngot\n\t", em.BBox, "\n\tdiff:\t", strings.Join(diff, "\n\t\t"))
-		}
-	})
-}
 
 func TestTrianglesForEdge(t *testing.T) {
 
@@ -1032,10 +839,15 @@ func BenchmarkMakeValid5PolyB(b *testing.B) {
 		)
 	}
 }
+
+var resultPolygon [][][]Pt
+
 func BenchmarkMakeValid5PolyC(b *testing.B) {
 
+	b.ReportAllocs()
+	var nresultPolygon [][][]Pt
 	for n := 0; n < b.N; n++ {
-		makeValid(
+		nresultPolygon, _ = makeValid(
 			[]Line{
 
 				Line{Pt{X: 40393, Y: 60595}, Pt{X: 40414, Y: 60603}},
@@ -4576,4 +4388,6 @@ func BenchmarkMakeValid5PolyC(b *testing.B) {
 			},
 		)
 	}
+
+	resultPolygon = nresultPolygon
 }

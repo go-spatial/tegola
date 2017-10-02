@@ -11,6 +11,7 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/makevalid"
 )
 
 // CleanLine will remove duplicate points, and points between the duplicate points. The exception to this, is the first and last points,
@@ -297,7 +298,7 @@ func makePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
 		}
 		plygLines = append(plygLines, segs)
 	}
-	plyPoints, err := maths.MakeValid(plygLines...)
+	plyPoints, err := makevalid.MakeValid(plygLines...)
 	if err != nil {
 		return mp, err
 	}
@@ -398,7 +399,7 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 			plygLines = append(plygLines, segs)
 		}
 	}
-	plyPoints, err := maths.MakeValid(plygLines...)
+	plyPoints, err := makevalid.MakeValid(plygLines...)
 	//log.Printf("Got the following for MakeValid(\n%#v\n):\n%#v\n", plygLines, plyPoints)
 	if err != nil {
 		//log.Printf("MPolygon %#v", g)

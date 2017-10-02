@@ -184,9 +184,9 @@ type label uint8
 
 func (l label) String() string {
 	switch l {
-	case outside:
+	case Outside:
 		return "outside"
-	case inside:
+	case Inside:
 		return "inside"
 	default:
 		return "unknown"
@@ -194,9 +194,9 @@ func (l label) String() string {
 }
 
 const (
-	unknown label = iota
-	outside
-	inside
+	Unknown label = iota
+	Outside
+	Inside
 )
 
 type TriangleNode struct {
@@ -228,7 +228,7 @@ func (tn *TriangleNode) LabelAs(l label, force bool) (unlabled []*TriangleNode) 
 	if tn == nil {
 		return unlabled
 	}
-	if !force && tn.Label != unknown {
+	if !force && tn.Label != Unknown {
 		//log.Println("Skipping labeling", force, tn.Label)
 		return unlabled
 	}
@@ -256,6 +256,10 @@ type TriangleGraph struct {
 	bounding []int
 }
 
+func (tg *TriangleGraph) Triangles() []*TriangleNode {
+	return tg.triangles
+}
+
 func (tg *TriangleGraph) Inside() []*TriangleNode {
 	r := make([]*TriangleNode, 0, len(tg.inside))
 	for _, i := range tg.inside {
@@ -272,6 +276,11 @@ func (tg *TriangleGraph) Outside() []*TriangleNode {
 }
 
 func (tg *TriangleGraph) Rings() (rings [][]Line) {
+
+	if tg == nil {
+		panic("TG nil!")
+		return rings
+	}
 
 	//log.Println("Starting TriangleGraph Rings")
 	//defer log.Println("Done with TriangleGraph Rings")
@@ -317,9 +326,9 @@ func NewTriangleGraph(tri []*TriangleNode, bbox [4]Pt) (tg *TriangleGraph) {
 	tg = &TriangleGraph{triangles: tri}
 	for i := range tg.triangles {
 		switch tg.triangles[i].Label {
-		case inside:
+		case Inside:
 			tg.inside = append(tg.inside, i)
-		case outside:
+		case Outside:
 			tg.outside = append(tg.outside, i)
 			if tg.triangles[i].EqualAnyPt(bbox[0], bbox[1], bbox[2], bbox[3]) {
 				tg.bounding = append(tg.bounding, i)
@@ -973,7 +982,7 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 			}
 		}
 	}
-	currentLabel := outside
+	currentLabel := Outside
 	var nextSetOfNodes []*TriangleNode
 
 	//log.Printf("Number of triangles found: %v", len(nodes))
@@ -984,10 +993,10 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 		}
 		//log.Println("Next set of nodes:", nextSetOfNodes)
 		nodesToLabel, nextSetOfNodes = nextSetOfNodes, nodesToLabel[:0]
-		if currentLabel == outside {
-			currentLabel = inside
+		if currentLabel == Outside {
+			currentLabel = Inside
 		} else {
-			currentLabel = outside
+			currentLabel = Outside
 		}
 	}
 	var nodeSlice []*TriangleNode
