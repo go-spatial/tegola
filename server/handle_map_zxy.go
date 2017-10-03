@@ -177,8 +177,8 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	check for the debug query string
 		if req.debug {
 			//	add debug layer
-			debugLayer := debugLayer(tile)
-			mvtTile.AddLayers(debugLayer)
+			debugLayers := debugLayer(tile)
+			mvtTile.AddLayers(debugLayers...)
 		}
 
 		//	generate our vector tile

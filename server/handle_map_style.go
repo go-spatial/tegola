@@ -29,14 +29,6 @@ type HandleMapStyle struct {
 //		map_name - map name in the config file
 func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var rScheme string
-	//	check if the request is http or https. the scheme is needed for the TileURLs and
-	//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
-	if r.TLS != nil {
-		rScheme = "https://"
-	} else {
-		rScheme = "http://"
-	}
 
 	params := httptreemux.ContextParams(r.Context())
 
@@ -60,6 +52,13 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	debug := r.URL.Query().Get("debug")
+
+	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json", scheme(r), hostName(r), req.mapName)
+	if debug == "true" {
+		sourceURL += "?debug=true"
+	}
+
 	mapboxStyle := style.Root{
 		Name:    m.Name,
 		Version: style.Version,
@@ -68,10 +67,43 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Sources: map[string]style.Source{
 			req.mapName: style.Source{
 				Type: style.SourceTypeVector,
-				URL:  fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, hostName(r), req.mapName),
+				URL:  sourceURL,
 			},
 		},
 		Layers: []style.Layer{},
+	}
+	//	if we have a debug param create a layer style
+	if debug == "true" {
+		debugTileOutline := style.Layer{
+			ID:          "debug-tile-outline",
+			Source:      req.mapName,
+			SourceLayer: "debug-tile-outline",
+			Layout: &style.LayerLayout{
+				Visibility: style.LayoutVisible,
+			},
+			Type: style.LayerTypeLine,
+			Paint: &style.LayerPaint{
+				LineColor: stringToColorHex("debug"),
+			},
+		}
+
+		mapboxStyle.Layers = append(mapboxStyle.Layers, debugTileOutline)
+
+		debugTileCenter := style.Layer{
+			ID:          "debug-tile-center",
+			Source:      req.mapName,
+			SourceLayer: "debug-tile-center",
+			Layout: &style.LayerLayout{
+				Visibility: style.LayoutVisible,
+			},
+			Type: style.LayerTypeCircle,
+			Paint: &style.LayerPaint{
+				CircleRadius: 3,
+				CircleColor:  stringToColorHex("debug"),
+			},
+		}
+
+		mapboxStyle.Layers = append(mapboxStyle.Layers, debugTileCenter)
 	}
 
 	//	determing the min and max zoom for this map

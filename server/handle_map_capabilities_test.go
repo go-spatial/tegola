@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/terranodo/tegola/server"
 	"github.com/terranodo/tegola/tilejson"
 )
@@ -37,7 +38,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				MaxZoom:     20,
 				Name:        &testMap.Name,
 				Description: nil,
-				Scheme:      "zxy",
+				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
 				Tiles: []string{
 					"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -53,8 +54,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Extent:       4096,
 						ID:           testLayer1.Name,
 						Name:         testLayer1.Name,
-						FeatureTags:  nil,
-						GeometryType: nil,
+						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
 						MaxZoom:      testLayer1.MaxZoom,
 						Tiles: []string{
@@ -66,8 +66,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Extent:       4096,
 						ID:           testLayer2.Name,
 						Name:         testLayer2.Name,
-						FeatureTags:  nil,
-						GeometryType: nil,
+						GeometryType: tilejson.GeomTypeLine,
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
@@ -92,7 +91,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				MaxZoom:     20,
 				Name:        &testMap.Name,
 				Description: nil,
-				Scheme:      "zxy",
+				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
 				Tiles: []string{
 					"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
@@ -108,8 +107,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Extent:       4096,
 						ID:           testLayer1.Name,
 						Name:         testLayer1.Name,
-						FeatureTags:  nil,
-						GeometryType: nil,
+						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
 						MaxZoom:      testLayer1.MaxZoom,
 						Tiles: []string{
@@ -121,8 +119,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Extent:       4096,
 						ID:           testLayer2.Name,
 						Name:         testLayer2.Name,
-						FeatureTags:  nil,
-						GeometryType: nil,
+						GeometryType: tilejson.GeomTypeLine,
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
@@ -132,14 +129,25 @@ func TestHandleMapCapabilities(t *testing.T) {
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           "debug",
-						Name:         "debug",
-						FeatureTags:  nil,
-						GeometryType: nil,
+						ID:           "debug-tile-outline",
+						Name:         "debug-tile-outline",
+						GeometryType: tilejson.GeomTypeLine,
 						MinZoom:      0,
 						MaxZoom:      server.MaxZoom,
 						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/debug/{z}/{x}/{y}.pbf?debug=true",
+							"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           "debug-tile-center",
+						Name:         "debug-tile-center",
+						GeometryType: tilejson.GeomTypePoint,
+						MinZoom:      0,
+						MaxZoom:      server.MaxZoom,
+						Tiles: []string{
+							"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
 						},
 					},
 				},

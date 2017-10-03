@@ -45,16 +45,8 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	case "GET":
 		//	new capabilities struct
-		var capabilities Capabilities
-		capabilities.Version = Version
-
-		var rScheme string
-		//	check if the request is http or https. the scheme is needed for the TileURLs and
-		//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
-		if r.TLS != nil {
-			rScheme = "https://"
-		} else {
-			rScheme = "http://"
+		capabilities := Capabilities{
+			Version: Version,
 		}
 
 		//	parse our query string
@@ -62,8 +54,8 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 		//	iterate our registered maps
 		for _, m := range maps {
-			var tileURL = fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), m.Name)
-			var capabilitiesURL = fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, hostName(r), m.Name)
+			var tileURL = fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), m.Name)
+			var capabilitiesURL = fmt.Sprintf("%v://%v/capabilities/%v.json", scheme(r), hostName(r), m.Name)
 
 			//	if we have a debug param add it to our URLs
 			if query.Get("debug") == "true" {
@@ -84,7 +76,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			}
 
 			for _, layer := range m.Layers {
-				tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), m.Name, layer.Name)
+				tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), m.Name, layer.Name)
 
 				//	if we have a debug param add it to our tileURL
 				if query.Get("debug") == "true" {
@@ -103,6 +95,34 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 				//	add the layer to the map
 				cMap.Layers = append(cMap.Layers, cLayer)
+			}
+
+			//	check for debug
+			if query.Get("debug") == "true" {
+				//	build the layer details
+				debugTileOutline := CapabilitiesLayer{
+					Name: "debug-tile-outline",
+					Tiles: []string{
+						fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-outline"),
+					},
+					MinZoom: 0,
+					MaxZoom: MaxZoom,
+				}
+
+				//	add the layer to the map
+				cMap.Layers = append(cMap.Layers, debugTileOutline)
+
+				debugTileCenter := CapabilitiesLayer{
+					Name: "debug-tile-center",
+					Tiles: []string{
+						fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-center"),
+					},
+					MinZoom: 0,
+					MaxZoom: MaxZoom,
+				}
+
+				//	add the layer to the map
+				cMap.Layers = append(cMap.Layers, debugTileCenter)
 			}
 
 			//	add the map to the capabilities struct
