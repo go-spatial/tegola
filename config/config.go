@@ -85,16 +85,24 @@ func (c *Config) Validate() error {
 	layerNames := map[string]MapLayer{}
 	for _, m := range c.Maps {
 		for _, l := range m.Layers {
-			//	split the provider layer (syntax is provider.layer)
-			plParts := strings.Split(l.ProviderLayer, ".")
-			if len(plParts) != 2 {
-				return ErrInvalidProviderLayerName{
-					ProviderLayerName: l.ProviderLayer,
+			var name string
+
+			if l.Name != "" {
+				name = l.Name
+			} else {
+				//	split the provider layer (syntax is provider.layer)
+				plParts := strings.Split(l.ProviderLayer, ".")
+				if len(plParts) != 2 {
+					return ErrInvalidProviderLayerName{
+						ProviderLayerName: l.ProviderLayer,
+					}
 				}
+
+				name = plParts[1]
 			}
 
-			//	check if already have this layer
-			if val, ok := layerNames[plParts[1]]; ok {
+			//	check if we already have this layer
+			if val, ok := layerNames[name]; ok {
 				//	we have a hit. check for zoom range overlap
 				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
 					return ErrLayerCollision{
@@ -106,7 +114,7 @@ func (c *Config) Validate() error {
 			}
 
 			//	add the MapLayer to our map
-			layerNames[plParts[1]] = l
+			layerNames[name] = l
 		}
 	}
 

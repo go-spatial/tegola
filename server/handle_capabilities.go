@@ -76,7 +76,21 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			}
 
 			for _, layer := range m.Layers {
-				tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), m.Name, layer.Name)
+				//	check if the layer already exists in our slice. this can happen if the config
+				//	is using the "name" param for a layer to override the providerLayerName
+				var skip bool
+				for i := range cMap.Layers {
+					if cMap.Layers[i].Name == layer.MVTName() {
+						skip = true
+						break
+					}
+				}
+				//	entry for layer already exists. move on
+				if skip {
+					continue
+				}
+
+				tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), m.Name, layer.MVTName())
 
 				//	if we have a debug param add it to our tileURL
 				if query.Get("debug") == "true" {
@@ -85,7 +99,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 				//	build the layer details
 				cLayer := CapabilitiesLayer{
-					Name: layer.Name,
+					Name: layer.MVTName(),
 					Tiles: []string{
 						tileURL,
 					},

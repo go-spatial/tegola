@@ -81,7 +81,21 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 		//	determing the min and max zoom for this map
 		for i, l := range m.Layers {
-			var tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.Name)
+			//	check if the layer already exists in our slice. this can happen if the config
+			//	is using the "name" param for a layer to override the providerLayerName
+			var skip bool
+			for i := range tileJSON.VectorLayers {
+				if tileJSON.VectorLayers[i].ID == l.MVTName() {
+					skip = true
+					break
+				}
+			}
+			//	entry for layer already exists. move on
+			if skip {
+				continue
+			}
+
+			var tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.MVTName())
 
 			//	if we have a debug param add it to our URLs
 			if query.Get("debug") == "true" {
@@ -104,7 +118,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				tileJSON.MaxZoom = l.MaxZoom
 			}
 
-			tiles := fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.Name)
+			tiles := fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.MVTName())
 			if r.URL.Query().Get("debug") != "" {
 				tiles = tiles + "?debug=true"
 			}
@@ -112,8 +126,8 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			layer := tilejson.VectorLayer{
 				Version: 2,
 				Extent:  4096,
-				ID:      l.Name,
-				Name:    l.Name,
+				ID:      l.MVTName(),
+				Name:    l.MVTName(),
 				MinZoom: l.MinZoom,
 				MaxZoom: l.MaxZoom,
 				Tiles: []string{

@@ -48,9 +48,9 @@ func TestHandleCapabilities(t *testing.T) {
 								MaxZoom: 9,
 							},
 							{
-								Name: "test-layer-2",
+								Name: "test-layer-2-name",
 								Tiles: []string{
-									"http://localhost:8080/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf",
+									"http://localhost:8080/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf",
 								},
 								MinZoom: 10,
 								MaxZoom: 20,
@@ -88,9 +88,9 @@ func TestHandleCapabilities(t *testing.T) {
 								MaxZoom: 9,
 							},
 							{
-								Name: "test-layer-2",
+								Name: "test-layer-2-name",
 								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf?debug=true",
+									"http://cdn.tegola.io/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf?debug=true",
 								},
 								MinZoom: 10,
 								MaxZoom: 20,

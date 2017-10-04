@@ -30,11 +30,11 @@ func TestParse(t *testing.T) {
 				user = "admin"
 				password = ""
 
-				    [[providers.layers]]
-				    name = "water"
-				    geometry_fieldname = "geom"
-				    id_fieldname = "gid"
-				    sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+					[[providers.layers]]
+					name = "water"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
 
 				[[maps]]
 				name = "osm"
@@ -42,10 +42,10 @@ func TestParse(t *testing.T) {
 				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
 				center = [-76.275329586789, 39.153492567373, 8.0]
 
-				    [[maps.layers]]
-				    provider_layer = "provider1.water"
-				    min_zoom = 10
-				    max_zoom = 20`,
+					[[maps.layers]]
+					provider_layer = "provider1.water"
+					min_zoom = 10
+					max_zoom = 20`,
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
@@ -84,6 +84,109 @@ func TestParse(t *testing.T) {
 								ProviderLayer: "provider1.water",
 								MinZoom:       10,
 								MaxZoom:       20,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			config: `
+				[webserver]
+				hostname = "cdn.tegola.io"
+				port = ":8080"
+				log_file = "/var/log/tegola/tegola.log"
+				log_format = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
+
+				[[providers]]
+				name = "provider1"
+				type = "postgis"
+				host = "localhost"
+				port = 5432
+				database = "osm_water" 
+				user = "admin"
+				password = ""
+
+					[[providers.layers]]
+					name = "water_0_5"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+					[[providers.layers]]
+					name = "water_6_10"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+				[[maps]]
+				name = "osm"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = [-76.275329586789, 39.153492567373, 8.0]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_0_5"
+					min_zoom = 0
+					max_zoom = 5
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10`,
+			expected: config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					HostName:  "cdn.tegola.io",
+					Port:      ":8080",
+					LogFile:   "/var/log/tegola/tegola.log",
+					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
+				},
+				Providers: []map[string]interface{}{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water_0_5",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+							{
+								"name":               "water_6_10",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								Name:          "water",
+								ProviderLayer: "provider1.water_0_5",
+								MinZoom:       0,
+								MaxZoom:       5,
+							},
+							{
+								Name:          "water",
+								ProviderLayer: "provider1.water_6_10",
+								MinZoom:       6,
+								MaxZoom:       10,
 							},
 						},
 					},
@@ -197,6 +300,72 @@ func TestValidate(t *testing.T) {
 			expected: config.ErrLayerCollision{
 				ProviderLayer1: "provider1.water",
 				ProviderLayer2: "provider2.water",
+			},
+		},
+		{
+			config: config.Config{
+				Providers: []map[string]interface{}{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water_0_5",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+					{
+						"name":     "provider2",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water_5_10",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								Name:          "water",
+								ProviderLayer: "provider1.water_0_5",
+								MinZoom:       0,
+								MaxZoom:       5,
+							},
+							{
+								Name:          "water",
+								ProviderLayer: "provider2.water_5_10",
+								MinZoom:       5,
+								MaxZoom:       10,
+							},
+						},
+					},
+				},
+			},
+			expected: config.ErrLayerCollision{
+				ProviderLayer1: "provider1.water_0_5",
+				ProviderLayer2: "provider2.water_5_10",
 			},
 		},
 		{

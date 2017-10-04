@@ -61,6 +61,7 @@ func main() {
 	initLogger(*logFile, *logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
 
 	//	check config for port setting
+	//	if you set the port via the comand line it will override a port setting in the config
 	if *port == defaultHTTPPort && conf.Webserver.Port != "" {
 		port = &conf.Webserver.Port
 	}
@@ -135,12 +136,13 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 
 			//	add our layer to our layers slice
 			serverMap.Layers = append(serverMap.Layers, server.Layer{
-				Name:        providerLayer[1],
-				MinZoom:     l.MinZoom,
-				MaxZoom:     l.MaxZoom,
-				Provider:    provider,
-				DefaultTags: defaultTags,
-				GeomType:    layerGeomType,
+				Name:              l.Name,
+				ProviderLayerName: providerLayer[1],
+				MinZoom:           l.MinZoom,
+				MaxZoom:           l.MaxZoom,
+				Provider:          provider,
+				DefaultTags:       defaultTags,
+				GeomType:          layerGeomType,
 			})
 		}
 

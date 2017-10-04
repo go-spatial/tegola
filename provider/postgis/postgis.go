@@ -320,9 +320,10 @@ func (p Provider) Layers() ([]mvt.LayerInfo, error) {
 }
 
 func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
+	//	lookup our layer
 	plyr, ok := p.layers[layerName]
 	if !ok {
-		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
+		return nil, fmt.Errorf("postgis: layer (%v) not registered", layerName)
 	}
 
 	//	replace the various tokens we support (i.e. !BBOX!, !ZOOM!) with balues

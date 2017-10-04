@@ -52,8 +52,8 @@ func TestHandleMapCapabilities(t *testing.T) {
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           testLayer1.Name,
-						Name:         testLayer1.Name,
+						ID:           testLayer1.MVTName(),
+						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
 						MaxZoom:      testLayer1.MaxZoom,
@@ -64,13 +64,13 @@ func TestHandleMapCapabilities(t *testing.T) {
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           testLayer2.Name,
-						Name:         testLayer2.Name,
+						ID:           testLayer2.MVTName(),
+						Name:         testLayer2.MVTName(),
 						GeometryType: tilejson.GeomTypeLine,
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf",
+							"http://localhost:8080/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf",
 						},
 					},
 				},
@@ -105,8 +105,8 @@ func TestHandleMapCapabilities(t *testing.T) {
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           testLayer1.Name,
-						Name:         testLayer1.Name,
+						ID:           testLayer1.MVTName(),
+						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
 						MaxZoom:      testLayer1.MaxZoom,
@@ -117,13 +117,13 @@ func TestHandleMapCapabilities(t *testing.T) {
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           testLayer2.Name,
-						Name:         testLayer2.Name,
+						ID:           testLayer2.MVTName(),
+						Name:         testLayer2.MVTName(),
 						GeometryType: tilejson.GeomTypeLine,
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf?debug=true",
+							"http://cdn.tegola.io/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf?debug=true",
 						},
 					},
 					{

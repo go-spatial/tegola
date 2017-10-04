@@ -146,15 +146,22 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					defer wg.Done()
 
 					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(r.Context(), l.Name, tile, l.DefaultTags)
+					mvtLayer, err := l.Provider.MVTLayer(r.Context(), l.ProviderLayerName, tile, l.DefaultTags)
 					if err == mvt.ErrCanceled {
 						return
 					}
 					if err != nil {
-						log.Printf("Error Getting MVTLayer: %v", err)
-						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusInternalServerError)
+						//	TODO: should we return an error to the response or just log the error?
+						//	we can't just write to the response as the waitgroup is going to write to the respons as well
+						log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
 						return
 					}
+
+					//	check if we have a layer name
+					if l.Name != "" {
+						mvtLayer.Name = l.Name
+					}
+
 					//	add the layer to the slice position
 					mvtLayers[i] = mvtLayer
 				}(i, layer)
