@@ -45,7 +45,7 @@ func TestHandleMapStyle(t *testing.T) {
 					{
 						ID:          testLayer1.MVTName(),
 						Source:      testMap.Name,
-						SourceLayer: testLayer1.Name,
+						SourceLayer: testLayer1.MVTName(),
 						Type:        style.LayerTypeCircle,
 						Layout: &style.LayerLayout{
 							Visibility: "visible",
@@ -58,7 +58,7 @@ func TestHandleMapStyle(t *testing.T) {
 					{
 						ID:          testLayer2.MVTName(),
 						Source:      testMap.Name,
-						SourceLayer: testLayer2.Name,
+						SourceLayer: testLayer2.MVTName(),
 						Type:        style.LayerTypeLine,
 						Layout: &style.LayerLayout{
 							Visibility: "visible",
