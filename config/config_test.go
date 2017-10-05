@@ -297,7 +297,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: config.ErrLayerCollision{
+			expected: config.ErrOverlappingLayerZooms{
 				ProviderLayer1: "provider1.water",
 				ProviderLayer2: "provider2.water",
 			},
@@ -363,7 +363,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: config.ErrLayerCollision{
+			expected: config.ErrOverlappingLayerZooms{
 				ProviderLayer1: "provider1.water_0_5",
 				ProviderLayer2: "provider2.water_5_10",
 			},

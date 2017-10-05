@@ -31,13 +31,13 @@ func (e ErrInvalidProviderLayerName) Error() string {
 	return fmt.Sprintf("config: invalid provider layer name (%v)", e.ProviderLayerName)
 }
 
-type ErrLayerCollision struct {
+type ErrOverlappingLayerZooms struct {
 	ProviderLayer1 string
 	ProviderLayer2 string
 }
 
-func (e ErrLayerCollision) Error() string {
-	return fmt.Sprintf("config: layer collision (%v) and (%v)", e.ProviderLayer1, e.ProviderLayer2)
+func (e ErrOverlappingLayerZooms) Error() string {
+	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
 }
 
 // A Config represents the a Tegola Config file.
@@ -105,7 +105,7 @@ func (c *Config) Validate() error {
 			if val, ok := layerNames[name]; ok {
 				//	we have a hit. check for zoom range overlap
 				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
-					return ErrLayerCollision{
+					return ErrOverlappingLayerZooms{
 						ProviderLayer1: val.ProviderLayer,
 						ProviderLayer2: l.ProviderLayer,
 					}
