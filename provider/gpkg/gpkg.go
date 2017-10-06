@@ -49,9 +49,34 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	return nil, e
 }
 
+type LayerInfo interface {
+	Name() string
+	GeomType() tegola.Geometry
+	SRID() int
+}
+
+// Implements mvt.LayerInfo interface
+type GPKGLayer struct {
+	name string
+	geomtype tegola.Geometry
+	srid int
+}
+
+func(l GPKGLayer) Name() (string) {return l.name}
+func(l GPKGLayer) GeomType() (tegola.Geometry) {return l.geomtype}
+func(l GPKGLayer) SRID() (int) {return l.srid}
+
 func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 	fmt.Println("Attempting gpkg.Layers()")
-	var ls []mvt.LayerInfo
+	layerCount := len(p.layers)
+	ls := make([]mvt.LayerInfo, layerCount)
+	
+	i := 0
+	for _, layer := range p.layers {
+		l := GPKGLayer{name: layer.name, srid: layer.srid}
+		ls[i] = l
+		i++
+	}
 
 	fmt.Println("Ok, returning mvt.LayerInfo array: ", ls)
 	return ls, nil
@@ -69,13 +94,28 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	ls := map[string]string{}
 
-	fmt.Println("db, ls: ", db, ls)
+	p := GPKGProvider{layers: make(map[string]layer)}
 
-	p := GPKGProvider{}
+	qtext := "SELECT * FROM gpkg_contents"
+	rows, err := db.Query(qtext)
+	if err != nil {
+		fmt.Println("Error during query: ", qtext, " - ", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tablename string
+	var srid int
+	var ignore string
+	for rows.Next() {
+		rows.Scan(&tablename, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &srid)
+		layerQuery := "SELECT * FROM " + tablename + ";"
+		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: "", srid: srid}
+		fmt.Println("gpkg_contents row: ", tablename, srid)
+	}
 	
-	return &p, nil	
+	return &p, err
 }
 
 func init() {
