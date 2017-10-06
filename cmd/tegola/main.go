@@ -16,6 +16,7 @@ import (
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
 	_ "github.com/terranodo/tegola/provider/postgis"
+	_ "github.com/terranodo/tegola/provider/gpkg"
 	"github.com/terranodo/tegola/server"
 )
 
@@ -183,6 +184,11 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 
 func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider, error) {
 	var err error
+
+	for idx, prv := range providers {
+		fmt.Println("---")
+		fmt.Println("Found provider: ", idx, ": ", prv["name"])
+	}
 
 	//	holder for registered providers
 	registeredProviders := map[string]mvt.Provider{}
