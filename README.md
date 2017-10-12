@@ -95,7 +95,7 @@ srid = 3857             # The default srid for this provider. If not provided it
 	name = "rivers" 					# will be encoded as the layer name in the tile
 	geometry_fieldname = "geom"			# geom field. default is geom
 	id_fieldname = "gid"				# geom id field. default is gid
-	# Custom sql to be used for this layer. Note: that the geometery field is wraped
+	# Custom sql to be used for this layer. Note: that the geometry field is wraped
 	# in a ST_AsBinary, as tegola only understand wkb.
 	sql = """
 		SELECT

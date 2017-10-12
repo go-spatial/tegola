@@ -130,7 +130,7 @@ type cursor struct {
 	tile tegola.BoundingBox
 
 	// The extent — it is an int, but to make computations easier and not lose precision
-	// Untill we convert the ∆'s to int32.
+	// Until we convert the ∆'s to int32.
 	extent float64
 
 	// These values are cached

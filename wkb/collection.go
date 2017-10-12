@@ -18,7 +18,7 @@ WKBGeometry      wkbGeometries[num_wkbGeometries]
 // Collection is a collection of geometries.
 type Collection []Geometry
 
-// Type returns the type number of this geometery, by the spec it's 7.
+// Type returns the type number of this geometry, by the spec it's 7.
 func (Collection) Type() uint32 {
 	return GeoGeometryCollection
 }
