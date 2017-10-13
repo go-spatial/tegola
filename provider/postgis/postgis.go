@@ -319,6 +319,7 @@ func (p Provider) Layers() ([]mvt.LayerInfo, error) {
 		ls = append(ls, p.layers[i])
 	}
 
+	fmt.Println("postgis.Layers():\n", ls)
 	return ls, nil
 }
 

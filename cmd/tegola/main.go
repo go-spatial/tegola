@@ -56,9 +56,11 @@ func main() {
 	}
 
 	//	init our maps
+	fmt.Println("conf.Maps before initMaps(): ", conf.Maps)
 	if err = initMaps(conf.Maps, providers); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("conf.Maps after initMaps(): ", conf.Maps)
 
 	if len(conf.Cache) != 0 {
 		//	init cache backends
