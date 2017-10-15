@@ -21,6 +21,10 @@ func TestParse(t *testing.T) {
 				log_file = "/var/log/tegola/tegola.log"
 				log_format = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
 
+				[cache]
+				type = "file"
+				basepath = "/tmp/tegola-cache"
+
 				[[providers]]
 				name = "provider1"
 				type = "postgis"
@@ -53,6 +57,10 @@ func TestParse(t *testing.T) {
 					Port:      ":8080",
 					LogFile:   "/var/log/tegola/tegola.log",
 					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
+				},
+				Cache: map[string]interface{}{
+					"type":     "file",
+					"basepath": "/tmp/tegola-cache",
 				},
 				Providers: []map[string]interface{}{
 					{

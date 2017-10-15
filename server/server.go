@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/terranodo/tegola/cache"
+	_ "github.com/terranodo/tegola/cache/filecache"
 )
 
 const (
@@ -22,6 +24,8 @@ var (
 	Version string
 	//	configurable via the tegola config.toml file
 	HostName string
+	//	cache interface to use
+	Cache cache.Cacher
 )
 
 //	incoming requests are associated with a map

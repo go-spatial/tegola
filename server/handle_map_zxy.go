@@ -1,7 +1,9 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -114,6 +116,29 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//	check if we have a cache backend setup
+		if Cache != nil {
+			key := fmt.Sprintf("/%v/%v/%v.pbf", req.z, req.x, req.y)
+			cachedTile, err := Cache.Read(key)
+			if err != nil {
+				//	TODO: this should be a debug warning
+				//	log.Printf("cache err: %v", err)
+			} else {
+				//	TODO: how configurable do we want the CORS policy to be?
+				//	set CORS header
+				w.Header().Add("Access-Control-Allow-Origin", "*")
+
+				//	mimetype for protocol buffers
+				w.Header().Add("Content-Type", "application/x-protobuf")
+
+				//	communicate the cache is being used
+				w.Header().Add("Tegola-Cache", "HIT")
+
+				io.Copy(w, cachedTile)
+				return
+			}
+		}
+
 		//	new tile
 		tile := tegola.Tile{
 			Z: req.z,
@@ -217,6 +242,17 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	check for tile size warnings
 		if len(pbyte) > MaxTileSize {
 			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
+		}
+
+		//	check if we have a cache
+		if Cache != nil {
+			key := fmt.Sprintf("/%v/%v/%v.pbf", req.z, req.x, req.y)
+			r := bytes.NewReader(pbyte)
+
+			//	write to our cache
+			if err := Cache.Write(key, r); err != nil {
+				log.Printf("cache err: %v", err)
+			}
 		}
 
 		//	log the request
