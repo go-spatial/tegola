@@ -42,6 +42,7 @@ type Map struct {
 	Bounds      []float64  `toml:"bounds"`
 	Center      [3]float64 `toml:"center"`
 	Layers      []struct {
+		Name          string      `toml:"name"` // optional, otherwise inferred from ProviderLayer
 		ProviderLayer string      `toml:"provider_layer"`
 		MinZoom       int         `toml:"min_zoom"`
 		MaxZoom       int         `toml:"max_zoom"`
@@ -186,14 +187,18 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 					return fmt.Errorf("'default_tags' for 'provider_layer' (%v) should be a TOML table", l.ProviderLayer)
 				}
 			}
+			if len(l.Name) == 0 {
+				l.Name = providerLayer[1]
+			}
 
 			//	add our layer to our layers slice
 			serverMap.Layers = append(serverMap.Layers, server.Layer{
-				Name:        providerLayer[1],
-				MinZoom:     l.MinZoom,
-				MaxZoom:     l.MaxZoom,
-				Provider:    provider,
-				DefaultTags: defaultTags,
+				Name:          l.Name,
+				ProviderLayer: providerLayer[1],
+				MinZoom:       l.MinZoom,
+				MaxZoom:       l.MaxZoom,
+				Provider:      provider,
+				DefaultTags:   defaultTags,
 			})
 		}
 

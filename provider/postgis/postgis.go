@@ -342,11 +342,11 @@ func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 	}
 }
 
-func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
+func (p Provider) MVTLayer(providerLayerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
 
-	plyr, ok := p.layers[layerName]
+	plyr, ok := p.layers[providerLayerName]
 	if !ok {
-		return nil, fmt.Errorf("Don't know of the layer %v", layerName)
+		return nil, fmt.Errorf("Don't know of the layer %v", providerLayerName)
 	}
 
 	textent := tile.BoundingBox()
@@ -360,11 +360,11 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	}
 	minPt, ok := minGeo.(*basic.Point)
 	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", minGeo)
+		return nil, fmt.Errorf("Expected Point, got %t %v", minGeo, minGeo)
 	}
 	maxPt, ok := maxGeo.(*basic.Point)
 	if !ok {
-		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo)
+		return nil, fmt.Errorf("Expected Point, got %t %v", maxGeo, maxGeo)
 	}
 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)
@@ -380,7 +380,6 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 	var geobytes []byte
 
 	layer = new(mvt.Layer)
-	layer.Name = layerName
 	var count int
 	var didEnd bool
 	if strings.Contains(os.Getenv("SQL_DEBUG"), "EXECUTE_SQL") {
@@ -403,17 +402,17 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 			switch fdescs[i].Name {
 			case plyr.GeomFieldName:
 				if geobytes, ok = v.([]byte); !ok {
-					return nil, fmt.Errorf("Was unable to convert geometry field(%v) into bytes for layer %v.", plyr.GeomFieldName, layerName)
+					return nil, fmt.Errorf("Was unable to convert geometry field(%v) into bytes for layer %v.", plyr.GeomFieldName, providerLayerName)
 				}
 				if geom, err = wkb.DecodeBytes(geobytes); err != nil {
-					return nil, fmt.Errorf("Was unable to decode geometry field(%v) into wkb for layer %v.", plyr.GeomFieldName, layerName)
+					return nil, fmt.Errorf("Was unable to decode geometry field(%v) into wkb for layer %v.", plyr.GeomFieldName, providerLayerName)
 				}
 				// TODO: Need to move this from being the responsibility of the provider to the responsibility of the feature. But that means a feature should know
 				// how the points are encoded.
 				if plyr.SRID != DefaultSRID {
 					// We need to convert our points to Webmercator.
 					if geom, err = basic.ToWebMercator(plyr.SRID, geom); err != nil {
-						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID(%v) for layer %v.", plyr.SRID, layerName)
+						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID(%v) for layer %v.", plyr.SRID, providerLayerName)
 					}
 				}
 			case plyr.IDFieldName:
@@ -439,7 +438,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				case uint32:
 					gid = uint64(aval)
 				default:
-					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v", plyr.IDFieldName, layerName)
+					return nil, fmt.Errorf("Unable to convert geometry ID field(%v) into a uint64 for layer %v", plyr.IDFieldName, providerLayerName)
 				}
 			default:
 				if vals[i] == nil {

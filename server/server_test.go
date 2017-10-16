@@ -15,7 +15,7 @@ const (
 
 type testMVTProvider struct{}
 
-func (tp *testMVTProvider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
+func (tp *testMVTProvider) MVTLayer(providerLayerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
 	var layer mvt.Layer
 
 	return &layer, nil
