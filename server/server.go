@@ -59,7 +59,7 @@ func Start(port string) {
 	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", HandleMapCapabilities{})
 
 	//	map tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CacheHandler(HandleMapZXY{}))
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
 	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HandleMapStyle{})
 

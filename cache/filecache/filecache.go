@@ -57,13 +57,13 @@ type Filecache struct {
 	Basepath string
 }
 
-func (fc *Filecache) Read(key string) (io.Reader, error) {
+func (fc *Filecache) Get(key string) (io.Reader, error) {
 	path := filepath.Join(fc.Basepath, key)
 
 	return os.Open(path)
 }
 
-func (fc *Filecache) Write(key string, value io.Reader) error {
+func (fc *Filecache) Set(key string, value io.Reader) error {
 	var err error
 
 	//	build our filepath
@@ -88,6 +88,21 @@ func (fc *Filecache) Write(key string, value io.Reader) error {
 	}
 
 	return nil
+}
+
+func (fc *Filecache) GetWriter(key string) (io.Writer, error) {
+	var err error
+
+	//	build our filepath
+	path := filepath.Join(fc.Basepath, key)
+
+	//	the key can have a directory syntax so we need to makeAll
+	if err = os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	//	create the file
+	return os.Create(path)
 }
 
 func (fc *Filecache) Purge(key string) error {
