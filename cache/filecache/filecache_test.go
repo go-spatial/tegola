@@ -64,12 +64,12 @@ func TestWriteReadPurge(t *testing.T) {
 		input := bytes.NewReader(tc.expected)
 
 		//	test write
-		if err = fc.Write(tc.key, input); err != nil {
+		if err = fc.Set(tc.key, input); err != nil {
 			t.Errorf("testcase (%v) write failed. err: %v", i, err)
 			continue
 		}
 
-		r, err := fc.Read(tc.key)
+		r, err := fc.Get(tc.key)
 		if err != nil {
 			t.Errorf("testcase (%v) read failed. err: %v", i, err)
 			continue
