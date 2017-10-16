@@ -13,7 +13,7 @@ func TestLayerMVTName(t *testing.T) {
 	}{
 		{
 			layer:    testLayer1,
-			expected: "test-layer-1",
+			expected: "test-layer",
 		},
 		{
 			layer:    testLayer2,

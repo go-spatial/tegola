@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -56,9 +57,9 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer1.MaxZoom,
+						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf",
+							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 						},
 					},
 					{
@@ -70,7 +71,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf",
+							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer2.MVTName()),
 						},
 					},
 				},
@@ -109,9 +110,9 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer1.MaxZoom,
+						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf?debug=true",
+							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 						},
 					},
 					{
@@ -123,7 +124,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf?debug=true",
+							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
 						},
 					},
 					{
@@ -162,6 +163,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 
 		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
+
 		//	setup a new router group
 		group := router.NewGroup("/")
 		group.UsingContext().Handler(test.reqMethod, test.uriPattern, server.HandleMapCapabilities{})

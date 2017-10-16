@@ -81,6 +81,15 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				var skip bool
 				for i := range cMap.Layers {
 					if cMap.Layers[i].Name == layer.MVTName() {
+						//	we need to use the min and max of all layers with this name
+						if cMap.Layers[i].MinZoom > layer.MinZoom {
+							cMap.Layers[i].MinZoom = layer.MinZoom
+						}
+
+						if cMap.Layers[i].MaxZoom < layer.MaxZoom {
+							cMap.Layers[i].MaxZoom = layer.MaxZoom
+						}
+
 						skip = true
 						break
 					}
