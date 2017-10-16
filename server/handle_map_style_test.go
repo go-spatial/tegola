@@ -52,7 +52,7 @@ func TestHandleMapStyle(t *testing.T) {
 						},
 						Paint: &style.LayerPaint{
 							CircleRadius: 3,
-							CircleColor:  "#7a40ce",
+							CircleColor:  "#56f8aa",
 						},
 					},
 					{
