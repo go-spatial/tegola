@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -40,20 +41,20 @@ func TestHandleCapabilities(t *testing.T) {
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
-								Name: "test-layer-1",
+								Name: testLayer1.MVTName(),
 								Tiles: []string{
-									"http://localhost:8080/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf",
+									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 								},
-								MinZoom: 4,
-								MaxZoom: 9,
+								MinZoom: testLayer1.MinZoom,
+								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
-								Name: "test-layer-2-name",
+								Name: testLayer2.MVTName(),
 								Tiles: []string{
-									"http://localhost:8080/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf",
+									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer2.MVTName()),
 								},
-								MinZoom: 10,
-								MaxZoom: 20,
+								MinZoom: testLayer2.MinZoom,
+								MaxZoom: testLayer2.MaxZoom,
 							},
 						},
 					},
@@ -80,20 +81,20 @@ func TestHandleCapabilities(t *testing.T) {
 						Layers: []server.CapabilitiesLayer{
 
 							{
-								Name: "test-layer-1",
+								Name: testLayer1.MVTName(),
 								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf?debug=true",
+									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 								},
-								MinZoom: 4,
-								MaxZoom: 9,
+								MinZoom: testLayer1.MinZoom,
+								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
 								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf?debug=true",
+									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
 								},
-								MinZoom: 10,
-								MaxZoom: 20,
+								MinZoom: testLayer2.MinZoom,
+								MaxZoom: testLayer2.MaxZoom,
 							},
 							{
 								Name: "debug-tile-outline",

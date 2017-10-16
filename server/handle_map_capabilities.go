@@ -86,6 +86,15 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			var skip bool
 			for i := range tileJSON.VectorLayers {
 				if tileJSON.VectorLayers[i].ID == l.MVTName() {
+					//	we need to use the min and max of all layers with this name
+					if tileJSON.VectorLayers[i].MinZoom > l.MinZoom {
+						tileJSON.VectorLayers[i].MinZoom = l.MinZoom
+					}
+
+					if tileJSON.VectorLayers[i].MaxZoom < l.MaxZoom {
+						tileJSON.VectorLayers[i].MaxZoom = l.MaxZoom
+					}
+
 					skip = true
 					break
 				}

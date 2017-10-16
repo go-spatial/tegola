@@ -37,6 +37,7 @@ func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
 }
 
 var testLayer1 = server.Layer{
+	Name:              "test-layer",
 	ProviderLayerName: "test-layer-1",
 	MinZoom:           4,
 	MaxZoom:           9,
@@ -59,6 +60,16 @@ var testLayer2 = server.Layer{
 	},
 }
 
+var testLayer3 = server.Layer{
+	Name:              "test-layer",
+	ProviderLayerName: "test-layer-3",
+	MinZoom:           10,
+	MaxZoom:           20,
+	Provider:          &testMVTProvider{},
+	GeomType:          basic.Point{},
+	DefaultTags:       map[string]interface{}{},
+}
+
 var testMap = server.Map{
 	Name:        "test-map",
 	Attribution: "test attribution",
@@ -66,6 +77,7 @@ var testMap = server.Map{
 	Layers: []server.Layer{
 		testLayer1,
 		testLayer2,
+		testLayer3,
 	},
 }
 
