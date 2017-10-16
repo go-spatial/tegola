@@ -26,7 +26,7 @@ type MultiPolygon []Polygon
 // Just to make basic collection only usable with basic types.
 func (MultiPolygon) basicType() {}
 
-// Polygons retuns the polygons that make up the set.
+// Polygons returns the polygons that make up the set.
 func (mp *MultiPolygon) Polygons() (polygons []tegola.Polygon) {
 	polygons = make([]tegola.Polygon, 0, len(*mp))
 	for i := range *mp {

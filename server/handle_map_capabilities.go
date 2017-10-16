@@ -84,7 +84,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			Data:        make([]string, 0),
 		}
 
-		//	determing the min and max zoom for this map
+		//	determining the min and max zoom for this map
 		for i, l := range m.Layers {
 			//	set our min and max using the first layer
 			if i == 0 {

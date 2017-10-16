@@ -24,7 +24,7 @@ type layer struct {
 	SQL string
 	// The ID field name, this will default to 'gid' if not set to something other then empty string.
 	IDFieldName string
-	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
+	// The Geometry field name, this will default to 'geom' if not set to something other then empty string.
 	GeomFieldName string
 	// The SRID that the data in the table is stored in. This will default to WebMercator
 	SRID int
@@ -34,7 +34,7 @@ type layer struct {
 type Provider struct {
 	config pgx.ConnPoolConfig
 	pool   *pgx.ConnPool
-	layers map[string]layer // map of layer name and corrosponding sql
+	layers map[string]layer // map of layer name and corresponding sql
 	srid   int
 }
 
@@ -408,7 +408,7 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 				if geom, err = wkb.DecodeBytes(geobytes); err != nil {
 					return nil, fmt.Errorf("Was unable to decode geometry field(%v) into wkb for layer %v.", plyr.GeomFieldName, layerName)
 				}
-				// TODO: Need to move this from being the responsiblity of the provider to the responsibility of the feature. But that means a feature should know
+				// TODO: Need to move this from being the responsibility of the provider to the responsibility of the feature. But that means a feature should know
 				// how the points are encoded.
 				if plyr.SRID != DefaultSRID {
 					// We need to convert our points to Webmercator.
