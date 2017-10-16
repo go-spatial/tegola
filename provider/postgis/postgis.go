@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -40,6 +41,7 @@ type Provider struct {
 
 // DEFAULT sql for get geometries,
 const BBOX = "!BBOX!"
+const PIXEL_WIDTH = "!PIXEL_WIDTH!"
 
 // We quote the field and table names to prevent colliding with postgres keywords.
 const stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + BBOX
@@ -369,7 +371,15 @@ func (p Provider) MVTLayer(layerName string, tile tegola.Tile, tags map[string]i
 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.SRID)
 	sql := strings.Replace(plyr.SQL, BBOX, bbox, -1)
-
+	if strings.Index(sql, PIXEL_WIDTH) > -1 {
+		var res float64
+		if plyr.SRID == 4326 {
+			res = tile.ZResGeodetic()
+		} else {
+			res = tile.ZRes()
+		}
+		sql = strings.Replace(sql, PIXEL_WIDTH, strconv.FormatFloat(res, 'E', -1, 64), -1)
+	}
 	rows, err := p.pool.Query(sql)
 	if err != nil {
 		return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
