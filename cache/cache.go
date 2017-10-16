@@ -7,10 +7,14 @@ import (
 
 //	Cacher defines a cache back end
 type Cacher interface {
-	Get(key string) (io.Reader, error)
+	Get(key string) (Item, error)
 	Set(key string, value io.Reader) error
 	Purge(key string) error
-	GetWriter(key string) (io.Writer, error)
+}
+
+type Item interface {
+	Read(p []byte) (int, error)
+	Write(p []byte) (int, error)
 }
 
 // InitFunc initilize a cache given a config map.

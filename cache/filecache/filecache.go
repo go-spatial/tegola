@@ -2,7 +2,6 @@ package filecache
 
 import (
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -55,15 +54,33 @@ func New(config map[string]interface{}) (cache.Cacher, error) {
 
 type Filecache struct {
 	Basepath string
+
+	//	locker tracks which cache keys are being operated on.
+	//	when the cache is being written to a Lock() is used.
+	//	when being read from an RLock() is used so we don't
+	//	block concurrent reads
+	//
+	//	TODO: currently the map keys are not cleaned up after they're
+	//	created. this will cause more memory to be used.
+	locker map[string]Item
 }
 
-func (fc *Filecache) Get(key string) (io.Reader, error) {
+func (fc *Filecache) Get(key string) (*os.File, error) {
 	path := filepath.Join(fc.Basepath, key)
-
+	/*
+		mutex, ok := fc.locker[key]
+		if !ok {
+			fc.locker[key] = sync.RWMutex{}
+			mutex = fc.locker[key]
+		}
+		mutex.RLock()
+		defer mutex.RUnlock()
+	*/
 	return os.Open(path)
 }
 
-func (fc *Filecache) Set(key string, value io.Reader) error {
+/*
+func (fc *Filecache) Set(key string) (*os.File, error) {
 	var err error
 
 	//	build our filepath
@@ -89,8 +106,9 @@ func (fc *Filecache) Set(key string, value io.Reader) error {
 
 	return nil
 }
+*/
 
-func (fc *Filecache) GetWriter(key string) (io.Writer, error) {
+func (fc *Filecache) Set(key string) (*os.File, error) {
 	var err error
 
 	//	build our filepath

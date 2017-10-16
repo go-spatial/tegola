@@ -1,7 +1,6 @@
 package filecache_test
 
 import (
-	"bytes"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -54,17 +53,23 @@ func TestWriteReadPurge(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
+		var err error
+
 		fc, err := filecache.New(tc.config)
 		if err != nil {
 			t.Errorf("testcase (%v) failed. err: %v", i, err)
 			continue
 		}
 
-		//	wrap our data in a reader
-		input := bytes.NewReader(tc.expected)
-
 		//	test write
-		if err = fc.Set(tc.key, input); err != nil {
+		w, err := fc.Set(tc.key)
+		if err != nil {
+			t.Errorf("testcase (%v) write failed. err: %v", i, err)
+			continue
+		}
+
+		_, err = w.Write(input)
+		if err != nil {
 			t.Errorf("testcase (%v) write failed. err: %v", i, err)
 			continue
 		}
