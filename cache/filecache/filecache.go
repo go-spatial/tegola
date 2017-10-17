@@ -66,17 +66,23 @@ type Filecache struct {
 	//	TODO: currently the map keys are not cleaned up after they're
 	//	created. this will cause more memory to be used.
 	Locker map[string]sync.RWMutex
+
+	//	we need a cache mutex to avoid concurrent writes to our Locker
+	sync.RWMutex
 }
 
 func (fc *Filecache) Get(key string) ([]byte, error) {
 	path := filepath.Join(fc.Basepath, key)
 
 	//	lookup our mutex
+	fc.RLock()
 	mutex, ok := fc.Locker[key]
+	fc.RUnlock()
 	if !ok {
-		fc.Locker[key] = sync.RWMutex{}
-		mutex = fc.Locker[key]
+		//	no entry, return
+		return nil, os.ErrNotExist
 	}
+
 	//	read lock
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -98,7 +104,9 @@ func (fc *Filecache) Set(key string, val []byte) error {
 	//	lookup our mutex
 	mutex, ok := fc.Locker[key]
 	if !ok {
+		fc.Lock()
 		fc.Locker[key] = sync.RWMutex{}
+		fc.Unlock()
 		mutex = fc.Locker[key]
 	}
 	//	write lock
