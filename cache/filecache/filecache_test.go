@@ -1,8 +1,8 @@
 package filecache_test
 
 import (
-	"io/ioutil"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/terranodo/tegola/cache/filecache"
@@ -19,6 +19,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &filecache.Filecache{
 				Basepath: "testfiles/tegola-cache",
+				Locker:   map[string]sync.RWMutex{},
 			},
 		},
 	}
@@ -37,7 +38,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestWriteReadPurge(t *testing.T) {
+func TestSetGetPurge(t *testing.T) {
 	testcases := []struct {
 		config   map[string]interface{}
 		key      string
@@ -53,8 +54,6 @@ func TestWriteReadPurge(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		var err error
-
 		fc, err := filecache.New(tc.config)
 		if err != nil {
 			t.Errorf("testcase (%v) failed. err: %v", i, err)
@@ -62,28 +61,14 @@ func TestWriteReadPurge(t *testing.T) {
 		}
 
 		//	test write
-		w, err := fc.Set(tc.key)
-		if err != nil {
+		if err = fc.Set(tc.key, tc.expected); err != nil {
 			t.Errorf("testcase (%v) write failed. err: %v", i, err)
 			continue
 		}
 
-		_, err = w.Write(input)
-		if err != nil {
-			t.Errorf("testcase (%v) write failed. err: %v", i, err)
-			continue
-		}
-
-		r, err := fc.Get(tc.key)
+		output, err := fc.Get(tc.key)
 		if err != nil {
 			t.Errorf("testcase (%v) read failed. err: %v", i, err)
-			continue
-		}
-
-		//	test read
-		output, err := ioutil.ReadAll(r)
-		if err != nil {
-			t.Errorf("testcase (%v) readAll failed. err: %v", i, err)
 			continue
 		}
 

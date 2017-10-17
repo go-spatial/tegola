@@ -1,20 +1,12 @@
 package cache
 
-import (
-	"fmt"
-	"io"
-)
+import "fmt"
 
 //	Cacher defines a cache back end
 type Cacher interface {
-	Get(key string) (Item, error)
-	Set(key string, value io.Reader) error
+	Get(key string) ([]byte, error)
+	Set(key string, value []byte) error
 	Purge(key string) error
-}
-
-type Item interface {
-	Read(p []byte) (int, error)
-	Write(p []byte) (int, error)
 }
 
 // InitFunc initilize a cache given a config map.

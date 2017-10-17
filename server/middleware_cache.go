@@ -1,10 +1,6 @@
 package server
 
-import (
-	"io"
-	"log"
-	"net/http"
-)
+import "net/http"
 
 func CacheHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -19,14 +15,13 @@ func CacheHandler(next http.Handler) http.Handler {
 		cachedTile, err := Cache.Get(r.URL.Path)
 		if err != nil {
 			//	TODO: this should be a debug warning
-			log.Printf("cache err: %v", err)
-			cWriter, err := Cache.GetWriter(r.URL.Path)
-			if err != nil {
-				log.Printf("cache newWriter err: %v", err)
-			}
+			//	log.Printf("cache err: %v", err)
 
-			//	ovewrite our current response writer with the cache writer
-			w = newCacheResponseWriter(w, cWriter)
+			//	ovewrite our current responseWriter with a cacheResponseWriter
+			w = &cacheResponseWriter{
+				cacheKey: r.URL.Path,
+				resp:     w,
+			}
 
 		} else {
 			//	TODO: how configurable do we want the CORS policy to be?
@@ -39,7 +34,7 @@ func CacheHandler(next http.Handler) http.Handler {
 			//	communicate the cache is being used
 			w.Header().Add("Tegola-Cache", "HIT")
 
-			io.Copy(w, cachedTile)
+			w.Write(cachedTile)
 			return
 		}
 
@@ -47,31 +42,25 @@ func CacheHandler(next http.Handler) http.Handler {
 	})
 }
 
-func newCacheResponseWriter(resp http.ResponseWriter, writers ...io.Writer) http.ResponseWriter {
-	//	communicate the cache is being used
-	resp.Header().Add("Tegola-Cache", "MISS")
-
-	writers = append(writers, resp)
-
-	return &cacheResponseWriter{
-		resp:  resp,
-		multi: io.MultiWriter(writers...),
-	}
-}
-
+//	cacheResponsWriter wraps http.ResponseWriter (https://golang.org/pkg/net/http/#ResponseWriter)
+//	to also write the response to a cache when there is a cache MISS
 type cacheResponseWriter struct {
-	resp  http.ResponseWriter
-	multi io.Writer
+	cacheKey string
+	resp     http.ResponseWriter
 }
 
-// implement http.ResponseWriter
-// https://golang.org/pkg/net/http/#ResponseWriter
 func (w *cacheResponseWriter) Header() http.Header {
+	//	communicate the tegola cache is being used
+	w.resp.Header().Add("Tegola-Cache", "MISS")
+
 	return w.resp.Header()
 }
 
 func (w *cacheResponseWriter) Write(b []byte) (int, error) {
-	return w.multi.Write(b)
+	//	after we write the response, persist the data to the cache
+	defer Cache.Set(w.cacheKey, b)
+
+	return w.resp.Write(b)
 }
 
 func (w *cacheResponseWriter) WriteHeader(i int) {

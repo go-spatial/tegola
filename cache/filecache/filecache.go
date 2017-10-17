@@ -2,8 +2,10 @@ package filecache
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/util/dict"
@@ -49,42 +51,59 @@ func New(config map[string]interface{}) (cache.Cacher, error) {
 
 	return &Filecache{
 		Basepath: basepath,
+		Locker:   map[string]sync.RWMutex{},
 	}, nil
 }
 
 type Filecache struct {
 	Basepath string
 
-	//	locker tracks which cache keys are being operated on.
-	//	when the cache is being written to a Lock() is used.
+	//	Locker tracks which cache keys are being operated on.
+	//	when the cache is being written to a Lock() is set.
 	//	when being read from an RLock() is used so we don't
-	//	block concurrent reads
+	//	block concurrent reads.
 	//
 	//	TODO: currently the map keys are not cleaned up after they're
 	//	created. this will cause more memory to be used.
-	locker map[string]Item
+	Locker map[string]sync.RWMutex
 }
 
-func (fc *Filecache) Get(key string) (*os.File, error) {
+func (fc *Filecache) Get(key string) ([]byte, error) {
 	path := filepath.Join(fc.Basepath, key)
-	/*
-		mutex, ok := fc.locker[key]
-		if !ok {
-			fc.locker[key] = sync.RWMutex{}
-			mutex = fc.locker[key]
-		}
-		mutex.RLock()
-		defer mutex.RUnlock()
-	*/
-	return os.Open(path)
+
+	//	lookup our mutex
+	mutex, ok := fc.Locker[key]
+	if !ok {
+		fc.Locker[key] = sync.RWMutex{}
+		mutex = fc.Locker[key]
+	}
+	//	read lock
+	mutex.RLock()
+	defer mutex.RUnlock()
+
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return ioutil.ReadAll(f)
 }
 
-/*
-func (fc *Filecache) Set(key string) (*os.File, error) {
+func (fc *Filecache) Set(key string, val []byte) error {
 	var err error
 
 	//	build our filepath
 	path := filepath.Join(fc.Basepath, key)
+
+	//	lookup our mutex
+	mutex, ok := fc.Locker[key]
+	if !ok {
+		fc.Locker[key] = sync.RWMutex{}
+		mutex = fc.Locker[key]
+	}
+	//	write lock
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	//	the key can have a directory syntax so we need to makeAll
 	if err = os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
@@ -99,28 +118,12 @@ func (fc *Filecache) Set(key string) (*os.File, error) {
 	defer f.Close()
 
 	//	copy the contents
-	_, err = io.Copy(f, value)
+	_, err = f.Write(val)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-*/
-
-func (fc *Filecache) Set(key string) (*os.File, error) {
-	var err error
-
-	//	build our filepath
-	path := filepath.Join(fc.Basepath, key)
-
-	//	the key can have a directory syntax so we need to makeAll
-	if err = os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
-		return nil, err
-	}
-
-	//	create the file
-	return os.Create(path)
 }
 
 func (fc *Filecache) Purge(key string) error {
