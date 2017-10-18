@@ -24,7 +24,7 @@ func ParseKey(str string) (*Key, error) {
 	keyParts := strings.Split(strings.TrimLeft(str, "/"), "/")
 	//	we're expecting a z/x/y scheme
 	if len(keyParts) < 3 || len(keyParts) > 5 {
-		err = ErrInvalidFileKey{
+		err = ErrInvalidFileKeyParts{
 			path:          str,
 			keyPartsCount: len(keyParts),
 		}
@@ -51,22 +51,24 @@ func ParseKey(str string) (*Key, error) {
 	key.Z, err = strconv.Atoi(zxy[0])
 	if err != nil {
 		err = ErrInvalidFileKey{
-			path:          str,
-			keyPartsCount: len(keyParts),
+			path: str,
+			key:  "Z",
+			val:  zxy[0],
 		}
 
-		log.Printf("cache: invalid fileKey (%v). unable to parse Z value (%v) into int. skipping.", str, zxy[0])
+		log.Printf(err.Error())
 		return nil, err
 	}
 
 	key.X, err = strconv.Atoi(zxy[1])
 	if err != nil {
 		err = ErrInvalidFileKey{
-			path:          str,
-			keyPartsCount: len(keyParts),
+			path: str,
+			key:  "X",
+			val:  zxy[1],
 		}
 
-		log.Printf("cache: invalid fileKey (%v). unable to parse X value (%v) into int. skipping.", str, zxy[0])
+		log.Printf(err.Error())
 		return nil, err
 	}
 
@@ -75,11 +77,12 @@ func ParseKey(str string) (*Key, error) {
 	key.Y, err = strconv.Atoi(yParts[0])
 	if err != nil {
 		err = ErrInvalidFileKey{
-			path:          str,
-			keyPartsCount: len(keyParts),
+			path: str,
+			key:  "Y",
+			val:  zxy[2],
 		}
 
-		log.Printf("cache: invalid fileKey (%v). unable to parse Y value (%v) into int. skipping.", str, zxy[0])
+		log.Printf(err.Error())
 		return nil, err
 	}
 
