@@ -3,6 +3,7 @@ package filecache
 import (
 	"errors"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -29,8 +30,8 @@ func init() {
 //	New instantiates a Filecache. The config expects the following params:
 //
 //		basepath (string): a path to where the cache will be written
-
-func New(config map[string]interface{}) (cache.Cacher, error) {
+//
+func New(config map[string]interface{}) (cache.Interface, error) {
 	var err error
 
 	c := dict.M(config)
@@ -49,38 +50,73 @@ func New(config map[string]interface{}) (cache.Cacher, error) {
 		return nil, err
 	}
 
-	return &Filecache{
+	fc := Filecache{
 		Basepath: basepath,
 		Locker:   map[string]sync.RWMutex{},
-	}, nil
+	}
+
+	//	TODO: walk our basepath and full our Locker with already rendered keys
+	err = filepath.Walk(basepath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		//	skip directories
+		if info.IsDir() {
+			return nil
+		}
+
+		//	remove the basepath for the file key
+		fileKey := path[len(basepath):]
+
+		cacheKey, err := cache.ParseKey(fileKey)
+		if err != nil {
+			log.Println("filecache: ", err.Error())
+			return nil
+		}
+
+		//	write our key
+		fc.Lock()
+		fc.Locker[cacheKey.String()] = sync.RWMutex{}
+		fc.Unlock()
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &fc, nil
 }
 
 type Filecache struct {
 	Basepath string
+
+	//	we need a cache mutex to avoid concurrent writes to our Locker
+	sync.RWMutex
 
 	//	Locker tracks which cache keys are being operated on.
 	//	when the cache is being written to a Lock() is set.
 	//	when being read from an RLock() is used so we don't
 	//	block concurrent reads.
 	//
-	//	TODO: currently the map keys are not cleaned up after they're
-	//	created. this will cause more memory to be used.
+	//	TODO: store a hash of the cache blob along with the Locker mutex
 	Locker map[string]sync.RWMutex
-
-	//	we need a cache mutex to avoid concurrent writes to our Locker
-	sync.RWMutex
 }
 
-func (fc *Filecache) Get(key string) ([]byte, error) {
-	path := filepath.Join(fc.Basepath, key)
+// 	Get reads a z,x,y entry from the cache and returns the contents
+//	if there is a hit. the second argument denotes a hit or miss
+//	so the consumer does not need to sniff errors for cache read misses
+func (fc *Filecache) Get(key *cache.Key) ([]byte, bool, error) {
+	path := filepath.Join(fc.Basepath, key.String())
 
 	//	lookup our mutex
 	fc.RLock()
-	mutex, ok := fc.Locker[key]
+	mutex, ok := fc.Locker[key.String()]
 	fc.RUnlock()
 	if !ok {
-		//	no entry, return
-		return nil, os.ErrNotExist
+		//	no entry, return a miss
+		return nil, false, nil
 	}
 
 	//	read lock
@@ -89,34 +125,48 @@ func (fc *Filecache) Get(key string) ([]byte, error) {
 
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		//	something is wrong with opening this file
+		//	remove the key from the cache if it exists
+		fc.Lock()
+		delete(fc.Locker, key.String())
+		fc.Unlock()
+
+		if os.IsNotExist(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
 	}
 
-	return ioutil.ReadAll(f)
+	val, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return val, true, nil
 }
 
-func (fc *Filecache) Set(key string, val []byte) error {
+func (fc *Filecache) Set(key *cache.Key, val []byte) error {
 	var err error
 
-	//	build our filepath
-	path := filepath.Join(fc.Basepath, key)
+	path := filepath.Join(fc.Basepath, key.String())
 
 	//	lookup our mutex
-	mutex, ok := fc.Locker[key]
+	mutex, ok := fc.Locker[key.String()]
 	if !ok {
 		fc.Lock()
-		fc.Locker[key] = sync.RWMutex{}
+		fc.Locker[key.String()] = sync.RWMutex{}
 		fc.Unlock()
-		mutex = fc.Locker[key]
+		mutex = fc.Locker[key.String()]
 	}
-	//	write lock
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	//	the key can have a directory syntax so we need to makeAll
 	if err = os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		return err
 	}
+
+	//	write lock
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	//	create the file
 	f, err := os.Create(path)
@@ -134,13 +184,18 @@ func (fc *Filecache) Set(key string, val []byte) error {
 	return nil
 }
 
-func (fc *Filecache) Purge(key string) error {
-	path := filepath.Join(fc.Basepath, key)
+func (fc *Filecache) Purge(key *cache.Key) error {
+	path := filepath.Join(fc.Basepath, key.String())
 
 	//	check if we have a file. if no file exists, return
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil
 	}
+
+	//	remove the locker key on purge
+	fc.Lock()
+	delete(fc.Locker, key.String())
+	fc.Unlock()
 
 	return os.Remove(path)
 }

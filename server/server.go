@@ -25,7 +25,7 @@ var (
 	//	configurable via the tegola config.toml file
 	HostName string
 	//	cache interface to use
-	Cache cache.Cacher
+	Cache cache.Interface
 )
 
 //	incoming requests are associated with a map
@@ -59,12 +59,12 @@ func Start(port string) {
 	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", HandleMapCapabilities{})
 
 	//	map tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CacheHandler(HandleMapZXY{}))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", TileCacheHandler(HandleMapZXY{}))
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
 	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HandleMapStyle{})
 
 	//	map layer tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", TileCacheHandler(HandleMapLayerZXY{}))
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
 
 	//	static convenience routes

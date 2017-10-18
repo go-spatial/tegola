@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/cache/filecache"
 )
 
@@ -19,7 +20,10 @@ func TestNew(t *testing.T) {
 			},
 			expected: &filecache.Filecache{
 				Basepath: "testfiles/tegola-cache",
-				Locker:   map[string]sync.RWMutex{},
+				Locker: map[string]sync.RWMutex{
+					//	our testfiles directory has a file that will be read in when calling New
+					"0/1/12": sync.RWMutex{},
+				},
 			},
 		},
 	}
@@ -41,14 +45,18 @@ func TestNew(t *testing.T) {
 func TestSetGetPurge(t *testing.T) {
 	testcases := []struct {
 		config   map[string]interface{}
-		key      string
+		key      cache.Key
 		expected []byte
 	}{
 		{
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
 			},
-			key:      "/osm/0/1/2.pbf",
+			key: cache.Key{
+				Z: 0,
+				X: 1,
+				Y: 2,
+			},
 			expected: []byte("\x53\x69\x6c\x61\x73"),
 		},
 	}
@@ -61,14 +69,18 @@ func TestSetGetPurge(t *testing.T) {
 		}
 
 		//	test write
-		if err = fc.Set(tc.key, tc.expected); err != nil {
+		if err = fc.Set(&tc.key, tc.expected); err != nil {
 			t.Errorf("testcase (%v) write failed. err: %v", i, err)
 			continue
 		}
 
-		output, err := fc.Get(tc.key)
+		output, hit, err := fc.Get(&tc.key)
 		if err != nil {
 			t.Errorf("testcase (%v) read failed. err: %v", i, err)
+			continue
+		}
+		if !hit {
+			t.Errorf("testcase (%v) read failed. should have been a hit but cache reported a miss", i)
 			continue
 		}
 
@@ -78,7 +90,7 @@ func TestSetGetPurge(t *testing.T) {
 		}
 
 		//	test purge
-		if err = fc.Purge(tc.key); err != nil {
+		if err = fc.Purge(&tc.key); err != nil {
 			t.Errorf("testcase (%v) failed. purge failed. err: %v", i, err)
 			continue
 		}

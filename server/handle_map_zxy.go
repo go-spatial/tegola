@@ -218,15 +218,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if len(pbyte) > MaxTileSize {
 			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
 		}
-		/*
-			//	check if we have a cache
-			if Cache != nil {
-				//	write to our cache using the url path as the key
-				if err := Cache.Set(r.URL.Path, bytes.NewReader(pbyte)); err != nil {
-					log.Printf("cache err: %v", err)
-				}
-			}
-		*/
+
 		//	log the request
 		L.Log(logItem{
 			X:         tile.X,

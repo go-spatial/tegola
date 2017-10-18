@@ -86,7 +86,7 @@ func main() {
 	server.Start(*port)
 }
 
-func initCache(config map[string]interface{}) (cache.Cacher, error) {
+func initCache(config map[string]interface{}) (cache.Interface, error) {
 	//	lookup our cache type
 	t, ok := config["type"]
 	if !ok {
