@@ -181,8 +181,13 @@ func FindIntersectsWithEventQueue(polygonCheck bool, eq []event, segments []Line
 			continue
 		}
 		edge := segments[ev.edge]
-
+		sslice := make([]int, 0, len(isegmap))
 		for s := range isegmap {
+			sslice = append(sslice, s)
+		}
+		sort.Ints(sslice)
+
+		for _, s := range sslice {
 
 			src, dest := (s+1)%ns, (ev.edge+1)%ns
 

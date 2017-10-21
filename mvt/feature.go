@@ -639,6 +639,10 @@ func (c *cursor) ClosePath() uint32 {
 	return uint32(NewCommand(cmdClosePath, 1))
 }
 
+func init() {
+	log.Println("Original geo.")
+}
+
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
 func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
@@ -659,10 +663,11 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 	*/
 
 	// Project Geom
+
 	geo := c.ScaleGeo(geom)
 	sg := SimplifyGeometry(geo, extent.Epsilon)
 
-	cg, err := validate.CleanGeometry(sg)
+	cg, err := validate.CleanGeometry(geo, sg, c.extent)
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}

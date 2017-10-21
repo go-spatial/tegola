@@ -1,232 +1,24 @@
-package maths
+package triangles
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"sort"
 	"time"
+
+	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/internal/triangulate"
 )
 
-func trace(msg string) func() {
-	tracer := time.Now()
-	log.Println(msg, "started at:", tracer)
-	return func() {
-		etracer := time.Now()
-		log.Println(msg, "ElapsedTime in seconds:", etracer.Sub(tracer))
-	}
-}
-
-const adjustBBoxBy = 10
-
-type Triangle [3]Pt
-
-func init() {
-	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
-}
-
-func (t *Triangle) FindEdge(e Line) (idx int, err error) {
-	switch {
-	case e[0].IsEqual(t[0]) && e[1].IsEqual(t[1]):
-		return 0, nil
-	case e[0].IsEqual(t[1]) && e[1].IsEqual(t[0]):
-		return 0, nil
-	case e[0].IsEqual(t[1]) && e[1].IsEqual(t[2]):
-		return 1, nil
-	case e[0].IsEqual(t[2]) && e[1].IsEqual(t[1]):
-		return 1, nil
-	case e[0].IsEqual(t[2]) && e[1].IsEqual(t[0]):
-		return 2, nil
-	case e[0].IsEqual(t[0]) && e[1].IsEqual(t[2]):
-		return 2, nil
-	}
-
-	return -1, errors.New("Edge not on triangle.")
-
-}
-
-func (t *Triangle) Edge(n int) Line {
-	if n < 0 || n == 0 {
-		return Line{t[0], t[1]}
-	}
-	if n > 2 || n == 2 {
-		return Line{t[2], t[0]}
-	}
-	return Line{t[1], t[2]}
-}
-func (t *Triangle) LREdge(n int) Line {
-	if n < 0 || n == 0 {
-		return Line{t[0], t[1]}
-	}
-	if n > 2 || n == 2 {
-		return Line{t[0], t[2]}
-	}
-	return Line{t[1], t[2]}
-}
-
-func (t *Triangle) Edges() [3]Line {
-	return [3]Line{
-		{t[0], t[1]},
-		{t[1], t[2]},
-		{t[2], t[0]},
-	}
-}
-
-func (t *Triangle) LREdges() [3]Line {
-	return [3]Line{
-		{t[0], t[1]},
-		{t[1], t[2]},
-		{t[0], t[2]},
-	}
-}
-
-func (t *Triangle) EdgeIdx(pt1, pt2 Pt) int {
-	if t == nil {
-		return -1
-	}
-	if pt1.IsEqual(t[0]) {
-		if pt2.IsEqual(t[1]) {
-			return 0
-		}
-		if pt2.IsEqual(t[2]) {
-			return 2
-		}
-		return -1
-	}
-	if pt2.IsEqual(t[0]) {
-		if pt1.IsEqual(t[1]) {
-			return 0
-		}
-		if pt1.IsEqual(t[2]) {
-			return 2
-		}
-		return -1
-	}
-	if pt1.IsEqual(t[1]) {
-		if pt2.IsEqual(t[2]) {
-			return 1
-		}
-		return -1
-	}
-	if pt2.IsEqual(t[1]) {
-		if pt1.IsEqual(t[2]) {
-			return 1
-		}
-		return -1
-	}
-	return -1
-}
-
-func (t *Triangle) Key() string {
-	if t == nil {
-		return ""
-	}
-	sort.Sort(t)
-	return fmt.Sprintf("(%v %v %v)", t[0], t[1], t[2])
-}
-
-func (t *Triangle) Points() []Pt { return []Pt{t[0], t[1], t[2]} }
-func (t *Triangle) Point(i int) Pt {
-	switch {
-	case i <= 0:
-		return t[0]
-	case i >= 2:
-		return t[2]
-	default:
-		return t[1]
-	}
-}
-func (t *Triangle) Len() int {
-	if t == nil {
-		return 0
-	}
-	return len(t)
-}
-
-// If t is nil, we want to panic, as this this a programming bug.
-func (t *Triangle) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
-func (t *Triangle) Less(i, j int) bool { return XYOrder(t[i], t[j]) == -1 }
-
-func (t *Triangle) Equal(t1 *Triangle) bool {
-	if t == nil || t1 == nil {
-		return t == t1
-	}
-	sort.Sort(t)
-	sort.Sort(t1)
-	return t[0].IsEqual(t1[0]) && t[1].IsEqual(t1[1]) && t[2].IsEqual(t1[2])
-}
-
-func (t *Triangle) EqualAnyPt(pts ...Pt) bool {
-	if t == nil {
-		return false
-	}
-	for _, pt := range pts {
-		if pt.IsEqual(t[0]) || pt.IsEqual(t[1]) || pt.IsEqual(t[2]) {
-			return true
-		}
-	}
-	return false
-}
-
-func AreaOfTriangle(v0, v1, v2 Pt) float64 {
-	d := (v0.X * (v1.Y - v2.Y)) + (v1.X * (v2.Y - v0.Y)) + (v2.X * (v0.Y - v1.Y))
-	a := d / 2
-	return a
-}
-
-func (t *Triangle) Area() float64 {
-	if t == nil {
-		return 0
-	}
-	area := AreaOfTriangle(t[0], t[1], t[2])
-	if area < 0 {
-		return 0 - area
-	}
-	return area
-}
-
-func (t *Triangle) Center() Pt {
-	if t == nil {
-		return Pt{0, 0}
-	}
-	return Pt{
-		X: (t[0].X + t[1].X + t[2].X) / 3,
-		Y: (t[0].Y + t[1].Y + t[2].Y) / 3,
-	}
-}
-
-// Will create a new Triangle and sort the points.k
-func NewTriangle(pt1, pt2, pt3 Pt) (tri Triangle) {
-	if pt1 == pt2 || pt1 == pt3 || pt2 == pt3 {
-		panic(fmt.Sprintf("All three points of a triangle must be different. < %v , %v , %v >", pt1, pt2, pt3))
-	}
-	tri = Triangle{pt1, pt2, pt3}
-	sort.Sort(&tri)
-	return tri
-}
-
-type TriangleEdge struct {
-	Node          *TriangleNode
-	IsConstrained bool
-}
-
-func (te *TriangleEdge) Dump() {
-	if te == nil || te.Node == nil {
-		//	log.Println("Triangle: nil")
-		return
-	}
-	//log.Println("Triangle: ", te.Node.Key(), "Constrained:", te.IsConstrained)
-}
-
-// label is the he label for the triangle. Is in "inside" or "outside".
+// label is the the label for the triangle. Is in "inside" or "outside".
 // TODO: gdey — would be make more sense to just have a bool here? IsInside or somthing like that?
 type Label uint8
 
 func (l Label) String() string {
 	switch l {
-	case Outside:
+	case outside:
 		return "outside"
-	case Inside:
+	case inside:
 		return "inside"
 	default:
 		return "unknown"
@@ -234,21 +26,34 @@ func (l Label) String() string {
 }
 
 const (
-	Unknown Label = iota
-	Outside
-	Inside
+	unknown Label = iota
+	outside
+	inside
 )
 
-type TriangleNode struct {
-	Triangle
+type Edge struct {
+	Node          *Node
+	IsConstrained bool
+}
+
+func (te *Edge) Dump() {
+	if te == nil || te.Node == nil {
+		//	log.Println("Triangle: nil")
+		return
+	}
+	//log.Println("Triangle: ", te.Node.Key(), "Constrained:", te.IsConstrained)
+}
+
+type Node struct {
+	maths.Triangle
 	// Edge 0 has pt's 0 and 1.
 	// Edge 1 has pt's 1 and 2.
 	// Edge 2 has pt's 0 and 2.
-	Neighbors [3]TriangleEdge
-	Label     Label
+	Neighbors [3]Edge
+	Label     label
 }
 
-func (tn *TriangleNode) Dump() {
+func (tn *Node) Dump() {
 	if tn == nil {
 		//log.Println("Tringle: nil")
 		return
@@ -264,11 +69,11 @@ func (tn *TriangleNode) Dump() {
 	}
 }
 
-func (tn *TriangleNode) LabelAs(l Label, force bool) (unlabled []*TriangleNode) {
+func LabelAs(tn *Node, l Label, force bool) (unlabled []*Node) {
 	if tn == nil {
 		return unlabled
 	}
-	if !force && tn.Label != Unknown {
+	if !force && tn.Label != unknown {
 		//log.Println("Skipping labeling", force, tn.Label)
 		return unlabled
 	}
@@ -287,8 +92,8 @@ func (tn *TriangleNode) LabelAs(l Label, force bool) (unlabled []*TriangleNode) 
 	return unlabled
 }
 
-type TriangleGraph struct {
-	triangles []*TriangleNode
+type Graph struct {
+	triangles []*Node
 	// List of the triangles that are labled as outside.
 	outside []int
 	// List of the triangles that are labled as inside.
@@ -296,80 +101,22 @@ type TriangleGraph struct {
 	bounding []int
 }
 
-func (tg *TriangleGraph) Triangles() []*TriangleNode {
-	return tg.triangles
-}
-
-func (tg *TriangleGraph) TrianglesAsMP() (mp [][][]Pt) {
-	for i := range tg.triangles {
-		if tg.triangles[i] == nil {
-			continue
-		}
-		mp = append(mp, [][]Pt{tg.triangles[i].Triangle[:]})
-	}
-	return mp
-}
-
-func (tg *TriangleGraph) Inside() []*TriangleNode {
-	r := make([]*TriangleNode, 0, len(tg.inside))
+func (tg *Graph) Inside() []*Node {
+	r := make([]*Node, 0, len(tg.inside))
 	for _, i := range tg.inside {
 		r = append(r, tg.triangles[i])
 	}
 	return r
 }
-func (tg *TriangleGraph) Outside() []*TriangleNode {
-	r := make([]*TriangleNode, 0, len(tg.outside))
+func (tg *Graph) Outside() []*Node {
+	r := make([]*Node, 0, len(tg.outside))
 	for _, i := range tg.outside {
 		r = append(r, tg.triangles[i])
 	}
 	return r
 }
 
-func simplifyNumberOfLines(lines []Line) (sln []Line) {
-	var m1, m2 float64
-	var ok1, ok2 bool
-	if len(lines) <= 2 {
-		return lines
-	}
-
-	lineToAdd := lines[len(lines)-1]
-	m1, _, ok1 = lineToAdd.SlopeIntercept()
-	for i := 0; i < len(lines); i, m1, ok1 = i+1, m2, ok2 {
-		m2, _, ok2 = lines[i].SlopeIntercept()
-		if m1 != m2 || ok1 != ok2 {
-			sln = append(sln, lineToAdd)
-			lineToAdd = lines[i]
-			continue
-		}
-		switch {
-		case lineToAdd[0].IsEqual(lines[i][0]):
-			lineToAdd[0] = lines[i][1]
-		case lineToAdd[0].IsEqual(lines[i][1]):
-			lineToAdd[0] = lines[i][0]
-		case lineToAdd[1].IsEqual(lines[i][0]):
-			lineToAdd[1] = lines[i][0]
-		case lineToAdd[1].IsEqual(lines[i][1]):
-			lineToAdd[1] = lines[i][1]
-		case lineToAdd[1].IsEqual(lines[i][0]):
-		default:
-			sln = append(sln, lineToAdd)
-			lineToAdd = lines[i]
-
-		}
-
-	}
-	sln = append(sln, lineToAdd)
-
-	return sln
-
-}
-
-func (tg *TriangleGraph) Rings() (rings [][]Line) {
-
-	if tg == nil {
-		panic("TG nil!")
-		return rings
-	}
+func (tg *Graph) Rings() (rings [][]maths.Line) {
 
 	//log.Println("Starting TriangleGraph Rings")
 	//defer log.Println("Done with TriangleGraph Rings")
@@ -383,16 +130,15 @@ func (tg *TriangleGraph) Rings() (rings [][]Line) {
 	for _, i := range tg.inside {
 		//log.Printf("Looking at tg.triangle[%v].Key(%v)", i, tg.triangles[i].Key())
 		if _, ok := seen[tg.triangles[i].Key()]; ok {
-			//log.Println("Skipping ", i, tg.triangles[i].Key())
+			//log.Println("Skipping ", i)
 			continue
 		}
-		nodesToProcess := []*TriangleNode{tg.triangles[i]}
-		var linesToProcess []Line
+		nodesToProcess := []*Node{tg.triangles[i]}
+		var linesToProcess []maths.Line
 
 		for offset := 0; offset != len(nodesToProcess); offset++ {
 			node := nodesToProcess[offset]
 			if _, ok := seen[node.Key()]; ok {
-				//log.Println("Skipping Node ", offset, node.Key())
 				continue
 			}
 			seen[node.Key()] = struct{}{}
@@ -400,28 +146,25 @@ func (tg *TriangleGraph) Rings() (rings [][]Line) {
 				if node.Neighbors[j].Node != nil && node.Neighbors[j].Node.Label == node.Label {
 					nodesToProcess = append(nodesToProcess, node.Neighbors[j].Node)
 				} else {
-					//log.Println("Found edge to process: ", node.LREdge(j))
-					linesToProcess = append(linesToProcess, node.LREdge(j))
+					//log.Println("Found edge to process: ", node.Edge(j))
+					linesToProcess = append(linesToProcess, node.Edge(j))
 				}
 			}
 		}
 		// Now need to deal with Lines.
 		//log.Println("Added lines to ring.", linesToProcess)
-		if len(linesToProcess) > 0 {
-			rings = append(rings, linesToProcess)
-		}
-
+		rings = append(rings, linesToProcess)
 	}
 	return rings
 }
 
-func NewTriangleGraph(tri []*TriangleNode, bbox [4]Pt) (tg *TriangleGraph) {
-	tg = &TriangleGraph{triangles: tri}
+func NewGraph(tri []*Node, bbox [4]Pt) (tg *Graph) {
+	tg = &Graph{triangles: tri}
 	for i := range tg.triangles {
 		switch tg.triangles[i].Label {
-		case Inside:
+		case inside:
 			tg.inside = append(tg.inside, i)
-		case Outside:
+		case outside:
 			tg.outside = append(tg.outside, i)
 			if tg.triangles[i].EqualAnyPt(bbox[0], bbox[1], bbox[2], bbox[3]) {
 				tg.bounding = append(tg.bounding, i)
@@ -437,7 +180,7 @@ func (t ByXY) Len() int           { return len(t) }
 func (t ByXY) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
 func (t ByXY) Less(i, j int) bool { return XYOrder(t[i], t[j]) == -1 }
 
-type ByXYLine []Line
+type ByXYLine []maths.Line
 
 func (t ByXYLine) Len() int      { return len(t) }
 func (t ByXYLine) Swap(i, j int) { t[i], t[j] = t[j], t[i] }
@@ -492,8 +235,8 @@ func PointPairs(pts []Pt) ([][2]Pt, error) {
 }
 
 // insureConnected will add a connecting line as needed to the given polygons. If there is only one line in a polygon, it will be left alone.
-func insureConnected(polygons ...[]Line) (ret [][]Line) {
-	ret = make([][]Line, len(polygons))
+func insureConnected(polygons ...[]maths.Line) (ret [][]maths.Line) {
+	ret = make([][]maths.Line, len(polygons))
 	for i := range polygons {
 		ln := len(polygons[i])
 		if ln == 0 {
@@ -504,19 +247,19 @@ func insureConnected(polygons ...[]Line) (ret [][]Line) {
 			continue
 		}
 		if !polygons[i][ln-1][1].IsEqual(polygons[i][0][0]) {
-			ret[i] = append(ret[i], Line{polygons[i][ln-1][1], polygons[i][0][0]})
+			ret[i] = append(ret[i], maths.Line{polygons[i][ln-1][1], polygons[i][0][0]})
 		}
 	}
 	return ret
 }
 
 // desctucture will split the given polygons into their composit lines, breaking up lines at intersection points. It will remove lines that overlap as well. Polygons need to be fully connected before calling this function.
-func destructure(polygons [][]Line) (lines []Line) {
+func destructure(polygons [][]maths.Line) (lines []maths.Line) {
 
 	// First we need to combine all the segments.
-	var segments []Line
+	var segments []maths.Line
 	{
-		segs := make(map[Line]struct{})
+		segs := make(map[maths.Line]struct{})
 		for i := range polygons {
 			for _, ln := range polygons[i] {
 				segs[ln.LeftRightMostAsLine()] = struct{}{}
@@ -557,18 +300,18 @@ func destructure(polygons [][]Line) (lines []Line) {
 			continue
 		}
 		sort.Sort(ByXY(splitPts[i]))
-		lidx, ridx := Line(segments[i]).XYOrderedPtsIdx()
+		lidx, ridx := maths.Line(segments[i]).XYOrderedPtsIdx()
 		lpt, rpt := segments[i][lidx], segments[i][ridx]
 		for j := range splitPts[i] {
 			if lpt.IsEqual(splitPts[i][j]) {
 				// Skipp dups.
 				continue
 			}
-			lines = append(lines, Line{lpt, splitPts[i][j]}.LeftRightMostAsLine())
+			lines = append(lines, maths.Line{lpt, splitPts[i][j]}.LeftRightMostAsLine())
 			lpt = splitPts[i][j]
 		}
 		if !lpt.IsEqual(rpt) {
-			lines = append(lines, Line{lpt, rpt}.LeftRightMostAsLine())
+			lines = append(lines, maths.Line{lpt, rpt}.LeftRightMostAsLine())
 		}
 	}
 
@@ -577,10 +320,10 @@ func destructure(polygons [][]Line) (lines []Line) {
 }
 
 // We only care about the first triangle node, as an edge can only contain two triangles.
-type aNodeList map[[2]Pt]*TriangleNode
+type aNodeList map[[2]Pt]*Node
 
 // AddTrinagleForPts will order the points, create a new Triangle and add it to the Node List.
-func (nl aNodeList) AddTriangleForPts(pt1, pt2, pt3 Pt, fnIsConstrained func(pt1, pt2 Pt) bool) (tri *TriangleNode, err error) {
+func (nl aNodeList) AddTriangleForPts(pt1, pt2, pt3 Pt, fnIsConstrained func(pt1, pt2 Pt) bool) (tri *Node, err error) {
 
 	var fn = func(pt1, pt2 Pt) bool { return false }
 
@@ -588,7 +331,7 @@ func (nl aNodeList) AddTriangleForPts(pt1, pt2, pt3 Pt, fnIsConstrained func(pt1
 		fn = fnIsConstrained
 	}
 
-	tri = &TriangleNode{Triangle: NewTriangle(pt1, pt2, pt3)}
+	tri = &Node{Triangle: maths.NewTriangle(pt1, pt2, pt3)}
 
 	for i := range tri.Points() {
 		j := i + 1
@@ -626,9 +369,9 @@ func (nl aNodeList) AddTriangleForPts(pt1, pt2, pt3 Pt, fnIsConstrained func(pt1
 type EdgeMap struct {
 	Keys         []Pt
 	Map          map[Pt]map[Pt]bool
-	Segments     []Line
+	Segments     []maths.Line
 	BBox         [4]Pt
-	destructured []Line
+	destructured []maths.Line
 }
 
 func (em *EdgeMap) SubKeys(pt Pt) (skeys []Pt, ok bool) {
@@ -646,7 +389,7 @@ func (em *EdgeMap) SubKeys(pt Pt) (skeys []Pt, ok bool) {
 	return skeys, ok
 }
 
-func (em *EdgeMap) trianglesForEdge(pt1, pt2 Pt) (*Triangle, *Triangle, error) {
+func (em *EdgeMap) trianglesForEdge(pt1, pt2 Pt) (*maths.Triangle, *maths.Triangle, error) {
 
 	apts, ok := em.SubKeys(pt1)
 	if !ok {
@@ -667,13 +410,13 @@ func (em *EdgeMap) trianglesForEdge(pt1, pt2 Pt) (*Triangle, *Triangle, error) {
 
 	// Now we need to look at the both subpts and only keep the points that are common to both lists.
 	var larea, rarea float64
-	var triangles [2]*Triangle
+	var triangles [2]*maths.Triangle
 NextApts:
 	for i := range apts {
 	NextBpts:
 		for j := range bpts {
 			if apts[i].IsEqual(bpts[j]) {
-				tri := NewTriangle(pt1, pt2, apts[i])
+				tri := maths.NewTriangle(pt1, pt2, apts[i])
 				area := AreaOfTriangle(pt1, pt2, apts[i])
 				switch {
 				case area > 0 && (rarea == 0 || rarea > area):
@@ -693,10 +436,10 @@ NextApts:
 	return triangles[0], triangles[1], nil
 }
 
-func generateEdgeMap(destructuredLines []Line) (em EdgeMap) {
+func generateEdgeMap(destructuredLines []maths.Line) (em EdgeMap) {
 	em.destructured = destructuredLines
 	em.Map = make(map[Pt]map[Pt]bool)
-	em.Segments = make([]Line, 0, len(destructuredLines))
+	em.Segments = make([]maths.Line, 0, len(destructuredLines))
 
 	// First we need to combine all the segments.
 	var minPt, maxPt Pt
@@ -762,7 +505,7 @@ func generateEdgeMap(destructuredLines []Line) (em EdgeMap) {
 	bbv1, bbv2, bbv3, bbv4 := minPt, Pt{maxPt.X, minPt.Y}, maxPt, Pt{minPt.X, maxPt.Y}
 
 	// We want our bound box to be in a known position. so that we can able things correctly.
-	em.Segments = append([]Line{
+	em.Segments = append([]maths.Line{
 		{bbv1, bbv2}, // Top edge
 		{bbv2, bbv3}, // right edge
 		{bbv3, bbv4}, // bottom edge
@@ -785,7 +528,11 @@ func generateEdgeMap(destructuredLines []Line) (em EdgeMap) {
 	return em
 }
 
-func (em *EdgeMap) addLine(constrained bool, addSegments bool, addKeys bool, lines ...Line) {
+func (em *EdgeMap) AddLine(constrained bool, addSegments bool, addKeys bool, lines ...maths.Line) {
+	em.addLine(constrained, addSegments, addKeys, lines...)
+}
+
+func (em *EdgeMap) addLine(constrained bool, addSegments bool, addKeys bool, lines ...maths.Line) {
 	if em == nil {
 		return
 	}
@@ -849,7 +596,7 @@ func (em *EdgeMap) Triangulate1() {
 	//log.Println("Starting to Triangulate. Keys", len(keys))
 	// We want to run through all the keys generating possible edges, and then
 	// collecting the ones that don't intersect with the edges in the map already.
-	var lines = make([]Line, 0, 2*len(keys))
+	var lines = make([]maths.Line, 0, 2*len(keys))
 	stime := time.Now()
 	for i := 0; i < len(keys)-1; i++ {
 		lookup := em.Map[keys[i]]
@@ -859,7 +606,7 @@ func (em *EdgeMap) Triangulate1() {
 				// Already have an edge with this point
 				continue
 			}
-			l := Line{keys[i], keys[j]}
+			l := maths.Line{keys[i], keys[j]}
 			lines = append(lines, l)
 		}
 	}
@@ -917,6 +664,9 @@ func (em *EdgeMap) Triangulate1() {
 }
 
 func (em *EdgeMap) Triangulate() {
+	triangulate.Triangulate(em)
+}
+func (em *EdgeMap) Triangulate2() {
 	//defer log.Println("Done with Triangulate")
 	keys := em.Keys
 	lnkeys := len(keys) - 1
@@ -925,18 +675,18 @@ func (em *EdgeMap) Triangulate() {
 	// collecting the ones that don't intersect with the edges in the map already.
 	for i := 0; i < lnkeys; i++ {
 		lookup := em.Map[keys[i]]
-		var possibleEdges []Line
+		var possibleEdges []maths.Line
 		for j := i + 1; j < len(keys); j++ {
 			if _, ok := lookup[keys[j]]; ok {
 				// Already have an edge with this point
 				continue
 			}
-			l := Line{keys[i], keys[j]}
+			l := maths.Line{keys[i], keys[j]}
 			possibleEdges = append(possibleEdges, l)
 		}
 
 		// Now we need to do a line sweep to see which of the possible edges we want to keep.
-		lines := append([]Line{}, possibleEdges...)
+		lines := append([]maths.Line{}, possibleEdges...)
 		offset := len(lines)
 		lines = append(lines, em.Segments...)
 		skiplines := make([]bool, offset)
@@ -1075,7 +825,7 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 			}
 		}
 	}
-	currentLabel := Outside
+	currentLabel := outside
 	var nextSetOfNodes []*TriangleNode
 
 	//log.Printf("Number of triangles found: %v", len(nodes))
@@ -1086,10 +836,10 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 		}
 		//log.Println("Next set of nodes:", nextSetOfNodes)
 		nodesToLabel, nextSetOfNodes = nextSetOfNodes, nodesToLabel[:0]
-		if currentLabel == Outside {
-			currentLabel = Inside
+		if currentLabel == outside {
+			currentLabel = inside
 		} else {
-			currentLabel = Outside
+			currentLabel = outside
 		}
 	}
 	var nodeSlice []*TriangleNode
@@ -1101,7 +851,7 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 
 // makeValid takes a set of polygons that is invalid,
 // will include triangles outside of the polygons provided, creating a convex hull.
-func makeValid(plygs ...[]Line) (polygons [][][]Pt, err error) {
+func makeValid(plygs ...[]maths.Line) (polygons [][][]Pt, err error) {
 	//defer trace(fmt.Sprintf("makeValid(%v --\n%#v\n): ", len(plygs), plygs))()
 
 	//stime := time.Now()
@@ -1143,7 +893,7 @@ func makeValid(plygs ...[]Line) (polygons [][][]Pt, err error) {
 	return polygons, nil
 }
 
-func MakeValid(plygs ...[]Line) (polygons [][][]Pt, err error) {
+func MakeValid(plygs ...[]maths.Line) (polygons [][][]Pt, err error) {
 	return makeValid(plygs...)
 }
 
@@ -1189,7 +939,7 @@ func (p plygByFirstPt) Swap(i, j int) {
 	p[i], p[j] = p[j], p[i]
 }
 
-func constructPolygon(lines []Line) [][]Pt {
+func constructPolygon(lines []maths.Line) [][]Pt {
 	// We sort the lines, for a couple of reasons.
 	// The first is because the smallest and largest lines are going to be part of the external ring.
 	// The second by sorting it moves lines that are connected closer together.
@@ -1282,7 +1032,7 @@ func (pl *PointList) IsComplete() bool {
 	return pl.isComplete
 }
 
-func (pl *PointList) TryAddLine(l Line) (ok bool) {
+func (pl *PointList) TryAddLine(l maths.Line) (ok bool) {
 	// If a PointList is complete we do not add more lines.
 	if pl.isComplete {
 		return false
@@ -1321,7 +1071,7 @@ func (pl *PointList) TryAddLine(l Line) (ok bool) {
 		return false
 	}
 }
-func NewPointList(line Line) PointList {
+func NewPointList(line maths.Line) PointList {
 
 	tail := &PointNode{Pt: line[1]}
 	head := &PointNode{

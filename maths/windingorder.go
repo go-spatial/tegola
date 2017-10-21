@@ -29,6 +29,20 @@ func (w WindingOrder) Not() WindingOrder {
 	return Clockwise
 }
 
+func WindingOrderOfPts(pts []Pt) WindingOrder {
+	sum := 0
+	li := len(pts) - 1
+
+	for i := range pts {
+		sum += int((pts[i].X - pts[li].X) * (pts[i].Y - pts[li].Y))
+		li = i
+	}
+	if sum < 0 {
+		return CounterClockwise
+	}
+	return Clockwise
+}
+
 func WindingOrderOf(sub []float64) WindingOrder {
 	sum := 0
 	for x, y := 0, 1; y < len(sub); x, y = x+2, y+2 {
@@ -39,9 +53,9 @@ func WindingOrderOf(sub []float64) WindingOrder {
 		sum += int((sub[nx] - sub[x]) * (sub[ny] + sub[y]))
 	}
 	if sum < 0 {
-		return Clockwise
+		return CounterClockwise
 	}
-	return CounterClockwise
+	return Clockwise
 }
 
 func WindingOrderOfLine(l tegola.LineString) WindingOrder {
@@ -56,7 +70,7 @@ func WindingOrderOfLine(l tegola.LineString) WindingOrder {
 		sum += int((npt.X() - pt.X()) * (npt.Y() + pt.Y()))
 	}
 	if sum < 0 {
-		return Clockwise
+		return CounterClockwise
 	}
-	return CounterClockwise
+	return Clockwise
 }

@@ -11,7 +11,7 @@ func NewLine(x1, y1, x2, y2 float64) Line {
 	}
 }
 
-// InBetween will check to see if the given point lies the line provided inbetween the endpoints.
+// InBetween will check to see if the given point lies on the line provided inbetween the endpoints.
 func (l Line) InBetween(pt Pt) bool {
 	lx, gx := l[0].X, l[1].X
 	if l[0].X > l[1].X {
@@ -126,7 +126,7 @@ func (l Line) DistanceFromPoint(pt Pt) float64 {
 	return denom / num
 }
 
-// SlopeIntercept will find the slop (if there is one) and the intercept of the two provided lines. If there isn't a slope because the lines are verticle, the slopeDefined will be false.
+// SlopeIntercept will find the slop (if there is one) and the intercept of the line. If there isn't a slope because the line is verticle, the defined will be false.
 func (l Line) SlopeIntercept() (m, b float64, defined bool) {
 	dx := l[1].X - l[0].X
 	dy := l[1].Y - l[0].Y

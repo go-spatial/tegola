@@ -11,6 +11,7 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/hitmap"
 	"github.com/terranodo/tegola/maths/makevalid"
 )
 
@@ -288,7 +289,7 @@ func FlipWindingOrderOfLine(l tegola.LineString) basic.Line {
 	}
 	return bl
 }
-func makePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
+func makePolygonValid(hm hitmap.M, g tegola.Polygon, extent float64) (mp basic.MultiPolygon, err error) {
 	//log.Printf("Making Polygon valid\n%#v\n", g)
 	var plygLines [][]maths.Line
 	for _, l := range g.Sublines() {
@@ -298,7 +299,7 @@ func makePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
 		}
 		plygLines = append(plygLines, segs)
 	}
-	plyPoints, err := makevalid.MakeValid(plygLines...)
+	plyPoints, err := makevalid.MakeValid(&hm, extent, plygLines...)
 	if err != nil {
 		return mp, err
 	}
@@ -342,7 +343,32 @@ func flipWindingOrderForPolygonLines(reason SimplicityReason, lines []tegola.Lin
 	}
 	return lns
 }
-func MakePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
+
+func insureCorrectWindingOrder(p tegola.Polygon) (np basic.Polygon) {
+	lines := p.Sublines()
+	if len(lines) == 0 {
+		return np
+	}
+	if maths.WindingOrderOfLine(lines[0]) == maths.CounterClockwise {
+		np = append(np, FlipWindingOrderOfLine(lines[0]))
+	} else {
+		np = append(np, basic.NewLineFromSubPoints(lines[0].Subpoints()...))
+	}
+	if len(lines) == 1 {
+		return np
+	}
+
+	for i := range lines[1:] {
+		if maths.WindingOrderOfLine(lines[i+1]) == maths.Clockwise {
+			np = append(np, FlipWindingOrderOfLine(lines[i+1]))
+		} else {
+			np = append(np, basic.NewLineFromSubPoints(lines[i+1].Subpoints()...))
+		}
+	}
+	return np
+}
+func MakePolygonValid(hm hitmap.M, g tegola.Polygon, extent float64) (mp basic.MultiPolygon, err error) {
+	return makePolygonValid(hm, insureCorrectWindingOrder(g), extent)
 
 	var reason SimplicityReason
 	var ok bool
@@ -352,18 +378,19 @@ func MakePolygonValid(g tegola.Polygon) (mp basic.MultiPolygon, err error) {
 
 	if (reason&DuplicatePoints == DuplicatePoints) || (reason&SelfIntersecting == SelfIntersecting) || (reason&OtherError == OtherError) {
 		// Need to do the fix.
-		return makePolygonValid(g)
+		return makePolygonValid(hm, insureCorrectWindingOrder(g), extent)
 	}
 	mp = append(mp, flipWindingOrderForPolygonLines(reason, g.Sublines()))
 	return mp, nil
 }
 
-func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err error) {
+func MakeMultiPolygonValid(hm hitmap.M, g tegola.MultiPolygon, extent float64) (mp basic.MultiPolygon, err error) {
 	var reason SimplicityReason
 	var ok bool
 	var needToFix bool
 	polygons := g.Polygons()
 	appendedCount := 0
+	goto JustFix
 	for i := range polygons {
 		if ok, reason = PolygonIsSimple(polygons[i]); ok {
 			appendedCount++
@@ -387,11 +414,12 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 	}
 	// Repair will provide a new multipolygon.
 	mp = mp[0:0]
-
+JustFix:
 	//log.Printf("[%v,%v,%v] Making MultiPolygon valid\n%#v\n", reason&SelfIntersecting, reason&OtherError, reason&OtherError, g)
 	var plygLines [][]maths.Line
 	for _, p := range g.Polygons() {
-		for _, l := range p.Sublines() {
+		np := insureCorrectWindingOrder(p)
+		for _, l := range np.Sublines() {
 			segs, err := LineStringToSegments(l)
 			if err != nil {
 				return mp, err
@@ -399,7 +427,7 @@ func MakeMultiPolygonValid(g tegola.MultiPolygon) (mp basic.MultiPolygon, err er
 			plygLines = append(plygLines, segs)
 		}
 	}
-	plyPoints, err := makevalid.MakeValid(plygLines...)
+	plyPoints, err := makevalid.MakeValid(&hm, extent, plygLines...)
 	//log.Printf("Got the following for MakeValid(\n%#v\n):\n%#v\n", plygLines, plyPoints)
 	if err != nil {
 		//log.Printf("MPolygon %#v", g)
@@ -468,19 +496,22 @@ func CleanPolygon(g tegola.Polygon) (p basic.Polygon, err error) {
 	return p, nil
 }
 
-func CleanGeometry(g tegola.Geometry) (geo tegola.Geometry, err error) {
+func CleanGeometry(ogeo, g tegola.Geometry, extent float64) (geo tegola.Geometry, err error) {
 	//return g, nil
 	if g == nil {
 		return nil, nil
 	}
+	hm := hitmap.NewFromGeometry(ogeo)
+	hm.DoClip = true
+	hm.Clip = maths.Rectangle{{-10, -10}, {extent + 10, extent + 10}}
 	switch gg := g.(type) {
 
 	case tegola.Polygon:
-		geo, err = MakePolygonValid(gg)
+		geo, err = MakePolygonValid(hm, gg, extent)
 		return geo, err
 
 	case tegola.MultiPolygon:
-		geo, err = MakeMultiPolygonValid(gg)
+		geo, err = MakeMultiPolygonValid(hm, gg, extent)
 		return geo, err
 	}
 	return g, nil

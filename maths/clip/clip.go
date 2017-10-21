@@ -670,7 +670,7 @@ func LineString(line tegola.LineString, min, max maths.Pt, extant int) (ls []bas
 func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.Polygon, err error) {
 	// Each polygon is made up of a main linestring describing the outer ring,
 	// and set of outer rings. The outer ring is clockwise while the inner ring is
-	// usually counter-clockwise.
+	// counter-clockwise.
 
 	// log.Println("Starting Polygon clipping.")
 	sls := polygon.Sublines()

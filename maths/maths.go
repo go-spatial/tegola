@@ -38,8 +38,22 @@ func (pt Pt) IsEqual(pt2 Pt) bool {
 
 func (pt Pt) Truncate() Pt {
 	return Pt{
-		X: float64(int64(pt.X)),
-		Y: float64(int64(pt.Y)),
+		X: math.Trunc(pt.X),
+		Y: math.Trunc(pt.Y),
+	}
+}
+
+func round(f float64) float64 {
+	i, r := math.Modf(f)
+	if r > 0.5 {
+		return i + 1
+	}
+	return i
+}
+func (pt Pt) Round() Pt {
+	return Pt{
+		round(pt.X),
+		round(pt.Y),
 	}
 }
 

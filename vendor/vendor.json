@@ -39,10 +39,22 @@
 			"revisionTime": "2017-02-27T21:27:28Z"
 		},
 		{
+			"checksumSHA1": "IJdG3ioWEw8viliJgFJJTBcGUfM=",
+			"path": "github.com/gdey/gotrace",
+			"revision": "c2ec44e09a7c617dca103f481cae093ca338730f",
+			"revisionTime": "2017-10-05T20:20:57Z"
+		},
+		{
 			"checksumSHA1": "/TU0r8yAEpNvUWbxosqlXi416Os=",
 			"path": "github.com/gdey/tbltest",
 			"revision": "af8abc47b052b70d6527a2113c2cc417849889f2",
 			"revisionTime": "2017-03-31T19:16:46Z"
+		},
+		{
+			"checksumSHA1": "NFd/7OSLQKBzvwufplt4kbokfbA=",
+			"path": "github.com/go-test/deep",
+			"revision": "f49763a6ea0a91026be26f8213bebee726b4185f",
+			"revisionTime": "2017-04-29T20:15:29Z"
 		},
 		{
 			"checksumSHA1": "kVJ5YScYaDWw6iotbpZwQJ6xCGM=",
