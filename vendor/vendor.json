@@ -75,6 +75,12 @@
 			"revisionTime": "2016-12-16T17:00:44Z"
 		},
 		{
+			"checksumSHA1": "Se195FlZ160eaEk/uVx4KdTPSxU=",
+			"path": "github.com/pborman/uuid",
+			"revision": "e790cca94e6cc75c7064b1332e63811d4aae1a53",
+			"revisionTime": "2017-06-12T15:36:48Z"
+		},
+		{
 			"checksumSHA1": "C3yiSMdTQxSY3xqKJzMV9T+KnIc=",
 			"path": "github.com/pkg/profile",
 			"revision": "5b67d428864e92711fcbd2f8629456121a56d91f",
