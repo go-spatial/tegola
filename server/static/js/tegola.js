@@ -117,6 +117,7 @@ var app = new Vue({
 
 			me.map.on('load', me.setData);
 			me.map.on('zoomend', me.setData);
+			me.map.on('click', me.showFeatureData);
 
 			me.inspector = new mapboxgl.Popup();
 		},
@@ -163,7 +164,7 @@ var app = new Vue({
 			var bbox = {
 				width: 10,
 				height: 10
-			}
+			};
 
 			//	query within a few pixels of the mouse to give us some tolerance to work with
 			var features = me.map.queryRenderedFeatures([
@@ -200,6 +201,21 @@ var app = new Vue({
 			if (!results) return null;
 			if (!results[2]) return '';
 			return decodeURIComponent(results[2].replace(/\+/g, " "));
+		},
+		showFeatureData: function(e){
+			var me = this;
+			var bbox = {
+				width: 10,
+				height: 10
+			};
+
+			//	query within a few pixels of the mouse to give us some tolerance to work with
+			var features = me.map.queryRenderedFeatures([
+				[e.point.x - bbox.width / 2, e.point.y - bbox.height / 2],
+				[e.point.x + bbox.width / 2, e.point.y + bbox.height / 2]
+			]);
+
+			console.log(features);
 		}
 	}
 });
