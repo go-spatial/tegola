@@ -21,6 +21,7 @@ const CacheType = "file"
 
 const (
 	ConfigKeyBasepath = "basepath"
+	ConfigKeyMaxZoom  = "max_zoom"
 )
 
 func init() {
@@ -36,6 +37,13 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 
 	c := dict.M(config)
 
+	/*
+		maxZoom, err := c.Uint(ConfigKeyMaxZoom, nil)
+		if err != nil {
+
+			return nil, ErrMissingBasepath
+		}
+	*/
 	basepath, err := c.String(ConfigKeyBasepath, nil)
 	if err != nil {
 		return nil, ErrMissingBasepath
@@ -102,6 +110,13 @@ type Filecache struct {
 	//
 	//	TODO: store a hash of the cache blob along with the Locker mutex
 	Locker map[string]sync.RWMutex
+
+	//	MaxZoom determins which zoom max should leverage the cache.
+	//	This is useful if the cache should not be leveraged for higher
+	//	zooms (i.e. 10+).
+	//
+	//	TODO: implement
+	MaxZoom uint
 }
 
 // 	Get reads a z,x,y entry from the cache and returns the contents

@@ -26,6 +26,21 @@ func TestNew(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			config: map[string]interface{}{
+				"basepath": "testfiles/tegola-cache",
+				"max_zoom": 9,
+			},
+			expected: &filecache.Filecache{
+				Basepath: "testfiles/tegola-cache",
+				Locker: map[string]sync.RWMutex{
+					//	our testfiles directory has a file that will be read in when calling New
+					"0/1/12": sync.RWMutex{},
+				},
+				MaxZoom: 9,
+			},
+		},
 	}
 
 	for i, tc := range testcases {
