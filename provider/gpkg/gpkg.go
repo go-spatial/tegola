@@ -4,10 +4,13 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/util/dict"
+
+	log "github.com/sirupsen/logrus"
+
 	"context"
-	"errors"
-//	"reflect"
+//	"errors"
 
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
@@ -38,6 +41,7 @@ type layer struct {
 }
 
 type GPKGProvider struct {
+	// Currently just the path to the gpkg file.
 	config string
 	// map of layer name and corrosponding sql
 	layers map[string]layer
@@ -62,7 +66,7 @@ func(l GPKGLayer) GeomType() (tegola.Geometry) {return l.geomtype}
 func(l GPKGLayer) SRID() (int) {return l.srid}
 
 func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
-	fmt.Println("Attempting gpkg.Layers()")
+	log.Debug("Attempting gpkg.Layers()")
 	layerCount := len(p.layers)
 	ls := make([]mvt.LayerInfo, layerCount)
 	
@@ -73,7 +77,7 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 		i++
 	}
 
-	fmt.Println("Ok, returning mvt.LayerInfo array: ", ls)
+	log.Debugf("Ok, returning mvt.LayerInfo array: %v", ls)
 	return ls, nil
 }
 
@@ -140,42 +144,97 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	}
 	defer rows.Close()
 
-	// Pick out column names & types
-	var colnames []string
-	colnames, _ = rows.Columns()
-	fmt.Printf("Columns for %v: %v\n", layerName, colnames)
-	ncol := len(colnames)
-	fmt.Println("Column Count: ", ncol)
-	var sqlColNames []string
-	sqlColNames = make([]string, ncol)
-	// Put the expected non-text columns at the beginning of the query in expected order
-	sqlColNames[0] = "fid"
-	sqlColNames[1] = "geom"
-	sqlColNames[2] = "osm_id"
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	vals := make([]interface{}, len(cols))
+	valPtrs := make([]interface{}, len(cols))
+	for i := 0; i < len(cols); i++ {
+        valPtrs[i] = &vals[i]
+    }
+
+	pLayer := p.layers[layerName]
+	newLayer := new(mvt.Layer)
+	newLayer.Name = layerName
 	
-	nextFreeNameIdx := 3
-	for _, colname := range colnames {
-		if colname == "fid" {continue}
-		if colname == "geom" {continue}
-		if colname == "osm_id" {continue}
-		sqlColNames[nextFreeNameIdx] = colname
-		nextFreeNameIdx++
-	}
+	fmt.Println("Columns: ", cols)
+	for rows.Next() {
+        err = rows.Scan(valPtrs...)
+        if err != nil {
+            fmt.Println(err)
+            continue
+        }
+        var gid uint64
+        var geom tegola.Geometry
 
-	qtext_columns_ordered := "SELECT "
-	for i, colname := range sqlColNames {
-		qtext_columns_ordered += colname
-		if i < ncol - 1 {
-			qtext_columns_ordered += ","
+		for i := 0; i < len(vals); i++ {
+			if vals[i] == nil {
+				fmt.Printf("%v is <nil>\n", cols[i])
+			} else if o, ok := vals[i].(int); ok {
+				fmt.Println("value is an int")
+				fmt.Println(int(o))
+			} else if o, ok := vals[i].(int64); ok {
+				fmt.Printf("%v: (%v) is an int64\n", cols[i], o)
+			} else if o, ok := vals[i].(string); ok {
+				fmt.Println("value is a string")
+				fmt.Println(string(o))
+			} else if o, ok := vals[i].([]uint8); ok {
+				fmt.Printf("%v: (%v) is a []uint8\n", cols[i], o)
+				if cols[i] != "geom" {
+					fmt.Println("As string: ", string(o))
+				}
+			} else {
+				fmt.Printf("%v: (%v) - (%T)\n", cols[i], vals[i], vals[i])
+//				fmt.Println("reflect.ValueOf: ", reflect.ValueOf(&vals[i]))
+				
+			}
+			
+			if cols[i] == "geom" {
+				fmt.Println("Doing geom extraction...", vals[i])
+				var h GeoPackageBinaryHeader
+				h.Init(vals[i].([]byte))
+				
+				if h.SRSId() != 4326 {
+					fmt.Println("SRID ", pLayer.srid, " != 4326, trying to convert...")			
+					// We need to convert our points to Webmercator.
+					g, err := basic.ToWebMercator(pLayer.srid, geom)
+					if err != nil {
+						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", pLayer.srid, layerName)
+					} else {
+						fmt.Println("ok")
+					}
+					geom = g.Geometry
+				} else {
+					geom = vals[i].([]byte)[h.Size():]
+				}
+			}
 		}
-	}
-	qtext_columns_ordered += " FROM " + layerName + ";"
-	rows_columns_ordered, err := db.Query(qtext_columns_ordered)
 
-	//	new mvt.Layer
-	layer := new(mvt.Layer)
-	layer.Name = layerName
-	getFeatures(layer, rows_columns_ordered, sqlColNames)
+		if geom == nil {
+			fmt.Println("No geometry, skipping feature")
+			fmt.Println("---")
+			continue
+		}
+		fmt.Println("---")
+
+
+		newLayer.AddFeatures(mvt.Feature{
+			ID: &gid,
+			Tags: make(map[string]interface{}),
+			Geometry: geom,
+		})
+		
+	}
+
+//			fmt.Println(vals[i])
+//		}
+	fmt.Println()
+
+	// "fid", "geom", "osm_id"
+
+//	getFeatures(layer, rows_columns_ordered, sqlColNames)
 	
 //	var coltypes []reflect.Type
 //	coltypes = make([]reflect.Type, ncol)
@@ -183,21 +242,18 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 //	fmt.Printf("Column types for %v: %v\n", layerName, coltypes)
 
 
-	msg := "MVTLayer() implementation in progress"
-	e := errors.New(msg)
-	fmt.Println(msg)
-	return nil, e
+	return newLayer, nil
 }
 
 
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	m := dict.M(config)
-	filepath, err := m.String(FilePath, nil)
+	filepath, err := m.String("config", nil)
 	if err != nil {
 		return nil, err
 	}
 	
-	fmt.Println("Attempting sql.Open() w/ filepath: ", filepath)
+	log.Debug("Attempting sql.Open() w/ filepath: ", filepath)
 	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
 		return nil, err
@@ -216,17 +272,22 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	var tablename string
 	var srid int
 	var ignore string
+	
+	logMsg := "gpkg_contents: "
 	for rows.Next() {
 		rows.Scan(&tablename, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &srid)
 		layerQuery := "SELECT * FROM " + tablename + ";"
 		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: "", srid: srid}
-		fmt.Println("gpkg_contents row: ", tablename, srid)
+		logMsgPart := "(" + tablename + "," + string(srid) + ")"
+		logMsg += logMsgPart
 	}
-	
+	log.Debug(logMsg)
+
 	return &p, err
 }
 
+
 func init() {
-	fmt.Println("Entering gpkg.go init()")
+	log.Debug("Entering gpkg.go init()")
 	provider.Register(Name, NewProvider)
 }

@@ -1,22 +1,31 @@
-package gpkg_test
+package gpkg
 
 import (
 	"testing"
-	"github.com/terranodo/tegola/provider/gpkg"
+	"github.com/stretchr/testify/assert"
+	"fmt"
+	"runtime"
+	"path/filepath"
 )
 
 func TestNewGPKGProvider(t *testing.T) {
-	if os.Getenv("RUN_GPKG_TEST") != "yes" {
-		return
-	}
+	_, filePath, _, _ := runtime.Caller(0)
+	dir, _ := filepath.Split(filePath)
+	var GPKGFilePath string = dir + "test_data/athens-osm-20170921.gpkg"
 
-	filepath := gpkg.Name
+	fmt.Println("Using path to gpkg: ", GPKGFilePath)
 	layers := map[string]layer{}
 	
-	config := gpkg.GPKGProvider{
-		c: gpkg.Name,
-		layers: layers,
-		srid: 0,
+	config := map[string]interface{} {
+		"config": GPKGFilePath,
+		"layers": layers,
+		"srid": 0,
 	}
-	p, err = gpkg.NewProvider(config)
+	p, _ := NewProvider(config)
+
+	lys, _ := p.Layers()
+	fmt.Println("p.Layers(): ", lys)
+	// MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{})
+	//	(*Layer, error)
+	assert.Equal(t, 19, len(lys), "")
 }

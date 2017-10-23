@@ -15,8 +15,8 @@ import (
 	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
+	"github.com/terranodo/tegola/provider/gpkg"
 	_ "github.com/terranodo/tegola/provider/postgis"
-	_ "github.com/terranodo/tegola/provider/gpkg"
 	"github.com/terranodo/tegola/server"
 )
 
@@ -24,6 +24,8 @@ var (
 	//	set at buildtime via the CI
 	Version = "version not set"
 )
+
+var codeLogFile *os.File
 
 func main() {
 	var err error
@@ -55,8 +57,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("Initializing logFile: ", *logFile)
+	initLogger(*logFile, *logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
+
 	//	init our maps
-	fmt.Println("conf.Maps before initMaps(): ", conf.Maps)
 	if err = initMaps(conf.Maps, providers); err != nil {
 		log.Fatal(err)
 	}
@@ -254,6 +258,7 @@ func initLogger(cmdFile, cmdFormat, confFile, confFormat string) {
 		format = confFormat
 	}
 
+	fmt.Println("Opening log file at: ", filename)
 	if file, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
 		log.Printf("Unable to open logfile (%v) for writing: %v", filename, err)
 		os.Exit(3)
