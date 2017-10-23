@@ -67,10 +67,16 @@ func destructure2(polygons [][]maths.Line, extent float64) []maths.Line {
 	var segments []maths.Line
 	if extent > 0 {
 		segments = []maths.Line{
-			{maths.Pt{-10, -10}, maths.Pt{-10, extent + 10}},
-			{maths.Pt{-10, -10}, maths.Pt{extent + 10, -10}},
-			{maths.Pt{extent + 10, -10}, maths.Pt{extent + 10, extent + 10}},
-			{maths.Pt{-10, extent + 10}, maths.Pt{extent + 10, extent + 10}},
+			/*
+				{maths.Pt{-10, -10}, maths.Pt{-10, extent + 10}},
+				{maths.Pt{-10, -10}, maths.Pt{extent + 10, -10}},
+				{maths.Pt{extent + 10, -10}, maths.Pt{extent + 10, extent + 10}},
+				{maths.Pt{-10, extent + 10}, maths.Pt{extent + 10, extent + 10}},
+			*/
+			{maths.Pt{0, 0}, maths.Pt{0, extent}},
+			{maths.Pt{0, 0}, maths.Pt{extent, 0}},
+			{maths.Pt{extent, 0}, maths.Pt{extent, extent}},
+			{maths.Pt{0, extent}, maths.Pt{extent, extent}},
 		}
 	}
 	for ln := range segs {
@@ -192,10 +198,6 @@ func destructure3(hm hitmap.Interface, adjustbb float64, segments []maths.Line, 
 
 		sline, dline := segments[src], segments[dest]
 
-		/*
-			pt.X = float64(int64(pt.X))
-			pt.Y = float64(int64(pt.Y))
-		*/
 		// Check to see if the end points of sline and dline intersect?
 		if (sline[0].IsEqual(dline[0])) ||
 			(sline[0].IsEqual(dline[1])) ||
@@ -288,13 +290,7 @@ func destructure3(hm hitmap.Interface, adjustbb float64, segments []maths.Line, 
 		if x == lx {
 			continue
 		}
-		lines = append(lines,
-			/*
-				maths.Line{maths.Pt{lx, miny}, maths.Pt{x, miny}},
-				maths.Line{maths.Pt{lx, maxy}, maths.Pt{x, maxy}},
-			*/
-			maths.Line{maths.Pt{x, miny}, maths.Pt{x, maxy}},
-		)
+		lines = append(lines, maths.Line{maths.Pt{x, miny}, maths.Pt{x, maxy}})
 		lx = x
 		uxs = append(uxs, x)
 	}
@@ -426,7 +422,7 @@ func destructure3(hm hitmap.Interface, adjustbb float64, segments []maths.Line, 
 	*/
 	close(idChan)
 	wg.Wait()
-	log.Println("Returning the following triangles:", len(triangles), "of", totalTri)
+	//log.Println("Returning the following triangles:", len(triangles), "of", totalTri)
 	/*
 		for i := range triangles {
 			log.Printf("\t%v:\t%v", i, triangles[i].Triangle)
@@ -614,9 +610,7 @@ func GenerateTriangleGraph(hm hitmap.Interface, adjustbb float64, polygons [][]m
 	if segments == nil {
 		return nil, 0
 	}
-	//hitmap := NewHitMap(polygons)
 	triangles, bbox, totalTri := destructure3(hm, adjustbb, segments, extent)
-	//return generateTriangleGraph(triangles, bbox), totalTri
 	return generateTriangleGraph(triangles, bbox), totalTri
 }
 func GenerateTriangleGraph1(hm hitmap.Interface, adjustbb float64, polygons [][]maths.Line, extent float64) (TriMP, int) {

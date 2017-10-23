@@ -588,10 +588,6 @@ func destructure5(hm hitmap.Interface, adjustbb float64, segments []maths.Line, 
 
 		sline, dline := segments[src], segments[dest]
 
-		/*
-			pt.X = float64(int64(pt.X))
-			pt.Y = float64(int64(pt.Y))
-		*/
 		// Check to see if the end points of sline and dline intersect?
 		if (sline[0].IsEqual(dline[0])) ||
 			(sline[0].IsEqual(dline[1])) ||
@@ -615,7 +611,7 @@ func destructure5(hm hitmap.Interface, adjustbb float64, segments []maths.Line, 
 		}
 		return true
 	})
-	clipBox := points.BoundingBox{-10, -10, extent + 10, extent + 10}
+	clipBox := points.BoundingBox{0, 0, extent, extent}
 
 	var xs []float64
 	var uxs []float64
