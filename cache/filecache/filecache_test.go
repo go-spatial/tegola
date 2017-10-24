@@ -1,6 +1,7 @@
 package filecache_test
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -13,6 +14,7 @@ func TestNew(t *testing.T) {
 	testcases := []struct {
 		config   map[string]interface{}
 		expected *filecache.Filecache
+		err      error
 	}{
 		{
 			config: map[string]interface{}{
@@ -25,8 +27,8 @@ func TestNew(t *testing.T) {
 					"0/1/12": sync.RWMutex{},
 				},
 			},
+			err: nil,
 		},
-
 		{
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
@@ -40,12 +42,30 @@ func TestNew(t *testing.T) {
 				},
 				MaxZoom: 9,
 			},
+			err: nil,
+		},
+		{
+			config:   map[string]interface{}{},
+			expected: nil,
+			err:      filecache.ErrMissingBasepath,
+		},
+		{
+			config: map[string]interface{}{
+				"basepath": "testfiles/tegola-cache",
+				"max_zoom": "foo",
+			},
+			expected: nil,
+			err:      fmt.Errorf("max_zoom value needs to be of type int. Value is of type string"),
 		},
 	}
 
 	for i, tc := range testcases {
 		output, err := filecache.New(tc.config)
 		if err != nil {
+			if err.Error() == tc.err.Error() {
+				//	correct error returned
+				continue
+			}
 			t.Errorf("testcase (%v) failed. err: %v", i, err)
 			continue
 		}
