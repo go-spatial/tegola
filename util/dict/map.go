@@ -32,6 +32,9 @@ func (m M) String(key string, def *string) (v string, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(string); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type string. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -73,6 +76,9 @@ func (m M) Int(key string, def *int) (v int, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type int. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -114,6 +120,9 @@ func (m M) Uint(key string, def *uint) (v uint, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type uint. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -155,6 +164,9 @@ func (m M) Int8(key string, def *int8) (v int8, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int8); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type int8. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -196,6 +208,9 @@ func (m M) Uint8(key string, def *uint8) (v uint8, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint8); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type uint8. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -237,6 +252,9 @@ func (m M) Int16(key string, def *int16) (v int16, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int16); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type int16. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -278,6 +296,9 @@ func (m M) Uint16(key string, def *uint16) (v uint16, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint16); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type uint16. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -319,6 +340,9 @@ func (m M) Int32(key string, def *int32) (v int32, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int32); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type int32. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -360,6 +384,9 @@ func (m M) Uint32(key string, def *uint32) (v uint32, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint32); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type uint32. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -401,6 +428,9 @@ func (m M) Int64(key string, def *int64) (v int64, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(int64); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type int64. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -442,6 +472,9 @@ func (m M) Uint64(key string, def *uint64) (v uint64, err error) {
 		return v, fmt.Errorf("%v value is required.", key)
 	}
 	if v, ok = val.(uint64); !ok {
+		if def == nil {
+			return v, nil
+		}
 		return *def, fmt.Errorf("%v value needs to be of type uint64. Value is of type %T", key, val)
 	}
 	return v, nil

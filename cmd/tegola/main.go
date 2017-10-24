@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
@@ -58,6 +59,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if len(conf.Cache) != 0 {
+		//	init cache backends
+		cache, err := initCache(conf.Cache)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if cache != nil {
+			server.Cache = cache
+		}
+	}
+
 	initLogger(*logFile, *logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
 
 	//	check config for port setting
@@ -72,6 +84,22 @@ func main() {
 
 	//	start our webserver
 	server.Start(*port)
+}
+
+func initCache(config map[string]interface{}) (cache.Interface, error) {
+	//	lookup our cache type
+	t, ok := config["type"]
+	if !ok {
+		return nil, fmt.Errorf("missing 'type' parameter for cache")
+	}
+
+	cType, ok := t.(string)
+	if !ok {
+		return nil, fmt.Errorf("'type' parameter for cache must be of type string")
+	}
+
+	//	register the provider
+	return cache.For(cType, config)
 }
 
 //	initMaps registers maps with our server

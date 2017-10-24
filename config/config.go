@@ -42,10 +42,12 @@ func (e ErrOverlappingLayerZooms) Error() string {
 
 // A Config represents the a Tegola Config file.
 type Config struct {
-	// LocationName is the file name or http server that the config was read from. If this is "", it means that the location was unknown. This is the case if the Prase() function is used
-	// directly.
+	// LocationName is the file name or http server that the config was read from.
+	// If this is "", it means that the location was unknown. This is the case if
+	// the Prase() function is used directly.
 	LocationName string
-	Webserver    Webserver `toml:"webserver"`
+	Webserver    Webserver              `toml:"webserver"`
+	Cache        map[string]interface{} `toml:"cache"`
 	// Map of providers.
 	Providers []map[string]interface{}
 	Maps      []Map
