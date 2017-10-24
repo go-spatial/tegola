@@ -31,40 +31,44 @@ func init() {
 //	New instantiates a Filecache. The config expects the following params:
 //
 //		basepath (string): a path to where the cache will be written
+//		max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
 //
 func New(config map[string]interface{}) (cache.Interface, error) {
 	var err error
 
+	//	new filecache
+	fc := Filecache{
+		Locker: map[string]sync.RWMutex{},
+	}
+
+	//	parse the config
 	c := dict.M(config)
 
-	/*
-		maxZoom, err := c.Uint(ConfigKeyMaxZoom, nil)
-		if err != nil {
+	defaultMaxZoom := 0
+	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
+	if err != nil {
+		return nil, err
+	}
+	if maxZoom != 0 {
+		fc.MaxZoom = uint(maxZoom)
+	}
 
-			return nil, ErrMissingBasepath
-		}
-	*/
-	basepath, err := c.String(ConfigKeyBasepath, nil)
+	fc.Basepath, err = c.String(ConfigKeyBasepath, nil)
 	if err != nil {
 		return nil, ErrMissingBasepath
 	}
 
-	if basepath == "" {
+	if fc.Basepath == "" {
 		return nil, ErrMissingBasepath
 	}
 
 	//	make our basepath if it does not exist
-	if err = os.MkdirAll(basepath, os.ModePerm); err != nil {
+	if err = os.MkdirAll(fc.Basepath, os.ModePerm); err != nil {
 		return nil, err
 	}
 
-	fc := Filecache{
-		Basepath: basepath,
-		Locker:   map[string]sync.RWMutex{},
-	}
-
-	//	TODO: walk our basepath and full our Locker with already rendered keys
-	err = filepath.Walk(basepath, func(path string, info os.FileInfo, err error) error {
+	//	walk our basepath and fill the filecache Locker with keys for already cached tiles
+	err = filepath.Walk(fc.Basepath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -75,7 +79,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 		}
 
 		//	remove the basepath for the file key
-		fileKey := path[len(basepath):]
+		fileKey := path[len(fc.Basepath):]
 
 		cacheKey, err := cache.ParseKey(fileKey)
 		if err != nil {
@@ -111,11 +115,9 @@ type Filecache struct {
 	//	TODO: store a hash of the cache blob along with the Locker mutex
 	Locker map[string]sync.RWMutex
 
-	//	MaxZoom determins which zoom max should leverage the cache.
-	//	This is useful if the cache should not be leveraged for higher
-	//	zooms (i.e. 10+).
-	//
-	//	TODO: implement
+	//	MaxZoom determins the max zoom the cache to persist. Beyond this
+	//	zoom, cache Set() calls will be ignored. This is useful if the cache
+	//	should not be leveraged for higher zooms when data changes often.
 	MaxZoom uint
 }
 
@@ -163,6 +165,11 @@ func (fc *Filecache) Get(key *cache.Key) ([]byte, bool, error) {
 
 func (fc *Filecache) Set(key *cache.Key, val []byte) error {
 	var err error
+
+	//	check for maxzoom
+	if key.Z > int(fc.MaxZoom) {
+		return nil
+	}
 
 	path := filepath.Join(fc.Basepath, key.String())
 
