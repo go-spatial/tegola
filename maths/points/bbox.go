@@ -28,6 +28,15 @@ func (bb BoundingBox) ContainBB(bb1 [4]float64) bool {
 
 }
 
+func (bb BoundingBox) LREdges() [4]maths.Line {
+	return [4]maths.Line{
+		{maths.Pt{bb[0], bb[1]}, maths.Pt{bb[2], bb[1]}}, // MinX,MinY -> MaxX,MinY
+		{maths.Pt{bb[0], bb[1]}, maths.Pt{bb[0], bb[3]}}, // MinX,MinY -> MinX,MaxY
+		{maths.Pt{bb[0], bb[3]}, maths.Pt{bb[2], bb[3]}}, // MinX,MaxY -> MaxX,MaxY
+		{maths.Pt{bb[2], bb[1]}, maths.Pt{bb[2], bb[3]}}, // MaxX,MinY -> MaxX,MaxX
+	}
+}
+
 func (bb BoundingBox) Contains(pt maths.Pt) bool {
 	return bb[0] <= pt.X && pt.X <= bb[2] &&
 		bb[1] <= pt.Y && pt.Y <= bb[3]
