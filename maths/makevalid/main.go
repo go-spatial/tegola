@@ -1,18 +1,26 @@
 package makevalid
 
 import (
+	"context"
 	"errors"
 	"log"
+	"runtime"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/hitmap"
+	"github.com/terranodo/tegola/maths/makevalid/plyg"
 	"github.com/terranodo/tegola/maths/points"
 )
 
+var numWorkers = 1
+
 func init() {
-	log.Println("Using seperated MakeValid.")
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
+	numWorkers = runtime.NumCPU()
+	log.Println("Number of workers:", numWorkers)
 }
 
 func trace(msg string) func() {
@@ -24,10 +32,331 @@ func trace(msg string) func() {
 	}
 }
 
-const adjustBBoxBy = 1
+// insureConnected will add a connecting line as needed to the given polygons. If there is only one line in a polygon, it will be left alone.
+func insureConnected(polygons ...[]maths.Line) (ret [][]maths.Line) {
+	ret = make([][]maths.Line, len(polygons))
+	for i := range polygons {
+		ln := len(polygons[i])
+		if ln == 0 {
+			continue
+		}
+		ret[i] = append(ret[i], polygons[i]...)
+		if ln == 1 {
+			continue
+		}
+		if !polygons[i][ln-1][1].IsEqual(polygons[i][0][0]) {
+			ret[i] = append(ret[i], maths.Line{polygons[i][ln-1][1], polygons[i][0][0]})
+		}
+	}
+	return ret
+}
 
-func MakeValid(hm hitmap.Interface, extent float64, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
-	return makeValid(hm, extent, plygs...)
+// destructure2 will split the ploygons up and split lines where they intersect. It will also, add a bounding box and a set of lines crossing from the end points of the bounding box to the center.
+func destructure2(polygons [][]maths.Line, clipbox *points.BoundingBox) []maths.Line {
+	// First we need to combine all the segments.
+	segs := make(map[maths.Line]struct{})
+	for i := range polygons {
+		for _, ln := range polygons[i] {
+			segs[ln.LeftRightMostAsLine()] = struct{}{}
+		}
+	}
+	var segments []maths.Line
+	if clipbox != nil {
+		edges := clipbox.LREdges()
+		segments = append(segments, edges[:]...)
+	}
+	for ln := range segs {
+		segments = append(segments, ln)
+	}
+	if len(segments) <= 1 {
+		return nil
+	}
+	return segments
+}
+
+func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.BoundingBox, segments []maths.Line) ([][][]maths.Pt, error) {
+
+	var lines []maths.Line
+
+	// linesToSplit holds a list of points for that segment to be split at. This list will have to be
+	// ordered and deuped.
+	splitPts := make([][]maths.Pt, len(segments))
+
+	maths.FindIntersects(segments, func(src, dest int, ptfn func() maths.Pt) bool {
+
+		if ctx.Err() != nil {
+			return true
+		}
+
+		sline, dline := segments[src], segments[dest]
+
+		// Check to see if the end points of sline and dline intersect?
+		if (sline[0].IsEqual(dline[0])) ||
+			(sline[0].IsEqual(dline[1])) ||
+			(sline[1].IsEqual(dline[0])) ||
+			(sline[1].IsEqual(dline[1])) {
+			return true
+		}
+
+		pt := ptfn().Round() // left most point.
+		if !sline.InBetween(pt) || !dline.InBetween(pt) {
+			return true
+		}
+		if !(pt.IsEqual(sline[0]) || pt.IsEqual(sline[1])) {
+			splitPts[src] = append(splitPts[src], pt)
+		}
+		if !(pt.IsEqual(dline[0]) || pt.IsEqual(dline[1])) {
+			splitPts[dest] = append(splitPts[dest], pt)
+		}
+		return true
+	})
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	var xs []float64
+	var uxs []float64
+	miny, maxy := segments[0][1].Y, segments[0][1].Y
+	{
+		mappts := make(map[maths.Pt]struct{}, len(segments)*2)
+		var lrln maths.Line
+
+		for i := range segments {
+			if splitPts[i] == nil {
+				lrln = segments[i].LeftRightMostAsLine()
+				if !clipbox.ContainsLine(lrln) {
+					// Outside of the clipping area.
+					continue
+				}
+				mappts[lrln[0]] = struct{}{}
+				mappts[lrln[1]] = struct{}{}
+				xs = append(xs, lrln[0].X, lrln[1].X)
+
+				if lrln[0].Y < miny {
+					miny = lrln[0].Y
+				}
+				if lrln[0].Y > maxy {
+					maxy = lrln[0].Y
+				}
+				if lrln[1].Y < miny {
+					miny = lrln[0].Y
+				}
+				if lrln[1].Y > maxy {
+					maxy = lrln[1].Y
+				}
+				lines = append(lines, lrln)
+				continue
+			}
+			// Context cancelled.
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			sort.Sort(points.ByXY(splitPts[i]))
+			lidx, ridx := maths.Line(segments[i]).XYOrderedPtsIdx()
+			lpt, rpt := segments[i][lidx], segments[i][ridx]
+			for j := range splitPts[i] {
+				if lpt.IsEqual(splitPts[i][j]) {
+					// Skipp dups.
+					continue
+				}
+				lrln = maths.Line{lpt, splitPts[i][j]}.LeftRightMostAsLine()
+				lpt = splitPts[i][j]
+				if !clipbox.ContainsLine(lrln) {
+					// Outside of the clipping area.
+					continue
+				}
+				mappts[lrln[0]] = struct{}{}
+				mappts[lrln[1]] = struct{}{}
+				xs = append(xs, lrln[0].X, lrln[1].X)
+				lines = append(lines, lrln)
+				// Context cancelled.
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+			}
+			if !lpt.IsEqual(rpt) {
+				lrln = maths.Line{lpt, rpt}.LeftRightMostAsLine()
+				if !clipbox.ContainsLine(lrln) {
+					// Outside of the clipping area.
+					continue
+				}
+				mappts[lrln[0]] = struct{}{}
+				mappts[lrln[1]] = struct{}{}
+				xs = append(xs, lrln[0].X, lrln[1].X)
+				lines = append(lines, lrln)
+			}
+			// Context cancelled.
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+		}
+	}
+	// Context cancelled.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	sort.Float64s(xs)
+	minx, maxx := xs[0], xs[len(xs)-1]
+	xs = append(append([]float64{minx}, xs...), maxx)
+	lx := xs[0]
+	uxs = append(uxs, lx)
+	lines = append(lines, maths.Line{maths.Pt{lx, miny}, maths.Pt{lx, maxy}})
+	// Draw lines along each x to make columns
+	for _, x := range xs[1:] {
+		if x == lx {
+			continue
+		}
+		lines = append(lines,
+			maths.Line{maths.Pt{x, miny}, maths.Pt{x, maxy}},
+		)
+		lx = x
+		uxs = append(uxs, x)
+	}
+	// Context cancelled.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	splitPts = make([][]maths.Pt, len(lines))
+
+	maths.FindIntersects(lines, func(src, dest int, ptfn func() maths.Pt) bool {
+
+		// Context cancelled.
+		if ctx.Err() != nil {
+			return true
+		}
+		sline, dline := lines[src], lines[dest]
+		// Check to see if the end points of sline and dline intersect?
+		if (sline[0].IsEqual(dline[0])) ||
+			(sline[0].IsEqual(dline[1])) ||
+			(sline[1].IsEqual(dline[0])) ||
+			(sline[1].IsEqual(dline[1])) {
+			return true
+		}
+
+		pt := ptfn().Round() // left most point.
+		if !sline.InBetween(pt) || !dline.InBetween(pt) {
+			return true
+		}
+		if !(pt.IsEqual(sline[0]) || pt.IsEqual(sline[1])) {
+			splitPts[src] = append(splitPts[src], pt)
+		}
+		if !(pt.IsEqual(dline[0]) || pt.IsEqual(dline[1])) {
+			splitPts[dest] = append(splitPts[dest], pt)
+		}
+		return true
+	})
+	// Context cancelled.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	var x2pts = make(map[float64][]maths.Pt)
+	var pt2MaxY = make(map[maths.Pt]int64)
+	var add2Maps = func(pt1, pt2 maths.Pt) {
+		x2pts[pt1.X] = append(x2pts[pt1.X], pt1)
+		x2pts[pt2.X] = append(x2pts[pt2.X], pt2)
+		if pt2.X != pt1.X {
+			if y1, ok := pt2MaxY[pt1]; !ok || y1 < int64(pt2.Y*100) {
+				pt2MaxY[pt1] = int64(pt2.Y * 100)
+			}
+		}
+	}
+	{
+		for i := range lines {
+			// Context cancelled.
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+
+			if splitPts[i] == nil {
+				// We are not splitting the line.
+				add2Maps(lines[i][0], lines[i][1])
+				continue
+			}
+
+			sort.Sort(points.ByXY(splitPts[i]))
+			lidx, ridx := lines[i].XYOrderedPtsIdx()
+			lpt, rpt := lines[i][lidx], lines[i][ridx]
+			for j := range splitPts[i] {
+				if lpt.IsEqual(splitPts[i][j]) {
+					// Skipp dups.
+					continue
+				}
+				add2Maps(lpt, splitPts[i][j])
+				lpt = splitPts[i][j]
+			}
+			if !lpt.IsEqual(rpt) {
+				add2Maps(lpt, rpt)
+			}
+		}
+	}
+
+	// Context cancelled.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range uxs {
+		x2pts[uxs[i]] = points.SortAndUnique(x2pts[uxs[i]])
+	}
+
+	// Context cancelled.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+	var idChan = make(chan int)
+	var lenuxs = len(uxs) - 1
+
+	var ringCols = make([]plyg.RingCol, lenuxs)
+
+	var worker = func(id int, ctx context.Context) {
+		for i := range idChan {
+			ringCols[i] = plyg.BuildRingCol(
+				ctx,
+				hm,
+				x2pts[uxs[i]],
+				x2pts[uxs[i+1]],
+				pt2MaxY,
+			)
+
+		}
+		wg.Done()
+	}
+	wg.Add(numWorkers)
+
+	for i := 0; i < numWorkers; i++ {
+		go worker(i, ctx)
+	}
+	for i := 0; i < lenuxs; i++ {
+		select {
+		case <-ctx.Done():
+		case idChan <- i:
+			// NoOp
+		}
+	}
+
+	close(idChan)
+	wg.Wait()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+
+	}
+
+	plygs := plyg.GenerateMultiPolygon(ringCols)
+	return plygs, nil
+}
+
+func MakeValid(ctx context.Context, hm hitmap.Interface, extent float64, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
+	clipbox := points.BoundingBox{-8, -8, extent + 8, extent + 8}
+	segments := destructure2(insureConnected(plygs...), &clipbox)
+	if segments == nil {
+		return nil, nil
+	}
+	return destructure5(ctx, hm, &clipbox, segments)
 }
 
 type byArea []*ring
@@ -333,7 +662,6 @@ NextLine:
 		}
 		rpts = append(rpts, rings[i].r)
 	}
-	//insureCorrectWindingOrder(rpts)
 	return rpts
 }
 
@@ -399,7 +727,6 @@ func fixup(pts [][]maths.Pt) {
 	}
 
 	if maths.WindingOrderOfPts(pts[0]) == maths.CounterClockwise {
-		//log.Println("Need to flip the winding order to clockwise.")
 		points.Reverse(pts[0])
 	}
 	if len(pts) == 1 {
@@ -407,7 +734,6 @@ func fixup(pts [][]maths.Pt) {
 	}
 	for i := range pts[1:] {
 		if maths.WindingOrderOfPts(pts[i+1]) == maths.Clockwise {
-			//log.Println("Need to flip the winding order counterclockwise.", i+1)
 			points.Reverse(pts[i+1])
 		}
 	}

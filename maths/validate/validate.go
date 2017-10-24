@@ -1,6 +1,8 @@
 package validate
 
 import (
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
@@ -37,7 +39,7 @@ func LineStringToSegments(l tegola.LineString) ([]maths.Line, error) {
 	ppln := tegola.LineAsPointPairs(l)
 	return maths.NewSegments(ppln)
 }
-func makePolygonValid(hm hitmap.M, extent float64, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
+func makePolygonValid(ctx context.Context, hm hitmap.M, extent float64, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
 	var plygLines [][]maths.Line
 	for _, g := range gs {
 		for _, l := range g.Sublines() {
@@ -46,9 +48,12 @@ func makePolygonValid(hm hitmap.M, extent float64, gs ...tegola.Polygon) (mp bas
 				return mp, err
 			}
 			plygLines = append(plygLines, segs)
+			if err := ctx.Err(); err != nil {
+				return mp, err
+			}
 		}
 	}
-	plyPoints, err := makevalid.MakeValid(&hm, extent, plygLines...)
+	plyPoints, err := makevalid.MakeValid(ctx, &hm, extent, plygLines...)
 	if err != nil {
 		return mp, err
 	}
@@ -59,23 +64,25 @@ func makePolygonValid(hm hitmap.M, extent float64, gs ...tegola.Polygon) (mp bas
 			// We need to transform plyPoints[i][j] into a basic.LineString.
 			nl := basic.NewLineFromPt(plyPoints[i][j]...)
 			p = append(p, nl)
+			if err := ctx.Err(); err != nil {
+				return mp, err
+			}
 		}
 		mp = append(mp, p)
 	}
 	return mp, err
 }
 
-func CleanGeometry(ogeo, g tegola.Geometry, extent float64) (geo tegola.Geometry, err error) {
+func CleanGeometry(ctx context.Context, g tegola.Geometry, extent float64) (geo tegola.Geometry, err error) {
 	if g == nil {
 		return nil, nil
 	}
 	hm := hitmap.NewFromGeometry(g)
 	switch gg := g.(type) {
 	case tegola.Polygon:
-		return makePolygonValid(hm, extent, gg)
-
+		return makePolygonValid(ctx, hm, extent, gg)
 	case tegola.MultiPolygon:
-		return makePolygonValid(hm, extent, gg.Polygons()...)
+		return makePolygonValid(ctx, hm, extent, gg.Polygons()...)
 	}
 	return g, nil
 }

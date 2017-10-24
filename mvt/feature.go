@@ -10,7 +10,6 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/clip"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 	"github.com/terranodo/tegola/wkb"
@@ -23,15 +22,6 @@ var (
 	ErrUnknownGeometryType = fmt.Errorf("Unknown geometry type")
 	ErrNilGeometryType     = fmt.Errorf("Nil geometry passed")
 )
-
-var EnableClipping = false
-
-func init() {
-	if os.Getenv("TEGOLA_CLIPPING") == "mvt" {
-		log.Println("Clipping has been enabled.")
-		EnableClipping = true
-	}
-}
 
 // TODO: Need to put in validation for the Geometry, at current the system
 // does not check to make sure that the geometry is following the rules as
@@ -282,43 +272,6 @@ Restart:
 	return newline
 }
 
-func bubbleSplitter(ls basic.Line) basic.MultiLine {
-	return basic.MultiLine{ls}
-
-	seen := make(map[string][]int)
-	key := func(x, y float64) string {
-		return fmt.Sprintf("%v,%v", x, y)
-	}
-	// create a map of all points
-	for i, pt := range ls {
-		k := key(pt.X(), pt.Y())
-		seen[k] = append(seen[k], i)
-	}
-	newlines := make([]basic.Line, 1)
-	for i := 0; i < len(ls); i++ {
-		k := key(ls[i].X(), ls[i].Y())
-		newlines[0] = append(newlines[0], ls[i])
-		idxs := seen[k]
-		if len(idxs) <= 1 {
-			continue
-		}
-		if idxs[len(idxs)-1] == i {
-			continue
-		}
-		// find the next index
-		for j, v := range idxs {
-			if v == i {
-				nextIdx := idxs[j+1]
-				newlines = append(newlines, cleanLine(ls[i:nextIdx]))
-				i = nextIdx + 1
-				break
-			}
-		}
-	}
-	return basic.MultiLine(newlines)
-
-}
-
 func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
 	line := basic.CloneLine(g)
 	if len(line) <= 4 || maths.DistOfLine(g) < tolerance {
@@ -338,11 +291,12 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 	if len(lines) <= 0 {
 		return nil
 	}
-	sqTolerance := tolerance
+
+	//sqTolerance := tolerance
+
+	sqTolerance := tolerance * tolerance
 
 	/*
-		sqTolerance := tolerance * tolerance
-
 		// First lets look the first line, then we will simplify the other lines.
 		area := maths.AreaOfPolygonLineString(lines[0])
 		if area < sqTolerance {
@@ -354,11 +308,8 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 	if len(pts) <= 2 {
 		return nil
 	}
-	//log.Println("Simplifying Polygon Point count:", len(pts))
 	pts = maths.DouglasPeucker(pts, sqTolerance, true)
-	//log.Println("\t After Pointcount:", len(pts))
 	if len(pts) <= 2 {
-		//log.Println("\t Skipping polygon.")
 		return nil
 	}
 	poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
@@ -444,53 +395,7 @@ func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine
 		ls = append(ls, npt)
 		lpt = npt
 	}
-	// var multiline basic.MultiLine
-	return bubbleSplitter(ls)
-
-	//return bubbleSplitter(cleanLine(ls))
-	/*
-		lines := bubbleSplitter(cleanLine(ls))
-
-		for i := range lines {
-			var line []maths.Pt
-			for _, p := range lines[i] {
-				line = append(line, p.AsPt())
-			}
-
-			sline := maths.DouglasPeucker(line, c.tile.Epsilon)
-			if len(sline) >= 2 {
-				multiline = append(multiline, basic.NewLineFromPt(sline...))
-			}
-		}
-	*/
-	/*
-		lines := bubbleSplitter(cleanLine(ls))
-		for i := range lines {
-
-			simplify := true
-			if len(lines[i]) <= 4 {
-				simplify = false
-			}
-
-			if polygon {
-				sqTolerance := c.tile.Epsilon * c.tile.Epsilon
-				area := maths.AreaOfPolygonLineString(lines[i])
-				simplify = simplify && area < sqTolerance
-			} else {
-				dist := maths.DistOfLine(lines[i])
-				simplify = simplify && dist < c.tile.Epsilon
-			}
-
-			if !simplify {
-				multiline = append(multiline, lines[i])
-				continue
-			}
-
-			nls := basic.NewLineFromPt(maths.DouglasPeucker(lines[i].AsPts(), c.tile.Epsilon, simplify)...)
-			multiline = append(multiline, nls)
-		}
-		return multiline
-	*/
+	return basic.MultiLine{ls}
 
 }
 
@@ -503,7 +408,6 @@ func (c *cursor) scalePolygon(g tegola.Polygon) basic.MultiPolygon {
 		return basic.MultiPolygon{}
 	}
 
-	// should check the winding order here
 	mainLines := c.scalelinestr(lines[0], true)
 	for i, _ := range mainLines {
 		p := basic.Polygon{mainLines[i]}
@@ -539,24 +443,19 @@ func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
 		}
 		return mp
 	case tegola.LineString:
-		// return c.scalelinestr(simplifyLineString(g, c.tile.Epsilon), false)
 		return c.scalelinestr(g, false)
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		for _, l := range g.Lines() {
-			//ml = append(ml, c.scalelinestr(simplifyLineString(l, c.tile.Epsilon), false)...)
 			ml = append(ml, c.scalelinestr(l, false)...)
 		}
 		return ml
 	case tegola.Polygon:
-		//return c.scalePolygon(simplifyPolygon(g, c.tile.Epsilon))
 		return c.scalePolygon(g)
 
 	case tegola.MultiPolygon:
 		var mp basic.MultiPolygon
 		for _, p := range g.Polygons() {
-
-			// nmp := c.scalePolygon(simplifyPolygon(p, c.tile.Epsilon))
 			nmp := c.scalePolygon(p)
 			mp = append(mp, nmp...)
 		}
@@ -599,18 +498,6 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	log.Printf("ERR: %v", err)
 }
 
-func (c *cursor) ClipGeo(geo tegola.Geometry) (basic.Geometry, error) {
-	if geo == nil {
-		return nil, nil
-	}
-	min, max := c.MinMax()
-	g, err := clip.Geometry(geo, min, max)
-	if g == nil {
-		createDebugFile(min, max, geo, err)
-	}
-	return g, err
-}
-
 func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
 	if len(points) == 0 {
 		return []uint32{}
@@ -639,10 +526,6 @@ func (c *cursor) ClosePath() uint32 {
 	return uint32(NewCommand(cmdClosePath, 1))
 }
 
-func init() {
-	log.Println("Original geo.")
-}
-
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
 func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
@@ -656,43 +539,19 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 	// We are scaling separately, no need to scale in cursor.
 	c.DisableScaling = true
 
-	/*
-	   geom, err = maths.Project(geom, bbox)
-	   geom, err = maths.Simplify(geom, bbox)
-	   geom, err = maths.Clip(geom, bbox)
-	*/
-
 	// Project Geom
 
 	geo := c.ScaleGeo(geom)
 	sg := SimplifyGeometry(geo, extent.Epsilon)
 
-	cg, err := validate.CleanGeometry(geo, sg, c.extent)
+	geom, err = validate.CleanGeometry(ctx, sg, c.extent)
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
-	geo = basic.Clone(cg)
-
-	if EnableClipping {
-
-		if ctx.Err() != nil {
-			return []uint32{}, -1, ctx.Err()
-		}
-		geo, err = c.ClipGeo(geo)
-		if err != nil {
-			log.Printf("We got the following error clipping: %v", err)
-			return nil, vectorTile.Tile_UNKNOWN, err
-		}
-
-	}
-
-	if ctx.Err() != nil {
-		return []uint32{}, -1, ctx.Err()
-	}
-	if geo == nil {
+	if geom == nil {
 		return []uint32{}, -1, nil
 	}
-	switch t := geo.(type) {
+	switch t := geom.(type) {
 	case tegola.Point:
 		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
@@ -739,7 +598,6 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 				g = append(g, c.MoveTo(points[0])...)
 				g = append(g, c.LineTo(points[1:]...)...)
 				g = append(g, c.ClosePath())
-				// g = append(g, c.MoveTo(&basic.Point{extent.Minx, extent.Miny})...)
 			}
 		}
 		return g, vectorTile.Tile_POLYGON, nil
