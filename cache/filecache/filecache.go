@@ -44,13 +44,15 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	//	parse the config
 	c := dict.M(config)
 
+	//	TODO: this could be cleaner
 	defaultMaxZoom := 0
 	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
 	if maxZoom != 0 {
-		fc.MaxZoom = uint(maxZoom)
+		mz := uint(maxZoom)
+		fc.MaxZoom = &mz
 	}
 
 	fc.Basepath, err = c.String(ConfigKeyBasepath, nil)
@@ -118,7 +120,7 @@ type Filecache struct {
 	//	MaxZoom determins the max zoom the cache to persist. Beyond this
 	//	zoom, cache Set() calls will be ignored. This is useful if the cache
 	//	should not be leveraged for higher zooms when data changes often.
-	MaxZoom uint
+	MaxZoom *uint
 }
 
 // 	Get reads a z,x,y entry from the cache and returns the contents
@@ -167,7 +169,7 @@ func (fc *Filecache) Set(key *cache.Key, val []byte) error {
 	var err error
 
 	//	check for maxzoom
-	if key.Z > int(fc.MaxZoom) {
+	if fc.MaxZoom != nil && key.Z <= int(*fc.MaxZoom) {
 		return nil
 	}
 

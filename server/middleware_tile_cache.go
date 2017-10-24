@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"io"
 	"log"
 	"net/http"
 
@@ -37,12 +39,17 @@ func TileCacheHandler(next http.Handler) http.Handler {
 		}
 		//	cache miss
 		if !hit {
+			//	buffer which will hold a copy of the response for writing to the cache
+			var buff bytes.Buffer
+
 			//	ovewrite our current responseWriter with a tileCacheResponseWriter
-			w = &tileCacheResponseWriter{
-				cacheKey: key,
-				resp:     w,
-			}
+			w = newTileCacheResponseWriter(w, &buff)
+
 			next.ServeHTTP(w, r)
+
+			if err := Cache.Set(key, buff.Bytes()); err != nil {
+				log.Println("cache response writer err: %v", err)
+			}
 			return
 		}
 
@@ -61,11 +68,18 @@ func TileCacheHandler(next http.Handler) http.Handler {
 	})
 }
 
-//	cacheResponsWriter wraps http.ResponseWriter (https://golang.org/pkg/net/http/#ResponseWriter)
-//	to also write the response to a cache when there is a cache MISS
+func newTileCacheResponseWriter(resp http.ResponseWriter, w io.Writer) http.ResponseWriter {
+	return &tileCacheResponseWriter{
+		resp:  resp,
+		multi: io.MultiWriter(w, resp),
+	}
+}
+
+//	tileCacheResponsWriter wraps http.ResponseWriter (https://golang.org/pkg/net/http/#ResponseWriter)
+//	to additionally write the response to a cache when there is a cache MISS
 type tileCacheResponseWriter struct {
-	cacheKey *cache.Key
-	resp     http.ResponseWriter
+	resp  http.ResponseWriter
+	multi io.Writer
 }
 
 func (w *tileCacheResponseWriter) Header() http.Header {
@@ -76,18 +90,8 @@ func (w *tileCacheResponseWriter) Header() http.Header {
 }
 
 func (w *tileCacheResponseWriter) Write(b []byte) (int, error) {
-	//	after we write the response, persist the data to the cache
-	//	use anonymous function to output the error
-	defer func(key *cache.Key) {
-		if Cache == nil {
-			return
-		}
-		if err := Cache.Set(key, b); err != nil {
-			log.Println("cache response writer err: %v", err)
-		}
-	}(w.cacheKey)
-
-	return w.resp.Write(b)
+	//	write to our multi writer
+	return w.multi.Write(b)
 }
 
 func (w *tileCacheResponseWriter) WriteHeader(i int) {
