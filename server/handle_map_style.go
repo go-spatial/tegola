@@ -29,14 +29,6 @@ type HandleMapStyle struct {
 //		map_name - map name in the config file
 func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var rScheme string
-	//	check if the request is http or https. the scheme is needed for the TileURLs and
-	//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
-	if r.TLS != nil {
-		rScheme = "https://"
-	} else {
-		rScheme = "http://"
-	}
 
 	params := httptreemux.ContextParams(r.Context())
 
@@ -62,7 +54,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	debug := r.URL.Query().Get("debug")
 
-	sourceURL := fmt.Sprintf("%v%v/capabilities/%v.json", rScheme, hostName(r), req.mapName)
+	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json", scheme(r), hostName(r), req.mapName)
 	if debug == "true" {
 		sourceURL += "?debug=true"
 	}
@@ -116,11 +108,25 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	determing the min and max zoom for this map
 	for _, l := range m.Layers {
+		//	check if the layer already exists in our slice. this can happen if the config
+		//	is using the "name" param for a layer to override the providerLayerName
+		var skip bool
+		for i := range mapboxStyle.Layers {
+			if mapboxStyle.Layers[i].ID == l.MVTName() {
+				skip = true
+				break
+			}
+		}
+		//	entry for layer already exists. move on
+		if skip {
+			continue
+		}
+
 		//	build our vector layer details
 		layer := style.Layer{
-			ID:          l.Name,
+			ID:          l.MVTName(),
 			Source:      req.mapName,
-			SourceLayer: l.Name,
+			SourceLayer: l.MVTName(),
 			Layout: &style.LayerLayout{
 				Visibility: style.LayoutVisible,
 			},
@@ -132,16 +138,16 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			layer.Type = style.LayerTypeCircle
 			layer.Paint = &style.LayerPaint{
 				CircleRadius: 3,
-				CircleColor:  stringToColorHex(l.Name),
+				CircleColor:  stringToColorHex(l.MVTName()),
 			}
 		case tegola.LineString, tegola.MultiLine:
 			layer.Type = style.LayerTypeLine
 			layer.Paint = &style.LayerPaint{
-				LineColor: stringToColorHex(l.Name),
+				LineColor: stringToColorHex(l.MVTName()),
 			}
 		case tegola.Polygon, tegola.MultiPolygon:
 			layer.Type = style.LayerTypeFill
-			hexColor := stringToColorHex(l.Name)
+			hexColor := stringToColorHex(l.MVTName())
 
 			hex, err := colors.ParseHEX(hexColor)
 			if err != nil {
@@ -158,7 +164,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				FillOutlineColor: hexColor,
 			}
 		default:
-			log.Printf("layer (%v) has unsupported geometry type (%v)", l.Name, l.GeomType)
+			log.Printf("layer (providerLayerName: %v) has unsupported geometry type (%v)", l.ProviderLayerName, l.GeomType)
 		}
 
 		//	add our layer to our tile layer response

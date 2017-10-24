@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -38,7 +39,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				MaxZoom:     20,
 				Name:        &testMap.Name,
 				Description: nil,
-				Scheme:      "zxy",
+				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
 				Tiles: []string{
 					"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -50,29 +51,27 @@ func TestHandleMapCapabilities(t *testing.T) {
 				Legend:   nil,
 				VectorLayers: []tilejson.VectorLayer{
 					{
-						Version: 2,
-						Extent:  4096,
-						ID:      testLayer1.Name,
-						Name:    testLayer1.Name,
-						//FeatureTags: nil,
+						Version:      2,
+						Extent:       4096,
+						ID:           testLayer1.MVTName(),
+						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer1.MaxZoom,
+						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf",
+							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 						},
 					},
 					{
-						Version: 2,
-						Extent:  4096,
-						ID:      testLayer2.Name,
-						Name:    testLayer2.Name,
-						//FeatureTags: nil,
+						Version:      2,
+						Extent:       4096,
+						ID:           testLayer2.MVTName(),
+						Name:         testLayer2.MVTName(),
 						GeometryType: tilejson.GeomTypeLine,
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf",
+							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer2.MVTName()),
 						},
 					},
 				},
@@ -93,7 +92,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				MaxZoom:     20,
 				Name:        &testMap.Name,
 				Description: nil,
-				Scheme:      "zxy",
+				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
 				Tiles: []string{
 					"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
@@ -107,25 +106,25 @@ func TestHandleMapCapabilities(t *testing.T) {
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           testLayer1.Name,
-						Name:         testLayer1.Name,
+						ID:           testLayer1.MVTName(),
+						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer1.MaxZoom,
+						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/test-layer-1/{z}/{x}/{y}.pbf?debug=true",
+							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 						},
 					},
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           testLayer2.Name,
-						Name:         testLayer2.Name,
+						ID:           testLayer2.MVTName(),
+						Name:         testLayer2.MVTName(),
 						GeometryType: tilejson.GeomTypeLine,
 						MinZoom:      testLayer2.MinZoom,
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/test-layer-2/{z}/{x}/{y}.pbf?debug=true",
+							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
 						},
 					},
 					{
@@ -164,6 +163,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 
 		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
+
 		//	setup a new router group
 		group := router.NewGroup("/")
 		group.UsingContext().Handler(test.reqMethod, test.uriPattern, server.HandleMapCapabilities{})

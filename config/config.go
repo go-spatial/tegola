@@ -31,13 +31,13 @@ func (e ErrInvalidProviderLayerName) Error() string {
 	return fmt.Sprintf("config: invalid provider layer name (%v)", e.ProviderLayerName)
 }
 
-type ErrLayerCollision struct {
+type ErrOverlappingLayerZooms struct {
 	ProviderLayer1 string
 	ProviderLayer2 string
 }
 
-func (e ErrLayerCollision) Error() string {
-	return fmt.Sprintf("config: layer collision (%v) and (%v)", e.ProviderLayer1, e.ProviderLayer2)
+func (e ErrOverlappingLayerZooms) Error() string {
+	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
 }
 
 // A Config represents the a Tegola Config file.
@@ -68,6 +68,9 @@ type Map struct {
 }
 
 type MapLayer struct {
+	//	Name is optional. If it's not defined the name of the ProviderLayer will be used.
+	//	Name can also be used to group multiple ProviderLayers under the same namespace.
+	Name          string      `toml:"name"`
 	ProviderLayer string      `toml:"provider_layer"`
 	MinZoom       int         `toml:"min_zoom"`
 	MaxZoom       int         `toml:"max_zoom"`
@@ -82,20 +85,27 @@ func (c *Config) Validate() error {
 	layerNames := map[string]MapLayer{}
 	for _, m := range c.Maps {
 		for _, l := range m.Layers {
-			//	split the provider layer (syntax is provider.layer)
-			plParts := strings.Split(l.ProviderLayer, ".")
-			if len(plParts) != 2 {
-				return ErrInvalidProviderLayerName{
-					ProviderLayerName: l.ProviderLayer,
+			var name string
+
+			if l.Name != "" {
+				name = l.Name
+			} else {
+				//	split the provider layer (syntax is provider.layer)
+				plParts := strings.Split(l.ProviderLayer, ".")
+				if len(plParts) != 2 {
+					return ErrInvalidProviderLayerName{
+						ProviderLayerName: l.ProviderLayer,
+					}
 				}
+
+				name = plParts[1]
 			}
 
-			//	check if already have this layer
-			if val, ok := layerNames[plParts[1]]; ok {
-				//	we have a hit
-				//	check for zoom range overlap
+			//	check if we already have this layer
+			if val, ok := layerNames[name]; ok {
+				//	we have a hit. check for zoom range overlap
 				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
-					return ErrLayerCollision{
+					return ErrOverlappingLayerZooms{
 						ProviderLayer1: val.ProviderLayer,
 						ProviderLayer2: l.ProviderLayer,
 					}
@@ -104,7 +114,7 @@ func (c *Config) Validate() error {
 			}
 
 			//	add the MapLayer to our map
-			layerNames[plParts[1]] = l
+			layerNames[name] = l
 		}
 	}
 

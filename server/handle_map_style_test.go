@@ -43,28 +43,28 @@ func TestHandleMapStyle(t *testing.T) {
 				},
 				Layers: []style.Layer{
 					{
-						ID:          testLayer1.Name,
+						ID:          testLayer1.MVTName(),
 						Source:      testMap.Name,
-						SourceLayer: testLayer1.Name,
+						SourceLayer: testLayer1.MVTName(),
 						Type:        style.LayerTypeCircle,
 						Layout: &style.LayerLayout{
 							Visibility: "visible",
 						},
 						Paint: &style.LayerPaint{
 							CircleRadius: 3,
-							CircleColor:  "#7a40ce",
+							CircleColor:  "#56f8aa",
 						},
 					},
 					{
-						ID:          testLayer2.Name,
+						ID:          testLayer2.MVTName(),
 						Source:      testMap.Name,
-						SourceLayer: testLayer2.Name,
+						SourceLayer: testLayer2.MVTName(),
 						Type:        style.LayerTypeLine,
 						Layout: &style.LayerLayout{
 							Visibility: "visible",
 						},
 						Paint: &style.LayerPaint{
-							LineColor: "#7b40ce",
+							LineColor: "#9d70ab",
 						},
 					},
 				},

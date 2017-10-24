@@ -41,15 +41,6 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	//	build payload
 	case "GET":
-		var rScheme string
-		//	check if the request is http or https. the scheme is needed for the TileURLs and
-		//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
-		if r.TLS != nil {
-			rScheme = "https://"
-		} else {
-			rScheme = "http://"
-		}
-
 		params := httptreemux.ContextParams(r.Context())
 
 		//	read the map_name value from the request
@@ -78,7 +69,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			Center:      m.Center,
 			Format:      "pbf",
 			Name:        &m.Name,
-			Scheme:      "zxy",
+			Scheme:      tilejson.SchemeXYZ,
 			TileJSON:    tilejson.Version,
 			Version:     "1.0.0",
 			Grids:       make([]string, 0),
@@ -90,7 +81,30 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 		//	determing the min and max zoom for this map
 		for i, l := range m.Layers {
-			var tileURL = fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName, l.Name)
+			//	check if the layer already exists in our slice. this can happen if the config
+			//	is using the "name" param for a layer to override the providerLayerName
+			var skip bool
+			for i := range tileJSON.VectorLayers {
+				if tileJSON.VectorLayers[i].ID == l.MVTName() {
+					//	we need to use the min and max of all layers with this name
+					if tileJSON.VectorLayers[i].MinZoom > l.MinZoom {
+						tileJSON.VectorLayers[i].MinZoom = l.MinZoom
+					}
+
+					if tileJSON.VectorLayers[i].MaxZoom < l.MaxZoom {
+						tileJSON.VectorLayers[i].MaxZoom = l.MaxZoom
+					}
+
+					skip = true
+					break
+				}
+			}
+			//	entry for layer already exists. move on
+			if skip {
+				continue
+			}
+
+			var tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.MVTName())
 
 			//	if we have a debug param add it to our URLs
 			if query.Get("debug") == "true" {
@@ -113,7 +127,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				tileJSON.MaxZoom = l.MaxZoom
 			}
 
-			tiles := fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName, l.Name)
+			tiles := fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.MVTName())
 			if r.URL.Query().Get("debug") != "" {
 				tiles = tiles + "?debug=true"
 			}
@@ -121,8 +135,8 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			layer := tilejson.VectorLayer{
 				Version: 2,
 				Extent:  4096,
-				ID:      l.Name,
-				Name:    l.Name,
+				ID:      l.MVTName(),
+				Name:    l.MVTName(),
 				MinZoom: l.MinZoom,
 				MaxZoom: l.MaxZoom,
 				Tiles: []string{
@@ -156,7 +170,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				MinZoom: 0,
 				MaxZoom: MaxZoom,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), m.Name, "debug-tile-outline"),
+					fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-outline"),
 				},
 				GeometryType: tilejson.GeomTypeLine,
 			}
@@ -172,7 +186,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				MinZoom: 0,
 				MaxZoom: MaxZoom,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", rScheme, hostName(r), m.Name, "debug-tile-center"),
+					fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-center"),
 				},
 				GeometryType: tilejson.GeomTypePoint,
 			}
@@ -181,7 +195,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			tileJSON.VectorLayers = append(tileJSON.VectorLayers, debugTileCenter)
 		}
 
-		tileURL := fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, hostName(r), req.mapName)
+		tileURL := fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName)
 
 		if r.URL.Query().Get("debug") == "true" {
 			tileURL += "?debug=true"
