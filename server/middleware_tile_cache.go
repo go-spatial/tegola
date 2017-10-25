@@ -47,6 +47,11 @@ func TileCacheHandler(next http.Handler) http.Handler {
 
 			next.ServeHTTP(w, r)
 
+			//	check if our request context has been canceled
+			if r.Context().Err() != nil {
+				return
+			}
+
 			if err := Cache.Set(key, buff.Bytes()); err != nil {
 				log.Println("cache response writer err: %v", err)
 			}
