@@ -143,6 +143,24 @@ func TestParse(t *testing.T) {
 					name = "water"
 					provider_layer = "provider1.water_6_10"
 					min_zoom = 6
+					max_zoom = 10
+
+				[[maps]]
+				name = "osm_2"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = [-76.275329586789, 39.153492567373, 8.0]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_0_5"
+					min_zoom = 0
+					max_zoom = 5
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
 					max_zoom = 10`,
 			expected: config.Config{
 				LocationName: "",
@@ -180,6 +198,26 @@ func TestParse(t *testing.T) {
 				Maps: []config.Map{
 					{
 						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								Name:          "water",
+								ProviderLayer: "provider1.water_0_5",
+								MinZoom:       0,
+								MaxZoom:       5,
+							},
+							{
+								Name:          "water",
+								ProviderLayer: "provider1.water_6_10",
+								MinZoom:       6,
+								MaxZoom:       10,
+							},
+						},
+					},
+					{
+						Name:        "osm_2",
 						Attribution: "Test Attribution",
 						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
@@ -423,6 +461,24 @@ func TestValidate(t *testing.T) {
 				Maps: []config.Map{
 					{
 						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water",
+								MinZoom:       10,
+								MaxZoom:       15,
+							},
+							{
+								ProviderLayer: "provider2.water",
+								MinZoom:       16,
+								MaxZoom:       20,
+							},
+						},
+					},
+					{
+						Name:        "osm_2",
 						Attribution: "Test Attribution",
 						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
