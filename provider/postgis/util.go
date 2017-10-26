@@ -1,6 +1,7 @@
 package postgis
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
@@ -12,7 +13,7 @@ import (
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
-func genSQL(l *layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
+func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
 
 	if len(flds) == 0 {
 		// We need to hit the database to see what the fields are.
@@ -73,7 +74,7 @@ const (
 //
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
-func replaceTokens(plyr *layer, tile tegola.Tile) (string, error) {
+func replaceTokens(plyr *Layer, tile tegola.Tile) (string, error) {
 
 	textent := tile.BoundingBox()
 
@@ -99,7 +100,7 @@ func replaceTokens(plyr *layer, tile tegola.Tile) (string, error) {
 	return tokenReplacer.Replace(plyr.sql), nil
 }
 
-func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
+func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 	switch valType {
 	default:
 		switch vt := val.(type) {
@@ -138,5 +139,89 @@ func transfromVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 		}
 	case pgx.DateOid, pgx.TimestampOid, pgx.TimestampTzOid:
 		return fmt.Sprintf("%v", val), nil
+	}
+}
+
+func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descriptions []pgx.FieldDescription, values []interface{}) (gid uint64, geom []byte, tags map[string]interface{}, err error) {
+	tags = make(map[string]interface{})
+	var desc pgx.FieldDescription
+	var ok bool
+
+	for i, v := range values {
+		// Do a quick check
+		if ctx.Err() != nil {
+			return 0, nil, nil, ctx.Err()
+		}
+		// Skip nil values.
+		if values[i] == nil {
+			continue
+		}
+		desc = descriptions[i]
+		switch desc.Name {
+		case geoFieldname:
+			if geom, ok = v.([]byte); !ok {
+				return 0, nil, nil, fmt.Errorf("Was unable to convert geometry field (%v) into bytes.", geoFieldname)
+			}
+		case idFieldname:
+			gid, err = gId(v)
+		default:
+			switch desc.DataTypeName {
+			// hstore is a special case
+			case "hstore":
+				// parse our Hstore values into keys and values
+				keys, values, err := pgx.ParseHstore(v.(string))
+				if err != nil {
+					return gid, geom, tags, fmt.Errorf("Unable to parse Hstore err: %v", err)
+				}
+				for i, k := range keys {
+					// if the value is Valid (i.e. not null) then add it to our tags map.
+					if values[i].Valid {
+						tags[k] = values[i].String
+					}
+				}
+				continue
+			case "numeric":
+				num, err := strconv.ParseFloat(v.(string), 64)
+				if err != nil {
+					return 0, nil, nil, fmt.Errorf("Unable to parse numeric (%v) to float64 err: %v", v.(string), err)
+				}
+				tags[desc.Name] = num
+				continue
+			default:
+				value, err := transformVal(desc.DataType, v)
+				if err != nil {
+					return gid, geom, tags, fmt.Errorf("Unable to convert field[%v] (%v) of type (%v - %v) to a suitable value.: [[ %T  :: %[5]t ]]", i, desc.Name, desc.DataType, desc.DataTypeName, v)
+				}
+				tags[desc.Name] = value
+			}
+		}
+	}
+	return gid, geom, tags, err
+}
+
+func gId(v interface{}) (gid uint64, err error) {
+	switch aval := v.(type) {
+	case float64:
+		return uint64(aval), nil
+	case int64:
+		return uint64(aval), nil
+	case uint64:
+		return aval, nil
+	case uint:
+		return uint64(aval), nil
+	case int8:
+		return uint64(aval), nil
+	case uint8:
+		return uint64(aval), nil
+	case uint16:
+		return uint64(aval), nil
+	case int32:
+		return uint64(aval), nil
+	case uint32:
+		return uint64(aval), nil
+	case string:
+		return strconv.ParseUint(aval, 10, 64)
+	default:
+		return gid, fmt.Errorf("Unable to convert field into a uint64.")
 	}
 }

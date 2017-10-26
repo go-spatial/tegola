@@ -149,17 +149,9 @@ func DrawGeometries() {
 		g := cursor.ScaleGeo(geom)
 		//log.Println("Tolerence:", tile.ZEpislon())
 		sg := mvt.SimplifyGeometry(g, tile.ZEpislon())
-		vg, err := validate.CleanGeometry(sg)
+		vg, err := validate.CleanGeometry(context.Background(), sg, 4096)
 		if err != nil {
 			return err
-		}
-		cg, err := cursor.ClipGeo(vg)
-		if err != nil {
-			return err
-		}
-		if !configStruct.KeepNilClip && cg == nil {
-			skipped = append(skipped, gid)
-			return nil
 		}
 
 		mm := svg.MinMax{0, 0, 4096, 4096}
@@ -192,7 +184,7 @@ func DrawGeometries() {
 		canvas.DrawGeometry(sg, fmt.Sprintf("%v_simplifed", gid), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
 
 		log.Println("\tDrawing clipped version.")
-		canvas.DrawGeometry(cg, fmt.Sprintf("clipped_%v", gid), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
+		canvas.DrawGeometry(vg, fmt.Sprintf("clipped_%v", gid), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
 		canvas.End()
 		return nil
 	}); err != nil {

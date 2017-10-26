@@ -3,7 +3,7 @@ package postgis
 import "github.com/terranodo/tegola"
 
 // layer holds information about a query.
-type layer struct {
+type Layer struct {
 	// The Name of the layer
 	name string
 	// The SQL to use when querying PostGIS for this layer
@@ -18,14 +18,22 @@ type layer struct {
 	srid int
 }
 
-func (l layer) Name() string {
+func (l Layer) Name() string {
 	return l.name
 }
 
-func (l layer) GeomType() tegola.Geometry {
+func (l Layer) GeomType() tegola.Geometry {
 	return l.geomType
 }
 
-func (l layer) SRID() int {
+func (l Layer) SRID() int {
 	return l.srid
+}
+
+func (l Layer) GeomFieldName() string {
+	return l.geomField
+}
+
+func (l Layer) IDFieldName() string {
+	return l.idField
 }

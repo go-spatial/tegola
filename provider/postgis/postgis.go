@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -26,8 +25,9 @@ type Provider struct {
 	config pgx.ConnPoolConfig
 	pool   *pgx.ConnPool
 	// map of layer name and corrosponding sql
-	layers map[string]layer
-	srid   int
+	layers     map[string]Layer
+	srid       int
+	firstlayer string
 }
 
 const (
@@ -144,7 +144,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, fmt.Errorf("Expected %v to be a []map[string]interface{}", ConfigKeyLayers)
 	}
 
-	lyrs := make(map[string]layer)
+	lyrs := make(map[string]Layer)
 	lyrsSeen := make(map[string]int)
 
 	for i, v := range layers {
@@ -158,6 +158,9 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			return nil, fmt.Errorf("%v layer name is duplicated in both layer %v and layer %v", lname, i, j)
 		}
 		lyrsSeen[lname] = i
+		if i == 0 {
+			p.firstlayer = lname
+		}
 
 		fields, err := vc.StringSlice(ConfigKeyFields)
 		if err != nil {
@@ -200,7 +203,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			return nil, err
 		}
 
-		l := layer{
+		l := Layer{
 			name:      lname,
 			idField:   idfld,
 			geomField: geomfld,
@@ -247,7 +250,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 }
 
 //	layerGeomType sets the geomType field on the layer by running the SQL and reading the geom type in the result set
-func (p Provider) layerGeomType(l *layer) error {
+func (p Provider) layerGeomType(l *Layer) error {
 	var err error
 
 	//	we need a tile to run our sql through the replacer
@@ -319,165 +322,205 @@ func (p Provider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
-func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (layer *mvt.Layer, err error) {
-	//	lookup our layer
-	plyr, ok := p.layers[layerName]
-	if !ok {
-		return nil, fmt.Errorf("postgis: layer (%v) not registered", layerName)
+func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
+
+	layer = &mvt.Layer{
+		Name: layerName,
 	}
 
-	//	replace the various tokens we support (i.e. !BBOX!, !ZOOM!) with balues
-	sql, err := replaceTokens(&plyr, tile)
-	if err != nil {
-		return nil, err
-	}
+	err = p.ForEachFeature(ctx, layerName, tile,
+		func(lyr Layer, gid uint64, wgeom wkb.Geometry, ftags map[string]interface{}) error {
+			var geom tegola.Geometry = wgeom
+			if lyr.SRID() != DefaultSRID {
+				g, err := basic.ToWebMercator(lyr.SRID(), geom)
+				if err != nil {
+					return fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", lyr.SRID, layerName)
+				}
+				geom = g.Geometry
+			}
+			//	copy our default tags to a tags map
+			tags := map[string]interface{}{}
+			for k, v := range dtags {
+				tags[k] = v
+			}
 
-	// do a quick context check:
-	if ctx.Err() != nil {
-		return nil, mvt.ErrCanceled
-	}
+			//	add feature tags to our map
+			for k := range ftags {
+				tags[k] = ftags[k]
+			}
 
-	rows, err := p.pool.Query(sql)
-	if err != nil {
-		return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
-	}
-	defer rows.Close()
+			// Add features to Layer
+			layer.AddFeatures(mvt.Feature{
+				ID:       &gid,
+				Tags:     tags,
+				Geometry: geom,
+			})
 
-	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
-	fdescs := rows.FieldDescriptions()
-	var geobytes []byte
+			return nil
 
-	//	new mvt.Layer
-	layer = new(mvt.Layer)
-	layer.Name = layerName
+		})
+	return layer, err
+	/*
 
-	for rows.Next() {
+		//	lookup our layer
+		plyr, ok := p.layers[layerName]
+		if !ok {
+			return nil, fmt.Errorf("postgis: layer (%v) not registered", layerName)
+		}
+
+		//	replace the various tokens we support (i.e. !BBOX!, !ZOOM!) with balues
+		sql, err := replaceTokens(&plyr, tile)
+		if err != nil {
+			return nil, err
+		}
+
 		// do a quick context check:
 		if ctx.Err() != nil {
 			return nil, mvt.ErrCanceled
 		}
 
-		var geom tegola.Geometry
-		var gid uint64
-
-		//	fetch row values
-		vals, err := rows.Values()
+		rows, err := p.pool.Query(sql)
 		if err != nil {
-			return nil, fmt.Errorf("Got an error trying to run SQL: %v ; %v", sql, err)
+			return nil, fmt.Errorf("Got the following error (%v) running this sql (%v)", err, sql)
 		}
-		//	holds our encoded tags
-		gtags := make(map[string]interface{})
+		defer rows.Close()
 
-		//	iterate the values returned from our row
-		for i, v := range vals {
+		//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
+		fdescs := rows.FieldDescriptions()
+		var geobytes []byte
+
+		//	new mvt.Layer
+		layer = new(mvt.Layer)
+		layer.Name = layerName
+
+		for rows.Next() {
 			// do a quick context check:
 			if ctx.Err() != nil {
 				return nil, mvt.ErrCanceled
 			}
 
-			switch fdescs[i].Name {
-			case plyr.geomField:
-				if geobytes, ok = v.([]byte); !ok {
-					return nil, fmt.Errorf("Was unable to convert geometry field (%v) into bytes for layer (%v)", plyr.geomField, layerName)
-				}
-				//	decode our WKB
-				if geom, err = wkb.DecodeBytes(geobytes); err != nil {
-					return nil, fmt.Errorf("Was unable to decode geometry field (%v) into wkb for layer (%v)", plyr.geomField, layerName)
-				}
-				// TODO: Need to move this from being the responsiblity of the provider to the responsibility of the feature. But that means a feature should know
-				// how the points are encoded.
-				// log.Printf("layer SRID %v Default: %v\n", plyr.SRID, DefaultSRID)
-				if plyr.srid != DefaultSRID {
-					// We need to convert our points to Webmercator.
-					g, err := basic.ToWebMercator(plyr.srid, geom)
-					if err != nil {
-						return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", plyr.srid, layerName)
-					}
-					geom = g.Geometry
-				}
-			case plyr.idField:
-				switch aval := v.(type) {
-				case int64:
-					gid = uint64(aval)
-				case uint64:
-					gid = aval
-				case int:
-					gid = uint64(aval)
-				case uint:
-					gid = uint64(aval)
-				case int8:
-					gid = uint64(aval)
-				case uint8:
-					gid = uint64(aval)
-				case int16:
-					gid = uint64(aval)
-				case uint16:
-					gid = uint64(aval)
-				case int32:
-					gid = uint64(aval)
-				case uint32:
-					gid = uint64(aval)
-				default:
-					return nil, fmt.Errorf("Unable to convert geometry ID field (%v) into a uint64 for layer (%v)", plyr.idField, layerName)
-				}
-			default:
-				if vals[i] == nil {
-					// We want to skip all nil values.
-					continue
+			var geom tegola.Geometry
+			var gid uint64
+
+			//	fetch row values
+			vals, err := rows.Values()
+			if err != nil {
+				return nil, fmt.Errorf("Got an error trying to run SQL: %v ; %v", sql, err)
+			}
+			//	holds our encoded tags
+			gtags := make(map[string]interface{})
+
+			//	iterate the values returned from our row
+			for i, v := range vals {
+				// do a quick context check:
+				if ctx.Err() != nil {
+					return nil, mvt.ErrCanceled
 				}
 
-				//	hstore
-				if fdescs[i].DataTypeName == "hstore" {
-					//	parse our Hstore values into keys and values
-					keys, values, err := pgx.ParseHstore(v.(string))
-					if err != nil {
-						return nil, fmt.Errorf("Unable to parse Hstore err: %v", err)
+				switch fdescs[i].Name {
+				case plyr.geomField:
+					if geobytes, ok = v.([]byte); !ok {
+						return nil, fmt.Errorf("Was unable to convert geometry field (%v) into bytes for layer (%v)", plyr.geomField, layerName)
 					}
-
-					for i, k := range keys {
-						//	if the value is Valid (i.e. not null) then add it to our gtags map
-						if values[i].Valid {
-							gtags[k] = values[i].String
+					//	decode our WKB
+					if geom, err = wkb.DecodeBytes(geobytes); err != nil {
+						return nil, fmt.Errorf("Was unable to decode geometry field (%v) into wkb for layer (%v)", plyr.geomField, layerName)
+					}
+					// TODO: Need to move this from being the responsiblity of the provider to the responsibility of the feature. But that means a feature should know
+					// how the points are encoded.
+					// log.Printf("layer SRID %v Default: %v\n", plyr.SRID, DefaultSRID)
+					if plyr.srid != DefaultSRID {
+						// We need to convert our points to Webmercator.
+						g, err := basic.ToWebMercator(plyr.srid, geom)
+						if err != nil {
+							return nil, fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", plyr.srid, layerName)
 						}
+						geom = g.Geometry
 					}
-					continue
-				}
+				case plyr.idField:
+					switch aval := v.(type) {
+					case int64:
+						gid = uint64(aval)
+					case uint64:
+						gid = aval
+					case int:
+						gid = uint64(aval)
+					case uint:
+						gid = uint64(aval)
+					case int8:
+						gid = uint64(aval)
+					case uint8:
+						gid = uint64(aval)
+					case int16:
+						gid = uint64(aval)
+					case uint16:
+						gid = uint64(aval)
+					case int32:
+						gid = uint64(aval)
+					case uint32:
+						gid = uint64(aval)
+					default:
+						return nil, fmt.Errorf("Unable to convert geometry ID field (%v) into a uint64 for layer (%v)", plyr.idField, layerName)
+					}
+				default:
+					if vals[i] == nil {
+						// We want to skip all nil values.
+						continue
+					}
 
-				//	decimal support
-				//	pgx returns numeric datatypes as strings so we need to handle parsing them ourselves
-				//	https://github.com/jackc/pgx/issues/56
-				if fdescs[i].DataTypeName == "numeric" {
-					num, err := strconv.ParseFloat(v.(string), 64)
+					//	hstore
+					if fdescs[i].DataTypeName == "hstore" {
+						//	parse our Hstore values into keys and values
+						keys, values, err := pgx.ParseHstore(v.(string))
+						if err != nil {
+							return nil, fmt.Errorf("Unable to parse Hstore err: %v", err)
+						}
+
+						for i, k := range keys {
+							//	if the value is Valid (i.e. not null) then add it to our gtags map
+							if values[i].Valid {
+								gtags[k] = values[i].String
+							}
+						}
+						continue
+					}
+
+					//	decimal support
+					//	pgx returns numeric datatypes as strings so we need to handle parsing them ourselves
+					//	https://github.com/jackc/pgx/issues/56
+					if fdescs[i].DataTypeName == "numeric" {
+						num, err := strconv.ParseFloat(v.(string), 64)
+						if err != nil {
+							return nil, fmt.Errorf("Unable to parse numeric (%v) to float64 err: %v", v.(string), err)
+						}
+
+						gtags[fdescs[i].Name] = num
+						continue
+					}
+
+					value, err := transfromVal(fdescs[i].DataType, vals[i])
 					if err != nil {
-						return nil, fmt.Errorf("Unable to parse numeric (%v) to float64 err: %v", v.(string), err)
+						return nil, fmt.Errorf("Unable to convert field[%v] (%v) of type (%v - %v) to a suitable value.: [[ %T  :: %[5]t ]]", i, fdescs[i].Name, fdescs[i].DataType, fdescs[i].DataTypeName, vals[i])
 					}
-
-					gtags[fdescs[i].Name] = num
-					continue
+					gtags[fdescs[i].Name] = value
 				}
-
-				value, err := transfromVal(fdescs[i].DataType, vals[i])
-				if err != nil {
-					return nil, fmt.Errorf("Unable to convert field[%v] (%v) of type (%v - %v) to a suitable value.: [[ %T  :: %[5]t ]]", i, fdescs[i].Name, fdescs[i].DataType, fdescs[i].DataTypeName, vals[i])
-				}
-				gtags[fdescs[i].Name] = value
 			}
+
+			for k, v := range tags {
+				// If tags does not exists, then let's add it.
+				if _, ok = gtags[k]; !ok {
+					gtags[k] = v
+				}
+			}
+
+			// Add features to Layer
+			layer.AddFeatures(mvt.Feature{
+				ID:       &gid,
+				Tags:     gtags,
+				Geometry: geom,
+			})
 		}
 
-		for k, v := range tags {
-			// If tags does not exists, then let's add it.
-			if _, ok = gtags[k]; !ok {
-				gtags[k] = v
-			}
-		}
-
-		// Add features to Layer
-		layer.AddFeatures(mvt.Feature{
-			ID:       &gid,
-			Tags:     gtags,
-			Geometry: geom,
-		})
-	}
-
-	return layer, err
+		return layer, err
+	*/
 }
