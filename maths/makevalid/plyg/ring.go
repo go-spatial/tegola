@@ -40,6 +40,8 @@ func (r Ring) LineRing() (pts []maths.Pt) {
 		(r.Label != maths.Inside && wo == maths.Clockwise) {
 		points.Reverse(pts)
 	}
+	// Lets move the points around so that the left-top most point is first.
+	points.RotateToLowestsFirst(pts)
 	return pts
 }
 
@@ -272,10 +274,13 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 	var discardPlys = make([]bool, len(rc.Rings))
 	var outsidePlys []int
 	var rings [][][]maths.Pt
+
 	// used to remove outside rings. If their bounding box touches these then they can be removed.
 	miny, maxy := rc.Y1s[0].Y, rc.Y1s[0].Y
+
 	idxmap := make(map[int]int)
 	// Mark any polygon touching the left and right border as being able to be discarded.
+	// Start with the left border
 	for _, yedge := range rc.Y1s {
 		if miny > yedge.Y {
 			miny = yedge.Y
@@ -291,6 +296,8 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 		}
 
 	}
+
+	// Now with the right border.
 	for _, yedge := range rc.Y2s {
 		if miny > yedge.Y {
 			miny = yedge.Y
@@ -305,8 +312,10 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 			}
 		}
 	}
+
 	for i, ring := range rc.Rings {
 
+		// We can discard this ring.
 		if discardPlys[i] {
 			continue
 		}

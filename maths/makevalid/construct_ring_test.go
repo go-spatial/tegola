@@ -1,7 +1,6 @@
 package makevalid
 
 import (
-	"log"
 	"reflect"
 	"testing"
 
@@ -28,7 +27,6 @@ func TestConstuctRing(t *testing.T) {
 	tests.Run(func(idx int, test testcase) {
 		r := newRing(test.start)
 		eadded := r.Add(test.pts)
-		log.Println(r, eadded)
 		if eadded != test.added {
 			t.Fatal("Added not equal")
 		}

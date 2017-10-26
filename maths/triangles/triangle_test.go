@@ -1,4 +1,4 @@
-package triangle
+package triangles
 
 import (
 	"log"

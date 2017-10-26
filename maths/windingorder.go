@@ -1,6 +1,8 @@
 package maths
 
-import "github.com/terranodo/tegola"
+import (
+	"github.com/terranodo/tegola"
+)
 
 // WindingOrder the direction the line strings.
 type WindingOrder uint8
@@ -30,13 +32,14 @@ func (w WindingOrder) Not() WindingOrder {
 }
 
 func WindingOrderOfPts(pts []Pt) WindingOrder {
-	sum := 0
+	sum := 0.0
 	li := len(pts) - 1
 
-	for i := range pts {
-		sum += int((pts[i].X - pts[li].X) * (pts[i].Y - pts[li].Y))
-		li = i
+	for i := range pts[:li] {
+		sum += (pts[i+1].X - pts[i].X) * (pts[i+1].Y + pts[i].Y)
 	}
+	sum += (pts[0].X - pts[li].X) * (pts[0].Y + pts[li].Y)
+
 	if sum < 0 {
 		return CounterClockwise
 	}

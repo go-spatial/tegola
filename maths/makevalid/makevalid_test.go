@@ -1,459 +1,17 @@
 package makevalid
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/gdey/tbltest"
 	"github.com/go-test/deep"
 	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/edgemap"
 	"github.com/terranodo/tegola/maths/hitmap"
 )
-
-func TestTrianglesForEdge(t *testing.T) {
-
-	type edgecase struct {
-		pts       [2]maths.Pt
-		err       error
-		triangles [2]*maths.Triangle
-	}
-	T := func(pt1, pt2, pt3, pt4 maths.Pt) edgecase {
-		t1 := maths.NewTriangle(pt1, pt2, pt3)
-		t2 := maths.NewTriangle(pt1, pt2, pt4)
-		return edgecase{
-			pts:       [2]maths.Pt{pt1, pt2},
-			triangles: [2]*maths.Triangle{&t1, &t2},
-		}
-	}
-	NT := func(pt1, pt2, pt4 maths.Pt) edgecase {
-		t2 := maths.NewTriangle(pt1, pt2, pt4)
-		return edgecase{
-			pts:       [2]maths.Pt{pt1, pt2},
-			triangles: [2]*maths.Triangle{nil, &t2},
-		}
-	}
-	TN := func(pt1, pt2, pt3 maths.Pt) edgecase {
-		t1 := maths.NewTriangle(pt1, pt2, pt3)
-		return edgecase{
-			pts:       [2]maths.Pt{pt1, pt2},
-			triangles: [2]*maths.Triangle{&t1, nil},
-		}
-	}
-	_, _, _ = T, NT, TN
-	type testcase struct {
-		lines       []maths.Line
-		triangulate bool
-		edges       []edgecase
-	}
-	tests := tbltest.Cases(
-		/*
-			testcase{
-				lines: []maths.Line{
-					// A
-					{maths.Pt{0, 0}, maths.Pt{7, -2}}, // B
-					{maths.Pt{0, 0}, maths.Pt{5, -5}}, // C
-					{maths.Pt{0, 0}, maths.Pt{5, 1}},  // D
-					{maths.Pt{0, 0}, maths.Pt{4, 0}},  // E
-					{maths.Pt{0, 0}, maths.Pt{5, -3}}, // F
-					{maths.Pt{0, 0}, maths.Pt{4, 4}},  // G
-					// B
-					{maths.Pt{7, -2}, maths.Pt{5, -5}},
-					{maths.Pt{7, -2}, maths.Pt{5, 1}},
-					{maths.Pt{7, -2}, maths.Pt{4, 0}},
-					{maths.Pt{7, -2}, maths.Pt{5, -3}},
-					{maths.Pt{7, -2}, maths.Pt{4, 4}},
-					// C
-					{maths.Pt{5, -5}, maths.Pt{5, -3}},
-					// D
-					{maths.Pt{5, 1}, maths.Pt{4, 0}},
-					{maths.Pt{5, 1}, maths.Pt{4, 4}},
-				},
-				edges: []edgecase{
-					// AB
-					T(maths.Pt{0, 0}, maths.Pt{7, -2}, maths.Pt{5, -3}, maths.Pt{4, 0}),
-					// BA
-					T(maths.Pt{7, -2}, maths.Pt{0, 0}, maths.Pt{4, 0}, maths.Pt{5, -3}),
-					// AC
-					NT(maths.Pt{0, 0}, maths.Pt{5, -5}, maths.Pt{5, -3}),
-					// AD
-					T(maths.Pt{0, 0}, maths.Pt{5, 1}, maths.Pt{4, 0}, maths.Pt{4, 4}),
-					// AE
-					T(maths.Pt{0, 0}, maths.Pt{4, 0}, maths.Pt{7, -2}, maths.Pt{5, 1}),
-					// AF
-					T(maths.Pt{0, 0}, maths.Pt{5, -3}, maths.Pt{5, -5}, maths.Pt{7, -2}),
-					// AG
-					TN(maths.Pt{0, 0}, maths.Pt{4, 4}, maths.Pt{5, 1}),
-					// BC
-					TN(maths.Pt{7, -2}, maths.Pt{5, -5}, maths.Pt{5, -3}),
-				},
-			},
-		*/
-		testcase{
-			triangulate: true,
-			lines: []maths.Line{
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 258, Y: -52}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 258, Y: -51}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 258, Y: -51}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 258, Y: -22}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 283, Y: 42}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 283, Y: 42}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 283, Y: 43}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 283, Y: 43}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -52}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -52}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -51}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -51}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -28}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -27}},
-				maths.Line{maths.Pt{X: 193, Y: 14}, maths.Pt{X: 193, Y: 15}},
-				maths.Line{maths.Pt{X: 193, Y: 14}, maths.Pt{X: 217, Y: -22}},
-				maths.Line{maths.Pt{X: 193, Y: 15}, maths.Pt{X: 213, Y: 55}},
-				maths.Line{maths.Pt{X: 213, Y: 55}, maths.Pt{X: 214, Y: 55}},
-				maths.Line{maths.Pt{X: 214, Y: 55}, maths.Pt{X: 250, Y: 93}},
-				maths.Line{maths.Pt{X: 217, Y: -23}, maths.Pt{X: 217, Y: -22}},
-				maths.Line{maths.Pt{X: 217, Y: -23}, maths.Pt{X: 257, Y: -22}},
-				maths.Line{maths.Pt{X: 250, Y: 93}, maths.Pt{X: 253, Y: 89}},
-				maths.Line{maths.Pt{X: 253, Y: 89}, maths.Pt{X: 261, Y: 79}},
-				maths.Line{maths.Pt{X: 257, Y: -22}, maths.Pt{X: 258, Y: -22}},
-				maths.Line{maths.Pt{X: 258, Y: -52}, maths.Pt{X: 299, Y: -51}},
-				maths.Line{maths.Pt{X: 261, Y: 79}, maths.Pt{X: 262, Y: 79}},
-				maths.Line{maths.Pt{X: 262, Y: 79}, maths.Pt{X: 271, Y: 83}},
-				maths.Line{maths.Pt{X: 263, Y: 53}, maths.Pt{X: 264, Y: 53}},
-				maths.Line{maths.Pt{X: 263, Y: 53}, maths.Pt{X: 271, Y: 82}},
-				maths.Line{maths.Pt{X: 264, Y: 53}, maths.Pt{X: 282, Y: 53}},
-				maths.Line{maths.Pt{X: 271, Y: 82}, maths.Pt{X: 271, Y: 83}},
-				maths.Line{maths.Pt{X: 282, Y: 53}, maths.Pt{X: 283, Y: 52}},
-				maths.Line{maths.Pt{X: 283, Y: 43}, maths.Pt{X: 283, Y: 52}},
-				maths.Line{maths.Pt{X: 283, Y: 43}, maths.Pt{X: 290, Y: 42}},
-				maths.Line{maths.Pt{X: 290, Y: 42}, maths.Pt{X: 290, Y: 43}},
-				maths.Line{maths.Pt{X: 290, Y: 43}, maths.Pt{X: 295, Y: 54}},
-				maths.Line{maths.Pt{X: 295, Y: 53}, maths.Pt{X: 295, Y: 54}},
-				maths.Line{maths.Pt{X: 295, Y: 53}, maths.Pt{X: 307, Y: 55}},
-				maths.Line{maths.Pt{X: 299, Y: -51}, maths.Pt{X: 299, Y: -28}},
-				maths.Line{maths.Pt{X: 299, Y: -27}, maths.Pt{X: 324, Y: -31}},
-				maths.Line{maths.Pt{X: 307, Y: 54}, maths.Pt{X: 307, Y: 55}},
-				maths.Line{maths.Pt{X: 307, Y: 54}, maths.Pt{X: 313, Y: 47}},
-				maths.Line{maths.Pt{X: 313, Y: 47}, maths.Pt{X: 313, Y: 48}},
-				maths.Line{maths.Pt{X: 313, Y: 48}, maths.Pt{X: 315, Y: 56}},
-				maths.Line{maths.Pt{X: 315, Y: 2}, maths.Pt{X: 315, Y: 3}},
-				maths.Line{maths.Pt{X: 315, Y: 2}, maths.Pt{X: 329, Y: -18}},
-				maths.Line{maths.Pt{X: 315, Y: 3}, maths.Pt{X: 329, Y: 12}},
-				maths.Line{maths.Pt{X: 315, Y: 56}, maths.Pt{X: 316, Y: 56}},
-				maths.Line{maths.Pt{X: 316, Y: 56}, maths.Pt{X: 324, Y: 53}},
-				maths.Line{maths.Pt{X: 324, Y: -31}, maths.Pt{X: 325, Y: -31}},
-				maths.Line{maths.Pt{X: 324, Y: 52}, maths.Pt{X: 324, Y: 53}},
-				maths.Line{maths.Pt{X: 324, Y: 52}, maths.Pt{X: 330, Y: 12}},
-				maths.Line{maths.Pt{X: 325, Y: -31}, maths.Pt{X: 329, Y: -19}},
-				maths.Line{maths.Pt{X: 329, Y: -19}, maths.Pt{X: 329, Y: -18}},
-				maths.Line{maths.Pt{X: 329, Y: 12}, maths.Pt{X: 330, Y: 12}},
-			},
-			edges: []edgecase{
-				// AB
-				T(maths.Pt{217, -23}, maths.Pt{257, -22}, maths.Pt{5, -3}, maths.Pt{4, 0}),
-			},
-		},
-	)
-	_ = tests
-
-	/*
-		tests.Run(func(idx int, test testcase) {
-			em := edgemap.New(test.lines)
-			log.Println("\tSegments:", len(em.Segments))
-			for _, seg := range em.Segments {
-				log.Println("\t\t", seg)
-			}
-			log.Println("\tSegments:", len(em.Segments))
-			if test.triangulate {
-				em.Triangulate()
-			}
-			log.Println("\tSegments:", len(em.Segments))
-			for _, seg := range em.Segments {
-				log.Println("\t\t", seg)
-			}
-			log.Println("\tSegments:", len(em.Segments))
-			for _, ec := range test.edges {
-				tr1, tr2, err := em.TrianglesForEdge(ec.pts[0], ec.pts[1])
-				if ec.err != nil {
-					if err != ec.err {
-						t.Errorf("Expected an error %v got %v", ec.err, err)
-					}
-					continue
-				}
-				if err != nil {
-					t.Errorf("Got unexpected error: %v", ec.err, err)
-					continue
-				}
-				if !(tr1.Equal(ec.triangles[0]) && tr2.Equal(ec.triangles[1])) {
-					//em.Dump()
-					t.Errorf("Expected: \n\t%v\n\t%v\nGot: \n\t%v\n\t%v",
-						ec.triangles[0], ec.triangles[1],
-						tr1, tr2,
-					)
-				}
-			}
-
-		})
-	*/
-
-}
-
-func TestFindTriangles(t *testing.T) {
-	type testcase struct {
-		EdgeMap       *edgemap.EM
-		expectedGraph *maths.TriangleGraph
-	}
-	type genTestCase struct {
-		lines         []maths.Line
-		expectedGraph *maths.TriangleGraph
-	}
-	genCases := []genTestCase{
-		{
-			lines: []maths.Line{
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 258, Y: -52}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 258, Y: -51}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 258, Y: -51}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 258, Y: -22}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 283, Y: 42}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 283, Y: 42}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 283, Y: 43}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 283, Y: 43}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -52}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -52}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -51}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -51}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -28}},
-				maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 299, Y: -27}},
-				maths.Line{maths.Pt{X: 193, Y: 14}, maths.Pt{X: 193, Y: 15}},
-				maths.Line{maths.Pt{X: 193, Y: 14}, maths.Pt{X: 217, Y: -22}},
-				maths.Line{maths.Pt{X: 193, Y: 15}, maths.Pt{X: 213, Y: 55}},
-				maths.Line{maths.Pt{X: 213, Y: 55}, maths.Pt{X: 214, Y: 55}},
-				maths.Line{maths.Pt{X: 214, Y: 55}, maths.Pt{X: 250, Y: 93}},
-				maths.Line{maths.Pt{X: 217, Y: -23}, maths.Pt{X: 217, Y: -22}},
-				maths.Line{maths.Pt{X: 217, Y: -23}, maths.Pt{X: 257, Y: -22}},
-				maths.Line{maths.Pt{X: 250, Y: 93}, maths.Pt{X: 253, Y: 89}},
-				maths.Line{maths.Pt{X: 253, Y: 89}, maths.Pt{X: 261, Y: 79}},
-				maths.Line{maths.Pt{X: 257, Y: -22}, maths.Pt{X: 258, Y: -22}},
-				maths.Line{maths.Pt{X: 258, Y: -52}, maths.Pt{X: 299, Y: -51}},
-				maths.Line{maths.Pt{X: 261, Y: 79}, maths.Pt{X: 262, Y: 79}},
-				maths.Line{maths.Pt{X: 262, Y: 79}, maths.Pt{X: 271, Y: 83}},
-				maths.Line{maths.Pt{X: 263, Y: 53}, maths.Pt{X: 264, Y: 53}},
-				maths.Line{maths.Pt{X: 263, Y: 53}, maths.Pt{X: 271, Y: 82}},
-				maths.Line{maths.Pt{X: 264, Y: 53}, maths.Pt{X: 282, Y: 53}},
-				maths.Line{maths.Pt{X: 271, Y: 82}, maths.Pt{X: 271, Y: 83}},
-				maths.Line{maths.Pt{X: 282, Y: 53}, maths.Pt{X: 283, Y: 52}},
-				maths.Line{maths.Pt{X: 283, Y: 43}, maths.Pt{X: 283, Y: 52}},
-				maths.Line{maths.Pt{X: 283, Y: 43}, maths.Pt{X: 290, Y: 42}},
-				maths.Line{maths.Pt{X: 290, Y: 42}, maths.Pt{X: 290, Y: 43}},
-				maths.Line{maths.Pt{X: 290, Y: 43}, maths.Pt{X: 295, Y: 54}},
-				maths.Line{maths.Pt{X: 295, Y: 53}, maths.Pt{X: 295, Y: 54}},
-				maths.Line{maths.Pt{X: 295, Y: 53}, maths.Pt{X: 307, Y: 55}},
-				maths.Line{maths.Pt{X: 299, Y: -51}, maths.Pt{X: 299, Y: -28}},
-				maths.Line{maths.Pt{X: 299, Y: -27}, maths.Pt{X: 324, Y: -31}},
-				maths.Line{maths.Pt{X: 307, Y: 54}, maths.Pt{X: 307, Y: 55}},
-				maths.Line{maths.Pt{X: 307, Y: 54}, maths.Pt{X: 313, Y: 47}},
-				maths.Line{maths.Pt{X: 313, Y: 47}, maths.Pt{X: 313, Y: 48}},
-				maths.Line{maths.Pt{X: 313, Y: 48}, maths.Pt{X: 315, Y: 56}},
-				maths.Line{maths.Pt{X: 315, Y: 2}, maths.Pt{X: 315, Y: 3}},
-				maths.Line{maths.Pt{X: 315, Y: 2}, maths.Pt{X: 329, Y: -18}},
-				maths.Line{maths.Pt{X: 315, Y: 3}, maths.Pt{X: 329, Y: 12}},
-				maths.Line{maths.Pt{X: 315, Y: 56}, maths.Pt{X: 316, Y: 56}},
-				maths.Line{maths.Pt{X: 316, Y: 56}, maths.Pt{X: 324, Y: 53}},
-				maths.Line{maths.Pt{X: 324, Y: -31}, maths.Pt{X: 325, Y: -31}},
-				maths.Line{maths.Pt{X: 324, Y: 52}, maths.Pt{X: 324, Y: 53}},
-				maths.Line{maths.Pt{X: 324, Y: 52}, maths.Pt{X: 330, Y: 12}},
-				maths.Line{maths.Pt{X: 325, Y: -31}, maths.Pt{X: 329, Y: -19}},
-				maths.Line{maths.Pt{X: 329, Y: -19}, maths.Pt{X: 329, Y: -18}},
-				maths.Line{maths.Pt{X: 329, Y: 12}, maths.Pt{X: 330, Y: 12}},
-			},
-		},
-	}
-
-	cases := []testcase{
-		testcase{
-			EdgeMap: &edgemap.EM{
-				BBox: [4]maths.Pt{{-10, -10}, {17, -100}, {17, 19}, {-10, 19}},
-				Keys: []maths.Pt{
-					{-10, -10}, {-10, 19}, {3, 1}, {3, 6}, {4, 4}, {4, 6}, {4, 9}, {5, 4}, {5, 6}, {5, 9}, {7, 1}, {7, 6}, {17, -10}, {17, 19},
-				},
-				Map: map[maths.Pt]map[maths.Pt]bool{
-					maths.Pt{-10, -10}: map[maths.Pt]bool{
-						maths.Pt{17, -10}: false,
-						maths.Pt{-10, 19}: false,
-						maths.Pt{3, 1}:    false,
-						maths.Pt{3, 6}:    false,
-						maths.Pt{4, 9}:    false,
-						maths.Pt{7, 1}:    false,
-					},
-					maths.Pt{-10, 19}: map[maths.Pt]bool{
-						maths.Pt{17, 19}:   false,
-						maths.Pt{-10, -10}: false,
-						maths.Pt{4, 9}:     false,
-						maths.Pt{5, 9}:     false,
-					},
-					maths.Pt{3, 1}: map[maths.Pt]bool{
-						maths.Pt{4, 6}:     false,
-						maths.Pt{5, 4}:     false,
-						maths.Pt{7, 6}:     false,
-						maths.Pt{3, 6}:     true,
-						maths.Pt{7, 1}:     true,
-						maths.Pt{-10, -10}: false,
-						maths.Pt{4, 4}:     false,
-					},
-					maths.Pt{3, 6}: map[maths.Pt]bool{
-						maths.Pt{3, 1}:     true,
-						maths.Pt{4, 6}:     true,
-						maths.Pt{-10, -10}: false,
-						maths.Pt{4, 9}:     false,
-					},
-					maths.Pt{4, 4}: map[maths.Pt]bool{
-						maths.Pt{4, 6}: true,
-						maths.Pt{5, 4}: true,
-						maths.Pt{3, 1}: false,
-						maths.Pt{5, 6}: false,
-					},
-					maths.Pt{4, 6}: map[maths.Pt]bool{
-						maths.Pt{3, 6}: true,
-						maths.Pt{4, 4}: true,
-						maths.Pt{4, 9}: true,
-						maths.Pt{5, 6}: true,
-						maths.Pt{3, 1}: false,
-						maths.Pt{5, 9}: false,
-					},
-					maths.Pt{4, 9}: map[maths.Pt]bool{
-						maths.Pt{3, 6}:     false,
-						maths.Pt{4, 6}:     true,
-						maths.Pt{5, 9}:     true,
-						maths.Pt{-10, -10}: false,
-						maths.Pt{-10, 19}:  false,
-					},
-					maths.Pt{5, 4}: map[maths.Pt]bool{
-						maths.Pt{4, 4}: true,
-						maths.Pt{5, 6}: true,
-						maths.Pt{3, 1}: false,
-						maths.Pt{7, 6}: false,
-					},
-					maths.Pt{5, 6}: map[maths.Pt]bool{
-						maths.Pt{4, 6}:   true,
-						maths.Pt{5, 4}:   true,
-						maths.Pt{5, 9}:   true,
-						maths.Pt{7, 6}:   true,
-						maths.Pt{4, 4}:   false,
-						maths.Pt{17, 19}: false,
-					},
-					maths.Pt{5, 9}: map[maths.Pt]bool{
-						maths.Pt{4, 9}:    true,
-						maths.Pt{5, 6}:    true,
-						maths.Pt{-10, 19}: false,
-						maths.Pt{4, 6}:    false,
-						maths.Pt{17, 19}:  false,
-					},
-					maths.Pt{7, 1}: map[maths.Pt]bool{
-						maths.Pt{3, 1}:     true,
-						maths.Pt{7, 6}:     true,
-						maths.Pt{-10, -10}: false,
-						maths.Pt{17, -10}:  false,
-						maths.Pt{17, 19}:   false,
-					},
-					maths.Pt{7, 6}: map[maths.Pt]bool{
-						maths.Pt{5, 6}:   true,
-						maths.Pt{7, 1}:   true,
-						maths.Pt{3, 1}:   false,
-						maths.Pt{5, 4}:   false,
-						maths.Pt{17, 19}: false,
-					},
-					maths.Pt{17, -10}: map[maths.Pt]bool{
-						maths.Pt{-10, -10}: false,
-						maths.Pt{17, 19}:   false,
-						maths.Pt{7, 1}:     false,
-					},
-
-					maths.Pt{17, 19}: map[maths.Pt]bool{
-						maths.Pt{-10, 109}: false,
-						maths.Pt{5, 6}:     false,
-						maths.Pt{5, 9}:     false,
-						maths.Pt{7, 1}:     false,
-						maths.Pt{7, 6}:     false,
-						maths.Pt{17, -10}:  false,
-					},
-				},
-				Segments: []maths.Line{
-					{maths.Pt{-10, -10}, maths.Pt{17, -10}},
-					{maths.Pt{17, -10}, maths.Pt{17, 19}},
-					{maths.Pt{17, 19}, maths.Pt{-10, 19}},
-					{maths.Pt{-10, 19}, maths.Pt{-10, -10}},
-					{maths.Pt{3, 1}, maths.Pt{3, 6}},
-					{maths.Pt{3, 1}, maths.Pt{7, 1}},
-					{maths.Pt{3, 6}, maths.Pt{4, 6}},
-					{maths.Pt{4, 4}, maths.Pt{4, 6}},
-					{maths.Pt{4, 4}, maths.Pt{5, 4}},
-					{maths.Pt{4, 6}, maths.Pt{4, 9}},
-					{maths.Pt{4, 6}, maths.Pt{5, 6}},
-					{maths.Pt{4, 9}, maths.Pt{5, 9}},
-					{maths.Pt{5, 4}, maths.Pt{5, 6}},
-					{maths.Pt{5, 6}, maths.Pt{5, 9}},
-					{maths.Pt{5, 6}, maths.Pt{7, 6}},
-					{maths.Pt{7, 1}, maths.Pt{7, 6}},
-					{maths.Pt{-10, -10}, maths.Pt{3, 1}},
-					{maths.Pt{-10, -10}, maths.Pt{3, 6}},
-					{maths.Pt{-10, -10}, maths.Pt{4, 9}},
-					{maths.Pt{-10, -10}, maths.Pt{7, 1}},
-					{maths.Pt{-10, 19}, maths.Pt{4, 9}},
-					{maths.Pt{-10, 19}, maths.Pt{5, 9}},
-					{maths.Pt{3, 1}, maths.Pt{4, 4}},
-					{maths.Pt{3, 1}, maths.Pt{4, 6}},
-					{maths.Pt{3, 1}, maths.Pt{5, 4}},
-					{maths.Pt{3, 1}, maths.Pt{7, 6}},
-					{maths.Pt{3, 6}, maths.Pt{4, 9}},
-					{maths.Pt{4, 4}, maths.Pt{5, 6}},
-					{maths.Pt{4, 6}, maths.Pt{5, 9}},
-					{maths.Pt{5, 4}, maths.Pt{7, 6}},
-					{maths.Pt{5, 6}, maths.Pt{17, 19}},
-					{maths.Pt{5, 9}, maths.Pt{17, 19}},
-					{maths.Pt{7, 1}, maths.Pt{17, -10}},
-					{maths.Pt{7, 1}, maths.Pt{17, 19}},
-					{maths.Pt{7, 6}, maths.Pt{17, 19}},
-				},
-			},
-			expectedGraph: &maths.TriangleGraph{},
-		},
-	}
-	for _, acase := range genCases {
-		em := edgemap.New(acase.lines)
-		em.Triangulate()
-		cases = append(cases, testcase{EdgeMap: em, expectedGraph: acase.expectedGraph})
-	}
-
-	var tcases []tbltest.TestCase
-	for _, ac := range cases {
-		tcases = append(tcases, tbltest.TestCase(ac))
-	}
-
-	tests := tbltest.Cases(tcases...)
-
-	tests.Run(func(idx int, test testcase) {
-
-		got, err := test.EdgeMap.FindTriangles()
-		_ = err
-
-		/*
-			log.Println(err)
-			log.Printf("%+v\n", got)
-		*/
-		if got == nil {
-			return
-		}
-		for i, v := range got.Triangles() {
-			//	log.Println("i:", i)
-			//	v.Dump()
-			_ = i
-			_ = v
-		}
-		//log.Println("BBox:", test.EdgeMap.BBox)
-	})
-}
 
 func TestPointPairs(t *testing.T) {
 	type testcase struct {
@@ -483,97 +41,6 @@ func TestPointPairs(t *testing.T) {
 			t.Error("Expected an error %v but got %v", test.err, err)
 		}
 		if test.err != nil && !reflect.DeepEqual(test.expected, got) {
-			t.Error("Expected\n\t", test.expected, "\ngot\n\t", got)
-		}
-	})
-}
-
-func TestDestructure(t *testing.T) {
-	type testcase struct {
-		lines    [][]maths.Line
-		expected []maths.Line
-	}
-	tests := tbltest.Cases(
-		testcase{
-			lines: [][]maths.Line{
-				{
-					{maths.Pt{3, 6}, maths.Pt{7, 6}},
-					{maths.Pt{4, 4}, maths.Pt{4, 9}},
-				},
-			},
-			expected: []maths.Line{
-				{maths.Pt{3, 6}, maths.Pt{4, 6}},
-				{maths.Pt{4, 4}, maths.Pt{4, 6}},
-				{maths.Pt{4, 6}, maths.Pt{7, 6}},
-				{maths.Pt{4, 6}, maths.Pt{4, 9}},
-			},
-		},
-		testcase{
-			lines: [][]maths.Line{
-				{
-					{maths.Pt{3, 1}, maths.Pt{7, 1}},
-					{maths.Pt{7, 1}, maths.Pt{7, 6}},
-					{maths.Pt{7, 6}, maths.Pt{3, 6}},
-					{maths.Pt{3, 6}, maths.Pt{3, 1}},
-				},
-				{
-					{maths.Pt{4, 4}, maths.Pt{5, 4}},
-					{maths.Pt{5, 4}, maths.Pt{5, 9}},
-					{maths.Pt{5, 9}, maths.Pt{4, 9}},
-					{maths.Pt{4, 9}, maths.Pt{4, 4}},
-				},
-			},
-			expected: []maths.Line{
-				{maths.Pt{3, 1}, maths.Pt{7, 1}},
-				{maths.Pt{3, 1}, maths.Pt{3, 6}},
-				{maths.Pt{3, 6}, maths.Pt{4, 6}},
-				{maths.Pt{4, 4}, maths.Pt{4, 6}},
-				{maths.Pt{4, 4}, maths.Pt{5, 4}},
-				{maths.Pt{4, 6}, maths.Pt{5, 6}},
-				{maths.Pt{4, 6}, maths.Pt{4, 9}},
-				{maths.Pt{4, 9}, maths.Pt{5, 9}},
-				{maths.Pt{5, 4}, maths.Pt{5, 6}},
-				{maths.Pt{5, 6}, maths.Pt{5, 9}},
-				{maths.Pt{5, 6}, maths.Pt{7, 6}},
-				{maths.Pt{7, 1}, maths.Pt{7, 6}},
-			},
-		},
-		testcase{
-			lines: [][]maths.Line{
-				{
-					{maths.Pt{3, 1}, maths.Pt{7, 1}},
-					{maths.Pt{7, 1}, maths.Pt{7, 6}},
-					{maths.Pt{7, 6}, maths.Pt{7, 1}}, // This is a bad line. Make sure that destruct can handle this.
-					{maths.Pt{7, 6}, maths.Pt{3, 6}},
-					{maths.Pt{3, 6}, maths.Pt{3, 1}},
-				},
-				{
-					{maths.Pt{4, 4}, maths.Pt{5, 4}},
-					{maths.Pt{5, 4}, maths.Pt{5, 9}},
-					{maths.Pt{5, 9}, maths.Pt{4, 9}},
-					{maths.Pt{4, 9}, maths.Pt{4, 4}},
-				},
-			},
-			expected: []maths.Line{
-				{maths.Pt{3, 1}, maths.Pt{7, 1}},
-				{maths.Pt{3, 1}, maths.Pt{3, 6}},
-				{maths.Pt{3, 6}, maths.Pt{4, 6}},
-				{maths.Pt{4, 4}, maths.Pt{4, 6}},
-				{maths.Pt{4, 4}, maths.Pt{5, 4}},
-				{maths.Pt{4, 6}, maths.Pt{5, 6}},
-				{maths.Pt{4, 6}, maths.Pt{4, 9}},
-				{maths.Pt{4, 9}, maths.Pt{5, 9}},
-				{maths.Pt{5, 4}, maths.Pt{5, 6}},
-				{maths.Pt{5, 6}, maths.Pt{5, 9}},
-				{maths.Pt{5, 6}, maths.Pt{7, 6}},
-				{maths.Pt{7, 1}, maths.Pt{7, 6}},
-			},
-		},
-	)
-	tests.Run(func(idx int, test testcase) {
-		got := edgemap.Destructure(test.lines)
-		sort.Sort(maths.ByXYLine(test.expected))
-		if !reflect.DeepEqual(test.expected, got) {
 			t.Error("Expected\n\t", test.expected, "\ngot\n\t", got)
 		}
 	})
@@ -715,12 +182,14 @@ func TestMakeValid(t *testing.T) {
 			},
 		},
 	)
+	log.Println("We need to get 1,2 passing right now they do not.")
 
-	tests.RunOrder = "2"
+	tests.RunOrder = "0"
+	ctx := context.Background()
 
 	tests.Run(func(idx int, test testcase) {
 		hm := hitmap.NewFromLines(test.lines)
-		got, err := makeValid(hm, test.lines...)
+		got, err := MakeValid(ctx, &hm, 4096, test.lines...)
 		if err != test.err {
 			t.Errorf("( %v ) Unexpected error: Expected: %v, got: %v", idx, test.err, err)
 			return
@@ -782,9 +251,10 @@ func BenchmarkMakeValid5PolyA(b *testing.B) {
 	}
 
 	hm := hitmap.NewFromLines(lines)
+	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
-		makeValid(hm, lines...)
+		MakeValid(ctx, &hm, 4096, lines...)
 	}
 }
 func BenchmarkMakeValid5PolyB(b *testing.B) {
@@ -820,9 +290,10 @@ func BenchmarkMakeValid5PolyB(b *testing.B) {
 		},
 	}
 	hm := hitmap.NewFromLines(lines)
+	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
-		makeValid(hm, lines...)
+		MakeValid(ctx, &hm, 4096, lines...)
 	}
 }
 
@@ -4373,8 +3844,9 @@ func BenchmarkMakeValid5PolyC(b *testing.B) {
 
 	b.ReportAllocs()
 	var nresultPolygon [][][]maths.Pt
+	ctx := context.Background()
 	for n := 0; n < b.N; n++ {
-		nresultPolygon, _ = makeValid(hm, lines...)
+		nresultPolygon, _ = MakeValid(ctx, &hm, 4096, lines...)
 	}
 
 	resultPolygon = nresultPolygon

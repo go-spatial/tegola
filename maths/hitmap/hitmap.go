@@ -306,6 +306,7 @@ func NewFromGeometry(g tegola.Geometry) (hm M) {
 	}
 }
 
+// NewFromLines creates a new hitmap where the first ring (made up of lines) is considered inside. The others if there are any are considered outside.
 func NewFromLines(ln [][]maths.Line) (hm M) {
 	hm.s = make([]segment, len(ln))
 	hm.s[0] = NewSegmentFromLines(maths.Inside, ln[0])
