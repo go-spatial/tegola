@@ -15,7 +15,7 @@ import (
 	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
-	"github.com/terranodo/tegola/provider/gpkg"
+	_ "github.com/terranodo/tegola/provider/gpkg"
 	_ "github.com/terranodo/tegola/provider/postgis"
 	"github.com/terranodo/tegola/server"
 )

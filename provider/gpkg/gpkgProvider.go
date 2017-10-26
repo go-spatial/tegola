@@ -6,9 +6,8 @@ import (
 	"github.com/terranodo/tegola/mvt/provider"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/util/dict"
-
-	log "github.com/sirupsen/logrus"
-
+	"github.com/terranodo/tegola/util"
+	
 	"context"
 //	"errors"
 
@@ -66,7 +65,7 @@ func(l GPKGLayer) GeomType() (tegola.Geometry) {return l.geomtype}
 func(l GPKGLayer) SRID() (int) {return l.srid}
 
 func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
-	log.Debug("Attempting gpkg.Layers()")
+	util.CodeLogger.Debug("Attempting gpkg.Layers()")
 	layerCount := len(p.layers)
 	ls := make([]mvt.LayerInfo, layerCount)
 	
@@ -77,21 +76,21 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 		i++
 	}
 
-	log.Debugf("Ok, returning mvt.LayerInfo array: %v", ls)
+	util.CodeLogger.Debugf("Ok, returning mvt.LayerInfo array: %v", ls)
 	return ls, nil
 }
 
-func doScan(rows* sql.Rows, fid *int, geom *tegola.Geometry, gid *uint64, featureColValues []string,
+func doScan(rows* sql.Rows, fid *int, geomBlob *[]byte, gid *uint64, featureColValues []string,
 			featureColNames []string) {
 	switch len(featureColValues) {
 		case 0:
-			rows.Scan(&fid, &geom, &gid)
+			rows.Scan(fid, geomBlob, gid)
 		case 1:
-			rows.Scan(fid, geom, gid, &featureColValues[0])
+			rows.Scan(fid, geomBlob, gid, &featureColValues[0])
 		case 2:
-			rows.Scan(fid, geom, gid, &featureColValues[0], &featureColValues[1])
+			rows.Scan(fid, geomBlob, gid, &featureColValues[0], &featureColValues[1])
 		case 10:
-			rows.Scan(fid, geom, gid, &featureColValues[0], &featureColValues[1],
+			rows.Scan(fid, geomBlob, gid, &featureColValues[0], &featureColValues[1],
 				&featureColValues[2], &featureColValues[3], &featureColValues[4],
 				&featureColValues[5], &featureColValues[6], &featureColValues[7],
 				&featureColValues[8], &featureColValues[9])
@@ -105,25 +104,25 @@ func doScan(rows* sql.Rows, fid *int, geom *tegola.Geometry, gid *uint64, featur
 	}
 }
 
-func getFeatures(layer *mvt.Layer, rows *sql.Rows, colnames []string) {
-	var featureColValues []string
-	featureColValues = make([]string, len(colnames) - 3)
-	var fid int
-	var geom tegola.Geometry
-	var gid uint64
-	
-	for rows.Next() {
-		doScan(rows, &fid, &geom, &gid, featureColValues, colnames[3:])
-		
-		// Add features to Layer
-		layer.AddFeatures(mvt.Feature{
-			ID:       &gid,
-			Tags:     nil,
-//			Tags:     gtags,
-			Geometry: geom,
-		})
-	}
-}
+//func getFeatures(layer *mvt.Layer, rows *sql.Rows, colnames []string) {
+//	var featureColValues []string
+//	featureColValues = make([]string, len(colnames) - 3)
+//	var fid int
+//	var geomBlob []byte
+//	var gid uint64
+//	fmt.Println("***Hi***")
+//	for rows.Next() {
+//		doScan(rows, &fid, &geomBlob, &gid, featureColValues, colnames[3:])
+//		geom, _ := readGeometries(geomBlob)
+//		// Add features to Layer
+//		layer.AddFeatures(mvt.Feature{
+//			ID:       &gid,
+//			Tags:     nil,
+////			Tags:     gtags,
+//			Geometry: geom,
+//		})
+//	}
+//}
 
 func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
 	fmt.Println("Attempting MVTLayer()")
@@ -160,6 +159,8 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	newLayer.Name = layerName
 	
 	fmt.Println("Columns: ", cols)
+	rowIdx := 0
+    var geom tegola.Geometry = nil
 	for rows.Next() {
         err = rows.Scan(valPtrs...)
         if err != nil {
@@ -167,7 +168,6 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
             continue
         }
         var gid uint64
-        var geom tegola.Geometry
 
 		for i := 0; i < len(vals); i++ {
 			if vals[i] == nil {
@@ -194,7 +194,8 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 			if cols[i] == "geom" {
 				fmt.Println("Doing geom extraction...", vals[i])
 				var h GeoPackageBinaryHeader
-				h.Init(vals[i].([]byte))
+				data := vals[i].([]byte)
+				h.Init(data)
 				
 				if h.SRSId() != 4326 {
 					fmt.Println("SRID ", pLayer.srid, " != 4326, trying to convert...")			
@@ -207,7 +208,18 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 					}
 					geom = g.Geometry
 				} else {
-					geom = vals[i].([]byte)[h.Size():]
+					// Read data starting from after the header
+					fmt.Printf("h.Size: %v\n", h.Size())
+					fmt.Printf("len(vals): %v\n", len(data))
+					fmt.Printf("len(vals[h.Size():]): %v\n", len(data[h.Size():]))
+					fmt.Println("rowIdx: ", rowIdx)
+					rowIdx++
+					geomArray, _ := readGeometries(data[h.Size():])
+					if len(geomArray) > 1 {
+						util.CodeLogger.Warn("Multiple geometries found at top level, only using first")
+					}
+					fmt.Printf("geom type: %T\n", geomArray[0])
+					geom = AsTegolaGeom(geomArray[0])
 				}
 			}
 		}
@@ -219,13 +231,14 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		}
 		fmt.Println("---")
 
+		fmt.Printf("geom: %v, geom type: %T", geom, geom)
 
-		newLayer.AddFeatures(mvt.Feature{
+		f := mvt.Feature{
 			ID: &gid,
 			Tags: make(map[string]interface{}),
 			Geometry: geom,
-		})
-		
+		}
+		newLayer.AddFeatures(f)
 	}
 
 //			fmt.Println(vals[i])
@@ -250,10 +263,11 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	m := dict.M(config)
 	filepath, err := m.String("config", nil)
 	if err != nil {
+		util.CodeLogger.Error(err)
 		return nil, err
 	}
 	
-	log.Debug("Attempting sql.Open() w/ filepath: ", filepath)
+	util.CodeLogger.Debug("Attempting sql.Open() w/ filepath: ", filepath)
 	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
 		return nil, err
@@ -278,16 +292,17 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		rows.Scan(&tablename, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &srid)
 		layerQuery := "SELECT * FROM " + tablename + ";"
 		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: "", srid: srid}
-		logMsgPart := "(" + tablename + "," + string(srid) + ")"
+		var logMsgPart string
+		fmt.Sprintf(logMsgPart, "(%v-%i) ", tablename, srid)
 		logMsg += logMsgPart
 	}
-	log.Debug(logMsg)
+	util.CodeLogger.Debug(logMsg)
 
 	return &p, err
 }
 
 
 func init() {
-	log.Debug("Entering gpkg.go init()")
+	util.CodeLogger.Debug("Entering gpkg.go init()")
 	provider.Register(Name, NewProvider)
 }

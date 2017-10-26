@@ -2,15 +2,43 @@ package gpkg
 
 import (
 	log "github.com/sirupsen/logrus"
+	"github.com/terranodo/tegola"
 
 	"encoding/binary"
 	"math"
 	"fmt"
 )
 
+func init() {
+	log.SetLevel(log.DebugLevel)
+}
+
 // Byte ordering flags
 const wkbXDR = 0	// Big Endian
 const wkbNDR = 1	// Little Endian
+
+func AsTegolaGeom(wkbGeom WKBGeometry) tegola.Geometry {
+	switch g := wkbGeom.(type) {
+		case *WKBLineString:
+			var tg tegola.LineString
+			tg = g
+			return tg
+		case *WKBPolygon:
+			var tg tegola.Polygon
+			tg = g
+			return tg
+		case *WKBMultiLineString:
+			var tg tegola.MultiLine
+			tg = g
+			return tg
+		default:
+			tg := tegola.Geometry(nil)
+			err := fmt.Errorf("Unexpected WKBGeometry type: %T, %t", wkbGeom, wkbGeom)
+			log.Fatal(err)
+			return tg
+	}
+}
+
 
 type WKBGeometry interface {
 	// Initializes the geometry and returns the number of bytes consumed
@@ -65,6 +93,14 @@ type WKBPoint struct {
 	y float64
 }
 
+func (p WKBPoint) X() float64 {
+	return p.x
+}
+
+func (p WKBPoint) Y() float64 {
+	return p.y
+}
+
 func (p *WKBPoint) Init(bytes []byte, byteOrder uint8) int {
 	// Returns the number of bytes consumed
 	if len(bytes) != 16 {
@@ -78,11 +114,25 @@ func (p *WKBPoint) Init(bytes []byte, byteOrder uint8) int {
 	return 16
 }
 
-type WKBLinearRing struct {
-	numPoints 	uint32
-	points 		[]WKBPoint;
+func (p WKBPoint) Type() uint32 {
+	return 1
 }
 
+func (p WKBPoint) AsTegolaPoint() tegola.Point {
+	var tp tegola.Point
+	tp = p
+	return tp
+}
+
+type WKBLinearRing struct {
+	numPoints 	uint32
+	points 		[]tegola.Point
+}
+
+//func (lr *WKBLinearRing) SubPoints() []WKBPoint {
+//	return lr.points
+//}
+//
 func (lr *WKBLinearRing) Init(bytes []byte, byteOrder uint8) int {
 	// Returns the number of bytes consumed
 	if len(bytes) < 4 {
@@ -92,14 +142,117 @@ func (lr *WKBLinearRing) Init(bytes []byte, byteOrder uint8) int {
 	// Current read position of bytes
 	i := 0
 	lr.numPoints = bytesToUint32(bytes[i:4], byteOrder)
-	lr.points = make([]WKBPoint, lr.numPoints)
+	lr.points = make([]tegola.Point, lr.numPoints)
 	i += 4
 	
 	for p := uint32(0); p < lr.numPoints; p++ {
-		lr.points[p].Init(bytes[i:i+16], byteOrder)
+		point := new(WKBPoint)
+		point.Init(bytes[i:i+16], byteOrder)
+		lr.points[p] = point
 		i+=16
 	}
 	return i
+}
+
+type WKBLineString struct {
+	WKBGeometry
+	tegola.LineString
+	byteOrder 	uint8
+	wkbType		uint32
+	numPoints	uint32
+	points      []WKBPoint
+}
+
+func(ls *WKBLineString) Init(bytes []byte) int {
+	i := 0
+	byteOrder := bytes[i]
+	i += 1
+	ls.byteOrder = byteOrder
+
+	wkbType := bytesToUint32(bytes[i:i+4], byteOrder)
+	lineStringType := WKBTypeFlags["WKBLineString"]
+	if wkbType != lineStringType {
+		err := fmt.Errorf("Expected WKBLineString type flag %v, got %v", lineStringType, wkbType)
+		log.Fatal(err)
+	}
+	ls.wkbType = wkbType
+	i += 4
+
+	ls.numPoints = bytesToUint32(bytes[i:i+4], byteOrder)
+	i += 4
+	
+	ls.points = make([]WKBPoint, ls.numPoints)
+
+	for j := uint32(0); j < ls.numPoints; j++ {
+		bytesConsumed := ls.points[j].Init(bytes[i:i+16], ls.byteOrder)
+		log.Debugf("Extracted point from byte stream: %v", ls.points[j])
+//		bytesConsumed := ls.points[j].Init(bytes[i:i+16], ls.byteOrder)
+		i += bytesConsumed
+	}
+	
+	log.Debugf("Initialized WKBLineString with %v points from %v bytes", ls.numPoints, i)
+	return i
+}
+
+func(ls WKBLineString) Type() uint32 {
+	return ls.wkbType
+}
+
+func(ls *WKBLineString) Subpoints() []tegola.Point {
+	fmt.Printf("We've got %v points (%v) in this WKBLineString: %v\n", len(ls.points), ls.numPoints, ls.points)
+	tPoints := make([]tegola.Point, len(ls.points))
+	for i := 0; i < len(ls.points); i++ {
+		tPoints[i] = ls.points[i]
+	}
+	return tPoints
+}
+
+type WKBMultiLineString struct {
+	byteOrder byte
+	wkbType uint32
+	numLineStrings uint32
+	lineStrings []WKBLineString;
+}
+
+func (mls *WKBMultiLineString) Init(bytes []byte) int {
+	i := 0
+	byteOrder := bytes[i]
+	i += 1
+	mls.byteOrder = byteOrder
+
+	wkbType := bytesToUint32(bytes[i:i+4], byteOrder)
+	i += 4
+	multiLineStringType := WKBTypeFlags["WKBMultiLineString"]
+	if wkbType != multiLineStringType {
+		err := fmt.Errorf("Expected WKBLineString type flag %v, got %v", multiLineStringType, wkbType)
+		log.Fatal(err)
+	}
+	mls.wkbType = wkbType
+
+	mls.numLineStrings = bytesToUint32(bytes[i:i+4], mls.byteOrder)
+	i += 4
+
+	mls.lineStrings = make([]WKBLineString, mls.numLineStrings)
+	for j := uint32(0); j < mls.numLineStrings; j++ {
+		ls := new(WKBLineString)
+		bytesConsumed := ls.Init(bytes[i:])
+		i += bytesConsumed
+		mls.lineStrings[j] = *ls
+	}
+
+	return i
+}
+
+func (mls *WKBMultiLineString) Type() uint32 {
+	return mls.wkbType
+}
+
+func (mls *WKBMultiLineString) Lines() []tegola.LineString {
+	tls := make([]tegola.LineString, mls.numLineStrings)
+	for i := uint32(0); i < mls.numLineStrings; i++ {
+		tls[i] = &mls.lineStrings[i]
+	}
+	return tls
 }
 
 
@@ -110,6 +263,16 @@ type WKBPolygon struct {
 	rings []WKBLinearRing
 }
 
+func (p WKBPolygon) Sublines() []tegola.LineString {
+	err := fmt.Errorf("WKBPolygon.Sublines() not implemented")
+	log.Error(err)
+	return nil
+//	lineStrings := make([]tegola.LineString, len(p.rings))
+//	for i := 0; i < len(p.rings); i++ {
+//		lineStrings[i] = p.rings[i]
+//	}
+//	return lineStrings
+}
 
 func (p *WKBPolygon) Init(bytes []byte) int {
 	// Returns the number of bytes consumed
@@ -139,7 +302,7 @@ func (p *WKBPolygon) Init(bytes []byte) int {
 	return i
 }
 
-func (p *WKBPolygon) Type() uint32 {
+func (p WKBPolygon) Type() uint32 {
 	return p.wkbType
 }
 
@@ -147,18 +310,22 @@ func (p *WKBPolygon) Type() uint32 {
 var WKBTypeFlags map[string]uint32 = map[string]uint32 {
 	"Geometry": 0,
 	"Point": 1,
-	"LineString": 2,
+	"WKBLineString": 2,
 	"WKBPolygon": 3,
 	"MultiPoint": 4,
-	"MultiLineString": 5,
+	"WKBMultiLineString": 5,
 	"MultiPolygon": 6,
 	"GeometryCollection": 7,
 }
 
 func newWKBGeometry(geomType uint32) WKBGeometry {
 	switch geomType {
+		case 2:
+			return new(WKBLineString)
 		case 3:
 			return new(WKBPolygon)
+		case 5:
+			return new(WKBMultiLineString)
 		default:
 			err := fmt.Errorf("newWKBGeometry: Unimplemented or invalid geomType: %v", geomType)
 			log.Error(err)
@@ -174,7 +341,13 @@ func readNextGeometry(bytes []byte) (WKBGeometry, int) {
 
 	byteOrder := bytes[0]
 	geomType := bytesToUint32(bytes[1:5], byteOrder)
-	
+	var geomTypeString string
+	for k, v := range WKBTypeFlags {
+		if v == geomType {
+			geomTypeString = k
+			break
+		}
+	}
 
 	newGeom := newWKBGeometry(geomType)
 	if newGeom == nil {
@@ -183,6 +356,7 @@ func readNextGeometry(bytes []byte) (WKBGeometry, int) {
 	}
 	bytesConsumed := newGeom.Init(bytes)
 	
+	log.Debugf("Read %v bytes as type %v (%v): %v", bytesConsumed, geomType, geomTypeString, bytes[:bytesConsumed])
 	return newGeom, bytesConsumed
 }
 
