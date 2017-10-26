@@ -340,14 +340,20 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 		obb := rc.Rings[i].BBox()
 
 		for j := range rings {
-			ibb := rc.Rings[idxmap[j]].BBox()
+			iring := rc.Rings[idxmap[j]]
+			ibb := iring.BBox()
 			if points.BoundingBox(ibb).Area() <= points.BoundingBox(obb).Area() {
 				continue
 			}
 			if !points.BoundingBox(ibb).ContainBB(obb) {
 				continue
 			}
+			// Now we need to do a full check.
+			iseg := hitmap.NewSegmentFromRing(iring.Label, iring.Points)
 			lnring := rc.Rings[i].LineRing()
+			if !iseg.Contains(points.Centroid(lnring)) {
+				continue
+			}
 			rings[j] = append(rings[j], lnring)
 			// Go to the next outside polygon.
 			break
