@@ -1,6 +1,10 @@
 package points
 
-import "github.com/terranodo/tegola/maths"
+import (
+	"math"
+
+	"github.com/terranodo/tegola/maths"
+)
 
 type BoundingBox [4]float64
 
@@ -43,6 +47,10 @@ func (bb BoundingBox) Contains(pt maths.Pt) bool {
 }
 func (bb BoundingBox) ContainsLine(l maths.Line) bool {
 	return bb.Contains(l[0]) && bb.Contains(l[1])
+}
+
+func (bb BoundingBox) Area() float64 {
+	return math.Abs((bb[2] - bb[0]) * (bb[3] - bb[1]))
 }
 
 // TODO:gdey — should we return an error?

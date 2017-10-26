@@ -341,10 +341,14 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 
 		for j := range rings {
 			ibb := rc.Rings[idxmap[j]].BBox()
+			if points.BoundingBox(ibb).Area() <= points.BoundingBox(obb).Area() {
+				continue
+			}
 			if !points.BoundingBox(ibb).ContainBB(obb) {
 				continue
 			}
-			rings[j] = append(rings[j], rc.Rings[i].LineRing())
+			lnring := rc.Rings[i].LineRing()
+			rings[j] = append(rings[j], lnring)
 			// Go to the next outside polygon.
 			break
 		}
