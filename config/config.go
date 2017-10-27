@@ -84,8 +84,12 @@ func (c *Config) Validate() error {
 
 	//	check for map layer name / zoom collisions
 	//	map of layers to providers
-	layerNames := map[string]MapLayer{}
+	mapLayers := map[string]map[string]MapLayer{}
 	for _, m := range c.Maps {
+		if _, ok := mapLayers[m.Name]; !ok {
+			mapLayers[m.Name] = map[string]MapLayer{}
+		}
+
 		for _, l := range m.Layers {
 			var name string
 
@@ -104,7 +108,7 @@ func (c *Config) Validate() error {
 			}
 
 			//	check if we already have this layer
-			if val, ok := layerNames[name]; ok {
+			if val, ok := mapLayers[m.Name][name]; ok {
 				//	we have a hit. check for zoom range overlap
 				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
 					return ErrOverlappingLayerZooms{
@@ -116,7 +120,7 @@ func (c *Config) Validate() error {
 			}
 
 			//	add the MapLayer to our map
-			layerNames[name] = l
+			mapLayers[m.Name][name] = l
 		}
 	}
 
