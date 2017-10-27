@@ -9,7 +9,7 @@ import (
 	"github.com/terranodo/tegola/wkb"
 )
 
-func (p Provider) Layer(name string) (Layer, bool) {
+func (p *Provider) Layer(name string) (Layer, bool) {
 	if name == "" {
 		return p.layers[p.firstlayer], true
 	}
@@ -17,7 +17,7 @@ func (p Provider) Layer(name string) (Layer, bool) {
 	return plyr, ok
 }
 
-func (p Provider) ForEachFeatureBytes(ctx context.Context, layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom []byte, tags map[string]interface{}) error) error {
+func (p *Provider) ForEachFeatureBytes(ctx context.Context, layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom []byte, tags map[string]interface{}) error) error {
 	plyr, ok := p.Layer(layerName)
 	if !ok {
 		return fmt.Errorf("Don't know of the layer “%v”", layerName)
@@ -66,7 +66,7 @@ func (p Provider) ForEachFeatureBytes(ctx context.Context, layerName string, til
 	return nil
 }
 
-func (p Provider) ForEachFeature(ctx context.Context, layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom wkb.Geometry, tags map[string]interface{}) error) error {
+func (p *Provider) ForEachFeature(ctx context.Context, layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom wkb.Geometry, tags map[string]interface{}) error) error {
 	plyr, ok := p.Layer(layerName)
 	if !ok {
 		return fmt.Errorf("Don't know of the layer named “%v”", layerName)
@@ -100,7 +100,7 @@ func (p Provider) ForEachFeature(ctx context.Context, layerName string, tile teg
 		//	fetch row values
 		vals, err := rows.Values()
 		if err != nil {
-			return fmt.Errorf("Got an error trying to run SQL: %v ; %v", sql, err)
+			return fmt.Errorf("error running SQL: %v ; %v", sql, err)
 		}
 
 		gid, geobytes, tags, err := decipherFields(ctx, plyr.GeomFieldName(), plyr.IDFieldName(), fdescs, vals)
@@ -111,7 +111,7 @@ func (p Provider) ForEachFeature(ctx context.Context, layerName string, tile teg
 		//	decode our WKB
 		geom, err := wkb.DecodeBytes(geobytes)
 		if err != nil {
-			return fmt.Errorf("Was unable to decode geometry field (%v) into wkb.", plyr.GeomFieldName())
+			return fmt.Errorf("Unable to decode geometry field (%v) into wkb where (%v = %v).", plyr.GeomFieldName(), plyr.IDFieldName(), gid)
 		}
 		if err = fn(plyr, gid, geom, tags); err != nil {
 			return err

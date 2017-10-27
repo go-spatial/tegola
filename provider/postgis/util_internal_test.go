@@ -8,12 +8,12 @@ import (
 
 func TestReplaceTokens(t *testing.T) {
 	testcases := []struct {
-		layer    layer
+		layer    Layer
 		tile     tegola.Tile
 		expected string
 	}{
 		{
-			layer: layer{
+			layer: Layer{
 				sql:  "SELECT * FROM foo WHERE geom && !BBOX!",
 				srid: tegola.WebMercator,
 			},
@@ -25,7 +25,7 @@ func TestReplaceTokens(t *testing.T) {
 			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,1.001875417e+07,0,0,3857)",
 		},
 		{
-			layer: layer{
+			layer: Layer{
 				sql:  "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
 				srid: tegola.WebMercator,
 			},
