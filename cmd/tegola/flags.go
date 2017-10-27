@@ -20,7 +20,7 @@ const defaultHTTPPort = ":8080"
 
 func init() {
 	//	short forms
-	flag.StringVar(configFile, "c", "config", "")
+	flag.StringVar(configFile, "c", "config.toml", "")
 	flag.BoolVar(version, "v", false, "")
 
 	flag.Usage = func() {
