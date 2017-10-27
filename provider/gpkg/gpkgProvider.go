@@ -7,9 +7,9 @@ import (
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/util/dict"
 	"github.com/terranodo/tegola/util"
-	
+	log "github.com/sirupsen/logrus"
+
 	"context"
-//	"errors"
 
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
@@ -41,7 +41,7 @@ type layer struct {
 
 type GPKGProvider struct {
 	// Currently just the path to the gpkg file.
-	config string
+	FilePath string
 	// map of layer name and corrosponding sql
 	layers map[string]layer
 	srid   int
@@ -70,8 +70,8 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 	ls := make([]mvt.LayerInfo, layerCount)
 	
 	i := 0
-	for _, layer := range p.layers {
-		l := GPKGLayer{name: layer.name, srid: layer.srid}
+	for _, player := range p.layers {
+		l := GPKGLayer{name: player.name, srid: player.srid, geomtype: player.geomType}
 		ls[i] = l
 		i++
 	}
@@ -126,7 +126,7 @@ func doScan(rows* sql.Rows, fid *int, geomBlob *[]byte, gid *uint64, featureColV
 
 func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
 	fmt.Println("Attempting MVTLayer()")
-	filepath := p.config
+	filepath := p.FilePath
 
 	fmt.Println("Opening gpkg at: ", filepath)
 	db, err := sql.Open("sqlite3", filepath)
@@ -261,7 +261,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	m := dict.M(config)
-	filepath, err := m.String("config", nil)
+	filepath, err := m.String("FilePath", nil)
 	if err != nil {
 		util.CodeLogger.Error(err)
 		return nil, err
@@ -273,7 +273,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	p := GPKGProvider{config: filepath, layers: make(map[string]layer)}
+	p := GPKGProvider{FilePath: filepath, layers: make(map[string]layer)}
 
 	qtext := "SELECT * FROM gpkg_contents"
 	rows, err := db.Query(qtext)
@@ -288,10 +288,29 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	var ignore string
 	
 	logMsg := "gpkg_contents: "
+	var geomRaw []byte
+	
 	for rows.Next() {
 		rows.Scan(&tablename, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &srid)
+
+		// Get layer geometry as geometry of first feature in table
+		geomQtext := "SELECT geom FROM " + tablename + " LIMIT 1;"
+		geomRow := db.QueryRow(geomQtext)
+		geomRow.Scan(&geomRaw)
+		var h GeoPackageBinaryHeader
+		h.Init(geomRaw)
+		geoms, _ := readGeometries(geomRaw[h.Size():])
+		geomType := geoms[0]
+		log.Infof("Got Geometry type %v for table %v", geomType, tablename)
 		layerQuery := "SELECT * FROM " + tablename + ";"
-		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: "", srid: srid}
+		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: geomType, srid: srid}
+
+		//		// The ID field name, this will default to 'gid' if not set to something other then empty string.
+//		idField string
+//		// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
+//		geomField string
+//		// GeomType is the the type of geometry returned from the SQL
+
 		var logMsgPart string
 		fmt.Sprintf(logMsgPart, "(%v-%i) ", tablename, srid)
 		logMsg += logMsgPart

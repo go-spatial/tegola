@@ -17,7 +17,7 @@ func TestNewGPKGProvider(t *testing.T) {
 	layers := map[string]layer{}
 	
 	config := map[string]interface{} {
-		"config": GPKGFilePath,
+		"FilePath": GPKGFilePath,
 		"layers": layers,
 		"srid": 0,
 	}

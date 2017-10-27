@@ -116,8 +116,8 @@ func TestReadNextGeometry(t *testing.T) {
 
 func TestWKBLineString(t *testing.T) {
 	expectedSubpoints := [][]tegola.Point{
-		{WKBPoint{x:23.7042737, y:37.9131229}, WKBPoint{x:23.7047466, y:37.9134829}},
-		{WKBPoint{x:23.7350737, y:37.9168907}, WKBPoint{x:23.7353205, y:37.9167163}},
+		{Point{x:23.7042737, y:37.9131229}, Point{x:23.7047466, y:37.9134829}},
+		{Point{x:23.7350737, y:37.9168907}, Point{x:23.7353205, y:37.9167163}},
 	}
 
 	expectedTypes := []uint32{2, 2}
@@ -135,21 +135,4 @@ func TestWKBLineString(t *testing.T) {
 		}
 		assert.Equal(t, expectedTypes[i], ls.Type(), "")
 	}
-}
-
-
-type G interface {
-	Area(x int, y int) int
-}
-
-type Gs struct {
-	name string
-}
-
-func (gs *Gs) Init(name string) {
-	gs.name = name
-}
-
-func (gs Gs) Area(x int, y int) int {
-	return x*y
 }

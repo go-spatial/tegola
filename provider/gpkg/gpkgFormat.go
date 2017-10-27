@@ -88,23 +88,23 @@ func bytesToFloat64(bytes []byte, byteOrder uint8) float64 {
 	return value	
 }
 
-type WKBPoint struct {
+type Point struct {
 	x float64
 	y float64
 }
 
-func (p WKBPoint) X() float64 {
+func (p Point) X() float64 {
 	return p.x
 }
 
-func (p WKBPoint) Y() float64 {
+func (p Point) Y() float64 {
 	return p.y
 }
 
-func (p *WKBPoint) Init(bytes []byte, byteOrder uint8) int {
+func (p *Point) Init(bytes []byte, byteOrder uint8) int {
 	// Returns the number of bytes consumed
 	if len(bytes) != 16 {
-		err := fmt.Errorf("WKBPoint.Init(): Need 16 bytes, received %v", len(bytes))
+		err := fmt.Errorf("Point.Init(): Need 16 bytes, received %v", len(bytes))
 		log.Fatal(err)
 	}
 
@@ -114,25 +114,64 @@ func (p *WKBPoint) Init(bytes []byte, byteOrder uint8) int {
 	return 16
 }
 
-func (p WKBPoint) Type() uint32 {
+func (p Point) Type() uint32 {
 	return 1
 }
 
-func (p WKBPoint) AsTegolaPoint() tegola.Point {
+func (p Point) AsTegolaPoint() tegola.Point {
 	var tp tegola.Point
 	tp = p
 	return tp
 }
+
+type WKBPoint struct {
+	WKBGeometry
+	tegola.Point
+	byteOrder	uint8
+	wkbType		uint32
+	point		Point
+}
+
+func (p *WKBPoint) Init(bytes []byte) int {
+	// Returns the number of bytes consumed from bytes
+	i := 0
+	byteOrder := bytes[i]
+	p.byteOrder = byteOrder
+	i += 1
+
+	wkbType := bytesToUint32(bytes[i:i+4], byteOrder)
+	pointType := WKBTypeFlags["WKBPoint"]
+	if wkbType != pointType {
+		err := fmt.Errorf("Expected WKBPoint type flag %v, got %v", pointType, wkbType)
+		log.Fatal(err)
+	}
+	p.wkbType = wkbType
+	i += 4
+
+	bytesConsumed := p.point.Init(bytes[i:], p.byteOrder)
+	i += bytesConsumed
+	
+	return i
+}
+
+func (p *WKBPoint) Type() uint32 {
+	return p.wkbType
+}
+
+func (p *WKBPoint) X() float64 {
+	return p.point.X()
+}
+
+func (p *WKBPoint) Y() float64 {
+	return p.point.Y()
+}
+
 
 type WKBLinearRing struct {
 	numPoints 	uint32
 	points 		[]tegola.Point
 }
 
-//func (lr *WKBLinearRing) SubPoints() []WKBPoint {
-//	return lr.points
-//}
-//
 func (lr *WKBLinearRing) Init(bytes []byte, byteOrder uint8) int {
 	// Returns the number of bytes consumed
 	if len(bytes) < 4 {
@@ -146,7 +185,7 @@ func (lr *WKBLinearRing) Init(bytes []byte, byteOrder uint8) int {
 	i += 4
 	
 	for p := uint32(0); p < lr.numPoints; p++ {
-		point := new(WKBPoint)
+		point := new(Point)
 		point.Init(bytes[i:i+16], byteOrder)
 		lr.points[p] = point
 		i+=16
@@ -160,7 +199,7 @@ type WKBLineString struct {
 	byteOrder 	uint8
 	wkbType		uint32
 	numPoints	uint32
-	points      []WKBPoint
+	points      []Point
 }
 
 func(ls *WKBLineString) Init(bytes []byte) int {
@@ -181,7 +220,7 @@ func(ls *WKBLineString) Init(bytes []byte) int {
 	ls.numPoints = bytesToUint32(bytes[i:i+4], byteOrder)
 	i += 4
 	
-	ls.points = make([]WKBPoint, ls.numPoints)
+	ls.points = make([]Point, ls.numPoints)
 
 	for j := uint32(0); j < ls.numPoints; j++ {
 		bytesConsumed := ls.points[j].Init(bytes[i:i+16], ls.byteOrder)
@@ -306,26 +345,88 @@ func (p WKBPolygon) Type() uint32 {
 	return p.wkbType
 }
 
-// Map WKBGeometry flag for type to GoLang type
+type WKBMultiPolygon struct {
+	WKBGeometry
+	tegola.MultiPolygon
+	byteOrder	uint8
+	wkbType		uint32
+	numPolygons	uint32
+	polygons	[]WKBPolygon
+}
+
+func (mp *WKBMultiPolygon) Init(bytes []byte) int {
+	// Returns the number of bytes consumed to initialize this WKBMultiPolygon
+	i := 0
+	byteOrder := bytes[i]
+	mp.byteOrder = byteOrder
+	i += 1
+	
+	wkbType := bytesToUint32(bytes[i:i+4], byteOrder)
+	multiPolygonType := WKBTypeFlags["WKBMultiPolygon"]
+	if wkbType != multiPolygonType {
+		err := fmt.Errorf("Expected WKBMultiPolygon type flag %v, got %v", multiPolygonType, wkbType)
+		log.Fatal(err)
+	}
+	mp.wkbType = wkbType
+	i += 4
+	
+	mp.numPolygons = bytesToUint32(bytes[i:i+4], byteOrder)
+	mp.polygons = make([]WKBPolygon, mp.numPolygons)
+	i += 4
+	
+	for j := uint32(0); j < mp.numPolygons; j++ {
+		bytesConsumed := mp.polygons[j].Init(bytes[i:])
+		i += bytesConsumed
+	}
+
+	return i
+}
+
+func (mp *WKBMultiPolygon) Type() uint32 {
+	return mp.wkbType
+}
+
+func (mp *WKBMultiPolygon) Polygons() []tegola.Polygon {
+	tps := make([]tegola.Polygon, mp.numPolygons)
+	for i := uint32(0); i < mp.numPolygons; i++ {
+		tps[i] = mp.polygons[i]
+	}
+	return tps
+}
+
+// Map WKBGeometry flag for type to string indicating GoLang type
 var WKBTypeFlags map[string]uint32 = map[string]uint32 {
-	"Geometry": 0,
-	"Point": 1,
+//	"Geometry": 0,
+	"WKBPoint": 1,
 	"WKBLineString": 2,
 	"WKBPolygon": 3,
-	"MultiPoint": 4,
+//	"MultiPoint": 4,
 	"WKBMultiLineString": 5,
-	"MultiPolygon": 6,
-	"GeometryCollection": 7,
+	"WKBMultiPolygon": 6,
+//	"GeometryCollection": 7,
 }
+
+//var WKBFlagToType map[uint32]tegola.Geometry = map[uint32]tegola.Geometry{
+//	1: tegola.Point,
+//	2: tegola.LineString,
+//	3: tegola.Polygon,
+//	5: tegola.MultiLineString,
+//	6: tegola.MultiPolygon,
+//}
+
 
 func newWKBGeometry(geomType uint32) WKBGeometry {
 	switch geomType {
+		case 1:
+			return new(WKBPoint)
 		case 2:
 			return new(WKBLineString)
 		case 3:
 			return new(WKBPolygon)
 		case 5:
 			return new(WKBMultiLineString)
+		case 6:
+			return new(WKBMultiPolygon)	
 		default:
 			err := fmt.Errorf("newWKBGeometry: Unimplemented or invalid geomType: %v", geomType)
 			log.Error(err)
