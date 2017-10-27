@@ -290,9 +290,14 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 	var discardPlys = make([]bool, len(rc.Rings))
 	var outsidePlys []int
 	var rings [][][]maths.Pt
+	var miny, maxy float64
 
 	// used to remove outside rings. If their bounding box touches these then they can be removed.
-	miny, maxy := rc.Y1s[0].Y, rc.Y1s[0].Y
+	if len(rc.Y1s) > 0 {
+		miny, maxy = rc.Y1s[0].Y, rc.Y1s[0].Y
+	} else if len(rc.Y2s) > 0 {
+		miny, maxy = rc.Y2s[0].Y, rc.Y2s[0].Y
+	}
 
 	// Mark any polygon touching the left and right border as being able to be discarded.
 	// Start with the left border
