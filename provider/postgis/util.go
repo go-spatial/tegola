@@ -176,7 +176,10 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 				for i, k := range keys {
 					// if the value is Valid (i.e. not null) then add it to our tags map.
 					if values[i].Valid {
-						tags[k] = values[i].String
+						//	we need to check if the key already exists. if it does, then don't overwrite it
+						if _, ok := tags[k]; !ok {
+							tags[k] = values[i].String
+						}
 					}
 				}
 				continue
