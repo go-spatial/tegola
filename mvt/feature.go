@@ -292,9 +292,9 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 		return nil
 	}
 
-	//sqTolerance := tolerance
+	sqTolerance := tolerance
 
-	sqTolerance := tolerance * tolerance
+	//sqTolerance := tolerance * tolerance
 
 	/*
 		// First lets look the first line, then we will simplify the other lines.
