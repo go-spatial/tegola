@@ -1,15 +1,23 @@
 package points
 
-import "github.com/terranodo/tegola/maths"
+import (
+	"math"
+
+	"github.com/terranodo/tegola/maths"
+)
 
 func SinArea(pts []maths.Pt) (a float64) {
-	if len(pts) < 2 {
+	if len(pts) < 3 {
 		return a
 	}
 	for i := range pts[:len(pts)-1] {
 		a += (pts[i].X * pts[i+1].Y) - (pts[i+1].X * pts[i].Y)
 	}
 	return a / 2
+}
+
+func Area(pts []maths.Pt) (a float64) {
+	return math.Abs(SinArea(pts))
 }
 
 func Centroid(pts []maths.Pt) (center maths.Pt) {

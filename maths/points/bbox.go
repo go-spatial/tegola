@@ -25,10 +25,10 @@ func (bb BoundingBox) PointAt(i int) maths.Pt {
 }
 
 func (bb BoundingBox) ContainBB(bb1 [4]float64) bool {
-	return bb[0] <= bb1[0] &&
-		bb1[2] <= bb[2] &&
-		bb[1] <= bb1[1] &&
-		bb1[3] <= bb[3]
+	return bb[0] <= bb1[0] && // bb1 minx is bigger or the same as bb
+		bb[1] <= bb1[1] && // bb1 miny is bigger or the same as bb
+		bb[2] >= bb1[2] && // bb1 maxx is smaller or the same as bb
+		bb[3] >= bb1[3] // bb1 maxy is smaller or the same as bb
 
 }
 

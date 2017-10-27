@@ -5,6 +5,7 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/points"
 )
 
 type Interface interface {
@@ -177,13 +178,13 @@ func (se segEvents) Contains(pt maths.Pt) (ok bool) {
 
 }
 
-type segment struct {
+type Segment struct {
 	bbox   bbox
 	label  maths.Label
 	events segEvents
 }
 
-func (seg segment) Contains(pt maths.Pt) bool {
+func (seg Segment) Contains(pt maths.Pt) bool {
 
 	// Check to make sure that the point is within the bounding box.
 	if !seg.bbox.Contains(pt) {
@@ -192,12 +193,12 @@ func (seg segment) Contains(pt maths.Pt) bool {
 	return seg.events.Contains(pt)
 }
 
-func NewSegment(label maths.Label, linestring tegola.LineString) (seg segment) {
+func NewSegment(label maths.Label, linestring tegola.LineString) (seg Segment) {
 
 	subpts := linestring.Subpoints()
 
 	seg.label = label
-	seg.events = make(segEvents, len(subpts))
+	seg.events = make(segEvents, 0, len(subpts))
 
 	j := len(subpts) - 1
 	for i := range subpts {
@@ -213,21 +214,22 @@ func NewSegment(label maths.Label, linestring tegola.LineString) (seg segment) {
 	return seg
 }
 
-func NewSegmentFromRing(label maths.Label, ring []maths.Pt) (seg segment) {
+func NewSegmentFromRing(label maths.Label, ring []maths.Pt) (seg Segment) {
 	seg.label = label
-	seg.events = make(segEvents, len(ring))
+	seg.events = make(segEvents, 0, len(ring))
 
 	j := len(ring) - 1
+	seg.bbox.f = points.BBox(ring)
+	seg.bbox.init = true
 	for i := range ring {
 		l := maths.Line{ring[j], ring[i]}
-		seg.bbox.Add(l[:]...)
 		seg.events.Add(l)
 		j = i
 	}
 	sort.Sort(seg.events)
 	return seg
 }
-func NewSegmentFromLines(label maths.Label, lines []maths.Line) (seg segment) {
+func NewSegmentFromLines(label maths.Label, lines []maths.Line) (seg Segment) {
 
 	seg.label = label
 
@@ -242,12 +244,12 @@ func NewSegmentFromLines(label maths.Label, lines []maths.Line) (seg segment) {
 }
 
 type M struct {
-	s      []segment
+	s      []Segment
 	DoClip bool
 	Clip   maths.Rectangle
 }
 
-func (hm *M) AppendSegment(seg ...segment) *M {
+func (hm *M) AppendSegment(seg ...Segment) *M {
 	hm.s = append(hm.s, seg...)
 	return hm
 }
@@ -278,7 +280,7 @@ func (hm *M) LabelFor(pt maths.Pt) maths.Label {
 
 func NewFromPolygon(p tegola.Polygon) (hm M) {
 	sl := p.Sublines()
-	hm.s = make([]segment, len(sl))
+	hm.s = make([]Segment, len(sl))
 	hm.s[0] = NewSegment(maths.Inside, sl[0])
 	for i := range sl[1:] {
 		hm.s[i+1] = NewSegment(maths.Outside, sl[i+1])
@@ -308,7 +310,7 @@ func NewFromGeometry(g tegola.Geometry) (hm M) {
 
 // NewFromLines creates a new hitmap where the first ring (made up of lines) is considered inside. The others if there are any are considered outside.
 func NewFromLines(ln [][]maths.Line) (hm M) {
-	hm.s = make([]segment, len(ln))
+	hm.s = make([]Segment, len(ln))
 	hm.s[0] = NewSegmentFromLines(maths.Inside, ln[0])
 	for i := range ln[1:] {
 		hm.s[i+1] = NewSegmentFromLines(maths.Outside, ln[i+1])

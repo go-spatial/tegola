@@ -266,6 +266,22 @@ func (rc *RingCol) searchY2Edge(y1, y2 float64, fn func(idx int, ptIdx int, l ma
 	rc.searchEdge(rc.Y2s, y1, y2, fn)
 }
 
+type mplysByArea struct {
+	pmap map[int]int
+	ply  [][][]maths.Pt
+}
+
+func (mp mplysByArea) Len() int { return len(mp.ply) }
+func (mp mplysByArea) Swap(i, j int) {
+	li := mp.pmap[i]
+	mp.pmap[i] = mp.pmap[j]
+	mp.pmap[j] = li
+	mp.ply[i], mp.ply[j] = mp.ply[j], mp.ply[i]
+}
+func (mp mplysByArea) Less(i, j int) bool {
+	return points.SinArea(mp.ply[i][0]) < points.SinArea(mp.ply[j][0])
+}
+
 func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 	if rc == nil || rc.Rings == nil {
 		return nil
@@ -278,7 +294,6 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 	// used to remove outside rings. If their bounding box touches these then they can be removed.
 	miny, maxy := rc.Y1s[0].Y, rc.Y1s[0].Y
 
-	idxmap := make(map[int]int)
 	// Mark any polygon touching the left and right border as being able to be discarded.
 	// Start with the left border
 	for _, yedge := range rc.Y1s {
@@ -313,6 +328,9 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 		}
 	}
 
+	idxmap := make(map[int]int)
+	segmap := make(map[int]hitmap.Segment)
+
 	for i, ring := range rc.Rings {
 
 		// We can discard this ring.
@@ -332,31 +350,41 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 		}
 		// This is an inside ring. Make a copy.
 		idxmap[len(rings)] = i
-		rings = append(rings, [][]maths.Pt{ring.LineRing()})
-
+		lnring := ring.LineRing()
+		segmap[len(rings)] = hitmap.NewSegmentFromRing(maths.Inside, ring.Points)
+		rings = append(rings, [][]maths.Pt{lnring})
 	}
+	// we need to sort the rings by area.
+	/*
+		sort.Sort(mplysByArea{
+			pmap: idxmap,
+			ply:  rings,
+		})
+	*/
+
 	// Now run through all the outside Rings.
 	for _, i := range outsidePlys {
-		obb := rc.Rings[i].BBox()
+		obb := points.BoundingBox(rc.Rings[i].BBox())
 
-		for j := range rings {
-			iring := rc.Rings[idxmap[j]]
-			ibb := iring.BBox()
-			if points.BoundingBox(ibb).Area() <= points.BoundingBox(obb).Area() {
+		for j := len(rings) - 1; j >= 0; j-- {
+			ibb := points.BoundingBox(points.BBox(rings[j][0]))
+			if ibb.Area() <= obb.Area() {
 				continue
 			}
-			if !points.BoundingBox(ibb).ContainBB(obb) {
+			containsbb := ibb.ContainBB(obb)
+			if !containsbb {
 				continue
 			}
-			// Now we need to do a full check.
-			iseg := hitmap.NewSegmentFromRing(iring.Label, iring.Points)
+
 			lnring := rc.Rings[i].LineRing()
-			if !iseg.Contains(points.Centroid(lnring)) {
+			//log.Println("Checking to see if the ring contains", lnring[0], "\n", segmap[j], "\n", ibb)
+			if !segmap[j].Contains(lnring[0]) {
 				continue
 			}
 			rings[j] = append(rings[j], lnring)
 			// Go to the next outside polygon.
 			break
+			//}
 		}
 	}
 	return rings

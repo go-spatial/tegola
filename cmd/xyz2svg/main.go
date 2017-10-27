@@ -178,13 +178,13 @@ func DrawGeometries() {
 		canvas.Init(file, 1440, 900, false)
 		log.Println("\tDrawing original version.")
 		canvas.Commentf("MinMax: %v\n", mm1)
-		canvas.DrawGeometry(g, fmt.Sprintf("%v_scaled", gid), "fill:yellow;opacity:1", "fill:black", false)
+		canvas.DrawGeometry(g, fmt.Sprintf("%v_scaled", gid), "fill-rule:evenodd; fill:yellow;opacity:1", "fill:black", false)
 		canvas.DrawRegion(true)
 		log.Println("\tDrawing simplified version.")
-		canvas.DrawGeometry(sg, fmt.Sprintf("%v_simplifed", gid), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
+		canvas.DrawGeometry(sg, fmt.Sprintf("%v_simplifed", gid), "fill-rule:evenodd; fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
 
 		log.Println("\tDrawing clipped version.")
-		canvas.DrawGeometry(vg, fmt.Sprintf("clipped_%v", gid), "fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
+		canvas.DrawGeometry(vg, fmt.Sprintf("clipped_%v", gid), "fill-rule:evenodd; fill:green;opacity:0.5", "fill:green;opacity:0.5", false)
 		canvas.End()
 		return nil
 	}); err != nil {
