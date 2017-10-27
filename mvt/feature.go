@@ -292,9 +292,7 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 		return nil
 	}
 
-	sqTolerance := tolerance
-
-	//sqTolerance := tolerance * tolerance
+	//sqTolerance := tolerance
 
 	/*
 		// First lets look the first line, then we will simplify the other lines.
@@ -308,23 +306,33 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 	if len(pts) <= 2 {
 		return nil
 	}
-	pts = maths.DouglasPeucker(pts, sqTolerance, true)
-	if len(pts) <= 2 {
-		return nil
-	}
-	poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
-	for i := 1; i < len(lines); i++ {
-		area := maths.AreaOfPolygonLineString(lines[0])
+	/*
+		pts = maths.DouglasPeucker(pts, sqTolerance, true)
+		if len(pts) <= 2 {
+			return nil
+		}
+	*/
+	sqTolerance := tolerance * tolerance
+	//	poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
+	for i := range lines {
+		area := maths.AreaOfPolygonLineString(lines[i])
 		l := basic.CloneLine(lines[i])
+
 		if area < sqTolerance {
 			// don't simplify the internal line
 			poly = append(poly, l)
 			continue
 		}
-		pts := basic.CloneLine(lines[0]).AsPts()
+
+		pts := l.AsPts()
 		if len(pts) <= 2 {
 			continue
 		}
+		if len(pts) <= 4 {
+			poly = append(poly, l)
+			continue
+		}
+
 		//log.Println("Simplifying Polygon subline Point count:", len(pts))
 		pts = maths.DouglasPeucker(pts, sqTolerance, true)
 		//log.Println("\t After Pointcount:", len(pts))
@@ -332,11 +340,14 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
 			//log.Println("\t Skipping polygon subline.")
 			continue
 		}
+
 		poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
 	}
+
 	if len(poly) == 0 {
 		return nil
 	}
+
 	return poly
 }
 

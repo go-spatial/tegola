@@ -80,20 +80,20 @@ func (t *Tile) ZEpislon() float64 {
 	if epi <= 0 {
 		return 0
 	}
-	/*
-		ext := float64(DefaultExtent)
-		if t.Extent != nil {
-			ext = *t.Extent
-		}
-		denom := (math.Exp2(float64(t.Z)) * ext)
 
-	*/
-	exp := t.Z - 1
-	if exp < 0 {
-		exp = 0
+	ext := float64(DefaultExtent)
+	if t.Extent != nil {
+		ext = *t.Extent
 	}
-	denom := math.Exp2(float64(exp))
+	denom := (math.Exp2(float64(t.Z)) * ext)
 
+	/*
+		exp := t.Z - 1
+		if exp < 0 {
+			exp = 0
+		}
+		denom := math.Exp2(float64(exp))
+	*/
 	e := epi / denom
 	return e
 
