@@ -86,7 +86,7 @@ func TestMVTLayer(t *testing.T) {
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
-						postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
+						postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) AS geom FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
 					},
 				},
 			},
@@ -109,6 +109,7 @@ func TestMVTLayer(t *testing.T) {
 					{
 						postgis.ConfigKeyLayerName:   "buildings",
 						postgis.ConfigKeyGeomIDField: "osm_id",
+						postgis.ConfigKeyGeomField:   "geometry",
 						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, nullif(as_numeric(height),-1) AS height, type FROM osm_buildings_test WHERE geometry && !BBOX!",
 					},
 				},
@@ -125,7 +126,7 @@ func TestMVTLayer(t *testing.T) {
 	for i, tc := range testcases {
 		p, err := postgis.NewProvider(tc.config)
 		if err != nil {
-			t.Errorf("Failed test %v. Unable to create a new provider. err: %v", i, err)
+			t.Errorf("test (%v) failed. Unable to create a new provider. err: %v", i, err)
 			return
 		}
 
@@ -135,41 +136,14 @@ func TestMVTLayer(t *testing.T) {
 
 			l, err := p.MVTLayer(context.Background(), layerName, tc.tile, map[string]interface{}{})
 			if err != nil {
-				t.Errorf("Failed to create mvt layer. %v", err)
+				t.Errorf("test (%v) failed to create mvt layer err: %v", i, err)
 				return
 			}
 
 			if len(l.Features()) != tc.expectedFeatureCount {
-				t.Errorf("Failed test %v. Expected feature count (%v), got (%v)", i, tc.expectedFeatureCount, len(l.Features()))
+				t.Errorf("test (%v) failed.. expected feature count (%v), got (%v)", i, tc.expectedFeatureCount, len(l.Features()))
 				return
 			}
 		}
 	}
 }
-
-/*
-func TestLayers(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TEST") != "yes" {
-		return
-	}
-
-	testcases := []struct {
-		config map[string]interface{},
-		layers []mvt.LayerInfo,
-	}{
-		{
-			postgis.ConfigKeyHost:     "localhost",
-			postgis.ConfigKeyPort:     int64(5432),
-			postgis.ConfigKeyDB:       "tegola",
-			postgis.ConfigKeyUser:     "postgres",
-			postgis.ConfigKeyPassword: "",
-			postgis.ConfigKeyLayers: []map[string]interface{}{
-				{
-					postgis.ConfigKeyLayerName: "land",
-					postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
-				},
-			},
-		},
-	}
-}
-*/

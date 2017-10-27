@@ -160,7 +160,7 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 		switch desc.Name {
 		case geoFieldname:
 			if geom, ok = v.([]byte); !ok {
-				return 0, nil, nil, fmt.Errorf("Was unable to convert geometry field (%v) into bytes.", geoFieldname)
+				return 0, nil, nil, fmt.Errorf("Unable to convert geometry field (%v) into bytes.", geoFieldname)
 			}
 		case idFieldname:
 			gid, err = gId(v)
@@ -176,7 +176,10 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 				for i, k := range keys {
 					// if the value is Valid (i.e. not null) then add it to our tags map.
 					if values[i].Valid {
-						tags[k] = values[i].String
+						//	we need to check if the key already exists. if it does, then don't overwrite it
+						if _, ok := tags[k]; !ok {
+							tags[k] = values[i].String
+						}
 					}
 				}
 				continue
