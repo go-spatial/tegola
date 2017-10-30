@@ -410,10 +410,12 @@ func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.P
 			}
 
 			maxy, ok := pt2my[col1[i]]
-			if (i == len1-1) ||
-				(ok && int64(col2[j].Y*100) < maxy) {
-				// We can not draw a line to i+1 because there is already
-				// a line from i to some point beyound j+1 blocking our path.
+			if (i == len1-1) || (ok && int64(col2[j].Y*100) < maxy) {
+
+				// We can not draw a line to i+1
+				// for one of two reasons
+				// 1. there is no i+1
+				// 2. there is already a line from i to some point beyound j+1 blocking our path.
 				col.addPts(hm, &b, col1[i:i+1], col2[j:j+2])
 				// move to the next j.
 				break
@@ -433,6 +435,7 @@ func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.P
 		i++
 	}
 
+	// We need to check if there is one last ring in the builder.
 	ring, x1, y1s, x2, y2s := b.CurrentRing()
 	if len(ring.Points) == 0 {
 		// We did not find any rings that were marked as inside
@@ -510,7 +513,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 			ringsToProcess = append(ringsToProcess, [2]int{0, d.Idx})
 		}
 	}
-	// Now we want to go through our Y1s and add those polygons to our polygon list and update col.Y1.
+	// Go through the rings that tourch the Y1 edge only and add them to our list of rings.
 	for i := range c1.Y1s {
 		for _, d := range c1.Y1s[i].Descs {
 			// Skip any rings that are touching Y2 as well.
@@ -521,13 +524,15 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 			col.Rings = append(col.Rings, c1.Rings[d.Idx])
 		}
 	}
-	// Now go through the c1 to find and add the rings that don't touch the sides.
+	// Add rings that do not touch either edge to our col's rings list.
 	for i := range c1.Rings {
 		if _, ok := seenRings[[2]int{0, i}]; ok {
 			continue
 		}
 		col.Rings = append(col.Rings, c1.Rings[i])
 	}
+
+	// Now we need to do the same thing for col one.
 
 	// Next we are going to loop through y1 of col one and take notes of the rings.
 	for i := range c2.Y1s {
@@ -818,7 +823,6 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 			}
 		}
 	}
-
 	return col
 }
 
