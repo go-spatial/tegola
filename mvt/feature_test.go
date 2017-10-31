@@ -156,7 +156,7 @@ func TestEncodeGeometry(t *testing.T) {
 	}
 	for i, tcase := range testcases {
 
-		g, gtype, err := encodeGeometry(context.Background(), tcase.geo, tcase.bbox, 4096)
+		g, gtype, err := encodeGeometry(context.Background(), tcase.geo, tcase.bbox, 4096, true)
 		if tcase.eerr != err {
 			t.Errorf("(%v) Expected error (%v) got (%v) instead", i, tcase.eerr, err)
 		}

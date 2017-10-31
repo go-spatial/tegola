@@ -157,9 +157,11 @@ func DegToRad(deg float64) float64 {
 
 // Intersect find the intersection point (x,y) between two lines if there is one. Ok will be true if it found an intersection point, and false if it did not.
 func Intersect(l1, l2 Line) (pt Pt, ok bool) {
-	if !l1.DoesIntersect(l2) {
-		return pt, false
-	}
+	/*
+		if !l1.DoesIntersect(l2) {
+			return pt, false
+		}
+	*/
 
 	// if the l1 is vertical.
 	if l1.IsVertical() {
