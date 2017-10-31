@@ -20,7 +20,8 @@ func debugLayer(tile tegola.Tile) []*mvt.Layer {
 
 	//	debug outlines
 	debugTileOutline := mvt.Layer{
-		Name: "debug-tile-outline",
+		Name:         "debug-tile-outline",
+		DontSimplify: true,
 	}
 	debugOutline := mvt.Feature{
 		Tags: map[string]interface{}{
@@ -39,7 +40,8 @@ func debugLayer(tile tegola.Tile) []*mvt.Layer {
 
 	//	debug center points
 	debugTileCenter := mvt.Layer{
-		Name: "debug-tile-center",
+		Name:         "debug-tile-center",
+		DontSimplify: true,
 	}
 	debugCenter := mvt.Feature{
 		Tags: map[string]interface{}{

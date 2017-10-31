@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	DefaultEpislon = 5
+	DefaultEpislon = 10.0
 	DefaultExtent  = 4096
 )
 
@@ -85,8 +85,6 @@ func (t *Tile) ZEpislon() float64 {
 	if t.Extent != nil {
 		ext = *t.Extent
 	}
-	denom := (math.Exp2(float64(t.Z)) * ext)
-
 	/*
 		exp := t.Z - 1
 		if exp < 0 {
@@ -94,6 +92,8 @@ func (t *Tile) ZEpislon() float64 {
 		}
 		denom := math.Exp2(float64(exp))
 	*/
+	denom := (math.Exp2(float64(t.Z)) * ext)
+
 	e := epi / denom
 	return e
 
