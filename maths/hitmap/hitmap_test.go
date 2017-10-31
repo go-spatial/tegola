@@ -123,7 +123,7 @@ func TestSegmentLinesContains(t *testing.T) {
 	)
 
 	tests.Run(func(idx int, test testcase) {
-		seg := newSegmentFromLines(maths.Inside, test.lines)
+		seg := NewSegmentFromLines(maths.Inside, test.lines)
 		for _, pt := range test.pts {
 			got := seg.Contains(pt.p)
 			if got != pt.contained {

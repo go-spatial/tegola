@@ -19,6 +19,10 @@ type Layer struct {
 	// The set of features
 	features []Feature
 	extent   *int // default is 4096
+	// DontSimplify truns off simplification for this layer.
+	DontSimplify bool
+	// MaxSimplificationZoom is the zoom level at which point simplification is turned off. if value is zero Max is set to 14. If you do not want to simplify at any level set DontSimplify to true.
+	MaxSimplificationZoom uint
 }
 
 func valMapToVTileValue(valMap []interface{}) (vt []*vectorTile.Tile_Value) {
@@ -40,7 +44,14 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 		if ctx.Err() != nil {
 			return nil, context.Canceled
 		}
-		vtf, err := f.VTileFeature(ctx, kmap, vmap, extent, l.Extent())
+		simplify := !l.DontSimplify
+		if l.MaxSimplificationZoom == 0 {
+			l.MaxSimplificationZoom = 14
+		}
+
+		simplify = simplify && extent.Z < int(l.MaxSimplificationZoom)
+
+		vtf, err := f.VTileFeature(ctx, kmap, vmap, extent, l.Extent(), simplify)
 		if err != nil {
 			return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
 		}
@@ -63,8 +74,6 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 
 //Version is the version of tile spec this layer is from.
 func (*Layer) Version() int {
-	// Quick fix till we can get full version 2 compatibility.
-	// TODO: gdey — look at issue #102 to get implementation to 2.1 spec.
 	return 2
 }
 

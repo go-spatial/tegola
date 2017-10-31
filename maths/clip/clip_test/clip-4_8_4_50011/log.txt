@@ -1,1 +1,0 @@
-ok  	github.com/terranodo/tegola/cmd/gentestcase/_examples/50011/clip	0.315s

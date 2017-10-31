@@ -190,7 +190,7 @@ func Intersect(l1, l2 Line) (pt Pt, ok bool) {
 	m1, b1, sdef1 := l1.SlopeIntercept()
 	m2, b2, sdef2 := l2.SlopeIntercept()
 
-	// if the slopes are the smae then they are parallel so, they don't intersect.
+	// if the slopes are the same then they are parallel so, they don't intersect.
 	if sdef1 == sdef2 && m1 == m2 {
 		return Pt{}, false
 	}

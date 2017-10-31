@@ -10,6 +10,7 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 	"github.com/terranodo/tegola/wkb"
@@ -70,14 +71,14 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int, simplify bool) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keys, vals, f); err != nil {
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent)
+	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent, simplify)
 	if err != nil {
 		return tf, err
 	}
@@ -285,72 +286,108 @@ func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
 	return basic.NewLineTruncatedFromPt(pts...)
 }
 
-func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
+func normalizePoints(pts []maths.Pt) (pnts []maths.Pt) {
+	if pts[0] == pts[len(pts)-1] {
+		pts = pts[1:]
+	}
+	if len(pts) <= 4 {
+		return pts
+	}
+	lpt := 0
+	pnts = append(pnts, pts[0])
+	for i := 1; i < len(pts); i++ {
+		ni := i + 1
+		if ni >= len(pts) {
+			ni = 0
+		}
+		m1, _, sdef1 := points.SlopeIntercept(pts[lpt], pts[i])
+		m2, _, sdef2 := points.SlopeIntercept(pts[lpt], pts[ni])
+		if m1 != m2 || sdef1 != sdef2 {
+			pnts = append(pnts, pts[i])
+		}
+	}
+	return pnts
+}
+
+func simplifyPolygon(g tegola.Polygon, tolerance float64, simplify bool) basic.Polygon {
 
 	lines := g.Sublines()
 	if len(lines) <= 0 {
 		return nil
 	}
 
-	sqTolerance := tolerance
+	//sqTolerance := tolerance
 
-	//sqTolerance := tolerance * tolerance
+	// First lets look the first line, then we will simplify the other lines.
 
-	/*
-		// First lets look the first line, then we will simplify the other lines.
-		area := maths.AreaOfPolygonLineString(lines[0])
-		if area < sqTolerance {
-			return basic.ClonePolygon(g)
-		}
-	*/
 	var poly basic.Polygon
-	pts := basic.CloneLine(lines[0]).AsPts()
-	if len(pts) <= 2 {
-		return nil
-	}
-	pts = maths.DouglasPeucker(pts, sqTolerance, true)
-	if len(pts) <= 2 {
-		return nil
-	}
-	poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
-	for i := 1; i < len(lines); i++ {
-		area := maths.AreaOfPolygonLineString(lines[0])
+	sqTolerance := tolerance * tolerance
+	//	poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
+	for i := range lines {
+		area := maths.AreaOfPolygonLineString(lines[i])
 		l := basic.CloneLine(lines[i])
+
 		if area < sqTolerance {
+			if i == 0 {
+				return basic.ClonePolygon(g)
+			}
 			// don't simplify the internal line
 			poly = append(poly, l)
 			continue
 		}
-		pts := basic.CloneLine(lines[0]).AsPts()
+
+		pts := l.AsPts()
 		if len(pts) <= 2 {
+			if i == 0 {
+				return nil
+			}
 			continue
 		}
+		pts = normalizePoints(pts)
+		// If the last point is the same as the first, remove the first point.
+		if len(pts) <= 4 {
+			if i == 0 {
+				return basic.ClonePolygon(g)
+			}
+			poly = append(poly, l)
+			continue
+		}
+
 		//log.Println("Simplifying Polygon subline Point count:", len(pts))
-		pts = maths.DouglasPeucker(pts, sqTolerance, true)
+		pts = maths.DouglasPeucker(pts, sqTolerance, simplify)
 		//log.Println("\t After Pointcount:", len(pts))
 		if len(pts) <= 2 {
+			if i == 0 {
+				return nil
+			}
 			//log.Println("\t Skipping polygon subline.")
 			continue
 		}
+
 		poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
 	}
+
 	if len(poly) == 0 {
 		return nil
 	}
+
 	return poly
 }
 
-func SimplifyGeometry(g tegola.Geometry, tolerance float64) tegola.Geometry {
+func SimplifyGeometry(g tegola.Geometry, tolerance float64, simplify bool) tegola.Geometry {
 	if g == nil {
 		return nil
 	}
+	if !simplify {
+		return g
+	}
 	switch gg := g.(type) {
 	case tegola.Polygon:
-		return simplifyPolygon(gg, tolerance)
+		return simplifyPolygon(gg, tolerance, simplify)
 	case tegola.MultiPolygon:
 		var newMP basic.MultiPolygon
 		for _, p := range gg.Polygons() {
-			sp := simplifyPolygon(p, tolerance)
+			sp := simplifyPolygon(p, tolerance, simplify)
 			if sp == nil {
 				continue
 			}
@@ -528,7 +565,7 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 
 	if geom == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
@@ -542,7 +579,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 	// Project Geom
 
 	geo := c.ScaleGeo(geom)
-	sg := SimplifyGeometry(geo, extent.Epsilon)
+	sg := SimplifyGeometry(geo, extent.Epsilon, simplify)
 
 	geom, err = validate.CleanGeometry(ctx, sg, c.extent)
 	if err != nil {
