@@ -1,8 +1,6 @@
 package region
 
 import (
-	"log"
-
 	"github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
 )
@@ -49,7 +47,7 @@ func New(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
 
 // Init initilizes the region struct.
 func (r *Region) Init(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
-	log.Println("Creating new clipping region ", Min, Max)
+	//log.Println("Creating new clipping region ", Min, Max)
 	r.winding = winding
 	//r.List.Init()
 	r.max = Max

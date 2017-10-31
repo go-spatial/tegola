@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/hitmap"
@@ -20,16 +19,6 @@ var numWorkers = 1
 func init() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 	numWorkers = runtime.NumCPU()
-	log.Println("Number of workers:", numWorkers)
-}
-
-func trace(msg string) func() {
-	tracer := time.Now()
-	log.Println(msg, "started at:", tracer)
-	return func() {
-		etracer := time.Now()
-		log.Println(msg, "ElapsedTime in seconds:", etracer.Sub(tracer))
-	}
 }
 
 // insureConnected will add a connecting line as needed to the given polygons. If there is only one line in a polygon, it will be left alone.

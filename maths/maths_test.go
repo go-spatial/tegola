@@ -1,7 +1,6 @@
 package maths_test
 
 import (
-	"log"
 	"testing"
 
 	"github.com/gdey/tbltest"
@@ -36,9 +35,7 @@ func Test_Contains(t *testing.T) {
 		newTest(0, -15, 2, false), // 6
 	)
 	tests.Run(func(idx int, tc TestCase) {
-		log.Println("Starting Test", idx)
 		got, err := maths.Contains(tc.subject, tc.pt)
-		log.Printf("Test (%v) Got: %v, err: %v", idx, got, err)
 		if err != tc.err {
 			t.Errorf("Test (%v) Failed Error Got: %v, wanted %v", idx, err, tc.err)
 		}
