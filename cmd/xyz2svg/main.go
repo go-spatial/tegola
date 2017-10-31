@@ -148,7 +148,7 @@ func DrawGeometries() {
 
 		g := cursor.ScaleGeo(geom)
 		//log.Println("Tolerence:", tile.ZEpislon())
-		sg := mvt.SimplifyGeometry(g, tile.ZEpislon())
+		sg := mvt.SimplifyGeometry(g, tile.ZEpislon(), true)
 		vg, err := validate.CleanGeometry(context.Background(), sg, 4096)
 		if err != nil {
 			return err
