@@ -36,9 +36,11 @@ func WindingOrderOfPts(pts []Pt) WindingOrder {
 	li := len(pts) - 1
 
 	for i := range pts[:li] {
-		sum += (pts[i+1].X - pts[i].X) * (pts[i+1].Y + pts[i].Y)
+		sum += (pts[i].X * pts[i+1].Y) - (pts[i+1].X * pts[i].Y)
 	}
-	sum += (pts[0].X - pts[li].X) * (pts[0].Y + pts[li].Y)
+	sum += (pts[li].X * pts[0].Y) - (pts[0].X * pts[li].Y)
+
+	//log.Println("For pts:", pts, "sum", sum)
 
 	if sum < 0 {
 		return CounterClockwise
@@ -47,33 +49,18 @@ func WindingOrderOfPts(pts []Pt) WindingOrder {
 }
 
 func WindingOrderOf(sub []float64) WindingOrder {
-	sum := 0
+	pts := make([]Pt, 0, len(sub)/2)
 	for x, y := 0, 1; y < len(sub); x, y = x+2, y+2 {
-		nx, ny := x+2, y+2
-		if y == (len(sub) - 1) {
-			nx, ny = 0, 1
-		}
-		sum += int((sub[nx] - sub[x]) * (sub[ny] + sub[y]))
+		pts = append(pts, Pt{sub[x], sub[y]})
 	}
-	if sum < 0 {
-		return CounterClockwise
-	}
-	return Clockwise
+	return WindingOrderOfPts(pts)
 }
 
 func WindingOrderOfLine(l tegola.LineString) WindingOrder {
-	sum := 0
-	pts := l.Subpoints()
-	for i, pt := range pts {
-		ni := i + 1
-		if ni == len(pts) {
-			ni = 0
-		}
-		npt := pts[ni]
-		sum += int((npt.X() - pt.X()) * (npt.Y() + pt.Y()))
+	lpts := l.Subpoints()
+	pts := make([]Pt, 0, len(lpts))
+	for _, pt := range lpts {
+		pts = append(pts, Pt{pt.X(), pt.Y()})
 	}
-	if sum < 0 {
-		return CounterClockwise
-	}
-	return Clockwise
+	return WindingOrderOfPts(pts)
 }

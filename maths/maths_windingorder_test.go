@@ -30,6 +30,7 @@ func TestWindingOrderOf(t *testing.T) {
 	)
 
 	tests.Run(func(idx int, test testcase) {
+
 		got := maths.WindingOrderOf(test.points)
 		if got != test.expected {
 			t.Errorf("Test %v: Failed expected %v got %v", idx, test.expected, got)
