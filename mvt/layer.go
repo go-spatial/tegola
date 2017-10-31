@@ -4,12 +4,45 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
 
 	"context"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 )
+
+var simplifyGeometries = true
+var simplificationMaxZoom = 10
+
+func init() {
+	options := strings.ToLower(os.Getenv("TEGOLA_OPTIONS"))
+	if strings.Contains(options, "dontsimplifygeo") {
+		simplifyGeometries = false
+		log.Println("Turning Off Simplification of Geometries.")
+	}
+	if strings.Contains(options, "simplifymaxzoom=") {
+		idx := strings.Index(options, "simplifymaxzoom=")
+		idx += 16
+		eidx := strings.IndexAny(options[idx:], ",.\t \n")
+
+		if eidx == -1 {
+			eidx = len(options)
+		} else {
+			eidx += idx
+		}
+		i, err := strconv.Atoi(options[idx:eidx])
+		if err != nil {
+			log.Printf("Did not under the value(%v) for SimplifyMaxZoom sticking with default (%v).", options[idx:eidx], simplificationMaxZoom)
+			return
+		}
+		simplificationMaxZoom = int(i + 1)
+		log.Printf("Setting SimplifyMaxZoom to %v", int(i))
+	}
+}
 
 // Layer describes a layer in the tile. Each layer can have multiple features
 // which describe drawing.
@@ -44,9 +77,9 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 		if ctx.Err() != nil {
 			return nil, context.Canceled
 		}
-		simplify := !l.DontSimplify
+		simplify := simplifyGeometries && !l.DontSimplify
 		if l.MaxSimplificationZoom == 0 {
-			l.MaxSimplificationZoom = 14
+			l.MaxSimplificationZoom = uint(simplificationMaxZoom)
 		}
 
 		simplify = simplify && extent.Z < int(l.MaxSimplificationZoom)
