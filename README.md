@@ -151,8 +151,6 @@ The following environment variables can be used for debugging the tegola server:
 - `EXECUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
 
 
-`TEGOLA_CLIPPING='mvt'` to enable experimental clipping support. This will clip the geometries to the boundaries of the tile.
-
 #### Usage
 
 ```bash
