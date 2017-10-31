@@ -114,7 +114,7 @@ func TestEncodeGeometry(t *testing.T) {
 				Maxx: 4096,
 				Maxy: 4096,
 			},
-			egeo: []uint32{9, 6, 12, 18, 10, 12, 24, 44, 15},
+			egeo: []uint32{9, 6, 12, 26, 10, 12, 24, 44, 23, 39, 15},
 		},
 		{ // 7
 			geo: basic.MultiPolygon{
@@ -148,10 +148,7 @@ func TestEncodeGeometry(t *testing.T) {
 				Maxx: 4096,
 				Maxy: 4096,
 			},
-			egeo: []uint32{9, 0, 0, 26, 20, 0, 0, 20, 19, 0, 15, 9, 22, 2, 26, 18, 0, 0, 18, 17, 0, 15, 9, 0, 17, 26, 18, 0, 0, 18, 17, 0, 15},
-			/* Before simplification.
 			egeo: []uint32{9, 0, 0, 26, 20, 0, 0, 20, 19, 0, 15, 9, 22, 2, 26, 18, 0, 0, 18, 17, 0, 15, 9, 4, 13, 26, 0, 8, 8, 0, 0, 7, 15},
-			*/
 		},
 	}
 	for i, tcase := range testcases {
