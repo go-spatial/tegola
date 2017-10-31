@@ -1,6 +1,7 @@
 package plyg
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"reflect"
@@ -204,7 +205,7 @@ func TestBuildRingCol(t *testing.T) {
 	tests.Run(func(idx int, test testcase) {
 		log.Printf("Running %v (%v)", idx, test.desc)
 		//var ys [2][]YEdge
-		col1 := BuildRingCol(test.hm, test.icols[0], test.icols[1], test.pt2my)
+		col1 := BuildRingCol(context.Background(), test.hm, test.icols[0], test.icols[1], test.pt2my)
 
 		if ok, reason := ringDiff(&col1, &test.Col, test.testYs); ok {
 			t.Errorf("For %v (%v) %v", idx, test.desc, reason)
@@ -605,8 +606,8 @@ func TestMerge2AdjecentRings(t *testing.T) {
 	// cases }}}1
 	tests.Run(func(idx int, test testcase) {
 		log.Printf("Running %v (%v)", idx, test.desc)
-		col1 := BuildRingCol(test.hm, test.icols[0][0], test.icols[0][1], test.pt2my[0])
-		col2 := BuildRingCol(test.hm, test.icols[1][0], test.icols[1][1], test.pt2my[1])
+		col1 := BuildRingCol(context.Background(), test.hm, test.icols[0][0], test.icols[0][1], test.pt2my[0])
+		col2 := BuildRingCol(context.Background(), test.hm, test.icols[1][0], test.icols[1][1], test.pt2my[1])
 		log.Printf("Col1: %v", col1.String())
 		log.Printf("Col2: %v", col2.String())
 

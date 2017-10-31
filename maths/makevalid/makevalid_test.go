@@ -3,7 +3,6 @@ package makevalid
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 	"testing"
 
@@ -182,7 +181,7 @@ func TestMakeValid(t *testing.T) {
 			},
 		},
 	)
-	log.Println("We need to get 1,2 passing right now they do not.")
+	//log.Println("We need to get 1,2 passing right now they do not.")
 
 	tests.RunOrder = "0"
 	ctx := context.Background()
