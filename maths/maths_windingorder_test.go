@@ -25,11 +25,12 @@ func TestWindingOrderOf(t *testing.T) {
 	tests := tbltest.Cases(
 		testcase{
 			points:   []float64{4, 2, 2, 4, 2, 6, 3, 7, 5, 8, 7, 7, 8, 5, 8, 3, 6, 2},
-			expected: maths.CounterClockwise,
+			expected: maths.Clockwise,
 		},
 	)
 
 	tests.Run(func(idx int, test testcase) {
+
 		got := maths.WindingOrderOf(test.points)
 		if got != test.expected {
 			t.Errorf("Test %v: Failed expected %v got %v", idx, test.expected, got)
