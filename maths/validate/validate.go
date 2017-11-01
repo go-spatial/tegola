@@ -6,6 +6,7 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/clip"
 	"github.com/terranodo/tegola/maths/hitmap"
 	"github.com/terranodo/tegola/maths/makevalid"
 )
@@ -83,6 +84,20 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent float64) (geo 
 		return makePolygonValid(ctx, hm, extent, gg)
 	case tegola.MultiPolygon:
 		return makePolygonValid(ctx, hm, extent, gg.Polygons()...)
+	case tegola.MultiLine:
+		var ml basic.MultiLine
+		lns := gg.Lines()
+		for i := range lns {
+			nls, err := clip.LineString(lns[i], maths.Pt{-8, -8}, maths.Pt{4104, 4104}, 0)
+			if err != nil {
+				return ml, err
+			}
+			ml = append(ml, nls...)
+		}
+		return ml, nil
+	case tegola.LineString:
+		nls, err := clip.LineString(gg, maths.Pt{-8, -8}, maths.Pt{4104, 4104}, 0)
+		return basic.MultiLine(nls), err
 	}
 	return g, nil
 }

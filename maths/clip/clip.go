@@ -14,7 +14,6 @@ import (
 	"fmt"
 
 	colour "github.com/logrusorgru/aurora"
-	"github.com/terranodo/tegola/maths/validate"
 )
 
 /*
@@ -343,6 +342,30 @@ func CleanLineString(sub []float64) [][]float64 {
 	retsub[0] = mainsub
 	return retsub
 }
+func validateCleanLinestring(g []float64) (l []float64, err error) {
+
+	var ptsMap = make(map[maths.Pt][]int)
+	var pts []maths.Pt
+	i := 0
+	for x, y := 0, 1; y < len(g); x, y = x+2, y+2 {
+
+		p := maths.Pt{g[x], g[y]}
+		ptsMap[p] = append(ptsMap[p], i)
+		pts = append(pts, p)
+		i++
+	}
+
+	for i := 0; i < len(pts); i++ {
+		pt := pts[i]
+		fpts := ptsMap[pt]
+		l = append(l, pt.X, pt.Y)
+		if len(fpts) > 1 {
+			// we will need to skip a bunch of points.
+			i = fpts[len(fpts)-1]
+		}
+	}
+	return l, nil
+}
 
 // linestring does the majority of the clipping of the subject array to the square bounds defined by the rMinPt and rMaxPt.
 func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]float64, err error) {
@@ -418,7 +441,7 @@ func linestring(sub []float64, rMinPt, rMaxPt maths.Pt) (clippedSubjects [][]flo
 		})
 
 		// Must have at least 3 points for it to be a valid runstring. (3 *2 = 6)
-		s, err = validate.CleanLinestring(s)
+		s, err = validateCleanLinestring(s)
 		if err != nil {
 			return nil, err
 		}
