@@ -10,6 +10,7 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/makevalid"
 	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -23,6 +24,8 @@ var (
 	ErrUnknownGeometryType = fmt.Errorf("Unknown geometry type")
 	ErrNilGeometryType     = fmt.Errorf("Nil geometry passed")
 )
+
+const tilebuffer = makevalid.TileBuffer
 
 // TODO: Need to put in validation for the Geometry, at current the system
 // does not check to make sure that the geometry is following the rules as
@@ -174,10 +177,10 @@ func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
 }
 
 func (c *cursor) MinMax() (min, max maths.Pt) {
-	return maths.Pt{-8, -8},
+	return maths.Pt{0 - tilebuffer, 0 - tilebuffer},
 		maths.Pt{
-			float64(c.extent + 8),
-			float64(c.extent + 8),
+			float64(c.extent + tilebuffer),
+			float64(c.extent + tilebuffer),
 		}
 }
 

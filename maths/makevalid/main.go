@@ -14,6 +14,8 @@ import (
 	"github.com/terranodo/tegola/maths/points"
 )
 
+const TileBuffer = 16
+
 var numWorkers = 1
 
 func init() {
@@ -340,7 +342,7 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Boun
 }
 
 func MakeValid(ctx context.Context, hm hitmap.Interface, extent float64, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
-	clipbox := points.BoundingBox{-8, -8, extent + 8, extent + 8}
+	clipbox := points.BoundingBox{0 - TileBuffer, 0 - TileBuffer, extent + TileBuffer, extent + TileBuffer}
 	segments := destructure2(insureConnected(plygs...), &clipbox)
 	if segments == nil {
 		return nil, nil
