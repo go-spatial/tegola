@@ -51,6 +51,10 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 		log.Printf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
+	if req.z < 0 {
+		log.Printf("invalid Z value (%v)", req.z)
+		return fmt.Errorf("negative zoom levels are not allowed")
+	}
 
 	x := params["x"]
 	req.x, err = strconv.Atoi(x)

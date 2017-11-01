@@ -39,7 +39,7 @@ var DisplayTiming = false
 
 func init() {
 	if os.Getenv("TEGOLA_TIMING") != "" {
-		log.Println("Timing   has been enabled.")
+		log.Println("timing   has been enabled.")
 		DisplayTiming = true
 	}
 }
@@ -59,6 +59,10 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	if err != nil {
 		log.Printf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
+	}
+	if req.z < 0 {
+		log.Printf("invalid Z value (%v)", req.z)
+		return fmt.Errorf("negative zoom levels are not allowed")
 	}
 
 	x := params["x"]
