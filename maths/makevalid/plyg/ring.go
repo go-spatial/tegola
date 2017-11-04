@@ -470,8 +470,7 @@ func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.P
 
 func slopeCheck(pt1, pt2, pt3 maths.Pt, x1, x2 float64) bool {
 	// if vertical can not do it.
-	if (pt1.X == x1 && pt2.X == x2 && pt3.X == x2) ||
-		(pt1.X == x1 && pt2.X == x2 && pt3.X == x2) {
+	if pt1.X == x1 && pt2.X == x2 && pt3.X == x2 {
 		return false
 	}
 	if pt1.Y == pt2.Y && pt1.Y == pt3.Y {

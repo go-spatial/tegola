@@ -334,7 +334,7 @@ func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Ti
 			if lyr.SRID() != DefaultSRID {
 				g, err := basic.ToWebMercator(lyr.SRID(), geom)
 				if err != nil {
-					return fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", lyr.SRID, layerName)
+					return fmt.Errorf("Was unable to transform geometry to webmercator from SRID (%v) for layer (%v)", lyr.SRID(), layerName)
 				}
 				geom = g.Geometry
 			}
