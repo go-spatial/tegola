@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/dustin/go-humanize"
@@ -32,16 +30,6 @@ type HandleMapZXY struct {
 	extension string
 	//	debug
 	debug bool
-}
-
-// Weather to show timing data for generating tiles.
-var DisplayTiming = false
-
-func init() {
-	if os.Getenv("TEGOLA_TIMING") != "" {
-		log.Println("timing   has been enabled.")
-		DisplayTiming = true
-	}
 }
 
 //	parseURI reads the request URI and extracts the various values for the request
@@ -208,17 +196,11 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//	generate our vector tile
 
-		start := time.Now()
 		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
-
 		if err != nil {
 			//	log.Printf("Error Getting VTile: %v", err)
-			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
-		}
-		elapsed := time.Since(start)
-		if DisplayTiming {
-			log.Printf("Generate tile for maps/%v/%v/%v/%v [%s]", req.mapName, tile.Z, tile.X, tile.Y, elapsed)
 		}
 
 		//	marshal our tile into a protocol buffer

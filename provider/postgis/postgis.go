@@ -212,7 +212,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		if sql != "" {
 			// make sure that the sql has a !BBOX! token
 			if !strings.Contains(sql, bboxToken) {
-				return nil, fmt.Errorf("SQL for layer (%v) %v does not contain "+bboxToken+", entry.", i, lname)
+				return nil, fmt.Errorf("SQL for layer (%v) %v is missing required token: %v", i, lname, bboxToken)
 			}
 			if !strings.Contains(sql, "*") {
 				if !strings.Contains(sql, geomfld) {

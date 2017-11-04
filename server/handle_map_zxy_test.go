@@ -49,6 +49,7 @@ func TestHandleMapZXY(t *testing.T) {
 		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
 		if err != nil {
 			t.Fatal(err)
+			continue
 		}
 
 		w := httptest.NewRecorder()
