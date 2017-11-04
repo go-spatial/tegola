@@ -35,7 +35,7 @@ func PLatToY(lat float64) float64 {
 	radiv2p4 := maths.PiDiv4 + raddiv2
 	tan := math.Tan(radiv2p4)
 	logTan := math.Log(tan)
-	val := EarthRadius + logTan
+	val := EarthRadius * logTan
 	if math.IsNaN(val) {
 
 		log.Println("We have an issue with lat", lat,

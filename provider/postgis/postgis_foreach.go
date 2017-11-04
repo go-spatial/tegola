@@ -56,7 +56,7 @@ func (p *Provider) ForEachFeature(ctx context.Context, layerName string, tile te
 
 		gid, geobytes, tags, err := decipherFields(ctx, plyr.GeomFieldName(), plyr.IDFieldName(), fdescs, vals)
 		if err != nil {
-			return fmt.Errorf("For layer(%v) %v", plyr.Name, err)
+			return fmt.Errorf("For layer(%v) %v", plyr.Name(), err)
 		}
 
 		//	decode our WKB
