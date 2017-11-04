@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"time"
-
 	"github.com/dimfeld/httptreemux"
 	"github.com/golang/protobuf/proto"
 	"github.com/terranodo/tegola"
@@ -211,23 +209,12 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	generate our vector tile
-
-		start := time.Now()
 		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
-
 		if err != nil {
-			elapsed := time.Since(start)
-			if DisplayTiming {
-				log.Printf("Generate with error tile for maps/%v/%v/%v/%v/%v [%s]", req.mapName, req.layerName, tile.Z, tile.X, tile.Y, elapsed)
-			}
 			errMsg := fmt.Sprintf("Error Getting VTile: %v", err.Error())
 			log.Println(errMsg)
 			http.Error(w, errMsg, http.StatusBadRequest)
 			return
-		}
-		elapsed := time.Since(start)
-		if DisplayTiming {
-			log.Printf("Generate tile for maps/%v/%v/%v/%v/%v [%s]", req.mapName, req.layerName, tile.Z, tile.X, tile.Y, elapsed)
 		}
 
 		//	marshal our tile into a protocol buffer
