@@ -50,7 +50,7 @@ const (
 	ConfigKeyDB          = "database"
 	ConfigKeyUser        = "user"
 	ConfigKeyPassword    = "password"
-	ConfigKeyMaxConn     = "max_connection"
+	ConfigKeyMaxConn     = "max_connections"
 	ConfigKeySRID        = "srid"
 	ConfigKeyLayers      = "layers"
 	ConfigKeyLayerName   = "name"
@@ -75,7 +75,7 @@ func init() {
 //		database (string) — the database name
 //		user (string) — the user name
 //		password (string) — the Password
-//		max_connections (*uint8) // Default is 5 if nil, 0 means no max.
+//		max_connections (*uint8) // Default is 100 if nil, 0 means no max.
 //		layers (map[string]struct{})  — This is map of layers keyed by the layer name.
 //     		tablename (string || sql string) — This is the sql to use or the tablename to use with the default query.
 //     		fields ([]string) — This is a list, if this is nil or empty we will get all fields.
@@ -111,8 +111,8 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	maxcon := int(DefaultMaxConn)
-	if maxcon, err = c.Int(ConfigKeyMaxConn, &maxcon); err != nil {
+	maxcon := int64(DefaultMaxConn)
+	if maxcon, err = c.Int64(ConfigKeyMaxConn, &maxcon); err != nil {
 		return nil, err
 	}
 
@@ -131,7 +131,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 				User:     user,
 				Password: password,
 			},
-			MaxConnections: maxcon,
+			MaxConnections: int(maxcon),
 		},
 	}
 
