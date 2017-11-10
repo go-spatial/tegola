@@ -1,0 +1,356 @@
+[webserver]
+port = ":8080"
+
+[[providers]]
+name = "osm"
+type = "postgis"
+host = ""
+port = 5432
+database = "osm"
+user = "ARolek"
+password = ""
+
+	[[providers.layers]]
+	name = "admin_boundaries_5-10"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, admin_level FROM osm_admin WHERE admin_level IN (1,2,3,4) AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_11-12"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, admin_level FROM osm_admin WHERE admin_level IN (1,2,3,4,5,8,7,8) AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_13-20"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, admin_level FROM osm_admin WHERE admin_level IN (1,2,3,4,5,8,7,8,9,10) AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "land_0-9"
+	geometry_fieldname = "geometry"
+	id_fieldname = "fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid FROM simplified_land_polygons WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "land_10-20"
+	geometry_fieldname = "geometry"
+	id_fieldname = "fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid FROM land_polygons WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "buildings"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, height, type FROM osm_buildings WHERE geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "landusages"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type, area, z_order FROM osm_landusages WHERE geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "landusages_gen0"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type, area, z_order FROM osm_landusages_gen0 WHERE type IN ('forest','wood','nature reserve') AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "landusages_gen1"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type, area, z_order FROM osm_landusages_gen1 WHERE geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "roads_gen1"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, ref, type, tunnel, bridge FROM osm_roads_gen1 WHERE type IN ('motorway', 'trunk', 'primary', 'primary_link', 'secondary', 'motorway_link', 'trunk_link') AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "roads_gen0"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, ref, type, tunnel, bridge FROM osm_roads_gen0 WHERE type IN ('motorway','trunk') AND  geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "roads_11-12"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, ref, type, tunnel, bridge, access, service FROM osm_roads WHERE type IN ('motorway', 'motorway_link', 'trunk', 'trunk_link', 'primary', 'primary_link', 'secondary', 'secondary_link', 'tertiary', 'tertiary_link', 'rail') AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "roads_13"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, ref, type, tunnel, bridge, access, service FROM osm_roads WHERE type IN ('motorway', 'motorway_link', 'trunk', 'trunk_link', 'primary', 'primary_link', 'secondary', 'secondary_link', 'tertiary', 'tertiary_link', 'rail', 'residential') AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "roads_14-20"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, ref, type, tunnel, bridge, access, service FROM osm_roads WHERE geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "waterareas"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type, area FROM osm_waterareas WHERE type IN ('water', 'pond', 'basin', 'canal', 'mill_pond', 'riverbank', 'dock') AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "waterareas_gen0"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type, area FROM osm_waterareas_gen0 WHERE type IN ('water', 'pond', 'basin', 'canal', 'mill_pond', 'riverbank') AND area > 10000 AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "waterareas_gen1"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type, area FROM osm_waterareas_gen1 WHERE type IN ('water', 'pond', 'basin', 'canal', 'mill_pond', 'riverbank') AND area > 1000 AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "waterways"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type FROM osm_waterways WHERE type IN ('river', 'canal', 'stream', 'ditch', 'drain') AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "waterways_gen0"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type FROM osm_waterways WHERE type IN ('river', 'canal') AND geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "waterways_gen1"
+	geometry_fieldname = "geometry"
+	id_fieldname = "osm_id"
+	sql = "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, type FROM osm_waterways WHERE type IN ('river', 'canal', 'stream') AND geometry && !BBOX!"
+
+#	natural earth
+[[providers]]
+name = "ne"
+type = "postgis"
+host = ""
+port = 5432
+database = "natural_earth"
+user = "ARolek"
+password = ""
+
+	[[providers.layers]]
+	name = "admin_boundaries_0-2"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name, name_alt FROM ne_110m_admin_0_boundary_lines_land WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_countries_3-7"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, labelrank, name FROM ne_10m_admin_0_countries WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_3-4"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name FROM ne_50m_admin_0_boundary_lines_land WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_disputed_3-4"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name FROM ne_50m_admin_0_boundary_lines_disputed_areas WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_states_provinces_lines_3-4"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name FROM ne_50m_admin_1_states_provinces_lines WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_5-6"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name FROM ne_10m_admin_0_boundary_lines_land WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_disputed_5-6"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name FROM ne_10m_admin_0_boundary_lines_disputed_areas WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_states_provinces_lines_5-6"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name FROM ne_10m_admin_1_states_provinces_lines WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_label_points_3-20"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name FROM ne_50m_admin_1_states_provinces_lines WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_label_points_5-20"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name, adm0_sr, datarank FROM ne_10m_admin_1_label_points WHERE wkb_geometry && !BBOX!"
+
+[[maps]]
+name = "osm"
+attribution = "Tegola OSM" # map attribution
+center = [-76.275329586789, 39.153492567373, 8.0] # optional center value. part of the TileJSON spec
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_0-2"
+	min_zoom = 0
+	max_zoom = 2
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_countries_3-7"
+	min_zoom = 3
+	max_zoom = 7
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_3-4"
+	min_zoom = 3
+	max_zoom = 4
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_disputed_3-4"
+	min_zoom = 3
+	max_zoom = 4
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_states_provinces_lines_3-4"
+	min_zoom = 3
+	max_zoom = 4
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_5-6"
+	min_zoom = 5
+	max_zoom = 6
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_disputed_5-6"
+	min_zoom = 5
+	max_zoom = 6
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_states_provinces_lines_5-6"
+	min_zoom = 5
+	max_zoom = 6
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_label_points_3-20"
+	min_zoom = 3
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_label_points_5-20"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "osm.land_0-9"
+	min_zoom = 0
+	max_zoom = 9
+
+	[[maps.layers]]
+	provider_layer = "osm.land_10-20"
+	min_zoom = 10
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "osm.admin_boundaries_5-10"
+	min_zoom = 5
+	max_zoom = 10
+
+	[[maps.layers]]
+	provider_layer = "osm.admin_boundaries_11-12"
+	min_zoom = 11
+	max_zoom = 12
+
+	[[maps.layers]]
+	provider_layer = "osm.admin_boundaries_13-20"
+	min_zoom = 13
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "osm.roads_gen0"
+	min_zoom = 4
+	max_zoom = 8
+
+	[[maps.layers]]
+	provider_layer = "osm.roads_gen1"
+	min_zoom = 9
+	max_zoom = 10
+
+	[[maps.layers]]
+	provider_layer = "osm.roads_11-12"
+	min_zoom = 11
+	max_zoom = 12
+
+	[[maps.layers]]
+	provider_layer = "osm.roads_13"
+	min_zoom = 13
+	max_zoom = 13
+
+	[[maps.layers]]
+	provider_layer = "osm.roads_14-20"
+	min_zoom = 14
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "osm.landusages_gen0"
+	min_zoom = 3
+	max_zoom = 9
+
+	[[maps.layers]]
+	provider_layer = "osm.landusages_gen1"
+	min_zoom = 10
+	max_zoom = 12
+
+	[[maps.layers]]
+	provider_layer = "osm.landusages"
+	min_zoom = 13
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "osm.buildings"
+	min_zoom = 14
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "osm.waterareas_gen0"
+	min_zoom = 3
+	max_zoom = 9
+
+	[[maps.layers]]
+	provider_layer = "osm.waterareas_gen1"
+	min_zoom = 10
+	max_zoom = 12
+
+	[[maps.layers]]
+	provider_layer = "osm.waterareas"
+	min_zoom = 13
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "osm.waterways_gen0"
+	min_zoom = 8
+	max_zoom = 12
+
+	[[maps.layers]]
+	provider_layer = "osm.waterways_gen1"
+	min_zoom = 13
+	max_zoom = 14
+
+	[[maps.layers]]
+	provider_layer = "osm.waterways"
+	min_zoom = 15
+	max_zoom = 20

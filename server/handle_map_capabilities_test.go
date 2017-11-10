@@ -10,6 +10,7 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 
+	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/server"
 	"github.com/terranodo/tegola/tilejson"
 )
@@ -31,13 +32,13 @@ func TestHandleMapCapabilities(t *testing.T) {
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
 			expected: tilejson.TileJSON{
-				Attribution: &testMap.Attribution,
-				Bounds:      [4]float64{0, 0, 0, 0},
-				Center:      testMap.Center,
+				Attribution: &testMapAttribution,
+				Bounds:      [4]float64{-180, -90, 180, 90},
+				Center:      testMapCenter,
 				Format:      "pbf",
 				MinZoom:     4,
 				MaxZoom:     20,
-				Name:        &testMap.Name,
+				Name:        &testMapName,
 				Description: nil,
 				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
@@ -84,13 +85,13 @@ func TestHandleMapCapabilities(t *testing.T) {
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
 			expected: tilejson.TileJSON{
-				Attribution: &testMap.Attribution,
-				Bounds:      [4]float64{0, 0, 0, 0},
-				Center:      testMap.Center,
+				Attribution: &testMapAttribution,
+				Bounds:      [4]float64{-180, -90, 180, 90},
+				Center:      testMapCenter,
 				Format:      "pbf",
-				MinZoom:     4,
+				MinZoom:     0,
 				MaxZoom:     20,
-				Name:        &testMap.Name,
+				Name:        &testMapName,
 				Description: nil,
 				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
@@ -103,6 +104,30 @@ func TestHandleMapCapabilities(t *testing.T) {
 				Template: nil,
 				Legend:   nil,
 				VectorLayers: []tilejson.VectorLayer{
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           "debug-tile-outline",
+						Name:         "debug-tile-outline",
+						GeometryType: tilejson.GeomTypeLine,
+						MinZoom:      0,
+						MaxZoom:      atlas.MaxZoom,
+						Tiles: []string{
+							"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           "debug-tile-center",
+						Name:         "debug-tile-center",
+						GeometryType: tilejson.GeomTypePoint,
+						MinZoom:      0,
+						MaxZoom:      atlas.MaxZoom,
+						Tiles: []string{
+							"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+						},
+					},
 					{
 						Version:      2,
 						Extent:       4096,
@@ -125,30 +150,6 @@ func TestHandleMapCapabilities(t *testing.T) {
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
 							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
-						},
-					},
-					{
-						Version:      2,
-						Extent:       4096,
-						ID:           "debug-tile-outline",
-						Name:         "debug-tile-outline",
-						GeometryType: tilejson.GeomTypeLine,
-						MinZoom:      0,
-						MaxZoom:      server.MaxZoom,
-						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
-						},
-					},
-					{
-						Version:      2,
-						Extent:       4096,
-						ID:           "debug-tile-center",
-						Name:         "debug-tile-center",
-						GeometryType: tilejson.GeomTypePoint,
-						MinZoom:      0,
-						MaxZoom:      server.MaxZoom,
-						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
 						},
 					},
 				},
@@ -191,3 +192,9 @@ func TestHandleMapCapabilities(t *testing.T) {
 		}
 	}
 }
+
+/*
+{Attribution:0x1705750 		Bounds:[-180 -90 180 90] Center:[1 2 3] Format:pbf MinZoom:4 MaxZoom:20 Name:0x1705760 		Description:<nil> Scheme:xyz TileJSON:2.1.0 Tiles:[http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true] Grids:[] Data:[] Version:1.0.0 Template:<nil> Legend:<nil> VectorLayers:[{Version:2 Extent:4096 ID:debug-tile-outline Name:debug-tile-outline FeatureTags:[] GeometryType:line MinZoom:0 MaxZoom:20 Tiles:[http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true]} {Version:2 Extent:4096 ID:debug-tile-center Name:debug-tile-center FeatureTags:[] GeometryType:point MinZoom:0 MaxZoom:20 Tiles:[http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true]} {Version:2 Extent:4096 ID:test-layer Name:test-layer FeatureTags:[] GeometryType:point MinZoom:4 MaxZoom:20 Tiles:[http://cdn.tegola.io/maps/test-map/test-layer/{z}/{x}/{y}.pbf?debug=true]} {Version:2 Extent:4096 ID:test-layer-2-name Name:test-layer-2-name FeatureTags:[] GeometryType:line MinZoom:10 MaxZoom:20 Tiles:[http://cdn.tegola.io/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf?debug=true]}]}
+{Attribution:0xc42016ed00 	Bounds:[-180 -90 180 90] Center:[1 2 3] Format:pbf MinZoom:0 MaxZoom:20 Name:0xc42016ed40 	Description:<nil> Scheme:xyz TileJSON:2.1.0 Tiles:[http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true] Grids:[] Data:[] Version:1.0.0 Template:<nil> Legend:<nil> VectorLayers:[{Version:2 Extent:4096 ID:debug-tile-outline Name:debug-tile-outline FeatureTags:[] GeometryType:line MinZoom:0 MaxZoom:20 Tiles:[http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true]} {Version:2 Extent:4096 ID:debug-tile-center Name:debug-tile-center FeatureTags:[] GeometryType:point MinZoom:0 MaxZoom:20 Tiles:[http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true]} {Version:2 Extent:4096 ID:test-layer Name:test-layer FeatureTags:[] GeometryType:point MinZoom:4 MaxZoom:20 Tiles:[http://cdn.tegola.io/maps/test-map/test-layer/{z}/{x}/{y}.pbf?debug=true]} {Version:2 Extent:4096 ID:test-layer-2-name Name:test-layer-2-name FeatureTags:[] GeometryType:line MinZoom:10 MaxZoom:20 Tiles:[http://cdn.tegola.io/maps/test-map/test-layer-2-name/{z}/{x}/{y}.pbf?debug=true]}]}
+
+*/

@@ -1,0 +1,173 @@
+[webserver]
+port = ":8080"
+
+[[providers]]
+name = "bonn_osm"
+type = "postgis"
+host = "localhost"
+port = 5432
+database = "bonn_osm"
+user = "ARolek"
+password = ""
+
+	[[providers.layers]]
+	name = "building"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid, other_tags FROM buildings WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "road"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM all_roads WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "river"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM rivers WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "main_roads"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM main_roads WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "farms"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM farms WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "aerodromes_polygon"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM aerodromes_polygon WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "forest"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM forest WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "grassland"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM grassland WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "lakes"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM lakes WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "medical_polygon"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM medical_polygon WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "military"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM military WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "residential"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM residential WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "schools_polygon"
+	geometry_fieldname = "wkb_geometry"
+	id_fieldname = "ogc_fid"
+	srid=4326
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS wkb_geometry, name, ogc_fid FROM schools_polygon WHERE wkb_geometry && !BBOX!"
+
+
+[[maps]]
+name = "bonn_osm"
+attribution = "Test attribution" # map attribution
+center = [7.0733624, 50.7024327, 8.0] # optional center value. part of the TileJSON spec
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.building"
+	min_zoom = 14
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.road"
+	min_zoom = 10
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.river"
+	min_zoom = 1
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.main_roads"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.farms"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.aerodromes_polygon"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.forest"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.grassland"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.lakes"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.medical_polygon"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.military"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.residential"
+	min_zoom = 5
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "bonn_osm.schools_polygon"
+	min_zoom = 5
+	max_zoom = 20

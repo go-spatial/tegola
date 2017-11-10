@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/dimfeld/httptreemux"
+
+	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/server"
 )
 
@@ -35,6 +37,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
+						Bounds:       [4]float64{-180.0, -90.0, 180.0, 90.0},
 						Capabilities: "http://localhost:8080/capabilities/test-map.json",
 						Tiles: []string{
 							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -74,12 +77,28 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
+						Bounds:       [4]float64{-180.0, -90.0, 180.0, 90.0},
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
 						},
 						Layers: []server.CapabilitiesLayer{
-
+							{
+								Name: "debug-tile-outline",
+								Tiles: []string{
+									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 0,
+								MaxZoom: atlas.MaxZoom,
+							},
+							{
+								Name: "debug-tile-center",
+								Tiles: []string{
+									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 0,
+								MaxZoom: atlas.MaxZoom,
+							},
 							{
 								Name: testLayer1.MVTName(),
 								Tiles: []string{
@@ -95,22 +114,6 @@ func TestHandleCapabilities(t *testing.T) {
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
-							},
-							{
-								Name: "debug-tile-outline",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: server.MaxZoom,
-							},
-							{
-								Name: "debug-tile-center",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: server.MaxZoom,
 							},
 						},
 					},

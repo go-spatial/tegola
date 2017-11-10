@@ -1,19 +1,18 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/dustin/go-humanize"
-	"github.com/golang/protobuf/proto"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/atlas"
 )
 
 type HandleMapZXY struct {
@@ -103,6 +102,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	options call does not have a body
 		w.Write(nil)
 		return
+
 	//	tile request
 	case "GET":
 
@@ -113,8 +113,8 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	lookup our Map
-		m, ok := maps[req.mapName]
-		if !ok {
+		m, err := atlas.GetMap(req.mapName)
+		if err != nil {
 			log.Printf("map (%v) not configured. check your config file", req.mapName)
 			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
 			return
@@ -127,88 +127,23 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Y: req.y,
 		}
 
-		//	generate a tile
-		var mvtTile mvt.Tile
-
-		//	check that our request is below max zoom and we have layers to render
-		if tile.Z <= MaxZoom && len(m.Layers) != 0 {
-
-			//	wait group for concurrent layer fetching
-			var wg sync.WaitGroup
-			//	filter down the layers we need for this zoom
-			ls := m.FilterLayersByZoom(tile.Z)
-
-			//	layer stack
-			mvtLayers := make([]*mvt.Layer, len(ls))
-
-			//	set our waitgroup count
-			wg.Add(len(ls))
-
-			//	iterate our layers
-			for i, layer := range ls {
-				//	go routine for fetching the layer concurrently
-				go func(i int, l Layer) {
-					//	on completion let the wait group know
-					defer wg.Done()
-
-					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(r.Context(), l.ProviderLayerName, tile, l.DefaultTags)
-					if err == mvt.ErrCanceled {
-						return
-					}
-					if err != nil {
-						//	TODO: should we return an error to the response or just log the error?
-						//	we can't just write to the response as the waitgroup is going to write to the response as well
-						log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
-						return
-					}
-
-					//	check if we have a layer name
-					if l.Name != "" {
-						mvtLayer.Name = l.Name
-					}
-
-					//	add the layer to the slice position
-					mvtLayers[i] = mvtLayer
-				}(i, layer)
-			}
-
-			//	wait for the waitgroup to finish
-			wg.Wait()
-
-			//	stop processing if the context has an error. this check is necessary
-			//	otherwise the server continues processing even if the request was canceled
-			//	as the waitgroup was not notified of the cancel
-			if r.Context().Err() != nil {
-				return
-			}
-
-			//	add layers to our tile
-			mvtTile.AddLayers(mvtLayers...)
-		}
+		//	filter down the layers we need for this zoom
+		m = m.DisableAllLayers().EnableLayersByZoom(tile.Z)
 
 		//	check for the debug query string
 		if req.debug {
-			//	add debug layer
-			debugLayers := debugLayer(tile)
-			mvtTile.AddLayers(debugLayers...)
+			m = m.EnableDebugLayers()
 		}
 
-		//	generate our vector tile
-
-		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
+		pbyte, err := m.Encode(r.Context(), tile)
 		if err != nil {
-			//	log.Printf("Error Getting VTile: %v", err)
-			http.Error(w, fmt.Sprintf("error Getting VTile: %v", err.Error()), http.StatusBadRequest)
-			return
-		}
-
-		//	marshal our tile into a protocol buffer
-		var pbyte []byte
-		pbyte, err = proto.Marshal(vtile)
-		if err != nil {
-			log.Printf("Error marshalling tile: %v", err)
-			http.Error(w, "Error marshalling tile", http.StatusInternalServerError)
+			switch err {
+			case context.Canceled:
+				//	TODO: add as a debug log
+			default:
+				log.Printf("Error marshalling tile: %v", err)
+				http.Error(w, "Error marshalling tile", http.StatusInternalServerError)
+			}
 			return
 		}
 

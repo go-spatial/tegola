@@ -27,24 +27,24 @@ func TestHandleMapStyle(t *testing.T) {
 	}{
 		{
 			handler:    server.HandleMapStyle{},
-			uri:        fmt.Sprintf("/maps/%v/style.json", testMap.Name),
+			uri:        fmt.Sprintf("/maps/%v/style.json", testMapName),
 			uriPattern: "/maps/:map_name/style.json",
 			reqMethod:  "GET",
 			expected: style.Root{
-				Name:    testMap.Name,
+				Name:    testMapName,
 				Version: style.Version,
-				Center:  [2]float64{testMap.Center[0], testMap.Center[1]},
-				Zoom:    testMap.Center[2],
+				Center:  [2]float64{testMapCenter[0], testMapCenter[1]},
+				Zoom:    testMapCenter[2],
 				Sources: map[string]style.Source{
-					testMap.Name: style.Source{
+					testMapName: style.Source{
 						Type: style.SourceTypeVector,
-						URL:  fmt.Sprintf("http://%v/capabilities/%v.json", serverHostName, testMap.Name),
+						URL:  fmt.Sprintf("http://%v/capabilities/%v.json", serverHostName, testMapName),
 					},
 				},
 				Layers: []style.Layer{
 					{
 						ID:          testLayer1.MVTName(),
-						Source:      testMap.Name,
+						Source:      testMapName,
 						SourceLayer: testLayer1.MVTName(),
 						Type:        style.LayerTypeCircle,
 						Layout: &style.LayerLayout{
@@ -57,7 +57,7 @@ func TestHandleMapStyle(t *testing.T) {
 					},
 					{
 						ID:          testLayer2.MVTName(),
-						Source:      testMap.Name,
+						Source:      testMapName,
 						SourceLayer: testLayer2.MVTName(),
 						Type:        style.LayerTypeLine,
 						Layout: &style.LayerLayout{

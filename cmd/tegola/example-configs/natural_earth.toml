@@ -1,0 +1,133 @@
+[webserver]
+port = ":8080"
+
+[cache]
+type="file"
+basepath="/tmp/tegola-cache-test"
+
+#	natural earth
+[[providers]]
+name = "ne"
+type = "postgis"
+host = "localhost"
+port = 5432
+database = "natural_earth"
+user = ""
+password = ""
+
+	[[providers.layers]]
+	name = "admin_boundaries_0-2"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name, name_alt FROM ne_110m_admin_0_boundary_lines_land WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_countries_3-7"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, labelrank, name FROM ne_10m_admin_0_countries WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_3-4"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name FROM ne_50m_admin_0_boundary_lines_land WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_disputed_3-4"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name FROM ne_50m_admin_0_boundary_lines_disputed_areas WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_states_provinces_lines_3-4"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name FROM ne_50m_admin_1_states_provinces_lines WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_5-6"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name FROM ne_10m_admin_0_boundary_lines_land WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_boundaries_disputed_5-6"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, featurecla, name FROM ne_10m_admin_0_boundary_lines_disputed_areas WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_states_provinces_lines_5-6"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name FROM ne_10m_admin_1_states_provinces_lines WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_label_points_3-5"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, sr_br_name FROM ne_10m_admin_0_label_points WHERE wkb_geometry && !BBOX!"
+
+	[[providers.layers]]
+	name = "admin_label_points_6-20"
+	geometry_fieldname = "geometry"
+	id_fieldname = "ogc_fid"
+	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name, adm0_sr, datarank FROM ne_10m_admin_1_label_points WHERE wkb_geometry && !BBOX!"
+
+[[maps]]
+name = "natural_earth"
+attribution = "Tegola OSM" # map attribution
+center = [-117.2228097, 32.8363159, 6.0] # optional center value. part of the TileJSON spec
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_0-2"
+	min_zoom = 0
+	max_zoom = 2
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_countries_3-7"
+	min_zoom = 0
+	max_zoom = 20
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_3-4"
+	min_zoom = 3
+	max_zoom = 4
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_disputed_3-4"
+	min_zoom = 3
+	max_zoom = 4
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_states_provinces_lines_3-4"
+	min_zoom = 3
+	max_zoom = 4
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_5-6"
+	min_zoom = 5
+	max_zoom = 6
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_boundaries_disputed_5-6"
+	min_zoom = 5
+	max_zoom = 6
+
+	[[maps.layers]]
+	provider_layer = "ne.admin_states_provinces_lines_5-6"
+	min_zoom = 5
+	max_zoom = 6
+
+	[[maps.layers]]
+	name = "admin_label_points"
+	provider_layer = "ne.admin_label_points_3-5"
+	min_zoom = 3
+	max_zoom = 5
+
+	[[maps.layers]]
+	name = "admin_label_points"
+	provider_layer = "ne.admin_label_points_6-20"
+	min_zoom = 6
+	max_zoom = 20

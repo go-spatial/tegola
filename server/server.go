@@ -2,7 +2,6 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -15,8 +14,6 @@ const (
 	//	MaxTileSize is 500k. Currently just throws a warning when tile
 	//	is larger than MaxTileSize
 	MaxTileSize = 500000
-	//	MaxZoom will not render tile beyond this zoom level
-	MaxZoom = 20
 )
 
 var (
@@ -27,22 +24,6 @@ var (
 	//	cache interface to use
 	Cache cache.Interface
 )
-
-//	incoming requests are associated with a map
-var maps = map[string]Map{}
-
-//	RegisterMap associates layers with map names
-func RegisterMap(m Map) error {
-	//	check if our map is already registered
-	if _, ok := maps[m.Name]; ok {
-		return fmt.Errorf("map (%v) is alraedy registered", m.Name)
-	}
-
-	//	associate our layers with a map
-	maps[m.Name] = m
-
-	return nil
-}
 
 //	Start starts the tile server binding to the provided port
 func Start(port string) {
