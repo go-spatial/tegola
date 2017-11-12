@@ -8,7 +8,7 @@ import (
 )
 
 // Line is a basic line type which is made up of two or more points that don't
-// interect.
+// intersect.
 // TODO: We don't really check to make sure the points don't intersect.
 type Line []Point
 

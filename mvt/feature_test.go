@@ -194,7 +194,7 @@ func TestNewFeature(t *testing.T) {
 		if len(tcase.expected) <= 0 {
 			continue
 		}
-		// TOOD test to make sure we got the correct feature
+		// TODO test to make sure we got the correct feature
 
 	}
 }
