@@ -30,7 +30,9 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 /
 ```
 
-The server root will display a built in viewer with an auto generated style. 
+The server root will display a built in viewer with an auto generated style. For example: 
+
+![tegola built in viewer](https://raw.githubusercontent.com/terranodo/tegola/v0.4.0/docs/screenshots/built-in-viewer.png "tegola built in viewer")
 
 
 ```
@@ -81,71 +83,70 @@ Under the `maps` section, map layers are associated with data provider layers an
 ```toml
 
 [webserver]
-port = ":9090"				# port to bind the web server to. defaults ":8080"
+port = ":9090"              # port to bind the web server to. defaults ":8080"
 
-[cache]						# configure a tile cache
-type = "file"				# a file cache will cache to the local file system
-basepath = "/tmp/tegola"	# where to write the file cache
+[cache]                     # configure a tile cache
+type = "file"               # a file cache will cache to the local file system
+basepath = "/tmp/tegola"    # where to write the file cache
 
 # register data providers
 [[providers]]
-name = "test_postgis"		# provider name is referenced from map layers (required)
-type = "postgis"			# the type of data provider. currently only supports postgis (required)
-host = "localhost"			# postgis database host (required)
-port = 5432					# postgis database port (required)
-database = "tegola" 		# postgis database name (required)
-user = "tegola"				# postgis database user (required)
-password = ""				# postgis database password (required)
-srid = 3857             	# The default srid for this provider. Defaults to WebMercator (3857) (optional)
-max_connections = "50"		# The max connections to maintain in the connection pool. Default is 100. (optional)
+name = "test_postgis"       # provider name is referenced from map layers (required)
+type = "postgis"            # the type of data provider. currently only supports postgis (required)
+host = "localhost"          # postgis database host (required)
+port = 5432                 # postgis database port (required)
+database = "tegola"         # postgis database name (required)
+user = "tegola"             # postgis database user (required)
+password = ""               # postgis database password (required)
+srid = 3857                 # The default srid for this provider. Defaults to WebMercator (3857) (optional)
+max_connections = "50"      # The max connections to maintain in the connection pool. Default is 100. (optional)
 
 	[[providers.layers]]
-	name = "landuse" 					# will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857" 	# sql or table_name are required
-	geometry_fieldname = "geom"			# geom field. default is geom
-	id_fieldname = "gid"				# geom id field. default is gid
+	name = "landuse"                    # will be encoded as the layer name in the tile
+	tablename = "gis.zoning_base_3857"  # sql or table_name are required
+	geometry_fieldname = "geom"         # geom field. default is geom
+	id_fieldname = "gid"                # geom id field. default is gid
 	srid = 4326                         # the srid of table's geo data. Defaults to WebMercator (3857)
 
-
 	[[providers.layers]]
-	name = "roads" 						# will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857" 	# sql or table_name are required
-	geometry_fieldname = "geom"			# geom field. default is geom
-	id_fieldname = "gid"				# geom id field. default is gid
+	name = "roads"                      # will be encoded as the layer name in the tile
+	tablename = "gis.zoning_base_3857"  # sql or table_name are required
+	geometry_fieldname = "geom"         # geom field. default is geom
+	id_fieldname = "gid"                # geom id field. default is gid
 	fields = [ "class", "name" ]        # Additional fields to include in the select statement.
 
 	[[providers.layers]]
 	name = "rivers" 					# will be encoded as the layer name in the tile
-	geometry_fieldname = "geom"			# geom field. default is geom
-	id_fieldname = "gid"				# geom id field. default is gid
+	geometry_fieldname = "geom"         # geom field. default is geom
+	id_fieldname = "gid"              # geom id field. default is gid
 	# Custom sql to be used for this layer. Note: that the geometery field is wraped
 	# in a ST_AsBinary, as tegola only understand wkb.
 	sql = """
-		SELECT
-			gid,
-			ST_AsBinary(geom) AS geom
-		FROM
-			gis.rivers
-		WHERE
-			geom && !BBOX!
+        SELECT
+            gid,
+            ST_AsBinary(geom) AS geom
+        FROM
+            gis.rivers
+        WHERE
+            geom && !BBOX!
 	"""
 
 # maps are made up of layers
 [[maps]]
-name = "zoning"							# used in the URL to reference this map (/maps/:map_name)
+name = "zoning"                              # used in the URL to reference this map (/maps/:map_name)
 
 	[[maps.layers]]
-	provider_layer = "test_postgis.landuse"	# must match a data provider layer
-	min_zoom = 12						# minimum zoom level to include this layer
-	max_zoom = 16						# maximum zoom level to include this layer
+	provider_layer = "test_postgis.landuse"	 # must match a data provider layer
+	min_zoom = 12                            # minimum zoom level to include this layer
+	max_zoom = 16                            # maximum zoom level to include this layer
 
-		[maps.layers.default_tags]		# table of default tags to encode in the tile. SQL statements will override
+		[maps.layers.default_tags]		     # table of default tags to encode in the tile. SQL statements will override
 		class = "park"
 
 	[[maps.layers]]
-	provider_layer = "test_postgis.rivers"	# must match a data provider layer
-	min_zoom = 10						# minimum zoom level to include this layer
-	max_zoom = 18						# maximum zoom level to include this layer
+	provider_layer = "test_postgis.rivers"   # must match a data provider layer
+	min_zoom = 10                            # minimum zoom level to include this layer
+	max_zoom = 18                            # maximum zoom level to include this layer
 ```
 
 ### Supported PostGIS SQL tokens
