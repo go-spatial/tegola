@@ -3,13 +3,15 @@ package mvt
 import (
 	"testing"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 )
 
 func newTileLayer(name string, keys []string, values []*vectorTile.Tile_Value, features []*vectorTile.Tile_Feature) *vectorTile.Tile_Layer {
-	version := uint32(1)
+	version := uint32(2)
 	extent := uint32(4096)
 	return &vectorTile.Tile_Layer{
 		Version:  &version,
@@ -92,7 +94,7 @@ func TestLayer(t *testing.T) {
 		},
 	}
 	for i, tcase := range testcases {
-		vt, err := tcase.layer.VTileLayer(tcase.bbox)
+		vt, err := tcase.layer.VTileLayer(context.Background(), tcase.bbox)
 		if err != tcase.eerr {
 			t.Errorf("For Test %v: Got unexpected error. Expected %v Got %v", i, tcase.eerr, err)
 		}

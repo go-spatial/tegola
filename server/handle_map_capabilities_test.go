@@ -2,12 +2,14 @@ package server_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/terranodo/tegola/server"
 	"github.com/terranodo/tegola/tilejson"
 )
@@ -16,6 +18,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 	//	setup a new provider
 	testcases := []struct {
 		handler    http.Handler
+		hostName   string
 		uri        string
 		uriPattern string
 		reqMethod  string
@@ -23,6 +26,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 	}{
 		{
 			handler:    server.HandleCapabilities{},
+			hostName:   "",
 			uri:        "http://localhost:8080/capabilities/test-map.json",
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
@@ -31,11 +35,11 @@ func TestHandleMapCapabilities(t *testing.T) {
 				Bounds:      [4]float64{0, 0, 0, 0},
 				Center:      testMap.Center,
 				Format:      "pbf",
-				MinZoom:     10,
+				MinZoom:     4,
 				MaxZoom:     20,
 				Name:        &testMap.Name,
 				Description: nil,
-				Scheme:      "zxy",
+				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
 				Tiles: []string{
 					"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -49,14 +53,102 @@ func TestHandleMapCapabilities(t *testing.T) {
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           testLayer1.Name,
-						Name:         testLayer1.Name,
-						FeatureTags:  nil,
-						GeometryType: nil,
+						ID:           testLayer1.MVTName(),
+						Name:         testLayer1.MVTName(),
+						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer1.MaxZoom,
+						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
-							"http://localhost:8080/maps/test-map/test-layer/{z}/{x}/{y}.pbf",
+							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           testLayer2.MVTName(),
+						Name:         testLayer2.MVTName(),
+						GeometryType: tilejson.GeomTypeLine,
+						MinZoom:      testLayer2.MinZoom,
+						MaxZoom:      testLayer2.MaxZoom,
+						Tiles: []string{
+							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer2.MVTName()),
+						},
+					},
+				},
+			},
+		},
+		{
+			handler:    server.HandleCapabilities{},
+			hostName:   "cdn.tegola.io",
+			uri:        "http://localhost:8080/capabilities/test-map.json?debug=true",
+			uriPattern: "/capabilities/:map_name",
+			reqMethod:  "GET",
+			expected: tilejson.TileJSON{
+				Attribution: &testMap.Attribution,
+				Bounds:      [4]float64{0, 0, 0, 0},
+				Center:      testMap.Center,
+				Format:      "pbf",
+				MinZoom:     4,
+				MaxZoom:     20,
+				Name:        &testMap.Name,
+				Description: nil,
+				Scheme:      tilejson.SchemeXYZ,
+				TileJSON:    tilejson.Version,
+				Tiles: []string{
+					"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
+				},
+				Grids:    []string{},
+				Data:     []string{},
+				Version:  "1.0.0",
+				Template: nil,
+				Legend:   nil,
+				VectorLayers: []tilejson.VectorLayer{
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           testLayer1.MVTName(),
+						Name:         testLayer1.MVTName(),
+						GeometryType: tilejson.GeomTypePoint,
+						MinZoom:      testLayer1.MinZoom,
+						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+						Tiles: []string{
+							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           testLayer2.MVTName(),
+						Name:         testLayer2.MVTName(),
+						GeometryType: tilejson.GeomTypeLine,
+						MinZoom:      testLayer2.MinZoom,
+						MaxZoom:      testLayer2.MaxZoom,
+						Tiles: []string{
+							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           "debug-tile-outline",
+						Name:         "debug-tile-outline",
+						GeometryType: tilejson.GeomTypeLine,
+						MinZoom:      0,
+						MaxZoom:      server.MaxZoom,
+						Tiles: []string{
+							"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           "debug-tile-center",
+						Name:         "debug-tile-center",
+						GeometryType: tilejson.GeomTypePoint,
+						MinZoom:      0,
+						MaxZoom:      server.MaxZoom,
+						Tiles: []string{
+							"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
 						},
 					},
 				},
@@ -67,8 +159,11 @@ func TestHandleMapCapabilities(t *testing.T) {
 	for i, test := range testcases {
 		var err error
 
+		server.HostName = test.hostName
+
 		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
+
 		//	setup a new router group
 		group := router.NewGroup("/")
 		group.UsingContext().Handler(test.reqMethod, test.uriPattern, server.HandleMapCapabilities{})

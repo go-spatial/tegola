@@ -9,6 +9,12 @@
 			"revisionTime": "2016-04-26T10:16:13Z"
 		},
 		{
+			"checksumSHA1": "6qccqKKVnwL9ECLdP+lVzTegdwk=",
+			"path": "github.com/ajstarks/svgo",
+			"revision": "2489f1e6d405e953ac052d1e7ae3769672bf43bb",
+			"revisionTime": "2017-05-07T10:33:33Z"
+		},
+		{
 			"checksumSHA1": "67Ufp7gCzJyjLVW3iW3og8uVtkw=",
 			"path": "github.com/dimfeld/httppath",
 			"revision": "c8e499c3ef3c3e272ed8bdcc1ccf39f73c88debc",
@@ -21,6 +27,36 @@
 			"revisionTime": "2016-10-04T02:10:53Z"
 		},
 		{
+			"checksumSHA1": "rhLUtXvcmouYuBwOq9X/nYKzvNg=",
+			"path": "github.com/dustin/go-humanize",
+			"revision": "259d2a102b871d17f30e3cd9881a642961a1e486",
+			"revisionTime": "2017-02-28T07:34:54Z"
+		},
+		{
+			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
+			"path": "github.com/elazarl/go-bindata-assetfs",
+			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
+			"revisionTime": "2017-02-27T21:27:28Z"
+		},
+		{
+			"checksumSHA1": "IJdG3ioWEw8viliJgFJJTBcGUfM=",
+			"path": "github.com/gdey/gotrace",
+			"revision": "c2ec44e09a7c617dca103f481cae093ca338730f",
+			"revisionTime": "2017-10-05T20:20:57Z"
+		},
+		{
+			"checksumSHA1": "/TU0r8yAEpNvUWbxosqlXi416Os=",
+			"path": "github.com/gdey/tbltest",
+			"revision": "af8abc47b052b70d6527a2113c2cc417849889f2",
+			"revisionTime": "2017-03-31T19:16:46Z"
+		},
+		{
+			"checksumSHA1": "NFd/7OSLQKBzvwufplt4kbokfbA=",
+			"path": "github.com/go-test/deep",
+			"revision": "f49763a6ea0a91026be26f8213bebee726b4185f",
+			"revisionTime": "2017-04-29T20:15:29Z"
+		},
+		{
 			"checksumSHA1": "kVJ5YScYaDWw6iotbpZwQJ6xCGM=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0",
@@ -31,6 +67,30 @@
 			"path": "github.com/jackc/pgx",
 			"revision": "558d5550cf5c08e7192eb2eb8635f21f4b700ff5",
 			"revisionTime": "2016-07-15T19:51:40Z"
+		},
+		{
+			"checksumSHA1": "je0xBtM96GQebMKfmSVzdthg3Rs=",
+			"path": "github.com/logrusorgru/aurora",
+			"revision": "962a6974312dde57d1f6f5738b4f83e1af9f38a4",
+			"revisionTime": "2016-12-16T17:00:44Z"
+		},
+		{
+			"checksumSHA1": "Se195FlZ160eaEk/uVx4KdTPSxU=",
+			"path": "github.com/pborman/uuid",
+			"revision": "e790cca94e6cc75c7064b1332e63811d4aae1a53",
+			"revisionTime": "2017-06-12T15:36:48Z"
+		},
+		{
+			"checksumSHA1": "C3yiSMdTQxSY3xqKJzMV9T+KnIc=",
+			"path": "github.com/pkg/profile",
+			"revision": "5b67d428864e92711fcbd2f8629456121a56d91f",
+			"revisionTime": "2017-05-09T09:25:25Z"
+		},
+		{
+			"checksumSHA1": "a9pyC/XvFSy6/wgxMt9qepohioQ=",
+			"path": "gopkg.in/go-playground/colors.v1",
+			"revision": "b53ecfb396233c24c77594af27dd0f5731fafaf1",
+			"revisionTime": "2015-09-24T11:17:26Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"

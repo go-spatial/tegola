@@ -6,15 +6,13 @@ import (
 	"flag"
 	"fmt"
 	"html"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/BurntSushi/toml"
-
+	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/cache"
+	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
 	_ "github.com/terranodo/tegola/provider/postgis"
@@ -26,41 +24,29 @@ var (
 	Version = "version not set"
 )
 
-type Config struct {
-	Webserver struct {
-		Port      string
-		LogFile   string `toml:"log_file"`
-		LogFormat string `toml:"log_format"`
-	}
-	Providers []map[string]interface{}
-	Maps      []Map
-}
-
-type Map struct {
-	Name        string     `toml:"name"`
-	Attribution string     `toml:"attribution"`
-	Bounds      []float64  `toml:"bounds"`
-	Center      [3]float64 `toml:"center"`
-	Layers      []struct {
-		ProviderLayer string      `toml:"provider_layer"`
-		MinZoom       int         `toml:"min_zoom"`
-		MaxZoom       int         `toml:"max_zoom"`
-		DefaultTags   interface{} `toml:"default_tags"`
-	} `toml:"layers"`
-}
-
 func main() {
 	var err error
 
 	//	parse our command line flags
 	flag.Parse()
 
-	conf, err := loadConfig(configFile)
+	//	if the user is looking for tegola version info, print it and exit
+	if *version {
+		fmt.Println(Version)
+		os.Exit(0)
+	}
+
+	defer setupProfiler().Stop()
+
+	conf, err := config.Load(*configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//	log.Println("config webserver port", conf.Webserver.Port)
+	//	validate our config
+	if err = conf.Validate(); err != nil {
+		log.Fatal(err)
+	}
 
 	//	init our providers
 	providers, err := initProviders(conf.Providers)
@@ -73,68 +59,51 @@ func main() {
 		log.Fatal(err)
 	}
 
-	initLogger(logFile, logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
+	if len(conf.Cache) != 0 {
+		//	init cache backends
+		cache, err := initCache(conf.Cache)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if cache != nil {
+			server.Cache = cache
+		}
+	}
+
+	initLogger(*logFile, *logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
 
 	//	check config for port setting
-	if port == defaultHTTPPort && conf.Webserver.Port != "" {
-		port = conf.Webserver.Port
+	//	if you set the port via the comand line it will override a port setting in the config
+	if *port == defaultHTTPPort && conf.Webserver.Port != "" {
+		port = &conf.Webserver.Port
 	}
 
 	//	set our server version
 	server.Version = Version
+	server.HostName = conf.Webserver.HostName
 
 	//	start our webserver
-	server.Start(port)
+	server.Start(*port)
 }
 
-//	parseConfig handles loading a config file locally or remote over http(s)
-func loadConfig(confLocation string) (Config, error) {
-	var err error
-	var conf Config
-	var reader io.Reader
-
-	//	check for http prefix
-	if strings.HasPrefix(confLocation, "http") {
-		log.Printf("Loading remote config (%v)", confLocation)
-
-		//	setup http client with a timeout
-		var httpClient = &http.Client{
-			Timeout: time.Second * 10,
-		}
-
-		//	make the http request
-		res, err := httpClient.Get(confLocation)
-		if err != nil {
-			return conf, fmt.Errorf("error fetching remote config file (%v): %v ", confLocation, err)
-		}
-
-		//	set the reader to the response body
-		reader = res.Body
-	} else {
-		log.Printf("Loading local config (%v)", confLocation)
-
-		//	check the conf file exists
-		if _, err := os.Stat(confLocation); os.IsNotExist(err) {
-			return conf, fmt.Errorf("config file at location (%v) not found!", confLocation)
-		}
-
-		//	open the confi file
-		reader, err = os.Open(confLocation)
-		if err != nil {
-			return conf, fmt.Errorf("error opening local config file (%v): %v ", confLocation, err)
-		}
+func initCache(config map[string]interface{}) (cache.Interface, error) {
+	//	lookup our cache type
+	t, ok := config["type"]
+	if !ok {
+		return nil, fmt.Errorf("missing 'type' parameter for cache")
 	}
 
-	//	decode conf file
-	if _, err := toml.DecodeReader(reader, &conf); err != nil {
-		return conf, err
+	cType, ok := t.(string)
+	if !ok {
+		return nil, fmt.Errorf("'type' parameter for cache must be of type string")
 	}
 
-	return conf, nil
+	//	register the provider
+	return cache.For(cType, config)
 }
 
 //	initMaps registers maps with our server
-func initMaps(maps []Map, providers map[string]mvt.Provider) error {
+func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 
 	//	iterate our maps
 	for _, m := range maps {
@@ -147,7 +116,6 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 			serverMap.Bounds = [4]float64{m.Bounds[0], m.Bounds[1], m.Bounds[2], m.Bounds[3]}
 		}
 
-		//	var layers []server.Layer
 		//	iterate our layers
 		for _, l := range m.Layers {
 			//	split our provider name (provider.layer) into [provider,layer]
@@ -165,13 +133,20 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 			}
 
 			//	read the provider's layer names
-			names := provider.LayerNames()
+			layerInfos, err := provider.Layers()
+			if err != nil {
+				return fmt.Errorf("error fetching layer info from provider (%v)", providerLayer[0])
+			}
 
 			//	confirm our providerLayer name is registered
 			var found bool
-			for i := range names {
-				if names[i] == providerLayer[1] {
+			var layerGeomType tegola.Geometry
+			for i := range layerInfos {
+				if layerInfos[i].Name() == providerLayer[1] {
 					found = true
+
+					//	read the layerGeomType
+					layerGeomType = layerInfos[i].GeomType()
 				}
 			}
 			if !found {
@@ -189,11 +164,13 @@ func initMaps(maps []Map, providers map[string]mvt.Provider) error {
 
 			//	add our layer to our layers slice
 			serverMap.Layers = append(serverMap.Layers, server.Layer{
-				Name:        providerLayer[1],
-				MinZoom:     l.MinZoom,
-				MaxZoom:     l.MaxZoom,
-				Provider:    provider,
-				DefaultTags: defaultTags,
+				Name:              l.Name,
+				ProviderLayerName: providerLayer[1],
+				MinZoom:           l.MinZoom,
+				MaxZoom:           l.MaxZoom,
+				Provider:          provider,
+				DefaultTags:       defaultTags,
+				GeomType:          layerGeomType,
 			})
 		}
 

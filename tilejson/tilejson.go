@@ -4,6 +4,20 @@ package tilejson
 
 const Version = "2.1.0"
 
+type GeomType string
+
+const (
+	GeomTypePoint   GeomType = "point"
+	GeomTypeLine    GeomType = "line"
+	GeomTypePolygon GeomType = "polygon"
+	GeomTypeUnknown GeomType = "unknown"
+)
+
+const (
+	SchemeXYZ  = "xyz"
+	SchemeTMLS = "tms"
+)
+
 type TileJSON struct {
 	// OPTIONAL. Default: null. Contains an attribution to be displayed
 	// when the map is shown to a user. Implementations MAY decide to treat this
@@ -109,10 +123,10 @@ type VectorLayer struct {
 	Name string `json:"name"`
 	// OPTIONAL. Default: []
 	// an array of feature tags that MAY be included on each feature
-	FeatureTags []string `json:"feature_tags"`
+	FeatureTags []string `json:"feature_tags,omitempty"`
 	// OPTIONAL. Default: null
 	// possible values include: "point", "line", "polygon", "unknown"
-	GeometryType *string `json:"geometry_type"`
+	GeometryType GeomType `json:"geometry_type,omitempty"`
 	// OPTIONAL. Default: 0. >= 0, <= 22.
 	// An integer specifying the minimum zoom level.
 	MinZoom int `json:"minzoom"`

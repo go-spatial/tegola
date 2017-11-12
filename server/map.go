@@ -1,7 +1,5 @@
 package server
 
-import "github.com/terranodo/tegola/mvt"
-
 //	NewMap creates a new map with the necessary default values
 func NewMap(name string) Map {
 	return Map{
@@ -40,20 +38,14 @@ func (m *Map) FilterLayersByZoom(zoom int) (filteredLayers []Layer) {
 //	the slice return is for convenience. MVT tiles require unique layer names
 func (m *Map) FilterLayersByName(name string) (filteredLayers []Layer) {
 	for _, l := range m.Layers {
-		if l.Name == name {
+		//	if we have a name set, use it for the lookup
+		if l.Name != "" && l.Name == name {
+			filteredLayers = append(filteredLayers, l)
+			return
+		} else if l.ProviderLayerName == name { //	default to using the ProviderLayerName for the lookup
 			filteredLayers = append(filteredLayers, l)
 			return
 		}
 	}
 	return
-}
-
-type Layer struct {
-	Name    string
-	MinZoom int
-	MaxZoom int
-	//	instantiated provider
-	Provider mvt.Provider
-	//	default tags to include when encoding the layer. provider tags take precedence
-	DefaultTags map[string]interface{}
 }

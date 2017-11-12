@@ -1,10 +1,18 @@
 package mvt
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/maths"
+	"github.com/terranodo/tegola/maths/makevalid"
+	"github.com/terranodo/tegola/maths/points"
+	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 	"github.com/terranodo/tegola/wkb"
 )
@@ -17,9 +25,11 @@ var (
 	ErrNilGeometryType     = fmt.Errorf("Nil geometry passed")
 )
 
+const tilebuffer = makevalid.TileBuffer
+
 // TODO: Need to put in validation for the Geometry, at current the system
 // does not check to make sure that the geometry is following the rules as
-// laided out by the spec. It just assumes the user is good.
+// laid out by the spec. It just assumes the user is good.
 
 // Feature describes a feature of a Layer. A layer will contain multiple features
 // each of which has a geometry describing the interesting thing, and the metadata
@@ -30,6 +40,8 @@ type Feature struct {
 	// Does not support the collection geometry, for this you have to create a feature for each
 	// geometry in the collection.
 	Geometry tegola.Geometry
+	// Unsimplifed weather the Geometry is simple already and thus does not need to be simplified.
+	Unsimplifed *bool
 }
 
 func (f Feature) String() string {
@@ -62,16 +74,19 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int, simplify bool) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keys, vals, f); err != nil {
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(f.Geometry, extent, layerExtent)
+	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent, simplify)
 	if err != nil {
 		return tf, err
+	}
+	if len(geo) == 0 {
+		return nil, nil
 	}
 	tf.Geometry = geo
 	tf.Type = &gtype
@@ -126,7 +141,7 @@ type cursor struct {
 	x int64
 	y int64
 
-	// The diamentions for the screen tile.
+	// The dimensions for the screen tile.
 	tile tegola.BoundingBox
 
 	// The extent — it is an int, but to make computations easier and not lose precision
@@ -136,9 +151,12 @@ type cursor struct {
 	// These values are cached
 	xspan float64
 	yspan float64
+
+	// Disabling scaling Use this when using clipping and scaling
+	DisableScaling bool
 }
 
-func newCursor(tile tegola.BoundingBox, layerExtent int) *cursor {
+func NewCursor(tile tegola.BoundingBox, layerExtent int) *cursor {
 	xspan := tile.Maxx - tile.Minx
 	yspan := tile.Maxy - tile.Miny
 	return &cursor{
@@ -158,8 +176,21 @@ func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
 	return nx, ny
 }
 
+func (c *cursor) MinMax() (min, max maths.Pt) {
+	return maths.Pt{0 - tilebuffer, 0 - tilebuffer},
+		maths.Pt{
+			float64(c.extent + tilebuffer),
+			float64(c.extent + tilebuffer),
+		}
+}
+
 func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
-	ix, iy := c.ScalePoint(p)
+	var ix, iy int64
+	if c.DisableScaling {
+		ix, iy = int64(p.X()), int64(p.Y())
+	} else {
+		ix, iy = c.ScalePoint(p)
+	}
 	//	computer our point delta
 	dx = ix - int64(c.x)
 	dy = iy - int64(c.y)
@@ -168,6 +199,343 @@ func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	c.x = ix
 	c.y = iy
 	return dx, dy
+}
+
+func (c *cursor) scalept(g tegola.Point) basic.Point {
+	return basic.Point{
+		float64(int64((g.X() - c.tile.Minx) * c.extent / c.xspan)),
+		float64(int64((g.Y() - c.tile.Miny) * c.extent / c.yspan)),
+	}
+}
+
+func chk3Pts(pt1, pt2, pt3 basic.Point) int {
+	// If the first and third points are equal we only care about
+	// the first point.
+	if tegola.IsPointEqual(pt1, pt3) {
+		return 1
+	}
+	if tegola.IsPointEqual(pt1, pt2) || tegola.IsPointEqual(pt2, pt3) {
+		return 2
+	}
+	return 3
+}
+
+func cleanLine(ols basic.Line) (newline basic.Line) {
+	ls := ols
+	loop := 0
+Restart:
+	count := 0
+	//log.Println("Line:", ls.GoString())
+	if len(ls) < 3 {
+		for i := range ls {
+			newline = append(newline, ls[i])
+		}
+		return newline
+	}
+	for i := 0; i < len(ls); i = i + 1 {
+		//log.Println(len(ls), "I:", i)
+		j, k := i+1, i+2
+		switch {
+		case i == len(ls)-2:
+			k = 0
+		case i == len(ls)-1:
+			j, k = 0, 1
+		}
+
+		// Always add the first point.
+		addFirstPt := true
+		skip := 3 - chk3Pts(ls[i], ls[j], ls[k])
+		//log.Println("Skip returned: ", skip, "I:", i)
+
+		switch {
+		case (k == 0 || k == 1) && skip == 2:
+			addFirstPt = false
+		case k == 1 && skip == 1:
+			// remove the first point from newline
+			newline = newline[1:]
+		case skip == 0:
+			count++
+		}
+		if addFirstPt {
+			newline = append(newline, ls[i])
+		}
+		i += skip
+		//log.Println(len(ls), "EI:", i)
+	}
+	//log.Println("Out of loop")
+
+	if len(ls) != count {
+		ls = newline
+		newline = basic.Line{}
+		loop++
+		if loop > 100 {
+			panic(fmt.Sprintf("infi (%v:%v)?\n%v\n%v", len(ls), count, ols.GoString(), ls.GoString()))
+		}
+		goto Restart
+	}
+	return newline
+}
+
+func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
+	line := basic.CloneLine(g)
+	if len(line) <= 4 || maths.DistOfLine(g) < tolerance {
+		return line
+	}
+	pts := line.AsPts()
+	pts = maths.DouglasPeucker(pts, tolerance, true)
+	if len(pts) == 0 {
+		return nil
+	}
+	return basic.NewLineTruncatedFromPt(pts...)
+}
+
+func normalizePoints(pts []maths.Pt) (pnts []maths.Pt) {
+	if pts[0] == pts[len(pts)-1] {
+		pts = pts[1:]
+	}
+	if len(pts) <= 4 {
+		return pts
+	}
+	lpt := 0
+	pnts = append(pnts, pts[0])
+	for i := 1; i < len(pts); i++ {
+		ni := i + 1
+		if ni >= len(pts) {
+			ni = 0
+		}
+		m1, _, sdef1 := points.SlopeIntercept(pts[lpt], pts[i])
+		m2, _, sdef2 := points.SlopeIntercept(pts[lpt], pts[ni])
+		if m1 != m2 || sdef1 != sdef2 {
+			pnts = append(pnts, pts[i])
+		}
+	}
+	return pnts
+}
+
+func simplifyPolygon(g tegola.Polygon, tolerance float64, simplify bool) basic.Polygon {
+
+	lines := g.Sublines()
+	if len(lines) <= 0 {
+		return nil
+	}
+
+	//sqTolerance := tolerance
+
+	// First lets look the first line, then we will simplify the other lines.
+
+	var poly basic.Polygon
+	sqTolerance := tolerance * tolerance
+	//	poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
+	for i := range lines {
+		area := maths.AreaOfPolygonLineString(lines[i])
+		l := basic.CloneLine(lines[i])
+
+		if area < sqTolerance {
+			if i == 0 {
+				return basic.ClonePolygon(g)
+			}
+			// don't simplify the internal line
+			poly = append(poly, l)
+			continue
+		}
+
+		pts := l.AsPts()
+		if len(pts) <= 2 {
+			if i == 0 {
+				return nil
+			}
+			continue
+		}
+		pts = normalizePoints(pts)
+		// If the last point is the same as the first, remove the first point.
+		if len(pts) <= 4 {
+			if i == 0 {
+				return basic.ClonePolygon(g)
+			}
+			poly = append(poly, l)
+			continue
+		}
+
+		//log.Println("Simplifying Polygon subline Point count:", len(pts))
+		pts = maths.DouglasPeucker(pts, sqTolerance, simplify)
+		//log.Println("\t After Pointcount:", len(pts))
+		if len(pts) <= 2 {
+			if i == 0 {
+				return nil
+			}
+			//log.Println("\t Skipping polygon subline.")
+			continue
+		}
+
+		poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
+	}
+
+	if len(poly) == 0 {
+		return nil
+	}
+
+	return poly
+}
+
+func SimplifyGeometry(g tegola.Geometry, tolerance float64, simplify bool) tegola.Geometry {
+	if g == nil {
+		return nil
+	}
+	if !simplify {
+		return g
+	}
+	switch gg := g.(type) {
+	case tegola.Polygon:
+		return simplifyPolygon(gg, tolerance, simplify)
+	case tegola.MultiPolygon:
+		var newMP basic.MultiPolygon
+		for _, p := range gg.Polygons() {
+			sp := simplifyPolygon(p, tolerance, simplify)
+			if sp == nil {
+				continue
+			}
+			newMP = append(newMP, sp)
+		}
+		if len(newMP) == 0 {
+			return nil
+		}
+		return newMP
+	case tegola.LineString:
+		return simplifyLineString(gg, tolerance)
+	case tegola.MultiLine:
+		var newML basic.MultiLine
+		for _, l := range gg.Lines() {
+			sl := simplifyLineString(l, tolerance)
+			if sl == nil {
+				continue
+			}
+			newML = append(newML, sl)
+		}
+		if len(newML) == 0 {
+			return nil
+		}
+		return newML
+	}
+	return g
+}
+
+func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine {
+
+	var ls basic.Line
+	var lpt basic.Point
+
+	for i, p := range g.Subpoints() {
+		npt := c.scalept(p)
+		if i != 0 { // skip check for the first point.
+			if tegola.IsPointEqual(lpt, npt) {
+				// drop any duplicate points.
+				continue
+			}
+		}
+		ls = append(ls, npt)
+		lpt = npt
+	}
+	return basic.MultiLine{ls}
+
+}
+
+func (c *cursor) scalePolygon(g tegola.Polygon) basic.MultiPolygon {
+
+	var mp basic.MultiPolygon
+
+	lines := g.Sublines()
+	if len(lines) == 0 {
+		return basic.MultiPolygon{}
+	}
+
+	mainLines := c.scalelinestr(lines[0], true)
+	for i, _ := range mainLines {
+		p := basic.Polygon{mainLines[i]}
+		mp = append(mp, p)
+	}
+
+	for k := 1; k < len(lines); k++ {
+		lns := c.scalelinestr(lines[k], true)
+	nextLine:
+		for i, _ := range lns {
+			for j, _ := range mp {
+				if mp[j][0].ContainsLine(lns[i]) {
+					mp[j] = append(mp[j], lns[i])
+					continue nextLine
+				}
+			}
+		}
+	}
+	return mp
+
+}
+
+func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
+	switch g := geo.(type) {
+	case tegola.Point:
+		return c.scalept(g)
+	case tegola.Point3:
+		return c.scalept(g)
+	case tegola.MultiPoint:
+		var mp basic.MultiPoint
+		for _, p := range g.Points() {
+			mp = append(mp, c.scalept(p))
+		}
+		return mp
+	case tegola.LineString:
+		return c.scalelinestr(g, false)
+	case tegola.MultiLine:
+		var ml basic.MultiLine
+		for _, l := range g.Lines() {
+			ml = append(ml, c.scalelinestr(l, false)...)
+		}
+		return ml
+	case tegola.Polygon:
+		return c.scalePolygon(g)
+
+	case tegola.MultiPolygon:
+		var mp basic.MultiPolygon
+		for _, p := range g.Polygons() {
+			nmp := c.scalePolygon(p)
+			mp = append(mp, nmp...)
+		}
+		return mp
+	}
+	return basic.G{}
+}
+
+type geoDebugStruct struct {
+	Min maths.Pt       `json:"min"`
+	Max maths.Pt       `json:"max"`
+	Geo basic.Geometry `json:"geo"`
+}
+
+func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
+	fln := os.Getenv("GenTestCase")
+	if fln == "" {
+		return
+	}
+	filename := fmt.Sprintf("/tmp/testcase_%v_%p.json", fln, geo)
+	bgeo, err := basic.CloneGeometry(geo)
+	if err != nil {
+		log.Println("Failed to clone geo for test case.", err)
+		return
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		log.Printf("Failed to create test file %v : %v.\n", filename, err)
+		return
+	}
+	defer f.Close()
+	geodebug := geoDebugStruct{
+		Max: max,
+		Min: min,
+		Geo: bgeo,
+	}
+	enc := json.NewEncoder(f)
+	enc.Encode(geodebug)
+	log.Printf("Created file: %v", filename)
+	log.Printf("ERR: %v", err)
 }
 
 func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
@@ -200,14 +568,30 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(geo tegola.Geometry, extent tegola.BoundingBox, layerExtent int) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
-	//	new cursor
-	c := newCursor(extent, layerExtent)
-	if geo == nil {
+func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+
+	if geom == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
 
-	switch t := geo.(type) {
+	//	new cursor
+	c := NewCursor(extent, layerExtent)
+	// We are scaling separately, no need to scale in cursor.
+	c.DisableScaling = true
+
+	// Project Geom
+
+	geo := c.ScaleGeo(geom)
+	sg := SimplifyGeometry(geo, extent.Epsilon, simplify)
+
+	geom, err = validate.CleanGeometry(ctx, sg, c.extent)
+	if err != nil {
+		return nil, vectorTile.Tile_UNKNOWN, err
+	}
+	if geom == nil {
+		return []uint32{}, -1, nil
+	}
+	switch t := geom.(type) {
 	case tegola.Point:
 		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
@@ -254,7 +638,6 @@ func encodeGeometry(geo tegola.Geometry, extent tegola.BoundingBox, layerExtent 
 				g = append(g, c.MoveTo(points[0])...)
 				g = append(g, c.LineTo(points[1:]...)...)
 				g = append(g, c.ClosePath())
-				// g = append(g, c.MoveTo(&basic.Point{extent.Minx, extent.Miny})...)
 			}
 		}
 		return g, vectorTile.Tile_POLYGON, nil

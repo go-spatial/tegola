@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/tilejson"
 )
 
@@ -40,15 +41,6 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	//	build payload
 	case "GET":
-		var rScheme string
-		//	check if the request is http or https. the scheme is needed for the TileURLs and
-		//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
-		if r.TLS != nil {
-			rScheme = "https://"
-		} else {
-			rScheme = "http://"
-		}
-
 		params := httptreemux.ContextParams(r.Context())
 
 		//	read the map_name value from the request
@@ -77,15 +69,48 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			Center:      m.Center,
 			Format:      "pbf",
 			Name:        &m.Name,
-			Scheme:      "zxy",
+			Scheme:      tilejson.SchemeXYZ,
 			TileJSON:    tilejson.Version,
 			Version:     "1.0.0",
 			Grids:       make([]string, 0),
 			Data:        make([]string, 0),
 		}
 
-		//	determining the min and max zoom for this map
+		//	parse our query string
+		var query = r.URL.Query()
+
+		//	determing the min and max zoom for this map
 		for i, l := range m.Layers {
+			//	check if the layer already exists in our slice. this can happen if the config
+			//	is using the "name" param for a layer to override the providerLayerName
+			var skip bool
+			for i := range tileJSON.VectorLayers {
+				if tileJSON.VectorLayers[i].ID == l.MVTName() {
+					//	we need to use the min and max of all layers with this name
+					if tileJSON.VectorLayers[i].MinZoom > l.MinZoom {
+						tileJSON.VectorLayers[i].MinZoom = l.MinZoom
+					}
+
+					if tileJSON.VectorLayers[i].MaxZoom < l.MaxZoom {
+						tileJSON.VectorLayers[i].MaxZoom = l.MaxZoom
+					}
+
+					skip = true
+					break
+				}
+			}
+			//	entry for layer already exists. move on
+			if skip {
+				continue
+			}
+
+			var tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.MVTName())
+
+			//	if we have a debug param add it to our URLs
+			if query.Get("debug") == "true" {
+				tileURL = tileURL + "?debug=true"
+			}
+
 			//	set our min and max using the first layer
 			if i == 0 {
 				tileJSON.MinZoom = l.MinZoom
@@ -98,29 +123,86 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			}
 
 			//	check if we have a max zoom higher then our current max
-			if tileJSON.MinZoom < l.MaxZoom {
+			if tileJSON.MaxZoom < l.MaxZoom {
 				tileJSON.MaxZoom = l.MaxZoom
 			}
 
+			tiles := fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName, l.MVTName())
+			if r.URL.Query().Get("debug") != "" {
+				tiles = tiles + "?debug=true"
+			}
 			//	build our vector layer details
 			layer := tilejson.VectorLayer{
 				Version: 2,
 				Extent:  4096,
-				ID:      l.Name,
-				Name:    l.Name,
+				ID:      l.MVTName(),
+				Name:    l.MVTName(),
 				MinZoom: l.MinZoom,
 				MaxZoom: l.MaxZoom,
 				Tiles: []string{
-					fmt.Sprintf("%v%v/maps/%v/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName, l.Name),
+					tileURL,
 				},
+			}
+
+			switch l.GeomType.(type) {
+			case tegola.Point, tegola.MultiPoint:
+				layer.GeometryType = tilejson.GeomTypePoint
+			case tegola.LineString, tegola.MultiLine:
+				layer.GeometryType = tilejson.GeomTypeLine
+			case tegola.Polygon, tegola.MultiPolygon:
+				layer.GeometryType = tilejson.GeomTypePolygon
+			default:
+				layer.GeometryType = tilejson.GeomTypeUnknown
 			}
 
 			//	add our layer to our tile layer response
 			tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 		}
 
+		//	if we have a debug param add it to our URLs
+		if query.Get("debug") == "true" {
+			//	build the layer details
+			debugTileOutline := tilejson.VectorLayer{
+				Version: 2,
+				Extent:  4096,
+				ID:      "debug-tile-outline",
+				Name:    "debug-tile-outline",
+				MinZoom: 0,
+				MaxZoom: MaxZoom,
+				Tiles: []string{
+					fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-outline"),
+				},
+				GeometryType: tilejson.GeomTypeLine,
+			}
+
+			//	add our layer to our tile layer response
+			tileJSON.VectorLayers = append(tileJSON.VectorLayers, debugTileOutline)
+
+			debugTileCenter := tilejson.VectorLayer{
+				Version: 2,
+				Extent:  4096,
+				ID:      "debug-tile-center",
+				Name:    "debug-tile-center",
+				MinZoom: 0,
+				MaxZoom: MaxZoom,
+				Tiles: []string{
+					fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-center"),
+				},
+				GeometryType: tilejson.GeomTypePoint,
+			}
+
+			//	add our layer to our tile layer response
+			tileJSON.VectorLayers = append(tileJSON.VectorLayers, debugTileCenter)
+		}
+
+		tileURL := fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), req.mapName)
+
+		if r.URL.Query().Get("debug") == "true" {
+			tileURL += "?debug=true"
+		}
+
 		//	build our URL scheme for the tile grid
-		tileJSON.Tiles = append(tileJSON.Tiles, fmt.Sprintf("%v%v/maps/%v/{z}/{x}/{y}.pbf", rScheme, r.Host, req.mapName))
+		tileJSON.Tiles = append(tileJSON.Tiles, tileURL)
 
 		//	TODO: how configurable do we want the CORS policy to be?
 		//	set CORS header

@@ -49,6 +49,10 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 		log.Printf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
+	if req.z < 0 {
+		log.Printf("invalid Z value (%v)", req.z)
+		return fmt.Errorf("negative zoom levels are not allowed")
+	}
 
 	x := params["x"]
 	req.x, err = strconv.Atoi(x)
@@ -144,6 +148,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					errMsg := fmt.Sprintf("layer (%v) not configured for map (%v)", req.layerName, req.mapName)
 					log.Println(errMsg)
 					http.Error(w, errMsg, http.StatusBadRequest)
+					return
 				}
 			}
 
@@ -161,13 +166,22 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					defer wg.Done()
 
 					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
-					if err != nil {
-						errMsg := fmt.Sprintf("Error Getting MVTLayer: %v", err)
-						log.Println(errMsg)
-						http.Error(w, errMsg, http.StatusBadRequest)
+					mvtLayer, err := l.Provider.MVTLayer(r.Context(), l.ProviderLayerName, tile, l.DefaultTags)
+					if err == mvt.ErrCanceled {
 						return
 					}
+					if err != nil {
+						//	TODO: should we return an error to the response or just log the error?
+						//	we can't just write to the response as the waitgroup is going to write to the respons as well
+						log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
+						return
+					}
+
+					//	check if we have a layer name
+					if l.Name != "" {
+						mvtLayer.Name = l.Name
+					}
+
 					//	add the layer to the slice position
 					mvtLayers[i] = mvtLayer
 				}(i, l)
@@ -176,6 +190,13 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			//	wait for the waitgroup to finish
 			wg.Wait()
 
+			//	stop processing if the context has an error. this check is necessary
+			//	otherwise the server continues processing even if the request was canceled
+			//	as the waitgroup was not notified of the cancel
+			if r.Context().Err() != nil {
+				return
+			}
+
 			//	add layers to our tile
 			mvtTile.AddLayers(mvtLayers...)
 		}
@@ -183,12 +204,12 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	check for the debug query string
 		if req.debug {
 			//	add debug layer
-			debugLayer := debugLayer(tile)
-			mvtTile.AddLayers(debugLayer)
+			debugLayers := debugLayer(tile)
+			mvtTile.AddLayers(debugLayers...)
 		}
 
 		//	generate our vector tile
-		vtile, err := mvtTile.VTile(tile.BoundingBox())
+		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
 		if err != nil {
 			errMsg := fmt.Sprintf("Error Getting VTile: %v", err.Error())
 			log.Println(errMsg)

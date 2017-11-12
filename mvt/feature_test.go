@@ -3,6 +3,8 @@ package mvt
 import (
 	"testing"
 
+	"context"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -20,13 +22,14 @@ func TestEncodeGeometry(t *testing.T) {
 		}
 	*/
 	testcases := []struct {
-		geo  tegola.Geometry
+		desc string `"test":"desc"`
+		geo  basic.Geometry
 		typ  vectorTile.Tile_GeomType
 		bbox tegola.BoundingBox
 		egeo []uint32
 		eerr error
 	}{
-		{
+		{ //0
 			geo: nil,
 			typ: vectorTile.Tile_UNKNOWN,
 			bbox: tegola.BoundingBox{
@@ -38,8 +41,8 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{},
 			eerr: ErrNilGeometryType,
 		},
-		{
-			geo: &basic.Point{1, 1},
+		{ // 1
+			geo: basic.Point{1, 1},
 			typ: vectorTile.Tile_POINT,
 			bbox: tegola.BoundingBox{
 				Minx: 0,
@@ -49,8 +52,8 @@ func TestEncodeGeometry(t *testing.T) {
 			},
 			egeo: []uint32{9, 2, 2},
 		},
-		{
-			geo: &basic.Point{25, 17},
+		{ // 2
+			geo: basic.Point{25, 17},
 			typ: vectorTile.Tile_POINT,
 			bbox: tegola.BoundingBox{
 				Minx: 0,
@@ -60,8 +63,8 @@ func TestEncodeGeometry(t *testing.T) {
 			},
 			egeo: []uint32{9, 50, 34},
 		},
-		{
-			geo: &basic.MultiPoint{basic.Point{5, 7}, basic.Point{3, 2}},
+		{ // 3
+			geo: basic.MultiPoint{basic.Point{5, 7}, basic.Point{3, 2}},
 			typ: vectorTile.Tile_POINT,
 			bbox: tegola.BoundingBox{
 				Minx: 0,
@@ -71,8 +74,8 @@ func TestEncodeGeometry(t *testing.T) {
 			},
 			egeo: []uint32{17, 10, 14, 3, 9},
 		},
-		{
-			geo: &basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
+		{ // 4
+			geo: basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
 			typ: vectorTile.Tile_LINESTRING,
 			bbox: tegola.BoundingBox{
 				Minx: 0,
@@ -82,8 +85,8 @@ func TestEncodeGeometry(t *testing.T) {
 			},
 			egeo: []uint32{9, 4, 4, 18, 0, 16, 16, 0},
 		},
-		{
-			geo: &basic.MultiLine{
+		{ // 5
+			geo: basic.MultiLine{
 				basic.Line{basic.Point{2, 2}, basic.Point{2, 10}, basic.Point{10, 10}},
 				basic.Line{basic.Point{1, 1}, basic.Point{3, 5}},
 			},
@@ -96,8 +99,8 @@ func TestEncodeGeometry(t *testing.T) {
 			},
 			egeo: []uint32{9, 4, 4, 18, 0, 16, 16, 0, 9, 17, 17, 10, 4, 8},
 		},
-		{
-			geo: &basic.Polygon{
+		{ // 6
+			geo: basic.Polygon{
 				basic.Line{
 					basic.Point{3, 6},
 					basic.Point{8, 12},
@@ -111,26 +114,26 @@ func TestEncodeGeometry(t *testing.T) {
 				Maxx: 4096,
 				Maxy: 4096,
 			},
-			egeo: []uint32{9, 6, 12, 18, 10, 12, 24, 44, 15},
+			egeo: []uint32{9, 6, 12, 26, 10, 12, 24, 44, 23, 39, 15},
 		},
-		{
-			geo: &basic.MultiPolygon{
-				basic.Polygon{
-					basic.Line{
+		{ // 7
+			geo: basic.MultiPolygon{
+				basic.Polygon{ // basic.Polygon len(000002).
+					basic.Line{ // basic.Line len(000004) direction(clockwise) line(00).
 						basic.Point{0, 0},
 						basic.Point{10, 0},
 						basic.Point{10, 10},
 						basic.Point{0, 10},
 					},
 				},
-				basic.Polygon{
-					basic.Line{
+				basic.Polygon{ // basic.Polygon len(000002).
+					basic.Line{ // basic.Line len(000004) direction(clockwise) line(00).
 						basic.Point{11, 11},
 						basic.Point{20, 11},
 						basic.Point{20, 20},
 						basic.Point{11, 20},
 					},
-					basic.Line{
+					basic.Line{ // basic.Line len(000004) direction(counter clockwise) line(01).
 						basic.Point{13, 13},
 						basic.Point{13, 17},
 						basic.Point{17, 17},
@@ -148,21 +151,22 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{9, 0, 0, 26, 20, 0, 0, 20, 19, 0, 15, 9, 22, 2, 26, 18, 0, 0, 18, 17, 0, 15, 9, 4, 13, 26, 0, 8, 8, 0, 0, 7, 15},
 		},
 	}
-	for _, tcase := range testcases {
-		g, gtype, err := encodeGeometry(tcase.geo, tcase.bbox, 4096)
+	for i, tcase := range testcases {
+
+		g, gtype, err := encodeGeometry(context.Background(), tcase.geo, tcase.bbox, 4096, true)
 		if tcase.eerr != err {
-			t.Errorf("Expected error (%v) got (%v) instead", tcase.eerr, err)
+			t.Errorf("(%v) Expected error (%v) got (%v) instead", i, tcase.eerr, err)
 		}
 		if gtype != tcase.typ {
-			t.Errorf("Expected Geometry Type to be %v Got: %v", tcase.typ, gtype)
+			t.Errorf("(%v) Expected Geometry Type to be %v Got: %v", i, tcase.typ, gtype)
 		}
 		if len(g) != len(tcase.egeo) {
-			t.Errorf("Geometry length is not what was expected(%v) got (%v)", tcase.egeo, g)
-			continue
+			t.Errorf("(%v) Geometry length is not what was expected([%v] %v) got ([%v] %v)", i, len(tcase.egeo), tcase.egeo, len(g), g)
 		}
-		for i := range tcase.egeo {
-			if tcase.egeo[i] != g[i] {
-				t.Errorf("Geometry is not what was expected(%v) got (%v)", tcase.egeo, g)
+		for j := range tcase.egeo {
+
+			if j < len(g) && tcase.egeo[j] != g[j] {
+				t.Errorf("(%v) Geometry is not what was expected at (%v) (%v) got (%v)", i, j, tcase.egeo, g)
 				break
 			}
 		}
@@ -218,7 +222,7 @@ func TestNormalizePoint(t *testing.T) {
 
 	for i, tcase := range testcases {
 		//	new cursor
-		c := newCursor(tcase.bbox, tcase.layerExtent)
+		c := NewCursor(tcase.bbox, tcase.layerExtent)
 
 		nx, ny := c.ScalePoint(&tcase.point)
 		if nx != tcase.nx {

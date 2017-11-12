@@ -9,7 +9,9 @@ import (
 	"sync"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/dustin/go-humanize"
 	"github.com/golang/protobuf/proto"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
 )
@@ -45,6 +47,10 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	if err != nil {
 		log.Printf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
+	}
+	if req.z < 0 {
+		log.Printf("invalid Z value (%v)", req.z)
+		return fmt.Errorf("negative zoom levels are not allowed")
 	}
 
 	x := params["x"]
@@ -139,26 +145,43 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			wg.Add(len(ls))
 
 			//	iterate our layers
-			for i, l := range ls {
-				//	go routine for rendering the layer
+			for i, layer := range ls {
+				//	go routine for fetching the layer concurrently
 				go func(i int, l Layer) {
 					//	on completion let the wait group know
 					defer wg.Done()
 
 					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(l.Name, tile, l.DefaultTags)
-					if err != nil {
-						log.Printf("Error Getting MVTLayer: %v", err)
-						http.Error(w, fmt.Sprintf("Error Getting MVTLayer: %v", err.Error()), http.StatusBadRequest)
+					mvtLayer, err := l.Provider.MVTLayer(r.Context(), l.ProviderLayerName, tile, l.DefaultTags)
+					if err == mvt.ErrCanceled {
 						return
 					}
+					if err != nil {
+						//	TODO: should we return an error to the response or just log the error?
+						//	we can't just write to the response as the waitgroup is going to write to the response as well
+						log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
+						return
+					}
+
+					//	check if we have a layer name
+					if l.Name != "" {
+						mvtLayer.Name = l.Name
+					}
+
 					//	add the layer to the slice position
 					mvtLayers[i] = mvtLayer
-				}(i, l)
+				}(i, layer)
 			}
 
 			//	wait for the waitgroup to finish
 			wg.Wait()
+
+			//	stop processing if the context has an error. this check is necessary
+			//	otherwise the server continues processing even if the request was canceled
+			//	as the waitgroup was not notified of the cancel
+			if r.Context().Err() != nil {
+				return
+			}
 
 			//	add layers to our tile
 			mvtTile.AddLayers(mvtLayers...)
@@ -167,15 +190,16 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	check for the debug query string
 		if req.debug {
 			//	add debug layer
-			debugLayer := debugLayer(tile)
-			mvtTile.AddLayers(debugLayer)
+			debugLayers := debugLayer(tile)
+			mvtTile.AddLayers(debugLayers...)
 		}
 
 		//	generate our vector tile
-		vtile, err := mvtTile.VTile(tile.BoundingBox())
+
+		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
 		if err != nil {
-			log.Printf("Error Getting VTile: %v", err)
-			http.Error(w, fmt.Sprintf("Error Getting VTile: %v", err.Error()), http.StatusBadRequest)
+			//	log.Printf("Error Getting VTile: %v", err)
+			http.Error(w, fmt.Sprintf("error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}
 
@@ -199,7 +223,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//	check for tile size warnings
 		if len(pbyte) > MaxTileSize {
-			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
+			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, humanize.Bytes(uint64(len(pbyte))))
 		}
 
 		//	log the request

@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/terranodo/tegola/cache"
+	_ "github.com/terranodo/tegola/cache/filecache"
 )
 
 const (
@@ -17,8 +19,14 @@ const (
 	MaxZoom = 20
 )
 
-//	set at runtime from main
-var Version string
+var (
+	//	set at runtime from main
+	Version string
+	//	configurable via the tegola config.toml file
+	HostName string
+	//	cache interface to use
+	Cache cache.Interface
+)
 
 //	incoming requests are associated with a map
 var maps = map[string]Map{}
@@ -51,17 +59,43 @@ func Start(port string) {
 	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", HandleMapCapabilities{})
 
 	//	map tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", TileCacheHandler(HandleMapZXY{}))
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HandleMapStyle{})
 
 	//	map layer tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", TileCacheHandler(HandleMapLayerZXY{}))
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
 
 	//	static convenience routes
-	group.UsingContext().Handler("GET", "/", http.FileServer(http.Dir("static")))
-	group.UsingContext().Handler("GET", "/*path", http.FileServer(http.Dir("static")))
+	group.UsingContext().Handler("GET", "/", http.FileServer(assetFS()))
+	group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
 
 	//	start our server
 	log.Fatal(http.ListenAndServe(port, r))
+}
+
+//	determins the hostname to return based on the following hierarchy
+//	- HostName var as configured via the config file
+//	- The request host
+func hostName(r *http.Request) string {
+	//	configured
+	if HostName != "" {
+		return HostName
+	}
+
+	//	default to the Host provided in the request
+	return r.Host
+}
+
+//	various checks to determin if the request is http or https. the scheme is needed for the TileURLs
+//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
+func scheme(r *http.Request) string {
+	if r.Header.Get("X-Forwarded-Proto") != "" {
+		return r.Header.Get("X-Forwarded-Proto")
+	} else if r.TLS != nil {
+		return "https"
+	}
+
+	return "http"
 }

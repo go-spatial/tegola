@@ -1,17 +1,18 @@
 package basic
 
-import "github.com/terranodo/tegola"
-
-// Collection type can represent one or more other basic types.
-type Collection []interface {
+type Geometry interface {
 	basicType() // does nothing, but there to make collection only work with basic types.
+	String() string
 }
 
+// Collection type can represent one or more other basic types.
+type Collection []Geometry
+
 //Geometeries return a set of geometeies that make that collection.
-func (c *Collection) Geometeries() (geometeries []tegola.Geometry) {
-	geometeries = make([]tegola.Geometry, 0, len(*c))
-	for i := range *c {
-		geometeries = append(geometeries, &((*c)[i]))
+func (c Collection) Geometeries() (geometeries []G) {
+	geometeries = make([]G, 0, len(c))
+	for i := range c {
+		geometeries = append(geometeries, G{c[i]})
 	}
 	return geometeries
 }
