@@ -14,6 +14,7 @@ import (
 	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
+	"github.com/terranodo/tegola/util"
 	"github.com/terranodo/tegola/wkb"
 )
 
@@ -83,8 +84,12 @@ func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interf
 
 	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent, simplify)
 	if err != nil {
+		util.CodeLogger.Errorf("Error encoding geometry: %v\n", err)
 		return tf, err
 	}
+
+	util.CodeLogger.Debugf("Geometry encoded for Mapbox as: %v\n", geo)
+
 	if len(geo) == 0 {
 		return nil, nil
 	}
@@ -191,11 +196,11 @@ func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	} else {
 		ix, iy = c.ScalePoint(p)
 	}
-	//	computer our point delta
+	// compute our point delta
 	dx = ix - int64(c.x)
 	dy = iy - int64(c.y)
 
-	//	update our cursor
+	// update our cursor
 	c.x = ix
 	c.y = iy
 	return dx, dy
@@ -420,7 +425,6 @@ func SimplifyGeometry(g tegola.Geometry, tolerance float64, simplify bool) tegol
 }
 
 func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine {
-
 	var ls basic.Line
 	var lpt basic.Point
 
@@ -436,7 +440,6 @@ func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine
 		lpt = npt
 	}
 	return basic.MultiLine{ls}
-
 }
 
 func (c *cursor) scalePolygon(g tegola.Polygon) basic.MultiPolygon {
@@ -620,6 +623,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 		return g, vectorTile.Tile_LINESTRING, nil
 
 	case tegola.Polygon:
+		// TODO: Right now c.ScaleGeo() never returns a Polygon, so this is dead code.
 		lines := t.Sublines()
 		for _, l := range lines {
 			points := l.Subpoints()

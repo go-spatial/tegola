@@ -79,13 +79,26 @@ func Start(port string) {
 //	- HostName var as configured via the config file
 //	- The request host
 func hostName(r *http.Request) string {
+	substrs := strings.Split(r.Host, ":")
+	var name string
+	var port string
+
+	switch len(substrs) {
+	case 1:
+		name = substrs[0]
+	case 2:
+		name, port = substrs
+	default:
+		util.CodeLogger.Warnf("Unexpected host string: %v", r.Host)
+	}
+
 	//	configured
 	if HostName != "" {
-		return HostName
+		return HostName + ":" + port
 	}
 
 	//	default to the Host provided in the request
-	return r.Host
+	return r.Host + ":" + port
 }
 
 //	various checks to determin if the request is http or https. the scheme is needed for the TileURLs

@@ -14,6 +14,7 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/util"
 )
 
 type HandleMapZXY struct {
@@ -91,6 +92,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 //		x - row
 //		y - column
 func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	util.CodeLogger.Infof("Handling %v request: %v", r.Method, r.URL)
 	//	check http verb
 	switch r.Method {
 	//	preflight check for CORS request
@@ -121,6 +123,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	new tile
+		util.CodeLogger.Debugf("Tile Request (x,y,z): (%v,%v,%v)", req.x, req.y, req.z)
 		tile := tegola.Tile{
 			Z: req.z,
 			X: req.x,

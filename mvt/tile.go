@@ -7,6 +7,7 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/mvt/vector_tile"
+	"github.com/terranodo/tegola/util"
 )
 
 //Tile describes a tile.
@@ -42,6 +43,10 @@ func (t *Tile) Layers() (l []Layer) {
 //VTile returns a tile object according to the Google Protobuff def. This function
 // does the hard work of converting everything to the standard.
 func (t *Tile) VTile(ctx context.Context, extent tegola.BoundingBox) (vt *vectorTile.Tile, err error) {
+	if len(t.layers) < 1 {
+		util.CodeLogger.Warn("Tile.VTile() - No layers in tile")
+		return new(vectorTile.Tile), nil
+	}
 	vt = new(vectorTile.Tile)
 	for _, l := range t.layers {
 		vtl, err := l.VTileLayer(ctx, extent)
