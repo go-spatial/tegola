@@ -1,21 +1,21 @@
 package gpkg
 
 import (
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/mvt"
-	//	"github.com/terranodo/tegola/wkb"
 	log "github.com/sirupsen/logrus"
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
 	"github.com/terranodo/tegola/util"
 	"github.com/terranodo/tegola/util/dict"
-
-	"context"
-
-	"database/sql"
+	"github.com/terranodo/tegola/wkb"
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"database/sql"
+
+	"bytes"
+	"context"
 	"fmt"
 )
 
@@ -100,26 +100,6 @@ func doScan(rows *sql.Rows, fid *int, geomBlob *[]byte, gid *uint64, featureColV
 	}
 }
 
-//func getFeatures(layer *mvt.Layer, rows *sql.Rows, colnames []string) {
-//	var featureColValues []string
-//	featureColValues = make([]string, len(colnames) - 3)
-//	var fid int
-//	var geomBlob []byte
-//	var gid uint64
-//	fmt.Println("***Hi***")
-//	for rows.Next() {
-//		doScan(rows, &fid, &geomBlob, &gid, featureColValues, colnames[3:])
-//		geom, _ := readGeometries(geomBlob)
-//		// Add features to Layer
-//		layer.AddFeatures(mvt.Feature{
-//			ID:       &gid,
-//			Tags:     nil,
-////			Tags:     gtags,
-//			Geometry: geom,
-//		})
-//	}
-//}
-
 func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
 	util.CodeLogger.Debugf("GPKGProvider MVTLayer() called for %v", layerName)
 	filepath := p.FilePath
@@ -170,13 +150,15 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 			if cols[i] == "geom" {
 				util.CodeLogger.Debugf("Doing geometry extraction...", vals[i])
 				var h GeoPackageBinaryHeader
-				data := vals[i].([]byte)
-				h.Init(data)
-				geomArray, _ := readGeometries(data[h.Size():])
-				if len(geomArray) > 1 {
-					util.CodeLogger.Warn("Multiple geometries found at top level, only using first")
+				geomData := vals[i].([]byte)
+				h.Init(geomData)
+
+				reader := bytes.NewReader(geomData[h.Size():])
+				geom, err = wkb.Decode(reader)
+
+				if err != nil {
+					util.CodeLogger.Errorf("Error decoding geometry: %v", err)
 				}
-				geom = geomArray[0]
 
 				if h.SRSId() != DefaultSRID {
 					util.CodeLogger.Infof("SRID %v != %v, trying to convert...", pLayer.srid, DefaultSRID)
@@ -189,20 +171,17 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 							pLayer.srid, layerName, err)
 						return nil, err
 					} else {
-						util.CodeLogger.Info("ok")
+						util.CodeLogger.Info("...conversion ok")
 					}
 					geom = g.Geometry
 				} else {
 					util.CodeLogger.Infof("SRID already default (%v), no conversion necessary", DefaultSRID)
-					// Read data starting from after the header
-					//					geomArray, _ := readGeometries(data[h.Size():])
-					//					geom = geomArray[0]
 				}
 			}
 		}
 
 		if geom == nil {
-			util.CodeLogger.Warn("No geometry in table, skipping feature")
+			util.CodeLogger.Warn("No geometry in row, skipping feature")
 			continue
 		}
 
@@ -215,7 +194,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	}
 
 	if rowCount != len(newLayer.Features()) {
-		util.CodeLogger.Error("newLayer feature count doesn't match table row count (%v != %v)\n",
+		util.CodeLogger.Errorf("newLayer feature count doesn't match table row count (%v != %v)\n",
 			len(newLayer.Features()), rowCount)
 	}
 	return newLayer, nil
@@ -250,7 +229,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	var ignore string
 
 	logMsg := "gpkg_contents: "
-	var geomRaw []byte
+	var geomData []byte
 
 	for rows.Next() {
 		rows.Scan(&tablename, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &srid)
@@ -258,14 +237,20 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		// Get layer geometry as geometry of first feature in table
 		geomQtext := "SELECT geom FROM " + tablename + " LIMIT 1;"
 		geomRow := db.QueryRow(geomQtext)
-		geomRow.Scan(&geomRaw)
+		geomRow.Scan(&geomData)
 		var h GeoPackageBinaryHeader
-		h.Init(geomRaw)
-		geoms, _ := readGeometries(geomRaw[h.Size():])
-		geomType := geoms[0]
-		log.Infof("Got Geometry type %T for table %v", geomType, tablename)
+		h.Init(geomData)
+
+		reader := bytes.NewReader(geomData[h.Size():])
+		geom, err := wkb.Decode(reader)
+
+		if err != nil {
+			util.CodeLogger.Errorf("Error decoding geometry: %v", err)
+		}
+
+		log.Infof("Got Geometry type %T for table %v", geom, tablename)
 		layerQuery := "SELECT * FROM " + tablename + ";"
-		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: geomType, srid: srid}
+		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: geom, srid: srid}
 
 		//		// The ID field name, this will default to 'gid' if not set to something other then empty string.
 		//		idField string

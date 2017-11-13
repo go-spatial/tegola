@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/terranodo/tegola/cache"
 	_ "github.com/terranodo/tegola/cache/filecache"
+	"github.com/terranodo/tegola/util"
 )
 
 const (
@@ -87,7 +89,8 @@ func hostName(r *http.Request) string {
 	case 1:
 		name = substrs[0]
 	case 2:
-		name, port = substrs
+		name = substrs[0]
+		port = substrs[1]
 	default:
 		util.CodeLogger.Warnf("Unexpected host string: %v", r.Host)
 	}
@@ -98,7 +101,7 @@ func hostName(r *http.Request) string {
 	}
 
 	//	default to the Host provided in the request
-	return r.Host + ":" + port
+	return name + ":" + port
 }
 
 //	various checks to determin if the request is http or https. the scheme is needed for the TileURLs
