@@ -88,7 +88,7 @@ func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interf
 		return tf, err
 	}
 
-	util.CodeLogger.Debugf("Geometry encoded for Mapbox as: %v\n", geo)
+	util.CodeLogger.Debugf("Geometry %T encoded for Mapbox as: %v", f.Geometry, geo)
 
 	if len(geo) == 0 {
 		return nil, nil
@@ -574,6 +574,7 @@ func (c *cursor) ClosePath() uint32 {
 func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 
 	if geom == nil {
+		util.CodeLogger.Errorf("encodeGeometry() received <nil> geom parameter\n")
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
 
@@ -583,37 +584,44 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 	c.DisableScaling = true
 
 	// Project Geom
-
 	geo := c.ScaleGeo(geom)
 	sg := SimplifyGeometry(geo, extent.Epsilon, simplify)
 
 	geom, err = validate.CleanGeometry(ctx, sg, c.extent)
+
 	if err != nil {
+		util.CodeLogger.Errorf("encodeGeometry() error in validate.CleanGeometry(): %v\n", err)
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
 	if geom == nil {
+		util.CodeLogger.Warnf("encodeGeometry() validate.CleanGeometry resulted in <nil> geom\n")
 		return []uint32{}, -1, nil
 	}
 	switch t := geom.(type) {
 	case tegola.Point:
+		util.CodeLogger.Debugf("Encoding tegola.Point\n")
 		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.Point3:
+		util.CodeLogger.Debugf("Encoding tegola.Point3\n")
 		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.MultiPoint:
+		util.CodeLogger.Debugf("Encoding tegola.MultiPoint\n")
 		g = append(g, c.MoveTo(t.Points()...)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.LineString:
+		util.CodeLogger.Debugf("Encoding tegola.LineString\n")
 		points := t.Subpoints()
 		g = append(g, c.MoveTo(points[0])...)
 		g = append(g, c.LineTo(points[1:]...)...)
 		return g, vectorTile.Tile_LINESTRING, nil
 
 	case tegola.MultiLine:
+		util.CodeLogger.Debugf("Encoding tegola.MultiLine\n")
 		lines := t.Lines()
 		for _, l := range lines {
 			points := l.Subpoints()
@@ -623,6 +631,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 		return g, vectorTile.Tile_LINESTRING, nil
 
 	case tegola.Polygon:
+		util.CodeLogger.Debugf("Encoding tegola.Polygon\n")
 		// TODO: Right now c.ScaleGeo() never returns a Polygon, so this is dead code.
 		lines := t.Sublines()
 		for _, l := range lines {
@@ -634,6 +643,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 		return g, vectorTile.Tile_POLYGON, nil
 
 	case tegola.MultiPolygon:
+		util.CodeLogger.Debugf("Encoding tegola.MultiPolygon\n")
 		polygons := t.Polygons()
 		for _, p := range polygons {
 			lines := p.Sublines()

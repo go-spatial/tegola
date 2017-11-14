@@ -83,23 +83,6 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
-func doScan(rows *sql.Rows, fid *int, geomBlob *[]byte, gid *uint64, featureColValues []string,
-	featureColNames []string) {
-	switch len(featureColValues) {
-	case 0:
-		rows.Scan(fid, geomBlob, gid)
-	case 1:
-		rows.Scan(fid, geomBlob, gid, &featureColValues[0])
-	case 2:
-		rows.Scan(fid, geomBlob, gid, &featureColValues[0], &featureColValues[1])
-	case 10:
-		rows.Scan(fid, geomBlob, gid, &featureColValues[0], &featureColValues[1],
-			&featureColValues[2], &featureColValues[3], &featureColValues[4],
-			&featureColValues[5], &featureColValues[6], &featureColValues[7],
-			&featureColValues[8], &featureColValues[9])
-	}
-}
-
 func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
 	util.CodeLogger.Debugf("GPKGProvider MVTLayer() called for %v", layerName)
 	filepath := p.FilePath
@@ -111,7 +94,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	}
 
 	// Get all feature rows for the layer requested.
-	qtext := "SELECT * FROM " + layerName + " WHERE geom IS NOT NULL;"
+	qtext := fmt.Sprintf("SELECT * FROM %v WHERE geom IS NOT NULL;", layerName)
 	rows, err := db.Query(qtext)
 	if err != nil {
 		util.CodeLogger.Errorf("Error during query: %v - %v", qtext, err)
@@ -148,7 +131,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 
 		for i := 0; i < len(cols); i++ {
 			if cols[i] == "geom" {
-				util.CodeLogger.Debugf("Doing geometry extraction...", vals[i])
+				util.CodeLogger.Debugf("Doing gpkg geometry extraction...", vals[i])
 				var h GeoPackageBinaryHeader
 				geomData := vals[i].([]byte)
 				h.Init(geomData)
@@ -211,6 +194,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	util.CodeLogger.Debug("Attempting sql.Open() w/ filepath: ", filepath)
 	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
+		util.CodeLogger.Errorf("Error opening gpkg file: %v", err)
 		return nil, err
 	}
 
@@ -235,7 +219,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		rows.Scan(&tablename, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &srid)
 
 		// Get layer geometry as geometry of first feature in table
-		geomQtext := "SELECT geom FROM " + tablename + " LIMIT 1;"
+		geomQtext := fmt.Sprintf("SELECT geom FROM %v LIMIT 1;", tablename)
 		geomRow := db.QueryRow(geomQtext)
 		geomRow.Scan(&geomData)
 		var h GeoPackageBinaryHeader
@@ -249,7 +233,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		}
 
 		log.Infof("Got Geometry type %T for table %v", geom, tablename)
-		layerQuery := "SELECT * FROM " + tablename + ";"
+		layerQuery := fmt.Sprintf("SELECT * FROM %v;", tablename)
 		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: geom, srid: srid}
 
 		//		// The ID field name, this will default to 'gid' if not set to something other then empty string.
