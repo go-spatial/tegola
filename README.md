@@ -178,6 +178,13 @@ The following environment variables can be used for debugging:
 - `LAYER_SQL`: print layer SQL as they are parsed from the config file.
 - `EXECUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
 
+
+`TEGOLA_OPTIONS` specify a set of options comma (or space) seperated options.
+
+- `DontSimplifyGeo` to turn off simplification for all layers.
+- `SimplifyMaxZoom={{int}}` to set the max zoom that simplification will apply to. (14 is default)
+
+
 #### Usage
 
 ```bash
