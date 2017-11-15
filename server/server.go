@@ -101,7 +101,11 @@ func hostName(r *http.Request) string {
 	}
 
 	//	default to the Host provided in the request
-	return name + ":" + port
+	retHost := name
+	if port != "" {
+		retHost += ":" + port
+	}
+	return retHost
 }
 
 //	various checks to determin if the request is http or https. the scheme is needed for the TileURLs
