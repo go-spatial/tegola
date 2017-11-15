@@ -111,7 +111,7 @@ func TestReadGeometries(t *testing.T) {
 	case *wkb.Polygon:
 		assert.Equal(t, polygonType, g.Type(), "")
 	default:
-		assert.Failf(t, "", "Unexpected geometry type: %T", g)
+		assert.Fail(t, fmt.Sprint("Unexpected geometry type: %T", g), "")
 	}
 }
 
@@ -124,7 +124,7 @@ func TestReadNextGeometry(t *testing.T) {
 	case *wkb.Polygon:
 		assert.Equal(t, g.Type(), uint32(3), "")
 	default:
-		assert.Failf(t, "", "Unexpected geometry type: %T", g)
+		assert.Fail(t, fmt.Sprintf("Unexpected geometry type: %T", g), "")
 	}
 }
 
