@@ -1,7 +1,6 @@
 package gpkg
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
@@ -25,8 +24,7 @@ const (
 	DefaultSRID  = tegola.WebMercator
 )
 
-// layer holds information about a query.
-// Currently stolen exactly from provider.postgis.layer
+// Layer is a single map layer & corresponds to a single geometric table in a geopackage file.
 type layer struct {
 	// The Name of the layer
 	name string
@@ -36,28 +34,23 @@ type layer struct {
 	idField string
 	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
 	geomField string
-	// GeomType is the the type of geometry returned from the SQL
+	// GeomType is a string identifying the geometry type for the table. *note that this is not
+	// always 100% consistent with srids identified in table geometry columns.
 	geomType tegola.Geometry
-	// The SRID that the data in the table is stored in. This will default to WebMercator
+	// The SRID identifying the projection that geometric data uses.
 	srid int
 }
 
 type GPKGProvider struct {
+	mvt.Provider
 	// Currently just the path to the gpkg file.
 	FilePath string
 	// map of layer name and corrosponding sql
 	layers map[string]layer
-	srid   int
 }
 
-type LayerInfo interface {
-	Name() string
-	GeomType() tegola.Geometry
-	SRID() int
-}
-
-// Implements mvt.LayerInfo interface
 type GPKGLayer struct {
+	mvt.LayerInfo
 	name     string
 	geomtype tegola.Geometry
 	srid     int
@@ -83,7 +76,7 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
-func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
+func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, dtags map[string]interface{}) (*mvt.Layer, error) {
 	util.CodeLogger.Debugf("GPKGProvider MVTLayer() called for %v", layerName)
 	filepath := p.FilePath
 
@@ -120,6 +113,12 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	rowCount := 0
 	var geom tegola.Geometry
 	for rows.Next() {
+		// Copy default tags to feature tag map
+		ftags := make(map[string]interface{})
+		for k, v := range dtags {
+			ftags[k] = v
+		}
+
 		geom = nil
 		rowCount++
 		err = rows.Scan(valPtrs...)
@@ -130,7 +129,9 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		var gid uint64
 
 		for i := 0; i < len(cols); i++ {
-			if cols[i] == "geom" {
+			if vals[i] == nil {
+				continue
+			} else if cols[i] == "geom" {
 				util.CodeLogger.Debugf("Doing gpkg geometry extraction...", vals[i])
 				var h GeoPackageBinaryHeader
 				geomData := vals[i].([]byte)
@@ -160,6 +161,22 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 				} else {
 					util.CodeLogger.Infof("SRID already default (%v), no conversion necessary", DefaultSRID)
 				}
+			} else {
+				// Grab any non-nil & non-geometry column as a tag
+				switch v := vals[i].(type) {
+				case []uint8:
+					asBytes := make([]byte, len(v)+1)
+					for j := 0; j < len(v); j++ {
+						asBytes[j] = v[j]
+					}
+					asString := string(asBytes)
+					ftags[cols[i]] = asString
+				case int64:
+					ftags[cols[i]] = v
+				default:
+					err := fmt.Errorf("Unexpected type for sqlite column data: %v: %T\n", cols[i], v)
+					util.CodeLogger.Error(err)
+				}
 			}
 		}
 
@@ -170,7 +187,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 
 		f := mvt.Feature{
 			ID:       &gid,
-			Tags:     make(map[string]interface{}),
+			Tags:     ftags,
 			Geometry: geom,
 		}
 		newLayer.AddFeatures(f)
@@ -183,15 +200,67 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	return newLayer, nil
 }
 
-func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
-	m := dict.M(config)
-	filepath, err := m.String("FilePath", nil)
+type GeomColumn struct {
+	name           string
+	geometryType   string
+	tegolaGeometry tegola.Geometry // to populate GPKGLayer.geomtype
+	srsId          int
+}
+
+func getGeomColumnDetails(db *sql.DB) (map[string]*GeomColumn, error) {
+	// Returns a map with table name (string) as key and struct containing column details as value
+	columnDetails := make(map[string]*GeomColumn)
+
+	sqlText := "SELECT table_name, column_name, geometry_type_name, srs_id FROM gpkg_geometry_columns;"
+	rows, err := db.Query(sqlText)
+	defer rows.Close()
+
 	if err != nil {
-		util.CodeLogger.Error(err)
+		util.CodeLogger.Errorf("Error in query collecting geometry column details: %v", err)
 		return nil, err
 	}
 
-	util.CodeLogger.Debug("Attempting sql.Open() w/ filepath: ", filepath)
+	for rows.Next() {
+		var tablename string
+		col := new(GeomColumn)
+		rows.Scan(&tablename, &((*col).name), &(*col).geometryType, &(*col).srsId)
+		// http://www.geopackage.org/spec/#geometry_types
+		switch col.geometryType {
+		case "POINT":
+			col.tegolaGeometry = new(basic.Point)
+		case "LINESTRING":
+			col.tegolaGeometry = new(basic.Line)
+		case "POLYGON":
+			col.tegolaGeometry = new(basic.Polygon)
+		case "MULTIPOINT":
+			col.tegolaGeometry = new(basic.MultiPoint)
+		case "MULTILINESTRING":
+			col.tegolaGeometry = new(basic.MultiLine)
+		case "MULTIPOLYGON":
+			col.tegolaGeometry = new(basic.MultiPolygon)
+		default:
+			err := fmt.Errorf("Unsupported gpkg geometry type: %v\n", col.geometryType)
+			util.CodeLogger.Error(err)
+		}
+		columnDetails[tablename] = col
+	}
+
+	return columnDetails, nil
+}
+
+func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
+	m := dict.M(config)
+	filepath, err := m.String("FilePath", nil)
+	if filepath == "" || err != nil {
+		msg := fmt.Sprintf("Bad gpkg filepath: %v", filepath)
+		if err != nil {
+			msg += fmt.Sprintf(" error: %v\n", err)
+		}
+		util.CodeLogger.Error(msg)
+		return nil, err
+	}
+
+	util.CodeLogger.Debugf("Opening gpkg at: %v", filepath)
 	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
 		util.CodeLogger.Errorf("Error opening gpkg file: %v", err)
@@ -209,38 +278,32 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	defer rows.Close()
 
 	var tablename string
+	var dataType string
+	var identifier string
+	var description string
+	var lastChange string
+	var minX float64
+	var minY float64
+	var maxX float64
+	var maxY float64
 	var srid int
-	var ignore string
 
 	logMsg := "gpkg_contents: "
-	var geomData []byte
+
+	geomColumnDetails, err := getGeomColumnDetails(db)
+	if err != nil {
+		return nil, err
+	}
 
 	for rows.Next() {
-		rows.Scan(&tablename, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore, &srid)
+		rows.Scan(&tablename, &dataType, &identifier, &description, &lastChange,
+			&minX, &minY, &maxX, &maxY, &srid)
 
-		// Get layer geometry as geometry of first feature in table
-		geomQtext := fmt.Sprintf("SELECT geom FROM %v LIMIT 1;", tablename)
-		geomRow := db.QueryRow(geomQtext)
-		geomRow.Scan(&geomData)
-		var h GeoPackageBinaryHeader
-		h.Init(geomData)
-
-		reader := bytes.NewReader(geomData[h.Size():])
-		geom, err := wkb.Decode(reader)
-
-		if err != nil {
-			util.CodeLogger.Errorf("Error decoding geometry: %v", err)
-		}
-
-		log.Infof("Got Geometry type %T for table %v", geom, tablename)
+		// Get layer geometry as tegola geometry corresponding to dataType text for table
 		layerQuery := fmt.Sprintf("SELECT * FROM %v;", tablename)
-		p.layers[tablename] = layer{name: tablename, sql: layerQuery, geomType: geom, srid: srid}
-
-		//		// The ID field name, this will default to 'gid' if not set to something other then empty string.
-		//		idField string
-		//		// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
-		//		geomField string
-		//		// GeomType is the the type of geometry returned from the SQL
+		colDetails := geomColumnDetails[tablename]
+		p.layers[tablename] = layer{
+			name: tablename, sql: layerQuery, geomType: colDetails.tegolaGeometry, srid: srid}
 
 		var logMsgPart string
 		fmt.Sprintf(logMsgPart, "(%v-%i) ", tablename, srid)
@@ -251,13 +314,6 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	return &p, err
 }
 
-func (p *GPKGProvider) layerGeomType(l *layer) {
-	msg := "GPKGProvider.layerGeomType() called (not implemented)"
-	fmt.Println(msg)
-	util.CodeLogger.Debug(msg)
-}
-
 func init() {
-	util.CodeLogger.Debug("Entering gpkgProvider.go init()")
 	provider.Register(ProviderName, NewProvider)
 }
