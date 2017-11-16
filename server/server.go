@@ -24,8 +24,10 @@ const (
 var (
 	//	set at runtime from main
 	Version string
-	//	configurable via the tegola config.toml file
+	//	configurable via the tegola config.toml file (set in main.go)
 	HostName string
+	//	configurable via the tegola config.toml file (set in main.go)
+	Port string
 	//	cache interface to use
 	Cache cache.Interface
 )
@@ -77,34 +79,39 @@ func Start(port string) {
 	log.Fatal(http.ListenAndServe(port, r))
 }
 
-//	determins the hostname to return based on the following hierarchy
-//	- HostName var as configured via the config file
-//	- The request host
+//	determins the hostname:port to return based on the following hierarchy
+//	- HostName / Port vars as configured via the config file
+//	- The request host / port if config HostName or Port is missing
 func hostName(r *http.Request) string {
-	substrs := strings.Split(r.Host, ":")
-	var name string
-	var port string
 
+	var requestHostname string
+	var requestPort string
+	substrs := strings.Split(r.Host, ":")
 	switch len(substrs) {
 	case 1:
-		name = substrs[0]
+		requestHostname = substrs[0]
 	case 2:
-		name = substrs[0]
-		port = substrs[1]
+		requestHostname = substrs[0]
+		requestPort = substrs[1]
 	default:
-		util.CodeLogger.Warnf("Unexpected host string: %v", r.Host)
+		util.CodeLogger.Warnf("Multiple colons (':') in host string: %v", r.Host)
 	}
 
-	//	configured
+	var retHost string
 	if HostName != "" {
-		return HostName + ":" + port
+		retHost = HostName
+	} else {
+		retHost = requestHostname
 	}
 
-	//	default to the Host provided in the request
-	retHost := name
-	if port != "" {
-		retHost += ":" + port
+	if Port == "none" {
+		// Don't add a port to the host.
+	} else if Port != "" {
+		retHost += ":" + Port
+	} else if requestPort != "" {
+		retHost += ":" + requestPort
 	}
+
 	return retHost
 }
 

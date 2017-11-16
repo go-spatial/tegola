@@ -88,6 +88,7 @@ func main() {
 	//	set our server version
 	server.Version = Version
 	server.HostName = conf.Webserver.HostName
+	server.Port = conf.Webserver.Port
 
 	//	start our webserver
 	server.Start(*port)
