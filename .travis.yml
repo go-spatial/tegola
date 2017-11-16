@@ -23,6 +23,9 @@ install:
   - bash ci/build_bindata.sh
   - bash ci/config_postgis.sh
 
+script:
+  - go test -v $(go list ./... | grep -v vendor)
+
 before_deploy:
   - go get github.com/mitchellh/gox
   - cd cmd/tegola/
