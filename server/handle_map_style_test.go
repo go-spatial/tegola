@@ -20,6 +20,8 @@ func TestHandleMapStyle(t *testing.T) {
 	//	setup a new provider
 	testcases := []struct {
 		handler    http.Handler
+		hostName   string
+		port       string
 		uri        string
 		uriPattern string
 		reqMethod  string
@@ -27,6 +29,7 @@ func TestHandleMapStyle(t *testing.T) {
 	}{
 		{
 			handler:    server.HandleMapStyle{},
+			hostName:   "tegola.io",
 			uri:        fmt.Sprintf("/maps/%v/style.json", testMap.Name),
 			uriPattern: "/maps/:map_name/style.json",
 			reqMethod:  "GET",
@@ -73,6 +76,9 @@ func TestHandleMapStyle(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
+		server.HostName = tc.hostName
+		server.Port = tc.port
+
 		var err error
 
 		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
