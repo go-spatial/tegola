@@ -1,11 +1,12 @@
 package gpkg
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"fmt"
-	"runtime"
 	"path/filepath"
+	"runtime"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewGPKGProvider(t *testing.T) {
@@ -14,12 +15,12 @@ func TestNewGPKGProvider(t *testing.T) {
 	var GPKGFilePath string = dir + "test_data/athens-osm-20170921.gpkg"
 
 	fmt.Println("Using path to gpkg: ", GPKGFilePath)
-	layers := map[string]layer{}
-	
-	config := map[string]interface{} {
+	layers := map[string]GPKGLayer{}
+
+	config := map[string]interface{}{
 		"FilePath": GPKGFilePath,
-		"layers": layers,
-		"srid": 0,
+		"layers":   layers,
+		"srid":     0,
 	}
 	p, _ := NewProvider(config)
 

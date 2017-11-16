@@ -24,41 +24,46 @@ const (
 	DefaultSRID  = tegola.WebMercator
 )
 
+// *** Remove type layer
 // Layer is a single map layer & corresponds to a single geometric table in a geopackage file.
-type layer struct {
-	// The Name of the layer
-	name string
-	// The SQL to use when querying PostGIS for this layer
-	sql string
-	// The ID field name, this will default to 'gid' if not set to something other then empty string.
-	idField string
-	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
-	geomField string
-	// GeomType is a string identifying the geometry type for the table. *note that this is not
-	// always 100% consistent with srids identified in table geometry columns.
-	geomType tegola.Geometry
-	// The SRID identifying the projection that geometric data uses.
-	srid int
-}
+//type layer struct {
+//	// The Name of the layer
+//	name string
+//	// The SQL to use when querying PostGIS for this layer
+//	sql string
+//	// The ID field name, this will default to 'gid' if not set to something other then empty string.
+//	idField string
+//	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
+//	geomField string
+//	// GeomType is a string identifying the geometry type for the table. *note that this is not
+//	// always 100% consistent with srids identified in table geometry columns.
+//	geomType tegola.Geometry
+//	// The SRID identifying the projection that geometric data uses.
+//	srid int
+//}
 
 type GPKGProvider struct {
 	mvt.Provider
 	// Currently just the path to the gpkg file.
 	FilePath string
 	// map of layer name and corrosponding sql
-	layers map[string]layer
+	layers map[string]GPKGLayer
 }
 
 type GPKGLayer struct {
 	mvt.LayerInfo
 	name     string
-	geomtype tegola.Geometry
+	geomType tegola.Geometry
 	srid     int
+	// Bounding box containing all features in the layer: [minX, minY, maxX, maxY]
+	bbox [4]float64
+	sql  string
 }
 
 func (l GPKGLayer) Name() string              { return l.name }
-func (l GPKGLayer) GeomType() tegola.Geometry { return l.geomtype }
+func (l GPKGLayer) GeomType() tegola.Geometry { return l.geomType }
 func (l GPKGLayer) SRID() int                 { return l.srid }
+func (l GPKGLayer) BBox() [4]float64          { return l.bbox }
 
 func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 	util.CodeLogger.Debug("Attempting gpkg.Layers()")
@@ -67,8 +72,7 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 
 	i := 0
 	for _, player := range p.layers {
-		l := GPKGLayer{name: player.name, srid: player.srid, geomtype: player.geomType}
-		ls[i] = l
+		ls[i] = player
 		i++
 	}
 
@@ -203,7 +207,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 type GeomColumn struct {
 	name           string
 	geometryType   string
-	tegolaGeometry tegola.Geometry // to populate GPKGLayer.geomtype
+	tegolaGeometry tegola.Geometry // to populate GPKGLayer.geomType
 	srsId          int
 }
 
@@ -267,7 +271,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	p := GPKGProvider{FilePath: filepath, layers: make(map[string]layer)}
+	p := GPKGProvider{FilePath: filepath, layers: make(map[string]GPKGLayer)}
 
 	qtext := "SELECT * FROM gpkg_contents"
 	rows, err := db.Query(qtext)
@@ -299,11 +303,13 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		rows.Scan(&tablename, &dataType, &identifier, &description, &lastChange,
 			&minX, &minY, &maxX, &maxY, &srid)
 
-		// Get layer geometry as tegola geometry corresponding to dataType text for table
+		// Get layer geometry as tegola geometry instance corresponding to dataType text for table
 		layerQuery := fmt.Sprintf("SELECT * FROM %v;", tablename)
 		colDetails := geomColumnDetails[tablename]
-		p.layers[tablename] = layer{
-			name: tablename, sql: layerQuery, geomType: colDetails.tegolaGeometry, srid: srid}
+		bbox := [4]float64{minX, minY, maxX, maxY}
+		p.layers[tablename] = GPKGLayer{
+			name: tablename, sql: layerQuery, geomType: colDetails.tegolaGeometry, srid: srid,
+			bbox: bbox}
 
 		var logMsgPart string
 		fmt.Sprintf(logMsgPart, "(%v-%i) ", tablename, srid)
