@@ -14,14 +14,6 @@ func (p Polygon) LinearRings() [][][2]float64 {
 	return p
 }
 
-// Points returns a slice of XY values
-func (p Polygon) Points() (points [][2]float64) {
-	for _, ls := range p {
-		points = append(points, ls...)
-	}
-	return
-}
-
 // SetLinearRings modifies the array of 2D coordinates
 func (p *Polygon) SetLinearRings(input [][][2]float64) (err error) {
 	if p == nil {

@@ -1,0 +1,40 @@
+// A Description provides a one line description of the test.
+desc: This is a simple test
+/*
+    How is the bytes encoded. It defaults to little.
+*/
+bom: little // This can be big or little.
+/*
+   These are are hex encoded bytes data. Note that it starts with
+   a “{{” and ends with “}}”. 
+*/
+bytes: // 01 02 03 04 05 06 07 08
+{{
+           00 00 00 00                // Just some values
+	   AF 00 af 0c d0 0d ac 00    // More values.
+	   DEAF D00D ACFF             // Different ways of expressing the binary data.
+	   00 /* Comment in the middle of it all */ 00
+}}
+expected: /* x */ 2, /* y */ 4  //  Just a simple point. 
+
+// Make sure it can handle more then one.
+
+// A Description provides a one line description of the test.
+desc: This is a simple test
+/*
+    How is the bytes encoded. It defaults to little.
+*/
+bom: little // This can be big or little.
+/*
+   These are are hex encoded bytes data. Note that it starts with
+   a “{{” and ends with “}}”. 
+*/
+bytes: // 01 02 03 04 05 06 07 08
+{{
+           00 00 00 00                // Just some values
+	   AF 00 af 0c d0 0d ac 00    // More values.
+	   DEAF D00D ACFF             // Different ways of expressing the binary data.
+	   00 /* Comment in the middle of it all */ 00
+}}
+expected: /* x */ 2, /* y */ 4  //  Just a simple point. 
+

@@ -22,10 +22,3 @@ func (p *Point) SetXY(xy [2]float64) (err error) {
 	p[1] = xy[1]
 	return
 }
-
-// Points returns a slice of XY values
-func (p Point) Points() [][2]float64 {
-	return [][2]float64{
-		{p[0], p[1]},
-	}
-}

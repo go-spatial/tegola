@@ -1,0 +1,30 @@
+desc: Simple Point
+expected: 1,2
+bytes:{{
+//01 02 03 04 05 06 07 08
+  01                      // Byte order Marker little
+  01 00 00 00             // Type 1 Point
+  00 00 00 00 00 00 F0 3F // x 1
+  00 00 00 00 00 00 00 40 // y 2
+}}
+
+desc: Simple LineString with two points
+bom: little
+expected: ( 1,2 3,4 )
+
+bytes:{{
+//01 02 03 04 05 06 07 08
+  01                      // Byte order Marker little
+  04 00 00 00             // Type 4 Multipoint
+  02 00 00 00             // number of points
+  01                      // Byte Order Marker little
+  01 00 00 00             // Type 1 Point
+  00 00 00 00 00 00 F0 3F // x 1
+  00 00 00 00 00 00 00 40 // y 2
+  01                      // Byte Order Marker little
+  01 00 00 00             // Type 1 Point
+  00 00 00 00 00 00 08 40 // x 3
+  00 00 00 00 00 00 10 40 // y 4
+}}
+ 
+
