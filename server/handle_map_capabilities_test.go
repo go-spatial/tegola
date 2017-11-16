@@ -19,6 +19,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 	testcases := []struct {
 		handler    http.Handler
 		hostName   string
+		port       string
 		uri        string
 		uriPattern string
 		reqMethod  string
@@ -80,6 +81,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 		{
 			handler:    server.HandleCapabilities{},
 			hostName:   "cdn.tegola.io",
+			port:       "none",
 			uri:        "http://localhost:8080/capabilities/test-map.json?debug=true",
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
@@ -160,6 +162,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 		var err error
 
 		server.HostName = test.hostName
+		server.Port = test.port
 
 		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
