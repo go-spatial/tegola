@@ -3,6 +3,7 @@ package gpkg
 import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
 	"github.com/terranodo/tegola/util"
@@ -80,9 +81,49 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
-func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, dtags map[string]interface{}) (*mvt.Layer, error) {
+func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.TegolaTile, dtags map[string]interface{}) (*mvt.Layer, error) {
 	util.CodeLogger.Debugf("GPKGProvider MVTLayer() called for %v", layerName)
 	filepath := p.FilePath
+
+	// Check that layer is within bounding box
+	var layerBBox points.BoundingBox
+	layerBBox = p.layers[layerName].bbox
+
+	// Convert bounding box to DefaultSRID if necessary.
+	layerSRID := p.layers[layerName].srid
+	if layerSRID != DefaultSRID {
+		if DefaultSRID != tegola.WebMercator {
+			util.CodeLogger.Fatal("DefaultSRID != tegola.WebMercator requires changes here")
+		}
+		lleft := basic.Point{layerBBox[0], layerBBox[1]}
+		tright := basic.Point{layerBBox[2], layerBBox[3]}
+		// Same points in DefaultSRID
+		lleftD, err1 := basic.ToWebMercator(layerSRID, lleft)
+		trightD, err2 := basic.ToWebMercator(layerSRID, tright)
+
+		if err1 != nil || err2 != nil {
+			util.CodeLogger.Error("Problem convering bbox geometry from %v -> %v", layerSRID, DefaultSRID)
+			if err1 != nil {
+				return nil, err1
+			} else {
+				return nil, err2
+			}
+		}
+
+		layerBBox = [4]float64{lleftD.AsPoint().X(), lleftD.AsPoint().Y(),
+			trightD.AsPoint().X(), trightD.AsPoint().Y()}
+	}
+
+	// In DefaultSRID (web mercator - 3857)
+	tileBBoxStruct := tile.BoundingBox()
+	tileBBox := [4]float64{tileBBoxStruct.Minx, tileBBoxStruct.Miny,
+		tileBBoxStruct.Maxx, tileBBoxStruct.Maxy}
+
+	if layerBBox.DisjointBB(tileBBox) {
+		msg := "Layer %v is outside tile bounding box, will not load any features"
+		util.CodeLogger.Debugf(msg, layerName)
+		return new(mvt.Layer), nil
+	}
 
 	util.CodeLogger.Infof("Opening gpkg at: ", filepath)
 	db, err := sql.Open("sqlite3", filepath)

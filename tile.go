@@ -9,6 +9,14 @@ const (
 	DefaultExtent  = 4096
 )
 
+type TegolaTile interface {
+	Deg2Num() (x, y int)
+	Num2Deg() (lat, lng float64)
+	BoundingBox() BoundingBox
+	ZRes() float64
+	ZEpislon()
+}
+
 //Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {

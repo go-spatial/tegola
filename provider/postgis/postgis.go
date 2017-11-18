@@ -323,7 +323,7 @@ func (p Provider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
-func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
+func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.TegolaTile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
 
 	layer = &mvt.Layer{
 		Name: layerName,
