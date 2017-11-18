@@ -74,7 +74,7 @@ const (
 //
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
-func replaceTokens(plyr *Layer, tile tegola.Tile) (string, error) {
+func replaceTokens(plyr *Layer, tile tegola.TegolaTile) (string, error) {
 
 	textent := tile.BoundingBox()
 
@@ -92,9 +92,10 @@ func replaceTokens(plyr *Layer, tile tegola.Tile) (string, error) {
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.srid)
 
 	//	replace query string tokens
+	t := tile.(*tegola.Tile)
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
-		zoomToken, strconv.Itoa(tile.Z),
+		zoomToken, strconv.Itoa(t.Z),
 	)
 
 	return tokenReplacer.Replace(plyr.sql), nil

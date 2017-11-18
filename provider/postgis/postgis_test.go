@@ -134,7 +134,7 @@ func TestMVTLayer(t *testing.T) {
 		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
 			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
 
-			l, err := p.MVTLayer(context.Background(), layerName, tc.tile, map[string]interface{}{})
+			l, err := p.MVTLayer(context.Background(), layerName, &tc.tile, map[string]interface{}{})
 			if err != nil {
 				t.Errorf("test (%v) failed to create mvt layer err: %v", i, err)
 				return

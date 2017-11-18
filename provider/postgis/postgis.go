@@ -256,7 +256,7 @@ func (p Provider) layerGeomType(l *Layer) error {
 	//	we need a tile to run our sql through the replacer
 	tile := tegola.Tile{Z: 0, X: 0, Y: 0}
 
-	sql, err := replaceTokens(l, tile)
+	sql, err := replaceTokens(l, &tile)
 	if err != nil {
 		return err
 	}

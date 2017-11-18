@@ -39,7 +39,7 @@ func TestReplaceTokens(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		sql, err := replaceTokens(&tc.layer, tc.tile)
+		sql, err := replaceTokens(&tc.layer, &tc.tile)
 		if err != nil {
 			t.Errorf("Failed test %v. err: %v", i, err)
 			return

@@ -14,12 +14,13 @@ type TegolaTile interface {
 	Num2Deg() (lat, lng float64)
 	BoundingBox() BoundingBox
 	ZRes() float64
-	ZEpislon()
+	ZEpislon() float64
 }
 
 //Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
+	TegolaTile
 	Z         int
 	X         int
 	Y         int

@@ -62,7 +62,7 @@ func TestForEachFeature(t *testing.T) {
 		for _, tcLayer := range tc.config[ConfigKeyLayers].([]map[string]interface{}) {
 			layerName := tcLayer[ConfigKeyLayerName].(string)
 
-			err = p.ForEachFeature(context.Background(), layerName, tc.tile, func(lyr Layer, gid uint64, wgeom wkb.Geometry, ftags map[string]interface{}) error {
+			err = p.ForEachFeature(context.Background(), layerName, &tc.tile, func(lyr Layer, gid uint64, wgeom wkb.Geometry, ftags map[string]interface{}) error {
 
 				if !reflect.DeepEqual(tc.expectedTags, ftags) {
 					t.Errorf("test (%v) failed. expected tags (%+v) does not match output (%+v)", i, tc.expectedTags, ftags)

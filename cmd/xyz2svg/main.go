@@ -139,7 +139,7 @@ func DrawGeometries() {
 	count := 0
 
 	skipped := []uint64{}
-	if err := p.ForEachFeature(context.Background(), provider.name, tile, func(layer postgis.Layer, gid uint64, geom wkb.Geometry, tags map[string]interface{}) error {
+	if err := p.ForEachFeature(context.Background(), provider.name, &tile, func(layer postgis.Layer, gid uint64, geom wkb.Geometry, tags map[string]interface{}) error {
 		if configStruct.IsolateGeo != -1 && configStruct.IsolateGeo != int64(gid) {
 			return nil
 		}
