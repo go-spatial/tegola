@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -35,13 +36,15 @@ func init() {
 	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
 	RootCmd.AddCommand(serverCmd)
 
-	//	cache
-	cacheSeedCmd.Flags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
-	cacheSeedCmd.Flags().StringVarP(&cacheXYZ, "zxy", "", "", "tile in z/x/y format")
-	cacheCmd.AddCommand(cacheSeedCmd)
-	cachePurgeCmd.Flags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
-	cachePurgeCmd.Flags().StringVarP(&cacheXYZ, "zxy", "", "", "tile in z/x/y format")
-	cacheCmd.AddCommand(cachePurgeCmd)
+	//	cache seed / purge
+	cacheCmd.Flags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
+	cacheCmd.Flags().StringVarP(&cacheZXY, "zxy", "", "", "tile in z/x/y format")
+	cacheCmd.Flags().UintVarP(&cacheMinZoom, "minzoom", "", 0, "min zoom to seed cache from")
+	cacheCmd.Flags().UintVarP(&cacheMaxZoom, "maxzoom", "", 0, "max zoom to seed cache to")
+	cacheCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
+	cacheCmd.Flags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
+	//cacheSeedCmd.Flags().BoolVarP(&cacheMaxZoom, "overwrite", "", false, "overwrite the cache if a tile already exists")
+
 	RootCmd.AddCommand(cacheCmd)
 
 	//	version
@@ -56,7 +59,9 @@ Version: %v`, Version),
 }
 
 func initConfig() {
-	conf, err := config.Load(configFile)
+	var err error
+
+	conf, err = config.Load(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -110,7 +115,7 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 
 	//	iterate our maps
 	for _, m := range maps {
-		newMap := atlas.NewMap(m.Name)
+		newMap := atlas.NewWGS84Map(m.Name)
 		newMap.Attribution = html.EscapeString(m.Attribution)
 		newMap.Center = m.Center
 

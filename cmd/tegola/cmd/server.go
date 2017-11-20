@@ -11,9 +11,9 @@ var (
 )
 
 var serverCmd = &cobra.Command{
-	Use:   "server",
+	Use:   "serve",
 	Short: "Use tegola as a tile server",
-	Long:  `Use tegola as a tile server`,
+	Long:  `Use tegola as a vector tile server. Maps tiles will be served at /maps/:map_name/:z/:x/:y`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initConfig()
 

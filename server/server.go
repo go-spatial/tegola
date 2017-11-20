@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/terranodo/tegola/cache"
+	"github.com/terranodo/tegola/atlas"
 	_ "github.com/terranodo/tegola/cache/filecache"
 )
 
@@ -21,12 +21,14 @@ var (
 	Version string
 	//	configurable via the tegola config.toml file
 	HostName string
-	//	cache interface to use
-	Cache cache.Interface
+	//	reference to the version of atlas to work with
+	Atlas *atlas.Atlas
 )
 
 //	Start starts the tile server binding to the provided port
 func Start(port string) {
+	Atlas = atlas.DefaultAtlas
+
 	//	notify the user the server is starting
 	log.Printf("Starting tegola server on port %v", port)
 

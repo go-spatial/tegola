@@ -34,6 +34,36 @@ func TestTileNum2Deg(t *testing.T) {
 	}
 }
 
+func TestTileDeg2Num(t *testing.T) {
+	testcases := []struct {
+		tile      tegola.Tile
+		expectedX int
+		expectedY int
+	}{
+		{
+			tile: tegola.Tile{
+				Z:    0,
+				Lat:  -85,
+				Long: -180,
+			},
+			expectedX: 0,
+			expectedY: 0,
+		},
+	}
+
+	for i, tc := range testcases {
+		x, y := tc.tile.Deg2Num()
+
+		if tc.expectedX != x {
+			t.Errorf("testcase (%v) failed. expected X value (%v) does not match output (%v)", i, tc.expectedX, x)
+		}
+
+		if tc.expectedY != y {
+			t.Errorf("testcase (%v) failed. expected X value (%v) does not match output (%v)", i, tc.expectedY, y)
+		}
+	}
+}
+
 func TestTileBBox(t *testing.T) {
 	testcases := []struct {
 		tile                   tegola.Tile

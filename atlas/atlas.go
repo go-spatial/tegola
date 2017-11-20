@@ -11,16 +11,22 @@ var DefaultAtlas = &Atlas{}
 
 const (
 	//	MaxZoom will not render tile beyond this zoom level
-	MaxZoom = 20
+	MaxZoom = 22
 )
+
+//	holds a reference to the cache backend
+//
+//	TODO: this is a weak implementation right now. it's confusing that
+//	the cache backend is a singleton but instances of the Atlas can be
+//	instantiated. if cache backends were associated with maps this would
+//	be addressed. should Maps have their own cache backends? -arolek
+var cacher cache.Interface
 
 type Atlas struct {
 	// for managing current access to the map container
 	sync.RWMutex
 	// hold maps
 	maps map[string]Map
-	// cache
-	cache cache.Interface
 }
 
 func (a *Atlas) AllMaps() []Map {
@@ -75,12 +81,12 @@ func (a *Atlas) AddMap(m Map) {
 
 //	GetCache returns the registered cache if one is registered, otherwise nil
 func (a *Atlas) GetCache() cache.Interface {
-	return a.cache
+	return cacher
 }
 
 //	SetCache sets the cache backend
 func (a *Atlas) SetCache(c cache.Interface) {
-	a.cache = c
+	cacher = c
 }
 
 //	AllMaps returns all registered maps
@@ -100,10 +106,10 @@ func AddMap(m Map) {
 
 //	GetCache returns the registered cache if one is registered, otherwise nil
 func GetCache() cache.Interface {
-	return DefaultAtlas.cache
+	return cacher
 }
 
 //	SetCache sets the cache backend
 func SetCache(c cache.Interface) {
-	DefaultAtlas.cache = c
+	cacher = c
 }
