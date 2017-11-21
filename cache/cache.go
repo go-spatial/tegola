@@ -16,9 +16,14 @@ type Interface interface {
 }
 
 //	ParseKey will parse a string in the format /:map/:layer/:z/:x/:y into a Key struct. The :layer value is optional
+//	ParseKey also supports other OS delimeters (i.e. Windows - "\")
 func ParseKey(str string) (*Key, error) {
 	var err error
 	var key Key
+
+	//	convert to all slashes to forward slashes. without this reading from certain OSes (i.e. windows)
+	//	will fail our keyParts check since it uses backslashes.
+	str = filepath.ToSlash(str)
 
 	//	remove the basepath and the first slash, then split the parts
 	keyParts := strings.Split(strings.TrimLeft(str, "/"), "/")
