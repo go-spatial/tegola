@@ -64,9 +64,13 @@ func TestMVTLayerFiltering(t *testing.T) {
 
 	// The literal coordinates are in WSG:4326 which is what the test gpkg uses,
 	//	convert to WebMercator, as that's what is expected in a tile bounding box
-	bboxLeftOfLayer := points.BoundingBox{20.0, 37.85, 23.6, 37.9431}
+	// Y-values are swapped (origin at top left, so miny is larger value,
+	//	@see https://github.com/terranodo/tegola/issues/189
+	// TODO: Swap them back when that's fixed.
+	bboxLeftOfLayer := points.BoundingBox{20.0, 37.9431, 23.6, 37.85}
 	tileLeftOfLayer := &MockTile{bbox: bboxLeftOfLayer.ConvertSrid(tegola.WGS84, tegola.WebMercator)}
-	bboxContainsLayer := points.BoundingBox{23.6, 37.8, 23.8, 38.0}
+
+	bboxContainsLayer := points.BoundingBox{23.6, 38.0, 23.8, 37.8}
 	tileContainsLayer := &MockTile{bbox: bboxContainsLayer.ConvertSrid(tegola.WGS84, tegola.WebMercator)}
 
 	testCases := []TestCase{

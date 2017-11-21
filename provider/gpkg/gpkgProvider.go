@@ -25,24 +25,6 @@ const (
 	DefaultSRID  = tegola.WebMercator
 )
 
-// *** Remove type layer
-// Layer is a single map layer & corresponds to a single geometric table in a geopackage file.
-//type layer struct {
-//	// The Name of the layer
-//	name string
-//	// The SQL to use when querying PostGIS for this layer
-//	sql string
-//	// The ID field name, this will default to 'gid' if not set to something other then empty string.
-//	idField string
-//	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
-//	geomField string
-//	// GeomType is a string identifying the geometry type for the table. *note that this is not
-//	// always 100% consistent with srids identified in table geometry columns.
-//	geomType tegola.Geometry
-//	// The SRID identifying the projection that geometric data uses.
-//	srid int
-//}
-
 type GPKGProvider struct {
 	mvt.Provider
 	// Currently just the path to the gpkg file.
@@ -57,7 +39,7 @@ type GPKGLayer struct {
 	geomType tegola.Geometry
 	srid     int
 	// Bounding box containing all features in the layer: [minX, minY, maxX, maxY]
-	bbox [4]float64
+	bbox points.BoundingBox
 	sql  string
 }
 
@@ -89,35 +71,22 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	var layerBBox points.BoundingBox
 	layerBBox = p.layers[layerName].bbox
 
-	// Convert bounding box to DefaultSRID if necessary.
+	// In DefaultSRID (web mercator - 3857)
+	tileBBoxStruct := tile.BoundingBox()
+	// TODO: There's some confusion between pixel coordinates & WebMercator positions in the tile
+	//	bounding box, making the smallest y-value tileBBoxStruct.Maxy and the largest Miny.
+	//	Hacking here to ensure a correct bounding box.
+	//	At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
+	tileBBox := points.BoundingBox{tileBBoxStruct.Minx, tileBBoxStruct.Maxy,
+		tileBBoxStruct.Maxx, tileBBoxStruct.Miny}
+	// Convert tile bounding box to gpkg geometry if necessary.
 	layerSRID := p.layers[layerName].srid
 	if layerSRID != DefaultSRID {
 		if DefaultSRID != tegola.WebMercator {
 			util.CodeLogger.Fatal("DefaultSRID != tegola.WebMercator requires changes here")
 		}
-		lleft := basic.Point{layerBBox[0], layerBBox[1]}
-		tright := basic.Point{layerBBox[2], layerBBox[3]}
-		// Same points in DefaultSRID
-		lleftD, err1 := basic.ToWebMercator(layerSRID, lleft)
-		trightD, err2 := basic.ToWebMercator(layerSRID, tright)
-
-		if err1 != nil || err2 != nil {
-			util.CodeLogger.Error("Problem convering bbox geometry from %v -> %v", layerSRID, DefaultSRID)
-			if err1 != nil {
-				return nil, err1
-			} else {
-				return nil, err2
-			}
-		}
-
-		layerBBox = [4]float64{lleftD.AsPoint().X(), lleftD.AsPoint().Y(),
-			trightD.AsPoint().X(), trightD.AsPoint().Y()}
+		tileBBox = tileBBox.ConvertSrid(tegola.WebMercator, p.layers[layerName].srid)
 	}
-
-	// In DefaultSRID (web mercator - 3857)
-	tileBBoxStruct := tile.BoundingBox()
-	tileBBox := [4]float64{tileBBoxStruct.Minx, tileBBoxStruct.Miny,
-		tileBBoxStruct.Maxx, tileBBoxStruct.Maxy}
 
 	if layerBBox.DisjointBB(tileBBox) {
 		msg := "Layer %v is outside tile bounding box, will not load any features"
@@ -132,10 +101,16 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	}
 
 	// Get all feature rows for the layer requested.
-	qtext := fmt.Sprintf("SELECT * FROM %v WHERE geom IS NOT NULL;", layerName)
-	rows, err := db.Query(qtext)
+	rtreeTablename := fmt.Sprintf("rtree_%v_geom", layerName)
+	// l - layer table, si - spatial index
+	qtext := fmt.Sprintf("SELECT * FROM %v l JOIN %v si ON l.fid = si.id WHERE geom IS NOT NULL "+
+		"AND NOT (si.minx > ? OR si.maxx < ? OR si.miny > ? OR si.maxy < ?);",
+		layerName, rtreeTablename)
+
+	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
+	rows, err := db.Query(qtext, qparams...)
 	if err != nil {
-		util.CodeLogger.Errorf("Error during query: %v - %v", qtext, err)
+		util.CodeLogger.Errorf("Error during query: %v (%v)- %v", qtext, qparams, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -242,6 +217,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		util.CodeLogger.Errorf("newLayer feature count doesn't match table row count (%v != %v)\n",
 			len(newLayer.Features()), rowCount)
 	}
+
 	return newLayer, nil
 }
 

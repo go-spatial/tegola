@@ -90,8 +90,14 @@ func main() {
 	server.HostName = conf.Webserver.HostName
 	server.Port = conf.Webserver.Port
 
+	// This allows the port to be specified as simply a port number while allowing backwards
+	//	compatibility with configs that prepend the port with a colon (:).
+	startPort := *port
+	if string([]rune(startPort[0:1])) != ":" {
+		startPort = string([]rune(":")) + startPort
+	}
 	//	start our webserver
-	server.Start(*port)
+	server.Start(startPort)
 }
 
 func initCache(config map[string]interface{}) (cache.Interface, error) {

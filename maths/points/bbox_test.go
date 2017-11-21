@@ -130,3 +130,53 @@ func TestConvertSrid(t *testing.T) {
 		}
 	}
 }
+
+func TestAsGeoJSON(t *testing.T) {
+	type TestCase struct {
+		bbox            BoundingBox
+		expectedGeoJson string
+	}
+
+	testCases := []TestCase{
+		{
+			bbox: BoundingBox{0.1234, 0.1234, 0.2345, 0.2345},
+			expectedGeoJson: `
+{
+  "type": "Polygon",
+  "coordinates": [
+    [
+      [0.1234, 0.1234],
+      [0.2345, 0.1234],
+      [0.2345, 0.2345],
+      [0.1234, 0.2345],
+      [0.1234, 0.1234]
+    ]
+  ]
+}
+`,
+		},
+		{
+			bbox: BoundingBox{0.8765, 0.8765, 9.8765, 9.8765},
+			expectedGeoJson: `
+{
+  "type": "Polygon",
+  "coordinates": [
+    [
+      [0.8765, 0.8765],
+      [9.8765, 0.8765],
+      [9.8765, 9.8765],
+      [0.8765, 9.8765],
+      [0.8765, 0.8765]
+    ]
+  ]
+}
+`,
+		},
+	}
+
+	for i, tc := range testCases {
+		geoJson := tc.bbox.AsGeoJSON()
+		msg := fmt.Sprintf("TestCase[%v] - GeoJSON doesn't match expected", i)
+		assert.Equal(t, tc.expectedGeoJson, geoJson, msg)
+	}
+}

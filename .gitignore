@@ -1,2 +1,6 @@
 .DS_Store
 .idea
+src
+sandbox
+.project
+.settings

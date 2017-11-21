@@ -1,6 +1,7 @@
 package points
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/terranodo/tegola"
@@ -128,4 +129,23 @@ func (bb BoundingBox) ConvertSrid(fromId int, toId int) BoundingBox {
 	newBB := BoundingBox{llC.AsPoint().X(), llC.AsPoint().Y(), trC.AsPoint().X(), trC.AsPoint().Y()}
 
 	return newBB
+}
+
+func (bb BoundingBox) AsGeoJSON() string {
+	template := `
+{
+  "type": "Polygon",
+  "coordinates": [
+    [
+      [%v, %v],
+      [%v, %v],
+      [%v, %v],
+      [%v, %v],
+      [%v, %v]
+    ]
+  ]
+}
+`
+	geoJson := fmt.Sprintf(template, bb[0], bb[1], bb[2], bb[1], bb[2], bb[3], bb[0], bb[3], bb[0], bb[1])
+	return geoJson
 }
