@@ -180,8 +180,8 @@ func (fc *Filecache) Set(key *cache.Key, val []byte) error {
 	if !ok {
 		fc.Lock()
 		fc.Locker[key.String()] = sync.RWMutex{}
-		fc.Unlock()
 		mutex = fc.Locker[key.String()]
+		fc.Unlock()
 	}
 	//	the key can have a directory syntax so we need to makeAll
 	if err = os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
