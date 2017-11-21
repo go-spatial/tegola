@@ -37,7 +37,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       [4]float64{-180.0, -90.0, 180.0, 90.0},
+						Bounds:       [4]float64{-180.0, -85.0511, 180.0, 85.0511},
 						Capabilities: "http://localhost:8080/capabilities/test-map.json",
 						Tiles: []string{
 							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -77,7 +77,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       [4]float64{-180.0, -90.0, 180.0, 90.0},
+						Bounds:       [4]float64{-180.0, -85.0511, 180.0, 85.0511},
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",

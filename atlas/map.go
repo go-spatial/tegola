@@ -77,7 +77,7 @@ func NewWebMercatorMap(name string) Map {
 
 	return Map{
 		Name:   name,
-		Bounds: [4]float64{},
+		Bounds: [4]float64{-20026376.39, -20048966.10, 20026376.39, 20048966.10},
 		Layers: []Layer{
 			{
 				Name:              debug.LayerDebugTileOutline,
