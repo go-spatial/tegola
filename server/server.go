@@ -104,6 +104,11 @@ func hostName(r *http.Request) string {
 		retHost = requestHostname
 	}
 
+	// Strip colon from Port if it is present.
+	if len(Port) > 0 && string([]rune(Port[0:1])) == ":" {
+		Port = Port[1:]
+	}
+
 	if Port == "none" {
 		// Don't add a port to the host.
 	} else if Port != "" {
