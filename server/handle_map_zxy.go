@@ -13,6 +13,7 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/mvt"
 )
 
 type HandleMapZXY struct {
@@ -138,13 +139,18 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pbyte, err := m.Encode(r.Context(), tile)
 		if err != nil {
 			switch err {
+			case mvt.ErrCanceled:
+				//	TODO: add debug logs
+				return
 			case context.Canceled:
-				//	TODO: add as a debug log
+				//	TODO: add debug logs
+				return
 			default:
-				log.Printf("Error marshalling tile: %v", err)
-				http.Error(w, "Error marshalling tile", http.StatusInternalServerError)
+				errMsg := fmt.Sprintf("Error marshalling tile: %v", err)
+				log.Printf(errMsg)
+				http.Error(w, errMsg, http.StatusInternalServerError)
+				return
 			}
-			return
 		}
 
 		//	TODO: how configurable do we want the CORS policy to be?
