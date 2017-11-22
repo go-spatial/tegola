@@ -3,6 +3,7 @@
 - Fixed: regression in providers/postgis. EXECUTE_SQL environment debug was dropped.
 - Fixed: Filecache: concurrent map read and map write on Set() (#188)
 - Fixed: Filecache: invalid fileKey on cache init (Windows) (#178)
+- Fixed: Clean up context canceled log (#170)
 
 ## 0.4.0 (2017-11-11)
 
