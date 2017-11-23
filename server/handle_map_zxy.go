@@ -162,7 +162,8 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						//	TODO: should we return an error to the response or just log the error?
 						//	we can't just write to the response as the waitgroup is going to write to the response as well
-						log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
+						log.Printf("Error Getting MVTLayer '%v' for tile Z: %v, X: %v, Y: %v: %v",
+							l.ProviderLayerName, tile.Z, tile.X, tile.Y, err)
 						return
 					}
 

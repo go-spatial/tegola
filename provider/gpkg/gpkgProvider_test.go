@@ -23,19 +23,23 @@ func init() {
 }
 
 func TestNewGPKGProvider(t *testing.T) {
-	layers := map[string]GPKGLayer{}
+	layers := []map[string]interface{}{
+		// With explicit id fieldname
+		{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid"},
+		{"name": "r_lines", "tablename": "rail_lines", "id_fieldname": "fid"},
+		// With default id fieldname
+		{"name": "rd_lines", "tablename": "roads_lines"},
+	}
+	expectedLayerCount := len(layers)
 
 	config := map[string]interface{}{
 		"FilePath": GPKGFilePath,
 		"layers":   layers,
-		"srid":     0,
 	}
-	p, _ := NewProvider(config)
-
+	p, err := NewProvider(config)
+	assert.Nil(t, err, fmt.Sprintf("Error in call to NewProvider(): %v", err))
 	lys, _ := p.Layers()
-	// MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, tags map[string]interface{})
-	//	(*Layer, error)
-	assert.Equal(t, 19, len(lys), "")
+	assert.Equal(t, expectedLayerCount, len(lys), "")
 }
 
 type MockTile struct {
@@ -49,8 +53,14 @@ func (tile *MockTile) BoundingBox() tegola.BoundingBox {
 }
 
 func TestMVTLayerFiltering(t *testing.T) {
+	layers := []map[string]interface{}{
+		{"name": "rl_lines", "tablename": "rail_lines"},
+		{"name": "rd_lines", "tablename": "roads_lines"},
+	}
+
 	config := map[string]interface{}{
 		"FilePath": GPKGFilePath,
+		"layers":   layers,
 	}
 	p, _ := NewProvider(config)
 
@@ -64,7 +74,7 @@ func TestMVTLayerFiltering(t *testing.T) {
 
 	// The literal coordinates are in WSG:4326 which is what the test gpkg uses,
 	//	convert to WebMercator, as that's what is expected in a tile bounding box
-	// Y-values are swapped (origin at top left, so miny is larger value,
+	// Y-values are swapped (origin at top left, so miny is larger than maxy,
 	//	@see https://github.com/terranodo/tegola/issues/189
 	// TODO: Swap them back when that's fixed.
 	bboxLeftOfLayer := points.BoundingBox{20.0, 37.9431, 23.6, 37.85}
@@ -78,7 +88,7 @@ func TestMVTLayerFiltering(t *testing.T) {
 		// roads_lines bounding box is: [23.6655, 37.85, 23.7958, 37.9431] (see gpkg_contents table)
 		TestCase{
 			ctx:          context.TODO(),
-			layerName:    "roads_lines",
+			layerName:    "rd_lines",
 			tile:         tileLeftOfLayer, // Left of layer
 			tags:         make(map[string]interface{}),
 			featureCount: 0,
@@ -87,7 +97,7 @@ func TestMVTLayerFiltering(t *testing.T) {
 		// rail lines bounding box is: [23.6828, 37.8501, 23.7549, 37.9431]
 		TestCase{
 			ctx:          context.TODO(),
-			layerName:    "rail_lines",
+			layerName:    "rl_lines",
 			tile:         tileContainsLayer, // Contains layer
 			tags:         make(map[string]interface{}),
 			featureCount: 187,
@@ -99,7 +109,6 @@ func TestMVTLayerFiltering(t *testing.T) {
 		resultTile, _ := p.MVTLayer(tc.ctx, tc.layerName, tc.tile, tc.tags)
 		featureCount := len(resultTile.Features())
 		assert.Equal(t, tc.featureCount, featureCount,
-			fmt.Sprintf("Testcase[%v] - There should be %v layers in this tile", i, tc.featureCount))
+			fmt.Sprintf("Testcase[%v] - There should be %v features in this tile", i, tc.featureCount))
 	}
-
 }

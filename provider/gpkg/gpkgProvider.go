@@ -20,9 +20,11 @@ import (
 )
 
 const (
-	ProviderName = "gpkg"
-	FilePath     = "FilePath"
-	DefaultSRID  = tegola.WebMercator
+	ProviderName           = "gpkg"
+	FilePath               = "FilePath"
+	DefaultSRID            = tegola.WebMercator
+	DEFAULT_ID_FIELDNAME   = "fid"
+	DEFAULT_GEOM_FIELDNAME = "geom"
 )
 
 type GPKGProvider struct {
@@ -35,12 +37,22 @@ type GPKGProvider struct {
 
 type GPKGLayer struct {
 	mvt.LayerInfo
-	name     string
-	geomType tegola.Geometry
-	srid     int
+	name          string
+	tablename     string
+	idFieldname   string
+	geomFieldname string
+	geomType      tegola.Geometry
+	srid          int
 	// Bounding box containing all features in the layer: [minX, minY, maxX, maxY]
 	bbox points.BoundingBox
 	sql  string
+}
+
+type GPKGGeomTableDetails struct {
+	geomFieldname string
+	geomType      tegola.Geometry
+	srid          int
+	bbox          points.BoundingBox
 }
 
 func (l GPKGLayer) Name() string              { return l.name }
@@ -100,13 +112,14 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		return nil, err
 	}
 
+	geomTablename := p.layers[layerName].tablename
+	idFieldname := p.layers[layerName].idFieldname
 	// Get all feature rows for the layer requested.
-	rtreeTablename := fmt.Sprintf("rtree_%v_geom", layerName)
+	rtreeTablename := fmt.Sprintf("rtree_%v_geom", geomTablename)
 	// l - layer table, si - spatial index
-	qtext := fmt.Sprintf("SELECT * FROM %v l JOIN %v si ON l.fid = si.id WHERE geom IS NOT NULL "+
+	qtext := fmt.Sprintf("SELECT * FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL "+
 		"AND NOT (si.minx > ? OR si.maxx < ? OR si.miny > ? OR si.maxy < ?);",
-		layerName, rtreeTablename)
-
+		geomTablename, rtreeTablename, idFieldname)
 	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
 	rows, err := db.Query(qtext, qparams...)
 	if err != nil {
@@ -228,50 +241,70 @@ type GeomColumn struct {
 	srsId          int
 }
 
-func getGeomColumnDetails(db *sql.DB) (map[string]*GeomColumn, error) {
+func gpkgGeomNameToTegolaGeometry(geomName string) (tegola.Geometry, error) {
 	// Returns a map with table name (string) as key and struct containing column details as value
-	columnDetails := make(map[string]*GeomColumn)
-
-	sqlText := "SELECT table_name, column_name, geometry_type_name, srs_id FROM gpkg_geometry_columns;"
-	rows, err := db.Query(sqlText)
-	defer rows.Close()
-
-	if err != nil {
-		util.CodeLogger.Errorf("Error in query collecting geometry column details: %v", err)
+	switch geomName {
+	case "POINT":
+		return new(basic.Point), nil
+	case "LINESTRING":
+		return new(basic.Line), nil
+	case "POLYGON":
+		return new(basic.Polygon), nil
+	case "MULTIPOINT":
+		return new(basic.MultiPoint), nil
+	case "MULTILINESTRING":
+		return new(basic.MultiLine), nil
+	case "MULTIPOLYGON":
+		return new(basic.MultiPolygon), nil
+	default:
+		err := fmt.Errorf("Unsupported gpkg geometry type: %v\n", geomName)
+		util.CodeLogger.Error(err)
 		return nil, err
 	}
-
-	for rows.Next() {
-		var tablename string
-		col := new(GeomColumn)
-		rows.Scan(&tablename, &((*col).name), &(*col).geometryType, &(*col).srsId)
-		// http://www.geopackage.org/spec/#geometry_types
-		switch col.geometryType {
-		case "POINT":
-			col.tegolaGeometry = new(basic.Point)
-		case "LINESTRING":
-			col.tegolaGeometry = new(basic.Line)
-		case "POLYGON":
-			col.tegolaGeometry = new(basic.Polygon)
-		case "MULTIPOINT":
-			col.tegolaGeometry = new(basic.MultiPoint)
-		case "MULTILINESTRING":
-			col.tegolaGeometry = new(basic.MultiLine)
-		case "MULTIPOLYGON":
-			col.tegolaGeometry = new(basic.MultiPolygon)
-		default:
-			err := fmt.Errorf("Unsupported gpkg geometry type: %v\n", col.geometryType)
-			util.CodeLogger.Error(err)
-		}
-		columnDetails[tablename] = col
-	}
-
-	return columnDetails, nil
+	err := fmt.Errorf("Execution should not leave switch block.")
+	util.CodeLogger.Fatal(err)
+	return nil, err
 }
 
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
+	util.CodeLogger.Info("GPKGProvider NewProvider() called with config: %v\n", config)
 	m := dict.M(config)
 	filepath, err := m.String("FilePath", nil)
+
+	layerConfigByName := make(map[string]map[string]interface{})
+	var layerConfigs []map[string]interface{}
+	if m["layers"] == nil {
+		layerConfigs = make([]map[string]interface{}, 0)
+	} else {
+		layerConfigs = m["layers"].([]map[string]interface{})
+	}
+
+	for _, layerConfig := range layerConfigs {
+		layerName := layerConfig["name"]
+		if layerName == nil {
+			err := fmt.Errorf("'name' is required for a feature's config.")
+			util.CodeLogger.Fatal(err)
+		}
+		if layerConfig["tablename"] == nil && layerConfig["sql"] == nil {
+			err := fmt.Errorf("Either 'tablename' or 'sql' is required for a feature's config.")
+			util.CodeLogger.Fatal(err)
+		}
+		if layerConfig["tablename"] != nil && layerConfig["sql"] != nil {
+			err := fmt.Errorf("Only one of 'tablename', 'sql' may appear in a layer's config.")
+			util.CodeLogger.Fatal(err)
+		}
+
+		configMap := make(map[string]interface{})
+		for key, value := range layerConfig {
+			if key == "name" {
+				continue
+			}
+			configMap[key] = value
+		}
+
+		layerConfigByName[layerName.(string)] = configMap
+	}
+
 	if filepath == "" || err != nil {
 		msg := fmt.Sprintf("Bad gpkg filepath: %v", filepath)
 		if err != nil {
@@ -290,7 +323,10 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 
 	p := GPKGProvider{FilePath: filepath, layers: make(map[string]GPKGLayer)}
 
-	qtext := "SELECT * FROM gpkg_contents"
+	qtext := "SELECT c.table_name, c.min_x, c.min_y, c.max_x, c.max_y, c.srs_id, " +
+		"gc.column_name, gc.geometry_type_name " +
+		"FROM gpkg_contents c JOIN gpkg_geometry_columns gc ON c.table_name == gc.table_name " +
+		"WHERE c.data_type = 'features';"
 	rows, err := db.Query(qtext)
 	if err != nil {
 		util.CodeLogger.Errorf("Error during query: %v - %v", qtext, err)
@@ -298,41 +334,55 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	}
 	defer rows.Close()
 
-	var tablename string
-	var dataType string
-	var identifier string
-	var description string
-	var lastChange string
-	var minX float64
-	var minY float64
-	var maxX float64
-	var maxY float64
+	var tablename, geomColName, geomTypeName string
+	var minX, minY, maxX, maxY float64
 	var srid int
 
-	logMsg := "gpkg_contents: "
-
-	geomColumnDetails, err := getGeomColumnDetails(db)
-	if err != nil {
-		return nil, err
-	}
-
+	geomTableDetails := make(map[string]GPKGGeomTableDetails)
 	for rows.Next() {
-		rows.Scan(&tablename, &dataType, &identifier, &description, &lastChange,
-			&minX, &minY, &maxX, &maxY, &srid)
+		rows.Scan(&tablename, &minX, &minY, &maxX, &maxY, &srid, &geomColName, &geomTypeName)
 
 		// Get layer geometry as tegola geometry instance corresponding to dataType text for table
-		layerQuery := fmt.Sprintf("SELECT * FROM %v;", tablename)
-		colDetails := geomColumnDetails[tablename]
-		bbox := [4]float64{minX, minY, maxX, maxY}
-		p.layers[tablename] = GPKGLayer{
-			name: tablename, sql: layerQuery, geomType: colDetails.tegolaGeometry, srid: srid,
-			bbox: bbox}
-
-		var logMsgPart string
-		fmt.Sprintf(logMsgPart, "(%v-%i) ", tablename, srid)
-		logMsg += logMsgPart
+		tg, err := gpkgGeomNameToTegolaGeometry(geomTypeName)
+		if err != nil {
+			util.CodeLogger.Errorf(
+				"Problem getting geometry type %v as tegola.Geometry: %v", geomTypeName, err)
+			return nil, err
+		}
+		bbox := points.BoundingBox{minX, minY, maxX, maxY}
+		geomTableDetails[tablename] = GPKGGeomTableDetails{
+			geomFieldname: geomColName, geomType: tg, srid: srid, bbox: bbox}
 	}
-	util.CodeLogger.Debug(logMsg)
+
+	for layerName, layerConfig := range layerConfigByName {
+		var l GPKGLayer
+
+		var idFieldname string
+		if layerConfig["id_fieldname"] == nil {
+			idFieldname = DEFAULT_ID_FIELDNAME // "fid"
+		} else {
+			idFieldname = layerConfig["id_fieldname"].(string)
+		}
+
+		if layerConfig["tablename"] != nil {
+			tablename := layerConfig["tablename"].(string)
+			l = GPKGLayer{
+				name:        layerName,
+				tablename:   tablename,
+				geomType:    geomTableDetails[tablename].geomType,
+				idFieldname: idFieldname,
+				srid:        geomTableDetails[tablename].srid,
+				bbox:        geomTableDetails[tablename].bbox,
+			}
+		} else {
+			// Layer from custom sql
+			l = GPKGLayer{
+				name: layerName,
+				sql:  layerConfig["sql"].(string),
+			}
+		}
+		p.layers[layerName] = l
+	}
 
 	return &p, err
 }
