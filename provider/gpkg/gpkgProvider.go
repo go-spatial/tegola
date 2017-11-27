@@ -10,10 +10,6 @@ import (
 	"github.com/terranodo/tegola/util/dict"
 	"github.com/terranodo/tegola/wkb"
 
-	_ "github.com/mattn/go-sqlite3"
-
-	"database/sql"
-
 	"bytes"
 	"context"
 	"fmt"
@@ -106,11 +102,12 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		return new(mvt.Layer), nil
 	}
 
-	util.CodeLogger.Infof("Opening gpkg at: ", filepath)
-	db, err := sql.Open("sqlite3", filepath)
+	db, err := getGpkgConnection(filepath)
 	if err != nil {
 		return nil, err
 	}
+	defer releaseGpkgConnection(filepath)
+	db.Query("SELECT * FROM road_lines;")
 
 	geomTablename := p.layers[layerName].tablename
 	idFieldname := p.layers[layerName].idFieldname
@@ -315,11 +312,12 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	}
 
 	util.CodeLogger.Debugf("Opening gpkg at: %v", filepath)
-	db, err := sql.Open("sqlite3", filepath)
+	db, err := getGpkgConnection(filepath)
 	if err != nil {
 		util.CodeLogger.Errorf("Error opening gpkg file: %v", err)
 		return nil, err
 	}
+	defer releaseGpkgConnection(filepath)
 
 	p := GPKGProvider{FilePath: filepath, layers: make(map[string]GPKGLayer)}
 

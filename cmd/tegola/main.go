@@ -57,14 +57,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Initializing logFile: ", *logFile)
-	initLogger(*logFile, *logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
-
 	//	init our maps
 	if err = initMaps(conf.Maps, providers); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("conf.Maps after initMaps(): ", conf.Maps)
 
 	if len(conf.Cache) != 0 {
 		//	init cache backends
@@ -198,11 +194,6 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider, error) {
 	var err error
 
-	for idx, prv := range providers {
-		fmt.Println("---")
-		fmt.Println("Found provider: ", idx, ": ", prv["name"])
-	}
-
 	//	holder for registered providers
 	registeredProviders := map[string]mvt.Provider{}
 
@@ -247,31 +238,4 @@ func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider,
 	}
 
 	return registeredProviders, err
-}
-
-func initLogger(cmdFile, cmdFormat, confFile, confFormat string) {
-	var err error
-	filename := cmdFile
-	format := cmdFormat
-	var file *os.File
-
-	if filename == "" {
-		filename = confFile
-	}
-	if filename == "" {
-		return
-	}
-	if format == "" {
-		format = confFormat
-	}
-
-	fmt.Println("Opening log file at: ", filename)
-	if file, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
-		log.Printf("Unable to open logfile (%v) for writing: %v", filename, err)
-		os.Exit(3)
-	}
-	server.L = &server.Logger{
-		File:   file,
-		Format: format,
-	}
 }

@@ -11,40 +11,28 @@ FilePath = "/home/jivan/gpkg/athens-osm-20170921.gpkg"
 
     [[providers.layers]]
     name = "land_polygons"
-    geometry_fieldname = "geom"
+    tablename = "land_polygons"
     id_fieldname = "fid"
 
     [[providers.layers]]
-	name = "roads_lines"
-    geometry_fieldname = "geom"
+    name = "land_polygons"
+    tablename = "land_polygons"
     id_fieldname = "fid"
 
     [[providers.layers]]
     name = "places_points"
-    geometry_fieldname = "geom"
+    tablename = "places_points"
     id_fieldname = "fid"
 
     [[providers.layers]]
     name = "buildings_polygons"
-    geometry_fieldname = "geom"
+    tablename = "buildings_polygons"
     id_fieldname = "fid"
 
 [[maps]]
 name = "athens"
 attribution = "Tegola GPKG"
-
-#center = [17.18, 38.41, 4.0]
-#center = [21.223, 37.683, 5.0]
-#center = [22.069, 37.943, 6.0]
-#center = [23.135, 37.947, 7.0]
-#center = [23.319, 37.902, 8.0]
-#center = [23.5401, 37.8966, 9.0]
-#center = [23.6287, 37.8939, 10.0]
-#center = [23.6826, 37.8961, 11.0]
 center = [23.7068, 37.8975, 12.0]
-#center = [23.7244, 37.8994, 13.0]
-#center = [23.7262, 37.8992, 14.0]
-#center = [23.7303, 37.9007, 15.0]
 
 	[[maps.layers]]
 	name = "map_land_polygons"
