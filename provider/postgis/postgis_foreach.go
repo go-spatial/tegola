@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/wkb"
 )
 
@@ -36,8 +35,8 @@ func (p *Provider) ForEachFeature(ctx context.Context, layerName string, tile te
 	}
 
 	// do a quick context check:
-	if ctx.Err() != nil {
-		return mvt.ErrCanceled
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	rows, err := p.pool.Query(sql)
@@ -51,8 +50,8 @@ func (p *Provider) ForEachFeature(ctx context.Context, layerName string, tile te
 
 	for rows.Next() {
 		// do a quick context check:
-		if ctx.Err() != nil {
-			return mvt.ErrCanceled
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 
 		//	fetch row values
@@ -63,7 +62,12 @@ func (p *Provider) ForEachFeature(ctx context.Context, layerName string, tile te
 
 		gid, geobytes, tags, err := decipherFields(ctx, plyr.GeomFieldName(), plyr.IDFieldName(), fdescs, vals)
 		if err != nil {
-			return fmt.Errorf("For layer(%v) %v", plyr.Name(), err)
+			switch err {
+			case context.Canceled:
+				return err
+			default:
+				return fmt.Errorf("For layer (%v) %v", plyr.Name(), err)
+			}
 		}
 
 		//	decode our WKB

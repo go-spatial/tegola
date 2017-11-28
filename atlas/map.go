@@ -297,14 +297,18 @@ func (m Map) Encode(ctx context.Context, tile tegola.Tile) ([]byte, error) {
 
 			//	fetch layer from data provider
 			mvtLayer, err := l.Provider.MVTLayer(ctx, l.ProviderLayerName, tile, l.DefaultTags)
-			if err == mvt.ErrCanceled {
-				return
-			}
 			if err != nil {
-				//	TODO: should we return an error to the response or just log the error?
-				//	we can't just write to the response as the waitgroup is going to write to the response as well
-				log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
-				return
+				switch err {
+				case mvt.ErrCanceled:
+					//	TODO: add debug logs
+				case context.Canceled:
+					//	TODO: add debug logs
+				default:
+					//	TODO: should we return an error to the response or just log the error?
+					//	we can't just write to the response as the waitgroup is going to write to the response as well
+					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
+					return
+				}
 			}
 
 			//	check if we have a layer name

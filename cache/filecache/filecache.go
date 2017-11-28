@@ -176,7 +176,9 @@ func (fc *Filecache) Set(key *cache.Key, val []byte) error {
 	path := filepath.Join(fc.Basepath, key.String())
 
 	//	lookup our mutex
+	fc.RLock()
 	mutex, ok := fc.Locker[key.String()]
+	fc.RUnlock()
 	if !ok {
 		fc.Lock()
 		fc.Locker[key.String()] = sync.RWMutex{}

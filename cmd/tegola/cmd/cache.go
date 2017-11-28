@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -164,18 +165,39 @@ var cacheCmd = &cobra.Command{
 						//	track how long the tile generation is taking
 						t := time.Now()
 
-						//	seed the tile
-						if err = mt.Map.SeedTile(mt.Tile); err != nil {
+						//	lookup the Map
+						m, err := atlas.GetMap(mt.MapName)
+						if err != nil {
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 						}
 
-						log.Printf("seeding map (%v) tile (%v/%v/%v) took: %v", mt.Map.Name, mt.Tile.Z, mt.Tile.X, mt.Tile.Y, time.Now().Sub(t))
+						//	log.Println("Tile Z", mt.Tile.Z)
+
+						//	filter down the layers we need for this zoom
+						m = m.DisableAllLayers().EnableLayersByZoom(mt.Tile.Z)
+
+						//	seed the tile
+						if err = m.SeedTile(mt.Tile); err != nil {
+							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
+						}
+
+						//	TODO: this is a hack to get around large arrays not being garbage collected
+						//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
+						runtime.GC()
+
+						log.Printf("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y, time.Now().Sub(t))
 
 					case "purge":
-						log.Printf("purging map (%v) tile (%v/%v/%v)", mt.Map.Name, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+						log.Printf("purging map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+
+						//	lookup the Map
+						m, err := atlas.GetMap(mt.MapName)
+						if err != nil {
+							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
+						}
 
 						//	purge the tile
-						if err = mt.Map.PurgeTile(mt.Tile); err != nil {
+						if err = m.PurgeTile(mt.Tile); err != nil {
 							log.Fatalf("error purging tile (%+v): %v", mt.Tile, err)
 						}
 					}
@@ -195,7 +217,7 @@ var cacheCmd = &cobra.Command{
 			bottomRight := tegola.Tile{Z: zooms[i], Long: bounds[2], Lat: bounds[3]}
 			maxx, miny = bottomRight.Deg2Num()
 
-			log.Printf("X: %v - %v, Y: %v - %v", minx, maxx, miny, maxy)
+			//	log.Printf("X: %v - %v, Y: %v - %v", minx, maxx, miny, maxy)
 
 			//	range rows
 			for x := minx; x <= maxx; x++ {
@@ -204,9 +226,11 @@ var cacheCmd = &cobra.Command{
 					//	range maps
 					for m := range maps {
 						mapTile := MapTile{
-							Map:  maps[m],
-							Tile: tegola.Tile{Z: zooms[i], X: x, Y: y},
+							MapName: maps[m].Name,
+							Tile:    tegola.Tile{Z: zooms[i], X: x, Y: y},
 						}
+
+						//	log.Printf("mapTile %v/%v/%v", mapTile.Tile.Z, mapTile.Tile.X, mapTile.Tile.Y)
 
 						tiler <- mapTile
 					}
@@ -223,8 +247,8 @@ var cacheCmd = &cobra.Command{
 }
 
 type MapTile struct {
-	Map  atlas.Map
-	Tile tegola.Tile
+	MapName string
+	Tile    tegola.Tile
 }
 
 //	parseTileString converts a Z/X/Y formatted string into a tegola tile

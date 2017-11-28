@@ -74,8 +74,8 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 	valmap := valMapToVTileValue(vmap)
 	var features = make([]*vectorTile.Tile_Feature, 0, len(l.features))
 	for _, f := range l.features {
-		if ctx.Err() != nil {
-			return nil, context.Canceled
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
 		simplify := simplifyGeometries && !l.DontSimplify
 		if l.MaxSimplificationZoom == 0 {
@@ -86,7 +86,12 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 
 		vtf, err := f.VTileFeature(ctx, kmap, vmap, extent, l.Extent(), simplify)
 		if err != nil {
-			return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
+			switch err {
+			case context.Canceled:
+				return nil, err
+			default:
+				return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
+			}
 		}
 		if vtf != nil {
 			features = append(features, vtf)
