@@ -589,7 +589,6 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 		ptmap := make(map[maths.Pt]int)
 		ptcounter := make(map[maths.Pt]int)
 		walkedRings := [][2]int{[2]int{c, r}}
-		walkedPts := []string{}
 		for {
 			etime := time.Now()
 			elapsed := etime.Sub(stime)
@@ -601,7 +600,6 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 				panic("Took too long")
 			}
 			if ptcounter[pt] > 5 {
-				log.Println("Walked Pts:", walkedPts)
 				log.Println("Col1:", c1.String())
 				log.Println("Col2:", c2.String())
 				log.Println("On ring:", ccoli, cri)
@@ -619,7 +617,6 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 				panic("Inif loop?")
 			}
 
-			walkedPts = append(walkedPts, fmt.Sprintln(pt))
 			if idx, ok := ptmap[pt]; ok {
 				// Need to remove the bubble.
 				// need to delete the points from the ptmap first.
@@ -659,15 +656,6 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 				//log.Println("Marking Ring as seen", ccoli, idx)
 				seenRings[[2]int{ccoli, idx}] = true
 				walkedRings = append(walkedRings, [2]int{ccoli, idx})
-				walkedPts = append(walkedPts,
-					fmt.Sprintf("Jumping to Col: %v Ring %v, Pt[%v] %v -- because of %v : %v\n",
-						ccoli,
-						idx,
-						ptid,
-						cols[ccoli].Rings[cri].Points[ptid],
-						pt, npt,
-					),
-				)
 				cols[ccoli].Rings[cri].BBox()
 				// don't continue searching.
 				// Let's check the other column real quick with the new edge.
@@ -698,15 +686,6 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 					//log.Println("Marking Ring as seen", ccoli, idx)
 					seenRings[[2]int{ccoli, idx}] = true
 					walkedRings = append(walkedRings, [2]int{ccoli, idx})
-					walkedPts = append(walkedPts,
-						fmt.Sprintf("Jumping to Col: %v Ring %v, Pt[%v] %v -- because of %v : %v\n",
-							ccoli,
-							idx,
-							ptid,
-							cols[ccoli].Rings[cri].Points[ptid],
-							pt, npt,
-						),
-					)
 					cols[ccoli].Rings[cri].BBox()
 					if nptid >= len(cols[ccoli].Rings[cri].Points) {
 						nptid = 0
