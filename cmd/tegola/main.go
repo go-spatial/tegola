@@ -239,3 +239,30 @@ func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider,
 
 	return registeredProviders, err
 }
+
+func initLogger(cmdFile, cmdFormat, confFile, confFormat string) {
+	var err error
+	filename := cmdFile
+	format := cmdFormat
+	var file *os.File
+
+	if filename == "" {
+		filename = confFile
+	}
+	if filename == "" {
+		return
+	}
+	if format == "" {
+		format = confFormat
+	}
+
+	fmt.Println("Opening log file at: ", filename)
+	if file, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
+		log.Printf("Unable to open logfile (%v) for writing: %v", filename, err)
+		os.Exit(3)
+	}
+	server.L = &server.Logger{
+		File:   file,
+		Format: format,
+	}
+}

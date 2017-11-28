@@ -13,16 +13,13 @@ import (
 )
 
 const (
-	// How long after a database is last requested it should be considered for closing (in seconds).
-	DEFAULT_CLOSE_AGE = 5 * 60
+	// How long after a database is last requested it should be considered for closing (in nanoseconds).
+	// 5 minutes
+	DEFAULT_CLOSE_AGE = 5 * 60 * 1000000000
 )
 
-var closeAge int
-
-func overrideCloseAge(newAge) {
-	// This function is primarily for testing, so tests don't have to wait DEFAULT_CLOSE_AGE.
-	closeAge = newAge
-}
+var closeAge int64    // nanoseconds
+var resendSignal bool // This can be set to false by tests to prevent a signal from being resent.
 
 // Maps a gpkg filename to a GpkgConnectionPool
 var gpkgPoolRegistry map[string]*GpkgConnectionPool
@@ -30,6 +27,7 @@ var gpkgPoolRegistryMutex sync.Mutex
 
 func init() {
 	closeAge = DEFAULT_CLOSE_AGE
+	resendSignal = true
 	gpkgPoolRegistry = make(map[string]*GpkgConnectionPool, 10)
 
 	// This sets up cleanup to close any open database connections when the program is killed.
@@ -41,23 +39,25 @@ func init() {
 		s := <-sigs
 		util.CodeLogger.Infof("Signal received: %v", s)
 
-		// Program is exiting, close db connections regardless of wait group status.
-		// Don't unlock registry or connection pools, as we don't want any further use before exit.
+		// Program is exiting, close db connections regardless of wait group status & reset registry.
 		gpkgPoolRegistryMutex.Lock()
-		for _, conn := range gpkgPoolRegistry {
+		for filepath, conn := range gpkgPoolRegistry {
 			conn.mutex.Lock()
 			if conn.db != nil {
 				util.CodeLogger.Infof("Closing gpkg db at: %v", conn.filepath)
 				conn.db.Close()
-				conn.db = nil
+				delete(gpkgPoolRegistry, filepath)
 			}
 		}
+		gpkgPoolRegistryMutex.Unlock()
 
 		// Undo notify so signal has normal effect & resend.
-		signal.Reset(syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT)
-		p, err := os.FindProcess(os.Getpid())
-		if err == nil {
-			p.Signal(s)
+		signal.Reset(syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
+		if resendSignal {
+			p, err := os.FindProcess(os.Getpid())
+			if err == nil {
+				p.Signal(s)
+			}
 		}
 	}()
 }
@@ -101,7 +101,7 @@ func getGpkgConnection(filepath string) (db *sql.DB, err error) {
 		db = conn.db
 		conn.shareCount++
 	}
-	conn.lastRequested = time.Now().Unix()
+	conn.lastRequested = time.Now().UnixNano()
 	conn.mutex.Unlock()
 
 	go runOldConnectionCheck()
@@ -125,12 +125,12 @@ func runOldConnectionCheck() {
 func closeOldConnections() {
 	// This ensures this routine will run again after completing
 	defer runOldConnectionCheck()
-
 	time.Sleep(time.Duration(closeAge) * time.Nanosecond)
 
-	currentTime := time.Now().Unix()
+	currentTime := time.Now().UnixNano()
 	gpkgPoolRegistryMutex.Lock()
 	for _, conn := range gpkgPoolRegistry {
+
 		if currentTime-conn.lastRequested > closeAge {
 			go func(conn *GpkgConnectionPool) {
 				closeConnection(conn)
@@ -148,7 +148,7 @@ func closeConnection(conn *GpkgConnectionPool) {
 				util.CodeLogger.Warnf("Invalid GpkgConnectionPool.shareCount for %v: %v",
 					conn.filepath, conn.shareCount)
 			}
-			util.CodeLogger.Infof("Closing GPKG unused in %v seconds: %v", closeAge, conn.filepath)
+			util.CodeLogger.Infof("Closing GPKG unused in %f nanoseconds: %v", float32(closeAge)/1000000000.0, conn.filepath)
 			conn.db.Close()
 			conn.db = nil
 		}
