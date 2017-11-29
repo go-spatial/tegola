@@ -1,3 +1,6 @@
+## 0.4.2 (2017-11-28)
+- Fixed: Performance affected by unused log statements (#197, @remster)
+
 ## 0.4.1 (2017-11-21)
 
 - Fixed: regression in providers/postgis. EXECUTE_SQL environment debug was dropped.
