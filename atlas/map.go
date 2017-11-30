@@ -3,7 +3,6 @@ package atlas
 import (
 	"context"
 	"log"
-	"math"
 	"strings"
 	"sync"
 
@@ -11,7 +10,6 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/provider/debug"
 )
@@ -25,6 +23,7 @@ func NewWGS84Map(name string) Map {
 		Name: name,
 		//	default bounds
 		Bounds: [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+		//	default debug layers
 		Layers: []Layer{
 			{
 				Name:              debug.LayerDebugTileOutline,
@@ -45,65 +44,8 @@ func NewWGS84Map(name string) Map {
 				MaxZoom:           MaxZoom,
 			},
 		},
-		TileWidth:  256,
-		TileHeight: 256,
-		SRID:       tegola.WGS84,
-		Resolutions: []float64{
-			0.703125000000000,
-			0.351562500000000,
-			0.175781250000000,
-			8.78906250000000e-2,
-			4.39453125000000e-2,
-			2.19726562500000e-2,
-			1.09863281250000e-2,
-			5.49316406250000e-3,
-			2.74658203125000e-3,
-			1.37329101562500e-3,
-			6.86645507812500e-4,
-			3.43322753906250e-4,
-			1.71661376953125e-4,
-			8.58306884765625e-5,
-			4.29153442382812e-5,
-			2.14576721191406e-5,
-			1.07288360595703e-5,
-			5.36441802978516e-6,
-		},
+		SRID: tegola.WGS84,
 	}
-}
-
-func NewWebMercatorMap(name string) Map {
-	//	setup a debug provider
-	debugProvider, _ := debug.NewProvider(map[string]interface{}{})
-
-	return Map{
-		Name:   name,
-		Bounds: [4]float64{-20026376.39, -20048966.10, 20026376.39, 20048966.10},
-		Layers: []Layer{
-			{
-				Name:              debug.LayerDebugTileOutline,
-				ProviderLayerName: debug.LayerDebugTileOutline,
-				Provider:          debugProvider,
-				GeomType:          basic.Line{},
-				Disabled:          true,
-				MinZoom:           0,
-				MaxZoom:           MaxZoom,
-			},
-			{
-				Name:              debug.LayerDebugTileCenter,
-				ProviderLayerName: debug.LayerDebugTileCenter,
-				Provider:          debugProvider,
-				GeomType:          basic.Point{},
-				Disabled:          true,
-				MinZoom:           0,
-				MaxZoom:           MaxZoom,
-			},
-		},
-		TileWidth:   256,
-		TileHeight:  256,
-		SRID:        tegola.WebMercator,
-		Resolutions: []float64{},
-	}
-
 }
 
 type Map struct {
@@ -120,12 +62,7 @@ type Map struct {
 	Center [3]float64
 	Layers []Layer
 
-	Resolutions []float64
-
 	SRID int
-
-	TileWidth  float64
-	TileHeight float64
 }
 
 func (m Map) DisableAllLayers() Map {
@@ -227,48 +164,6 @@ func (m Map) EnableLayersByName(names ...string) Map {
 	return m
 }
 
-func (m Map) SeedTile(tile tegola.Tile) error {
-	b, err := m.Encode(context.Background(), tile)
-	if err != nil {
-		return err
-	}
-
-	//	TODO: should we support cache on individual maps?
-	//	TODO: the DefaultAtlas is not necessarly the correct instance to fetch the cache from
-	c := DefaultAtlas.GetCache()
-	if c == nil {
-		return ErrMissingCache
-	}
-
-	//	cache key
-	key := cache.Key{
-		MapName: m.Name,
-		Z:       tile.Z,
-		X:       tile.X,
-		Y:       tile.Y,
-	}
-
-	return c.Set(&key, b)
-}
-
-func (m Map) PurgeTile(tile tegola.Tile) error {
-	//	TODO: the DefaultAtlas is not necessarly the correct instance to fetch the cache from
-	c := DefaultAtlas.GetCache()
-	if c == nil {
-		return ErrMissingCache
-	}
-
-	//	cache key
-	key := cache.Key{
-		MapName: m.Name,
-		Z:       tile.Z,
-		X:       tile.X,
-		Y:       tile.Y,
-	}
-
-	return c.Purge(&key)
-}
-
 //	TODO: support for max zoom
 func (m Map) Encode(ctx context.Context, tile tegola.Tile) ([]byte, error) {
 	//	generate a tile
@@ -342,84 +237,4 @@ func (m Map) Encode(ctx context.Context, tile tegola.Tile) ([]byte, error) {
 
 	//	encode the tile
 	return proto.Marshal(vtile)
-}
-
-//	credit: TileCache
-//	https://github.com/OSGeo/tilecache/
-func (m *Map) ClosestCell(zoom int, minx, miny float64) (z, x, y int) {
-	res := m.Resolutions[zoom]
-
-	maxx := minx + m.TileWidth*res
-	maxy := miny + m.TileHeight*res
-
-	return m.Cell(minx, miny, maxx, maxy)
-}
-
-func (m *Map) Cell(minx, miny, maxx, maxy float64) (z, x, y int) {
-
-	res := m.Resolution(minx, miny, maxx, maxy)
-	z = m.ClosestLevel(res)
-	res = m.Resolutions[z]
-
-	x0 := (minx - m.Bounds[0]) / (res * m.TileWidth)
-	y0 := (miny - m.Bounds[1]) / (res * m.TileHeight)
-
-	x = round(x0)
-	y = round(y0)
-
-	return
-}
-
-func (m *Map) Resolution(minx, miny, maxx, maxy float64) float64 {
-	v1 := (maxx - minx) / m.TileWidth
-	v2 := (maxy - miny) / m.TileHeight
-
-	return math.Max(v1, v2)
-}
-
-//	ClosestLevel find the closest zoom from a provided resolution
-func (m *Map) ClosestLevel(res float64) int {
-	var z int
-	diff := math.MaxFloat64
-
-	for i := 0; i <= MaxZoom; i++ {
-		r := math.Abs(m.Resolutions[i] - res)
-
-		if diff > r {
-			diff = r
-			z = i
-			continue
-		}
-		break
-	}
-
-	return z
-}
-
-func (m *Map) Level(res float64) int {
-	var z int
-	maxDiff := res / math.Max(m.TileWidth, m.TileHeight)
-
-	for i := 0; i <= MaxZoom; i++ {
-		r := math.Abs(m.Resolutions[i] - res)
-
-		if r < maxDiff {
-			res = m.Resolutions[i]
-			z = i
-			continue
-		}
-		break
-	}
-
-	return z
-}
-
-func round(f float64) int {
-	if f < -0.5 {
-		return int(f - 0.5)
-	}
-	if f > 0.5 {
-		return int(f + 0.5)
-	}
-	return 0
 }

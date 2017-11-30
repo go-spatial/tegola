@@ -5,7 +5,7 @@ port = ":8080"
 type="file"
 basepath="/tmp/tegola-cache-test"
 
-#	natural earth
+#	natural earth v4
 [[providers]]
 name = "ne"
 type = "postgis"
@@ -63,18 +63,6 @@ password = ""
 	id_fieldname = "ogc_fid"
 	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name FROM ne_10m_admin_1_states_provinces_lines WHERE wkb_geometry && !BBOX!"
 
-	[[providers.layers]]
-	name = "admin_label_points_3-5"
-	geometry_fieldname = "geometry"
-	id_fieldname = "ogc_fid"
-	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, sr_br_name FROM ne_10m_admin_0_label_points WHERE wkb_geometry && !BBOX!"
-
-	[[providers.layers]]
-	name = "admin_label_points_6-20"
-	geometry_fieldname = "geometry"
-	id_fieldname = "ogc_fid"
-	sql = "SELECT ST_AsBinary(wkb_geometry) AS geometry, ogc_fid, scalerank, name, adm0_sr, datarank FROM ne_10m_admin_1_label_points WHERE wkb_geometry && !BBOX!"
-
 [[maps]]
 name = "natural_earth"
 attribution = "Tegola OSM" # map attribution
@@ -119,15 +107,3 @@ center = [-117.2228097, 32.8363159, 6.0] # optional center value. part of the Ti
 	provider_layer = "ne.admin_states_provinces_lines_5-6"
 	min_zoom = 5
 	max_zoom = 6
-
-	[[maps.layers]]
-	name = "admin_label_points"
-	provider_layer = "ne.admin_label_points_3-5"
-	min_zoom = 3
-	max_zoom = 5
-
-	[[maps.layers]]
-	name = "admin_label_points"
-	provider_layer = "ne.admin_label_points_6-20"
-	min_zoom = 6
-	max_zoom = 20

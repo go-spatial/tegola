@@ -13,6 +13,7 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/maths/webmercator"
 )
 
@@ -29,6 +30,8 @@ var (
 	cacheBounds string
 	//	the amount of concurrency to use. defaults to the number of CPUs on the machine
 	cacheConcurrency int
+	//	cache overwrite
+	cacheOverwrite bool
 )
 
 var cacheCmd = &cobra.Command{
@@ -101,6 +104,7 @@ var cacheCmd = &cobra.Command{
 			}
 			//	use the tile bounds as the bounds for the job.
 			//	the grid flips between web mercator and WGS84 which is why we use must use lat from one point and lon from the other
+			//	TODO: this smells funny. Investigate why the grid is flipping - arolek
 			bounds[0] = ul[0]
 			bounds[1] = lr[1]
 
@@ -140,10 +144,6 @@ var cacheCmd = &cobra.Command{
 
 		}
 
-		log.Println("bounds", bounds)
-		log.Println("zooms", zooms)
-		log.Println("concurrency", cacheConcurrency)
-
 		//	setup a waitgroup
 		var wg sync.WaitGroup
 
@@ -176,8 +176,36 @@ var cacheCmd = &cobra.Command{
 						//	filter down the layers we need for this zoom
 						m = m.DisableAllLayers().EnableLayersByZoom(mt.Tile.Z)
 
+						//	check if overwriting the cache is not ok
+						if !cacheOverwrite {
+							//	lookup our cache
+							c := atlas.GetCache()
+							if c == nil {
+								log.Fatalf("error fetching cache: %v", err)
+							}
+
+							//	cache key
+							key := cache.Key{
+								MapName: mt.MapName,
+								Z:       mt.Tile.Z,
+								X:       mt.Tile.X,
+								Y:       mt.Tile.Y,
+							}
+
+							//	read the tile from the cache
+							_, hit, err := c.Get(&key)
+							if err != nil {
+								log.Fatal("error reading from cache: %v", err)
+							}
+							//	if we have a cache hit, then skip processing this tile
+							if hit {
+								log.Printf("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+								continue
+							}
+						}
+
 						//	seed the tile
-						if err = m.SeedTile(mt.Tile); err != nil {
+						if err = atlas.SeedMapTile(m, mt.Tile); err != nil {
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 						}
 
@@ -197,7 +225,7 @@ var cacheCmd = &cobra.Command{
 						}
 
 						//	purge the tile
-						if err = m.PurgeTile(mt.Tile); err != nil {
+						if err = atlas.PurgeMapTile(m, mt.Tile); err != nil {
 							log.Fatalf("error purging tile (%+v): %v", mt.Tile, err)
 						}
 					}
@@ -217,8 +245,6 @@ var cacheCmd = &cobra.Command{
 			bottomRight := tegola.Tile{Z: zooms[i], Long: bounds[2], Lat: bounds[3]}
 			maxx, miny = bottomRight.Deg2Num()
 
-			//	log.Printf("X: %v - %v, Y: %v - %v", minx, maxx, miny, maxy)
-
 			//	range rows
 			for x := minx; x <= maxx; x++ {
 				//	range columns
@@ -229,8 +255,6 @@ var cacheCmd = &cobra.Command{
 							MapName: maps[m].Name,
 							Tile:    tegola.Tile{Z: zooms[i], X: x, Y: y},
 						}
-
-						//	log.Printf("mapTile %v/%v/%v", mapTile.Tile.Z, mapTile.Tile.X, mapTile.Tile.Y)
 
 						tiler <- mapTile
 					}

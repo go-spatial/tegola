@@ -43,7 +43,7 @@ func init() {
 	cacheCmd.Flags().UintVarP(&cacheMaxZoom, "maxzoom", "", 0, "max zoom to seed cache to")
 	cacheCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
 	cacheCmd.Flags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
-	//cacheSeedCmd.Flags().BoolVarP(&cacheMaxZoom, "overwrite", "", false, "overwrite the cache if a tile already exists")
+	cacheCmd.Flags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists")
 
 	RootCmd.AddCommand(cacheCmd)
 
