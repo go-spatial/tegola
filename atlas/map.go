@@ -22,7 +22,7 @@ func NewWGS84Map(name string) Map {
 	return Map{
 		Name: name,
 		//	default bounds
-		Bounds: [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+		Bounds: tegola.WGS84Bounds,
 		//	default debug layers
 		Layers: []Layer{
 			{
@@ -121,7 +121,7 @@ func (m Map) DisableDebugLayers() Map {
 	return m
 }
 
-//	FilterByZoom returns layers that that are to be rendered between a min and max zoom
+//	EnableLayersByZoom returns layers that that are to be rendered between a min and max zoom
 func (m Map) EnableLayersByZoom(zoom int) Map {
 	//	make an explict copy of the layers
 	layers := make([]Layer, len(m.Layers))
@@ -202,8 +202,8 @@ func (m Map) Encode(ctx context.Context, tile tegola.Tile) ([]byte, error) {
 					//	TODO: should we return an error to the response or just log the error?
 					//	we can't just write to the response as the waitgroup is going to write to the response as well
 					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
-					return
 				}
+				return
 			}
 
 			//	check if we have a layer name

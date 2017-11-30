@@ -24,7 +24,8 @@ func TileCacheHandler(next http.Handler) http.Handler {
 		}
 
 		//	parse our URI into a cache key structure (pop off the "maps/" prefix)
-		key, err := cache.ParseKey(r.URL.Path[len("maps/"):])
+		//	5 is the value of len("maps/")
+		key, err := cache.ParseKey(r.URL.Path[5:])
 		if err != nil {
 			log.Println("cache middleware: ParseKey err: %v", err)
 			next.ServeHTTP(w, r)
