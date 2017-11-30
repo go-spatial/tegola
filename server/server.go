@@ -2,12 +2,11 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/terranodo/tegola/cache"
+	"github.com/terranodo/tegola/atlas"
 	_ "github.com/terranodo/tegola/cache/filecache"
 )
 
@@ -15,8 +14,6 @@ const (
 	//	MaxTileSize is 500k. Currently just throws a warning when tile
 	//	is larger than MaxTileSize
 	MaxTileSize = 500000
-	//	MaxZoom will not render tile beyond this zoom level
-	MaxZoom = 20
 )
 
 var (
@@ -24,28 +21,14 @@ var (
 	Version string
 	//	configurable via the tegola config.toml file
 	HostName string
-	//	cache interface to use
-	Cache cache.Interface
+	//	reference to the version of atlas to work with
+	Atlas *atlas.Atlas
 )
-
-//	incoming requests are associated with a map
-var maps = map[string]Map{}
-
-//	RegisterMap associates layers with map names
-func RegisterMap(m Map) error {
-	//	check if our map is already registered
-	if _, ok := maps[m.Name]; ok {
-		return fmt.Errorf("map (%v) is alraedy registered", m.Name)
-	}
-
-	//	associate our layers with a map
-	maps[m.Name] = m
-
-	return nil
-}
 
 //	Start starts the tile server binding to the provided port
 func Start(port string) {
+	Atlas = atlas.DefaultAtlas
+
 	//	notify the user the server is starting
 	log.Printf("Starting tegola server on port %v", port)
 

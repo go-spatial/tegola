@@ -1,11 +1,10 @@
 package server_test
 
 import (
-	"log"
-
 	"context"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/server"
@@ -16,6 +15,12 @@ const (
 	httpPort       = ":8080"
 	serverVersion  = "0.4.0"
 	serverHostName = "tegola.io"
+)
+
+var (
+	testMapName        = "test-map"
+	testMapAttribution = "test attribution"
+	testMapCenter      = [3]float64{1.0, 2.0, 3.0}
 )
 
 type testMVTProvider struct{}
@@ -36,7 +41,7 @@ func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
 	}, nil
 }
 
-var testLayer1 = server.Layer{
+var testLayer1 = atlas.Layer{
 	Name:              "test-layer",
 	ProviderLayerName: "test-layer-1",
 	MinZoom:           4,
@@ -48,7 +53,7 @@ var testLayer1 = server.Layer{
 	},
 }
 
-var testLayer2 = server.Layer{
+var testLayer2 = atlas.Layer{
 	Name:              "test-layer-2-name",
 	ProviderLayerName: "test-layer-2-provider-layer-name",
 	MinZoom:           10,
@@ -60,7 +65,7 @@ var testLayer2 = server.Layer{
 	},
 }
 
-var testLayer3 = server.Layer{
+var testLayer3 = atlas.Layer{
 	Name:              "test-layer",
 	ProviderLayerName: "test-layer-3",
 	MinZoom:           10,
@@ -68,17 +73,6 @@ var testLayer3 = server.Layer{
 	Provider:          &testMVTProvider{},
 	GeomType:          basic.Point{},
 	DefaultTags:       map[string]interface{}{},
-}
-
-var testMap = server.Map{
-	Name:        "test-map",
-	Attribution: "test attribution",
-	Center:      [3]float64{1.0, 2.0, 3.0},
-	Layers: []server.Layer{
-		testLayer1,
-		testLayer2,
-		testLayer3,
-	},
 }
 
 type layer struct {
@@ -103,8 +97,15 @@ func init() {
 	server.Version = serverVersion
 	server.HostName = serverHostName
 
-	//	register a map with layers
-	if err := server.RegisterMap(testMap); err != nil {
-		log.Fatal("Failed to register test map")
-	}
+	testMap := atlas.NewWGS84Map(testMapName)
+	testMap.Attribution = testMapAttribution
+	testMap.Center = testMapCenter
+	testMap.Layers = append(testMap.Layers, []atlas.Layer{
+		testLayer1,
+		testLayer2,
+		testLayer3,
+	}...)
+
+	//	register a map with atlas
+	atlas.AddMap(testMap)
 }

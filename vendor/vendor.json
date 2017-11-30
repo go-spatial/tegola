@@ -87,6 +87,18 @@
 			"revisionTime": "2017-05-09T09:25:25Z"
 		},
 		{
+			"checksumSHA1": "Egby8wsHgh+rW7DphTy/b1dN2cs=",
+			"path": "github.com/spf13/cobra",
+			"revision": "b3426bbac13d7110c4d8fce456ea0012f79f3b8b",
+			"revisionTime": "2017-10-29T21:09:45Z"
+		},
+		{
+			"checksumSHA1": "Kby2HCu2WOsAHbS7x6zgWo5Ic4Q=",
+			"path": "github.com/spf13/pflag",
+			"revision": "97afa5e7ca8a08a383cb259e06636b5e2cc7897f",
+			"revisionTime": "2017-10-20T11:06:17Z"
+		},
+		{
 			"checksumSHA1": "a9pyC/XvFSy6/wgxMt9qepohioQ=",
 			"path": "gopkg.in/go-playground/colors.v1",
 			"revision": "b53ecfb396233c24c77594af27dd0f5731fafaf1",

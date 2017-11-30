@@ -1,14 +1,14 @@
-package server_test
+package atlas_test
 
 import (
 	"testing"
 
-	"github.com/terranodo/tegola/server"
+	"github.com/terranodo/tegola/atlas"
 )
 
 func TestLayerMVTName(t *testing.T) {
 	testcases := []struct {
-		layer    server.Layer
+		layer    atlas.Layer
 		expected string
 	}{
 		{

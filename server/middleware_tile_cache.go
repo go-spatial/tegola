@@ -16,14 +16,16 @@ func TileCacheHandler(next http.Handler) http.Handler {
 		var err error
 
 		//	check if a cache backend exists
-		if Cache == nil {
+		cacher := Atlas.GetCache()
+		if cacher == nil {
 			//	nope. move on
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		//	parse our URI into a cache key structure
-		key, err := cache.ParseKey(r.URL.Path)
+		//	parse our URI into a cache key structure (pop off the "maps/" prefix)
+		//	5 is the value of len("maps/")
+		key, err := cache.ParseKey(r.URL.Path[5:])
 		if err != nil {
 			log.Println("cache middleware: ParseKey err: %v", err)
 			next.ServeHTTP(w, r)
@@ -31,7 +33,7 @@ func TileCacheHandler(next http.Handler) http.Handler {
 		}
 
 		//	use the URL path as the key
-		cachedTile, hit, err := Cache.Get(key)
+		cachedTile, hit, err := cacher.Get(key)
 		if err != nil {
 			log.Printf("cache middleware: error reading from cache: %v", err)
 			next.ServeHTTP(w, r)
@@ -52,7 +54,7 @@ func TileCacheHandler(next http.Handler) http.Handler {
 				return
 			}
 
-			if err := Cache.Set(key, buff.Bytes()); err != nil {
+			if err := cacher.Set(key, buff.Bytes()); err != nil {
 				log.Println("cache response writer err: %v", err)
 			}
 			return

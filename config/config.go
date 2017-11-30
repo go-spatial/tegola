@@ -40,11 +40,11 @@ func (e ErrOverlappingLayerZooms) Error() string {
 	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
 }
 
-// A Config represents the a Tegola Config file.
+// Config represents a tegola config file.
 type Config struct {
 	// LocationName is the file name or http server that the config was read from.
-	// If this is "", it means that the location was unknown. This is the case if
-	// the Prase() function is used directly.
+	// If this is an empty string, it means that the location was unknown. This is the case if
+	// the Parse() function is used directly.
 	LocationName string
 	Webserver    Webserver              `toml:"webserver"`
 	Cache        map[string]interface{} `toml:"cache"`

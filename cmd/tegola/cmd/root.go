@@ -1,44 +1,67 @@
-//tegola server
-package main
+package cmd
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"html"
 	"log"
-	"os"
+	"runtime"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
+	_ "github.com/terranodo/tegola/provider/debug"
 	_ "github.com/terranodo/tegola/provider/postgis"
-	"github.com/terranodo/tegola/server"
 )
 
 var (
-	//	set at buildtime via the CI
+	configFile string
+	//	set at build time via the CI
 	Version = "version not set"
+	//	parsed config
+	conf config.Config
 )
 
-func main() {
+func init() {
+	//	root
+	RootCmd.PersistentFlags().StringVar(&configFile, "config", "config.toml", "path to config file")
+
+	//	server
+	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
+	RootCmd.AddCommand(serverCmd)
+
+	//	cache seed / purge
+	cacheCmd.Flags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
+	cacheCmd.Flags().StringVarP(&cacheZXY, "zxy", "", "", "tile in z/x/y format")
+	cacheCmd.Flags().UintVarP(&cacheMinZoom, "minzoom", "", 0, "min zoom to seed cache from")
+	cacheCmd.Flags().UintVarP(&cacheMaxZoom, "maxzoom", "", 0, "max zoom to seed cache to")
+	cacheCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
+	cacheCmd.Flags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
+	cacheCmd.Flags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists")
+
+	RootCmd.AddCommand(cacheCmd)
+
+	//	version
+	RootCmd.AddCommand(versionCmd)
+}
+
+var RootCmd = &cobra.Command{
+	Use:   "tegola",
+	Short: "tegola is a vector tile server",
+	Long: fmt.Sprintf(`tegola is a vector tile server
+Version: %v`, Version),
+}
+
+func initConfig() {
 	var err error
 
-	//	parse our command line flags
-	flag.Parse()
-
-	//	if the user is looking for tegola version info, print it and exit
-	if *version {
-		fmt.Println(Version)
-		os.Exit(0)
-	}
-
-	defer setupProfiler().Stop()
-
-	conf, err := config.Load(*configFile)
+	conf, err = config.Load(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,24 +89,9 @@ func main() {
 			log.Fatal(err)
 		}
 		if cache != nil {
-			server.Cache = cache
+			atlas.SetCache(cache)
 		}
 	}
-
-	initLogger(*logFile, *logFormat, conf.Webserver.LogFile, conf.Webserver.LogFormat)
-
-	//	check config for port setting
-	//	if you set the port via the comand line it will override a port setting in the config
-	if *port == defaultHTTPPort && conf.Webserver.Port != "" {
-		port = &conf.Webserver.Port
-	}
-
-	//	set our server version
-	server.Version = Version
-	server.HostName = conf.Webserver.HostName
-
-	//	start our webserver
-	server.Start(*port)
 }
 
 func initCache(config map[string]interface{}) (cache.Interface, error) {
@@ -107,13 +115,12 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 
 	//	iterate our maps
 	for _, m := range maps {
+		newMap := atlas.NewWGS84Map(m.Name)
+		newMap.Attribution = html.EscapeString(m.Attribution)
+		newMap.Center = m.Center
 
-		serverMap := server.NewMap(m.Name)
-		//	sanitize the provided attirbution string
-		serverMap.Attribution = html.EscapeString(m.Attribution)
-		serverMap.Center = m.Center
 		if len(m.Bounds) == 4 {
-			serverMap.Bounds = [4]float64{m.Bounds[0], m.Bounds[1], m.Bounds[2], m.Bounds[3]}
+			newMap.Bounds = [4]float64{m.Bounds[0], m.Bounds[1], m.Bounds[2], m.Bounds[3]}
 		}
 
 		//	iterate our layers
@@ -163,7 +170,7 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 			}
 
 			//	add our layer to our layers slice
-			serverMap.Layers = append(serverMap.Layers, server.Layer{
+			newMap.Layers = append(newMap.Layers, atlas.Layer{
 				Name:              l.Name,
 				ProviderLayerName: providerLayer[1],
 				MinZoom:           l.MinZoom,
@@ -175,7 +182,7 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 		}
 
 		//	register map
-		server.RegisterMap(serverMap)
+		atlas.AddMap(newMap)
 	}
 
 	return nil
@@ -228,30 +235,4 @@ func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider,
 	}
 
 	return registeredProviders, err
-}
-
-func initLogger(cmdFile, cmdFormat, confFile, confFormat string) {
-	var err error
-	filename := cmdFile
-	format := cmdFormat
-	var file *os.File
-
-	if filename == "" {
-		filename = confFile
-	}
-	if filename == "" {
-		return
-	}
-	if format == "" {
-		format = confFormat
-	}
-
-	if file, err = os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666); err != nil {
-		log.Printf("Unable to open logfile (%v) for writing: %v", filename, err)
-		os.Exit(3)
-	}
-	server.L = &server.Logger{
-		File:   file,
-		Format: format,
-	}
 }
