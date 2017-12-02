@@ -154,7 +154,7 @@ FEATURES_LOOP:
 			continue
 		}
 		for _, cf := range l.features {
-			if cf.ID != nil {
+			if cf.ID == nil {
 				continue
 			}
 			// We matched, we skip
