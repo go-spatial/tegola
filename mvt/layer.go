@@ -111,9 +111,7 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 }
 
 //Version is the version of tile spec this layer is from.
-func (*Layer) Version() int {
-	return 2
-}
+func (*Layer) Version() int { return 2 }
 
 // Extent defaults to 4096
 func (l *Layer) Extent() int {
