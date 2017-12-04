@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type Logger interface {
+type Interface interface {
 	// These all take args the same as calls to fmt.Printf()
 	Fatal(string, ...interface{})
 	Error(string, ...interface{})
@@ -17,110 +17,96 @@ type Logger interface {
 }
 
 func init() {
-	defaultLogger = &stdLogger
+	logger = standard
+	SetLogLevel(INFO)
 }
+
+type Level int
 
 // Allows the ordering of severity to be checked
 const (
-	FATAL = 60
-	ERROR = 50
-	WARN  = 40
-	INFO  = 30
-	DEBUG = 20
-	TRACE = 10
+	TRACE = Level(iota - 2)
+	DEBUG
+	INFO
+	WARN
+	ERROR
+	FATAL
 )
 
 var (
-	defaultLogger Logger
-	logLevel      int = INFO
-	logLock       sync.Mutex
-	IsError       bool = true
-	IsWarn        bool = true
-	IsInfo        bool = true
-	IsDebug       bool = false
-	IsTrace       bool = false
+	logger Interface
+	level  Level
+	lock   sync.Mutex
+	// FATAL level is never disabled
+	IsError bool
+	IsWarn  bool
+	IsInfo  bool
+	IsDebug bool
+	IsTrace bool
 )
 
-func SetLogLevel(level int) {
-	logLock.Lock()
-	switch {
-	case level <= TRACE:
-		logLevel = TRACE
-		IsError = true
-		IsWarn = true
-		IsInfo = true
-		IsDebug = true
-		IsTrace = true
-	case level <= DEBUG:
-		logLevel = DEBUG
-		IsError = true
-		IsWarn = true
-		IsInfo = true
-		IsDebug = true
-		IsTrace = false
-	case level <= INFO:
-		logLevel = INFO
-		IsError = true
-		IsWarn = true
-		IsInfo = true
-		IsDebug = false
-		IsTrace = false
-	case level <= WARN:
-		logLevel = WARN
-		IsError = true
-		IsWarn = true
-		IsInfo = false
-		IsDebug = false
-		IsTrace = false
-	case level <= ERROR:
-		logLevel = ERROR
-		IsError = true
-		IsWarn = false
-		IsInfo = false
-		IsDebug = false
-		IsTrace = false
-	default:
-		logLevel = FATAL
-		IsError = false
-		IsWarn = false
-		IsInfo = false
-		IsDebug = false
-		IsTrace = false
+func SetLogLevel(lvl Level) {
+	lock.Lock()
+	IsTrace = false
+	IsDebug = false
+	IsInfo = false
+	IsWarn = false
+	IsError = false
+	IsTrace = false
+	if lvl != TRACE && lvl != DEBUG && lvl != INFO && lvl != WARN && lvl != ERROR && lvl != FATAL {
+		lvl = INFO
 	}
-	logLock.Unlock()
+	level = lvl
+	switch {
+	case level == TRACE:
+		IsTrace = true
+		fallthrough
+	case level <= DEBUG:
+		IsDebug = true
+		fallthrough
+	case level <= INFO:
+		IsInfo = true
+		fallthrough
+	case level <= WARN:
+		IsWarn = true
+		fallthrough
+	case level <= ERROR:
+		IsError = true
+	}
+	lock.Unlock()
 }
 
 // Output format should be: "timestamp•LOG_LEVEL•filename.go•linenumber•output"
 func Fatal(format string, args ...interface{}) {
-	defaultLogger.Fatal(format, args...)
+	logger.Fatal(format, args...)
 }
 
 func Error(format string, args ...interface{}) {
 	if IsError {
-		defaultLogger.Error(format, args...)
+		logger.Error(format, args...)
 	}
 }
 
 func Warn(format string, args ...interface{}) {
 	if IsWarn {
-		defaultLogger.Warn(format, args...)
+		logger.Warn(format, args...)
 	}
 }
 
 func Info(format string, args ...interface{}) {
 	if IsInfo {
-		defaultLogger.Info(format, args...)
+		logger.Info(format, args...)
 	}
 }
 
 func Debug(format string, args ...interface{}) {
 	if IsDebug {
-		defaultLogger.Debug(format, args...)
+		logger.Debug(format, args...)
 	}
 }
 
 func Trace(format string, args ...interface{}) {
 	if IsTrace {
-		defaultLogger.Trace(format, args...)
+		logger.Trace(format, args...)
 	}
 }

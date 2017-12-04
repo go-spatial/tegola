@@ -9,56 +9,49 @@ import (
 
 func TestSetLevel(t *testing.T) {
 	// Check default level is INFO & Is* flags are set appropriately
-	if !(logLevel == INFO && IsError == true && IsWarn == true && IsInfo == true && IsDebug == false &&
-		IsTrace == false) {
+	if level != INFO || !IsError || !IsWarn || !IsInfo || IsDebug || IsTrace {
 		fmt.Println("Default level is not set as expected")
 		t.Fail()
 	}
 
 	// Check TRACE
 	SetLogLevel(TRACE)
-	if !(logLevel == TRACE && IsError == true && IsWarn == true && IsInfo == true && IsDebug == true &&
-		IsTrace == true) {
+	if level != TRACE || !IsError || !IsWarn || !IsInfo || !IsDebug || !IsTrace {
 		fmt.Println("TRACE level is not set as expected")
 		t.Fail()
 	}
 
 	// Check DEBUG
 	SetLogLevel(DEBUG)
-	if !(logLevel == DEBUG && IsError == true && IsWarn == true && IsInfo == true && IsDebug == true &&
-		IsTrace == false) {
+	if level != DEBUG || !IsError || !IsWarn || !IsInfo || !IsDebug || IsTrace {
 		fmt.Println("DEBUG level is not set as expected")
 		t.Fail()
 	}
 
 	// Check INFO
 	SetLogLevel(INFO)
-	if !(logLevel == INFO && IsError == true && IsWarn == true && IsInfo == true && IsDebug == false &&
-		IsTrace == false) {
+	if level != INFO || !IsError || !IsWarn || !IsInfo || IsDebug || IsTrace {
 		fmt.Println("INFO level is not set as expected")
 		t.Fail()
 	}
 
 	// Check WARN
 	SetLogLevel(WARN)
-	if !(logLevel == WARN && IsError == true && IsWarn == true && IsInfo == false && IsDebug == false &&
-		IsTrace == false) {
+	if level != WARN || !IsError || !IsWarn || IsInfo || IsDebug || IsTrace {
 		fmt.Println("WARN level is not set as expected")
 		t.Fail()
 	}
 
 	// Check ERROR
 	SetLogLevel(ERROR)
-	if !(logLevel == ERROR && IsError == true && IsWarn == false && IsInfo == false &&
-		IsDebug == false && IsTrace == false) {
+	if level != ERROR || !IsError || IsWarn || IsInfo || IsDebug || IsTrace {
 		fmt.Println("ERROR level is not set as expected")
 		t.Fail()
 	}
 
 	// Check FATAL
 	SetLogLevel(FATAL)
-	if !(logLevel == FATAL && IsError == false && IsWarn == false && IsInfo == false &&
-		IsDebug == false && IsTrace == false) {
+	if level != FATAL || IsError || IsWarn || IsInfo || IsDebug || IsTrace {
 		fmt.Println("FATAL level is not set as expected")
 		t.Fail()
 	}
@@ -66,8 +59,8 @@ func TestSetLevel(t *testing.T) {
 
 func TestLogging(t *testing.T) {
 	type TestCase struct {
-		loggerLevel int
-		msgLevel    int
+		loggerLevel Level
+		msgLevel    Level
 		msg         string
 		msgArgs     []interface{}
 		expected    string // regex pattern
@@ -128,7 +121,7 @@ func TestLogging(t *testing.T) {
 		},
 	}
 
-	loggerCalls := map[int]func(string, ...interface{}){
+	loggerCalls := map[Level]func(string, ...interface{}){
 		FATAL: Fatal,
 		ERROR: Error,
 		WARN:  Warn,
