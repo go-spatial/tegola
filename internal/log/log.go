@@ -57,20 +57,20 @@ func SetLogLevel(lvl Level) {
 		lvl = INFO
 	}
 	level = lvl
-	switch {
-	case level == TRACE:
+	switch level {
+	case TRACE:
 		IsTrace = true
 		fallthrough
-	case level <= DEBUG:
+	case DEBUG:
 		IsDebug = true
 		fallthrough
-	case level <= INFO:
+	case INFO:
 		IsInfo = true
 		fallthrough
-	case level <= WARN:
+	case WARN:
 		IsWarn = true
 		fallthrough
-	case level <= ERROR:
+	case ERROR:
 		IsError = true
 	}
 	lock.Unlock()
@@ -82,31 +82,36 @@ func Fatal(format string, args ...interface{}) {
 }
 
 func Error(format string, args ...interface{}) {
-	if IsError {
-		logger.Error(format, args...)
+	if !IsError {
+		return
 	}
+	logger.Error(format, args...)
 }
 
 func Warn(format string, args ...interface{}) {
-	if IsWarn {
-		logger.Warn(format, args...)
+	if !IsWarn {
+		return
 	}
+	logger.Warn(format, args...)
 }
 
 func Info(format string, args ...interface{}) {
-	if IsInfo {
-		logger.Info(format, args...)
+	if !IsInfo {
+		return
 	}
+	logger.Info(format, args...)
 }
 
 func Debug(format string, args ...interface{}) {
-	if IsDebug {
-		logger.Debug(format, args...)
+	if !IsDebug {
+		return
 	}
+	logger.Debug(format, args...)
 }
 
 func Trace(format string, args ...interface{}) {
-	if IsTrace {
-		logger.Trace(format, args...)
+	if !IsTrace {
+		return
 	}
+	logger.Trace(format, args...)
 }
