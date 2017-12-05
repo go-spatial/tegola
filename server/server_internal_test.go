@@ -30,7 +30,7 @@ func TestHostName(t *testing.T) {
 		expected string
 	}{
 		{
-			// With hostname port unset in config, expect host:port matching URL
+			// With hostname & port unset in config, expect host:port matching URL
 			request:  mockRequest(urlFromString("http://localhost:8080/capabilities")),
 			expected: "localhost:8080",
 		},

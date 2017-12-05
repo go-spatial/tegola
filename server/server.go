@@ -26,8 +26,6 @@ var (
 	Port string
 	//	reference to the version of atlas to work with
 	Atlas *atlas.Atlas
-	//	cache interface to use
-	Cache cache.Interface
 )
 
 //	Start starts the tile server binding to the provided port
@@ -80,19 +78,16 @@ func hostName(r *http.Request) string {
 		log.Printf("Multiple colons (':') in host string: %v", r.Host)
 	}
 
-	var retHost string
-	if HostName != "" {
-		retHost = HostName
-	} else {
+	retHost := HostName
+	if HostName == "" {
 		retHost = requestHostname
 	}
 
-	if Port == "none" {
-		// Don't add a port to the host.
-	} else if Port != "" {
-		retHost += ":" + Port
-	} else if requestPort != "" {
-		retHost += ":" + requestPort
+	if Port != "" && Port != "none" {
+		return retHost + Port
+	}
+	if requestPort != "" && Port != "none" {
+		return retHost + ":" + requestPort
 	}
 
 	return retHost
