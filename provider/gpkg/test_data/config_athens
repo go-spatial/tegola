@@ -1,5 +1,5 @@
 [webserver]
-port = ":8080"
+#port = "8080"
 #hostname = "tegola-cdn.terranodo.io"
 hostname = "localhost"
 
@@ -15,23 +15,27 @@ FilePath = "/home/jivan/gpkg/athens-osm-20170921.gpkg"
     id_fieldname = "fid"
 
     [[providers.layers]]
-    name = "land_polygons"
-    tablename = "land_polygons"
+	name = "roads_lines"
+	tablename = "roads_lines"
+	fields = ["highway"]
     id_fieldname = "fid"
 
     [[providers.layers]]
     name = "places_points"
     tablename = "places_points"
+	fields = ["place", "is_in"]
     id_fieldname = "fid"
 
     [[providers.layers]]
     name = "buildings_polygons"
     tablename = "buildings_polygons"
+	fields = ["building", "addr:street", "addr:housenumber"]
     id_fieldname = "fid"
 
 [[maps]]
 name = "athens"
 attribution = "Tegola GPKG"
+
 center = [23.7068, 37.8975, 12.0]
 
 	[[maps.layers]]
@@ -52,9 +56,9 @@ center = [23.7068, 37.8975, 12.0]
 	min_zoom = 4
 	max_zoom = 15
 
-# --- This layer is interesting, but will take significant time to load/render.
-#	[[maps.layers]]
-#	name = "map_buildings_polygons"
-#	provider_layer = "gpkgathens.buildings_polygons"
-#	min_zoom = 4
-#	max_zoom = 15
+	[[maps.layers]]
+	name = "map_buildings_polygons"
+	tablename = "map_buildings_polygons"
+	provider_layer = "gpkgathens.buildings_polygons"
+	min_zoom = 4
+	max_zoom = 15

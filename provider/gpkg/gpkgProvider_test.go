@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	//	"reflect"
 	"runtime"
 	"testing"
 
@@ -110,5 +111,108 @@ func TestMVTLayerFiltering(t *testing.T) {
 		featureCount := len(resultTile.Features())
 		assert.Equal(t, tc.featureCount, featureCount,
 			fmt.Sprintf("Testcase[%v] - There should be %v features in this tile", i, tc.featureCount))
+	}
+}
+
+func TestConfigFields(t *testing.T) {
+	// Checks the proper functioning of a "fields" config variable which specifies which
+	//	columns of a table should be converted to tags beyond the defaults.
+
+	// --- Get provider with tag fields specified in config.
+	layers := []map[string]interface{}{
+		{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid",
+			"fields": []string{"amenity", "religion", "tourism", "shop"}},
+		{"name": "r_lines", "tablename": "rail_lines", "id_fieldname": "fid",
+			"fields": []string{"railway", "bridge", "tunnel"}},
+		{"name": "rd_lines", "tablename": "roads_lines"},
+	}
+
+	//	expectedLayerTags := map[string][]string{
+	//		"a_points": []string{"religion", "tourism", "shop"},
+	//		"r_lines":  []string{"railway", "bridge", "tunnel"},
+	//		"rd_lines": []string{},
+	//	}
+	config := map[string]interface{}{
+		"FilePath": GPKGFilePath,
+		"layers":   layers,
+	}
+	p, err := NewProvider(config)
+	if err != nil {
+		fmt.Printf("Error creating provider: %v\n", err)
+		t.FailNow()
+	}
+
+	// --- Check that features are populated
+	ctx := context.TODO()
+	pixelExtentEntireWorld := [4]float64{-20037508, 6196014515, 20037508, -6196014515}
+	mt := &MockTile{bbox: pixelExtentEntireWorld}
+	tags := make(map[string]interface{})
+
+	type TagLookupByFeatureId map[uint64]map[string]interface{}
+	type TestCase struct {
+		lName        string
+		expectedTags TagLookupByFeatureId
+	}
+
+	testCases := []TestCase{
+		{
+			lName: "a_points",
+			expectedTags: TagLookupByFeatureId{
+				515: map[string]interface{}{
+					"amenity": "boat_rental",
+					"shop":    "yachts",
+				},
+				359: map[string]interface{}{
+					"amenity": "bench",
+					"tourism": "viewpoint",
+				},
+				273: map[string]interface{}{
+					"amenity":  "place_of_worship",
+					"religion": "christian",
+				},
+			},
+		},
+		// Check that without fields specified in config, no tags are provided.
+		{
+			lName: "rd_lines",
+			expectedTags: TagLookupByFeatureId{
+				1: map[string]interface{}{},
+			},
+		},
+	}
+
+	for i, tc := range testCases {
+		l, err := p.MVTLayer(ctx, tc.lName, mt, tags)
+		if err != nil {
+			t.Errorf("TestCase[%v]: Error in call to p.MVTLayer(%v): %v\n", i, tc.lName, err)
+		}
+
+		var testCount int
+		for _, f := range l.Features() {
+			if tc.expectedTags[*f.ID] == nil {
+				continue
+			}
+
+			expectedTagCount := len(tc.expectedTags[*f.ID])
+			actualTagCount := len(f.Tags)
+			if actualTagCount != expectedTagCount {
+				t.Errorf("Testcase[%v]: ID: %v - Expecting %v tags, got %v\n",
+					i, expectedTagCount, actualTagCount)
+			}
+
+			// Check that expected tags are present and their values match expected values.
+			for tName, tValue := range f.Tags {
+				exTagValue := tc.expectedTags[*f.ID][tName]
+				if exTagValue != nil && exTagValue != tValue {
+					t.Errorf("TestCase[%v]: ID: %v - %v: %v != %v\n", i, *f.ID, tName, tValue, exTagValue)
+				}
+			}
+			testCount++
+		}
+
+		if testCount != len(tc.expectedTags) {
+			t.Errorf("TestCase[%v]: Tested tags for %v features, was expecting to test %v\n",
+				i, testCount, len(tc.expectedTags))
+		}
 	}
 }

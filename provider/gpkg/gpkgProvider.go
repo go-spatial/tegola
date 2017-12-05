@@ -35,6 +35,8 @@ type GPKGLayer struct {
 	mvt.LayerInfo
 	name          string
 	tablename     string
+	features      []string
+	tagFieldnames []string
 	idFieldname   string
 	geomFieldname string
 	geomType      tegola.Geometry
@@ -97,8 +99,9 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	}
 
 	if layerBBox.DisjointBB(tileBBox) {
-		msg := "Layer %v is outside tile bounding box, will not load any features"
-		util.CodeLogger.Debugf(msg, layerName)
+		msg := fmt.Sprintf("Layer '%v' bounding box %v is outside tile bounding box %v, "+
+			"will not load any features", layerName, layerBBox, tileBBox)
+		util.CodeLogger.Debugf(msg)
 		return new(mvt.Layer), nil
 	}
 
@@ -107,17 +110,22 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		return nil, err
 	}
 	defer releaseGpkgConnection(filepath)
-	db.Query("SELECT * FROM road_lines;")
 
 	geomTablename := p.layers[layerName].tablename
+	geomFieldname := p.layers[layerName].geomFieldname
 	idFieldname := p.layers[layerName].idFieldname
 	// Get all feature rows for the layer requested.
 	rtreeTablename := fmt.Sprintf("rtree_%v_geom", geomTablename)
 	// l - layer table, si - spatial index
-	qtext := fmt.Sprintf("SELECT * FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL "+
+	selectClause := fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", idFieldname, geomFieldname)
+	for _, tf := range p.layers[layerName].tagFieldnames {
+		selectClause += fmt.Sprintf(", `%v`", tf)
+	}
+	qtext := fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL "+
 		"AND NOT (si.minx > ? OR si.maxx < ? OR si.miny > ? OR si.maxy < ?);",
-		geomTablename, rtreeTablename, idFieldname)
+		selectClause, geomTablename, rtreeTablename, idFieldname)
 	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
+	util.CodeLogger.Debugf("qtext: %v\nqparams: %v\n", qtext, qparams)
 	rows, err := db.Query(qtext, qparams...)
 	if err != nil {
 		util.CodeLogger.Errorf("Error during query: %v (%v)- %v", qtext, qparams, err)
@@ -156,12 +164,14 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 			util.CodeLogger.Error(err)
 			continue
 		}
-		var gid uint64
+		var fid uint64
 
 		for i := 0; i < len(cols); i++ {
 			if vals[i] == nil {
 				continue
-			} else if cols[i] == "geom" {
+			} else if cols[i] == idFieldname {
+				fid = uint64(vals[i].(int64))
+			} else if cols[i] == geomFieldname {
 				util.CodeLogger.Debugf("Doing gpkg geometry extraction...", vals[i])
 				var h GeoPackageBinaryHeader
 				geomData := vals[i].([]byte)
@@ -192,13 +202,14 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 					util.CodeLogger.Infof("SRID already default (%v), no conversion necessary", DefaultSRID)
 				}
 			} else {
-				// Grab any non-nil & non-geometry column as a tag
+				// Grab any non-nil, non-id, & non-geometry column as a tag
 				switch v := vals[i].(type) {
 				case []uint8:
-					asBytes := make([]byte, len(v)+1)
+					asBytes := make([]byte, len(v))
 					for j := 0; j < len(v); j++ {
 						asBytes[j] = v[j]
 					}
+
 					asString := string(asBytes)
 					ftags[cols[i]] = asString
 				case int64:
@@ -216,7 +227,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		}
 
 		f := mvt.Feature{
-			ID:       &gid,
+			ID:       &fid,
 			Tags:     ftags,
 			Geometry: geom,
 		}
@@ -295,8 +306,9 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		for key, value := range layerConfig {
 			if key == "name" {
 				continue
+			} else {
+				configMap[key] = value
 			}
-			configMap[key] = value
 		}
 
 		layerConfigByName[layerName.(string)] = configMap
@@ -362,15 +374,31 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			idFieldname = layerConfig["id_fieldname"].(string)
 		}
 
+		tagFieldnames := make([]string, 0)
+		if layerConfig["fields"] != nil {
+			// TODO: I'm not sure why the value coming out of the config isn't consistent, but it
+			//	shouldn't require converting from two different types.
+			iArray, ok := layerConfig["fields"].([]interface{})
+			if ok {
+				for i := 0; i < len(iArray); i++ {
+					tagFieldnames = append(tagFieldnames, iArray[i].(string))
+				}
+			} else if sArray, ok := layerConfig["fields"].([]string); ok {
+				tagFieldnames = sArray
+			}
+		}
+
 		if layerConfig["tablename"] != nil {
 			tablename := layerConfig["tablename"].(string)
 			l = GPKGLayer{
-				name:        layerName,
-				tablename:   tablename,
-				geomType:    geomTableDetails[tablename].geomType,
-				idFieldname: idFieldname,
-				srid:        geomTableDetails[tablename].srid,
-				bbox:        geomTableDetails[tablename].bbox,
+				name:          layerName,
+				tablename:     tablename,
+				tagFieldnames: tagFieldnames,
+				geomFieldname: geomTableDetails[tablename].geomFieldname,
+				geomType:      geomTableDetails[tablename].geomType,
+				idFieldname:   idFieldname,
+				srid:          geomTableDetails[tablename].srid,
+				bbox:          geomTableDetails[tablename].bbox,
 			}
 		} else {
 			// Layer from custom sql
