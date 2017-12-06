@@ -1,6 +1,7 @@
 ## 0.5.0 (2017-12-XX)
 - Added: Command line `cache seed` and `cache purge` commands
 - Added: More robust command line interface
+- Fixed: Possible Panic if a feature without an ID is added before a feature with an ID; when constructing Layers (#195)
 
 Breaking changes:
 - To use tegola as a web server, use the command `tegola serve --config=/path/to/config.toml`
