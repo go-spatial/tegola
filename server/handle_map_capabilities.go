@@ -10,7 +10,7 @@ import (
 	"github.com/dimfeld/httptreemux"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/tilejson"
+	"github.com/terranodo/tegola/mapbox/tilejson"
 )
 
 type HandleMapCapabilities struct {
