@@ -75,7 +75,7 @@ func hostName(r *http.Request) string {
 		requestHostname = substrs[0]
 		requestPort = substrs[1]
 	default:
-		log.Printf("Multiple colons (':') in host string: %v", r.Host)
+		log.Printf("multiple colons (':') in host string: %v", r.Host)
 	}
 
 	retHost := HostName

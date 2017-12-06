@@ -29,7 +29,6 @@ func TestHandleCapabilities(t *testing.T) {
 		//	request uri.
 		{
 			handler:    server.HandleCapabilities{},
-			hostname:   "",
 			uri:        "http://localhost:8080/capabilities",
 			uriPattern: "/capabilities",
 			reqMethod:  "GET",
@@ -68,6 +67,7 @@ func TestHandleCapabilities(t *testing.T) {
 			},
 		},
 		// With hostname set and port set to "none" in config, urls should have host "cdn.tegola.io"
+		// debug layers turned on
 		{
 			handler:    server.HandleCapabilities{},
 			hostname:   "cdn.tegola.io",
@@ -127,7 +127,6 @@ func TestHandleCapabilities(t *testing.T) {
 		},
 		{
 			handler:    server.HandleCapabilities{},
-			hostname:   "",
 			uri:        "http://localhost:8080/capabilities",
 			uriPattern: "/capabilities",
 			reqMethod:  "GET",
