@@ -59,6 +59,7 @@ func TestLayerAddFeatures(t *testing.T) {
 	}
 	newID := func(id uint64) *uint64 { return &id }
 	tbltest.Cases(
+		//	nil id test 1
 		tc{
 			features: []Feature{
 				{
@@ -67,6 +68,58 @@ func TestLayerAddFeatures(t *testing.T) {
 				},
 				{
 					ID:       newID(1),
+					Tags:     map[string]interface{}{"atag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+			},
+		},
+		//	nil id test 2
+		tc{
+			features: []Feature{
+				{
+					ID:       newID(1),
+					Tags:     map[string]interface{}{"atag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+				{
+					Tags:     map[string]interface{}{"btag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+			},
+		},
+		//	same feature test
+		tc{
+			features: []Feature{
+				{
+					ID:       newID(1),
+					Tags:     map[string]interface{}{"atag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+				{
+					ID:       newID(1),
+					Tags:     map[string]interface{}{"atag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+			},
+			expected: []Feature{
+				{
+					ID:       newID(1),
+					Tags:     map[string]interface{}{"atag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+			},
+			skipped: true,
+		},
+		//	different feature test
+		tc{
+			features: []Feature{
+				{
+					ID:       newID(1),
+					Tags:     map[string]interface{}{"atag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+				{
+					ID:       newID(2),
 					Tags:     map[string]interface{}{"atag": "tag"},
 					Geometry: basic.Point{12.0, 15.0},
 				},
