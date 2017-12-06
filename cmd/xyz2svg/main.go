@@ -14,6 +14,7 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/draw/svg"
+	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/provider/postgis"
@@ -126,11 +127,7 @@ func DrawGeometries() {
 		panic(err)
 	}
 
-	tile := tegola.Tile{
-		X: configStruct.Coords[1],
-		Y: configStruct.Coords[2],
-		Z: configStruct.Coords[0],
-	}
+	tile := tegola.NewTile(configStruct.Coords[0], configStruct.Coords[1], configStruct.Coords[2])
 
 	p := provider.provider
 	baseDir := fmt.Sprintf("svg_files/z%v_x%v_y%v", tile.Z, tile.X, tile.Y)
@@ -145,12 +142,17 @@ func DrawGeometries() {
 			return nil
 		}
 		count++
-		cursor := mvt.NewCursor(tile.BoundingBox(), 4096)
+		cursor := mvt.NewCursor(tile)
 
 		g := cursor.ScaleGeo(geom)
 		//log.Println("Tolerence:", tile.ZEpislon())
 		sg := mvt.SimplifyGeometry(g, tile.ZEpislon(), true)
-		vg, err := validate.CleanGeometry(context.Background(), sg, 4096)
+		pbb, err := tile.PixelBufferedBounds()
+		if err != nil {
+			return err
+		}
+		ext := points.Extent(pbb)
+		vg, err := validate.CleanGeometry(context.Background(), sg, &ext)
 		if err != nil {
 			return err
 		}

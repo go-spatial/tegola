@@ -45,7 +45,7 @@ func (a *Atlas) AllMaps() []Map {
 
 //	SeedMapTile will generate a tile and persist it to the
 //	configured cache backend
-func (a *Atlas) SeedMapTile(m Map, tile tegola.Tile) error {
+func (a *Atlas) SeedMapTile(m Map, tile *tegola.Tile) error {
 	//	confirm we have a cache backend
 	if a.cacher == nil {
 		return ErrMissingCache
@@ -69,7 +69,7 @@ func (a *Atlas) SeedMapTile(m Map, tile tegola.Tile) error {
 }
 
 //	PurgeMapTile will purge a map tile from the configured cache backend
-func (a *Atlas) PurgeMapTile(m Map, tile tegola.Tile) error {
+func (a *Atlas) PurgeMapTile(m Map, tile *tegola.Tile) error {
 	if a.cacher == nil {
 		return ErrMissingCache
 	}
@@ -154,12 +154,12 @@ func SetCache(c cache.Interface) {
 
 //	SeedMapTile will generate a tile and persist it to the
 //	configured cache backend for the DefaultAtlas
-func SeedMapTile(m Map, tile tegola.Tile) error {
+func SeedMapTile(m Map, tile *tegola.Tile) error {
 	return DefaultAtlas.SeedMapTile(m, tile)
 }
 
 //	PurgeMapTile will purge a map tile from the configured cache backend
 //	for the DefaultAtlas
-func PurgeMapTile(m Map, tile tegola.Tile) error {
+func PurgeMapTile(m Map, tile *tegola.Tile) error {
 	return DefaultAtlas.PurgeMapTile(m, tile)
 }

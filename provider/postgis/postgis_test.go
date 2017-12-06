@@ -51,7 +51,7 @@ func TestMVTLayer(t *testing.T) {
 
 	testcases := []struct {
 		config               map[string]interface{}
-		tile                 tegola.Tile
+		tile                 *tegola.Tile
 		expectedFeatureCount int
 	}{
 		{
@@ -68,11 +68,7 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile: tegola.Tile{
-				Z: 1,
-				X: 1,
-				Y: 1,
-			},
+			tile:                 tegola.NewTile(1, 1, 1),
 			expectedFeatureCount: 614,
 		},
 		//	scalerank test
@@ -90,11 +86,7 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile: tegola.Tile{
-				Z: 1,
-				X: 1,
-				Y: 1,
-			},
+			tile:                 tegola.NewTile(1, 1, 1),
 			expectedFeatureCount: 23,
 		},
 		//	decode numeric(x,x) types
@@ -114,11 +106,7 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile: tegola.Tile{
-				Z: 16,
-				X: 11241,
-				Y: 26168,
-			},
+			tile:                 tegola.NewTile(16, 11241, 26168),
 			expectedFeatureCount: 101,
 		},
 	}

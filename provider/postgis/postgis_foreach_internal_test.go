@@ -17,7 +17,7 @@ func TestForEachFeature(t *testing.T) {
 
 	testcases := []struct {
 		config       map[string]interface{}
-		tile         tegola.Tile
+		tile         *tegola.Tile
 		expectedTags map[string]interface{}
 	}{
 		{
@@ -36,11 +36,7 @@ func TestForEachFeature(t *testing.T) {
 					},
 				},
 			},
-			tile: tegola.Tile{
-				Z: 1,
-				X: 1,
-				Y: 1,
-			},
+			tile: tegola.NewTile(1, 1, 1),
 			expectedTags: map[string]interface{}{
 				"height": "10",
 			},

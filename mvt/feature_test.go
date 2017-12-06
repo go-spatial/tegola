@@ -1,6 +1,7 @@
 package mvt
 
 import (
+	"log"
 	"testing"
 
 	"context"
@@ -151,9 +152,16 @@ func TestEncodeGeometry(t *testing.T) {
 			egeo: []uint32{9, 0, 0, 26, 20, 0, 0, 20, 19, 0, 15, 9, 22, 2, 26, 18, 0, 0, 18, 17, 0, 15, 9, 4, 13, 26, 0, 8, 8, 0, 0, 7, 15},
 		},
 	}
+	tile := tegola.NewTile(0, 0, 0)
+	tile.Buffer = 0
+	tile.Init()
+	{
+		pbb, _ := tile.PixelBufferedBounds()
+		log.Println("Buffer PixelBounds", pbb)
+	}
 	for i, tcase := range testcases {
 
-		g, gtype, err := encodeGeometry(context.Background(), tcase.geo, tcase.bbox, 4096, true)
+		g, gtype, err := encodeGeometry(context.Background(), tcase.geo, tile, true)
 		if tcase.eerr != err {
 			t.Errorf("(%v) Expected error (%v) got (%v) instead", i, tcase.eerr, err)
 		}
@@ -199,6 +207,8 @@ func TestNewFeature(t *testing.T) {
 	}
 }
 
+/*
+// This test needs to move to tile.
 func TestNormalizePoint(t *testing.T) {
 	testcases := []struct {
 		point       basic.Point
@@ -220,9 +230,11 @@ func TestNormalizePoint(t *testing.T) {
 		},
 	}
 
+	tile := tegola.NewTile(0, 0, 0)
+
 	for i, tcase := range testcases {
 		//	new cursor
-		c := NewCursor(tcase.bbox, tcase.layerExtent)
+		c := NewCursor(tile)
 
 		nx, ny := c.ScalePoint(&tcase.point)
 		if nx != tcase.nx {
@@ -234,3 +246,4 @@ func TestNormalizePoint(t *testing.T) {
 		continue
 	}
 }
+*/

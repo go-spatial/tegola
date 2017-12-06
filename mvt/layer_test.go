@@ -93,8 +93,9 @@ func TestLayer(t *testing.T) {
 			bbox:    baseBBox,
 		},
 	}
+	tile := tegola.NewTile(0, 0, 0)
 	for i, tcase := range testcases {
-		vt, err := tcase.layer.VTileLayer(context.Background(), tcase.bbox)
+		vt, err := tcase.layer.VTileLayer(context.Background(), tile)
 		if err != tcase.eerr {
 			t.Errorf("For Test %v: Got unexpected error. Expected %v Got %v", i, tcase.eerr, err)
 		}

@@ -10,6 +10,8 @@ import (
 	"github.com/terranodo/tegola/maths/clip/intersect"
 	"github.com/terranodo/tegola/maths/clip/region"
 	"github.com/terranodo/tegola/maths/clip/subject"
+	"github.com/terranodo/tegola/maths/lines"
+	"github.com/terranodo/tegola/maths/points"
 
 	"fmt"
 
@@ -613,79 +615,60 @@ func linestring2floats(l tegola.LineString) (ls []float64) {
 	return ls
 }
 
-func LineString(line tegola.LineString, min, max maths.Pt, extant int) (ls []basic.Line, err error) {
-	emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
-	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
-	r := region.New(maths.Clockwise, emin, emax)
+func LineString(linestr tegola.LineString, extent *points.Extent) (ls []basic.Line, err error) {
+	line := lines.FromTLineString(linestr)
+	/*
+		emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
+		emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
+		r := region.New(maths.Clockwise, emin, emax)
+	*/
+	/*
+		r := region.New(maths.Clockwise, min, max)
+		lpt := maths.Pt{pts[0], pts[1]}
+		lptIsIn := r.Contains(lpt)
+	*/
+
 	// I don't think this makes sense for a unconnected polygon
 	// Linestrings are not connected. So, for these we just need to walk each point and see if it's within the clipping rectangle.
 	// When we enter the clipping rectangle, we need to calculate the interaction point, and start a new line.
 	// When we leave the clipping rectangle, we need to calculated the interaction point, and stop the line.
-	pts := linestring2floats(line)
-	lpt := maths.Pt{pts[0], pts[1]}
-	lptIsIn := r.Contains(lpt)
-	var cpts []float64
-	if lptIsIn {
-		cpts = append(cpts, lpt.X, lpt.Y)
-	}
-	for x, y := 2, 3; y < len(pts); x, y = x+2, y+2 {
-		cpt := maths.Pt{pts[x], pts[y]}
-		cptIsIn := r.Contains(cpt)
-		// log.Printf("looking @ [ %v : %v , %v : %v ]", cptIsIn, cpt, lptIsIn, lpt)
-		switch {
-		case cptIsIn && !lptIsIn:
-			line := maths.Line{lpt, cpt}
-			for a := r.FirstAxis(); a != nil; a = a.Next() {
-				pt, doesIntersect := a.Intersect(line)
-				if doesIntersect {
-					cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
-					break
-				}
-			}
-			fallthrough
-		case cptIsIn && lptIsIn:
-			cpts = append(cpts, cpt.X, cpt.Y)
-		case !cptIsIn && lptIsIn:
-			line := maths.Line{lpt, cpt}
-			for a := r.FirstAxis(); a != nil; a = a.Next() {
-				pt, doesIntersect := a.Intersect(line)
-				if doesIntersect {
-					cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
-					break
-				}
-			}
-			// Need to complete this set of points.
-			ls = append(ls, basic.NewLine(cpts...))
-			cpts = cpts[:0]
-		case !cptIsIn && !lptIsIn:
-			// if they are both outside the clipping region, they could cross the clipping region.
-			// Which means we need to get the intersections two points.
-			line := maths.Line{lpt, cpt}
-			var seenpts []maths.Pt
-			for a := r.FirstAxis(); a != nil; a = a.Next() {
-				pt, doesIntersect := a.Intersect(line)
-				if doesIntersect {
-					// Check to see if we have already seen the point.
-					seen := false
-					for _, spt := range seenpts {
-						if spt.IsEqual(pt) {
-							seen = true
-							break
-						}
-					}
-					if !seen {
-						seenpts = append(seenpts, pt)
-						cpts = append(cpts, float64(int64(pt.X)), float64(int64(pt.Y)))
-					}
-				}
-			}
+	// pts := linestring2floats(line)
 
+	var cpts [][2]float64
+	lptIsIn := extent.Contains(line[0])
+	if lptIsIn {
+		cpts = append(cpts, line[0])
+	}
+
+	for i := 1; i < len(line); i++ {
+		cptIsIn := extent.Contains(line[i])
+		switch {
+		case !lptIsIn && cptIsIn: // We are entering the extent region.
+			if ipt, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok && len(ipt) > 0 {
+				cpts = append(cpts, ipt[0])
+			}
+			cpts = append(cpts, line[i])
+		case !lptIsIn && !cptIsIn: // Both points are outside, but it's possible that they could be going straight through the regions.
+			if ipt, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok && len(ipt) > 1 {
+				ls = append(ls, basic.NewLineFrom2Float64(ipt...))
+			}
+			cpts = cpts[:0]
+		case lptIsIn && cptIsIn: // Both points are in, just add the new point.
+			cpts = append(cpts, line[i])
+		case lptIsIn && !cptIsIn: // We are headed out of the region.
+			if ipt, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok {
+				_ = ipt
+				cpts = append(cpts, ipt...)
+			}
+			// Time to add this line to our set of lines, and reset
+			// the new line.
+			ls = append(ls, basic.NewLineFrom2Float64(cpts...))
+			cpts = cpts[:0]
 		}
-		lpt = cpt
 		lptIsIn = cptIsIn
 	}
 	if len(cpts) > 0 {
-		ls = append(ls, basic.NewLine(cpts...))
+		ls = append(ls, basic.NewLineFrom2Float64(cpts...))
 	}
 	return ls, nil
 }
@@ -704,14 +687,8 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 
 	emin := maths.Pt{min.X - float64(extant), min.Y - float64(extant)}
 	emax := maths.Pt{max.X + float64(extant), max.Y + float64(extant)}
-	//log.Printf("Starting to clip main line to %v, %v", emin, emax)
 	plstrs, err := linestring(linestring2floats(sls[0]), emin, emax)
-	/*
-		log.Printf("Done to clipping main line to %v, %v;err:%v;%v", emin, emax, err, len(plstrs))
-		for i, str := range plstrs {
-			log.Printf("\tline (%v), %v", i, len(str))
-		}
-	*/
+
 	if err != nil {
 		return nil, err
 	}
@@ -730,11 +707,11 @@ func Polygon(polygon tegola.Polygon, min, max maths.Pt, extant int) (p []basic.P
 		}
 		subls = append(subls, nsub)
 	}
-	//log.Println("The number of new polygons", len(p))
+
 	emin = maths.Pt{min.X - (float64(extant) - 1), min.Y - (float64(extant) - 1)}
 	emax = maths.Pt{max.X + (float64(extant) - 1), max.Y + (float64(extant) - 1)}
 	for _, s := range sls[1:] {
-		//log.Println("Into conterclockwise lines.")
+
 		slines, err := linestring(linestring2floats(s), min, max)
 		if err != nil {
 			return nil, err
@@ -800,7 +777,8 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (basic.Geometry, error) {
 		return mp, nil
 
 	case tegola.LineString:
-		ls, err := LineString(g, min, max, extant)
+		//ls, err := LineString(g, min, max, extant)
+		ls, err := LineString(g, &points.Extent{{min.X, min.Y}, {max.X, max.Y}})
 		if err != nil {
 			return basic.G{}, err
 		}
@@ -815,7 +793,7 @@ func Geometry(geo tegola.Geometry, min, max maths.Pt) (basic.Geometry, error) {
 	case tegola.MultiLine:
 		var ls basic.MultiLine
 		for _, l := range g.Lines() {
-			lls, err := LineString(l, min, max, extant)
+			lls, err := LineString(l, &points.Extent{{min.X, min.Y}, {max.X, max.Y}})
 			if err != nil {
 				return ls, err
 			}

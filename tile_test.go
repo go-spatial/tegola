@@ -13,11 +13,7 @@ func TestTileNum2Deg(t *testing.T) {
 		expectedLng float64
 	}{
 		{
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
+			tile:        *tegola.NewTile(2, 1, 1),
 			expectedLat: 66.51326044311185,
 			expectedLng: -90,
 		},
@@ -41,11 +37,7 @@ func TestTileDeg2Num(t *testing.T) {
 		expectedY int
 	}{
 		{
-			tile: tegola.Tile{
-				Z:    0,
-				Lat:  -85,
-				Long: -180,
-			},
+			tile:      *tegola.NewTileLatLong(0, -85, -180),
 			expectedX: 0,
 			expectedY: 0,
 		},
@@ -59,7 +51,7 @@ func TestTileDeg2Num(t *testing.T) {
 		}
 
 		if tc.expectedY != y {
-			t.Errorf("testcase (%v) failed. expected X value (%v) does not match output (%v)", i, tc.expectedY, y)
+			t.Errorf("testcase (%v) failed. expected Y value (%v) does not match output (%v)", i, tc.expectedY, y)
 		}
 	}
 }
@@ -70,22 +62,14 @@ func TestTileBBox(t *testing.T) {
 		minx, miny, maxx, maxy float64
 	}{
 		{
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
+			tile: *tegola.NewTile(2, 1, 1),
 			minx: -10018754.17,
 			miny: 10018754.17,
 			maxx: 0,
 			maxy: 0,
 		},
 		{
-			tile: tegola.Tile{
-				Z: 16,
-				X: 11436,
-				Y: 26461,
-			},
+			tile: *tegola.NewTile(16, 11436, 26461),
 			minx: -13044437.497219238996,
 			miny: 3856706.6986199953,
 			maxx: -13043826.000993041,
@@ -117,11 +101,7 @@ func TestTileZRes(t *testing.T) {
 		zres float64
 	}{
 		{
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
+			tile: *tegola.NewTile(2, 1, 1),
 			zres: 39135.75848201026,
 		},
 	}

@@ -124,11 +124,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//	new tile
-		tile := tegola.Tile{
-			Z: req.z,
-			X: req.x,
-			Y: req.y,
-		}
+		tile := tegola.NewTile(req.z, req.x, req.y)
 
 		//	filter down the layers we need for this zoom
 		m = m.DisableAllLayers().EnableLayersByZoom(tile.Z)

@@ -9,7 +9,7 @@ import (
 func TestReplaceTokens(t *testing.T) {
 	testcases := []struct {
 		layer    Layer
-		tile     tegola.Tile
+		tile     *tegola.Tile
 		expected string
 	}{
 		{
@@ -17,24 +17,16 @@ func TestReplaceTokens(t *testing.T) {
 				sql:  "SELECT * FROM foo WHERE geom && !BBOX!",
 				srid: tegola.WebMercator,
 			},
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
-			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,1.001875417e+07,0,0,3857)",
+			tile:     tegola.NewTile(2, 1, 1),
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.0097025686953126e+07,1.0097025686953126e+07,78271.5169531256,-78271.5169531256,3857)",
 		},
 		{
 			layer: Layer{
 				sql:  "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
 				srid: tegola.WebMercator,
 			},
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
-			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,1.001875417e+07,0,0,3857)",
+			tile:     tegola.NewTile(2, 1, 1),
+			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.0097025686953126e+07,1.0097025686953126e+07,78271.5169531256,-78271.5169531256,3857)",
 		},
 	}
 
