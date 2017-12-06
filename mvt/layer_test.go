@@ -34,14 +34,14 @@ func TestLayerAddFeatures(t *testing.T) {
 	fn := func(idx int, tcase tc) {
 		defer func() {
 			if r := recover(); r != nil {
-				t.Errorf("Did not expect AddFeatures to painc: Recovered: %v", r)
+				t.Errorf("[%v] did not expect AddFeatures to panic: recovered: %v", idx, r)
 			}
 		}()
 		// First create a blank layer to add the features to.
 		l := new(Layer)
 		skipped := l.AddFeatures(tcase.features...)
 		if tcase.skipped != skipped {
-			t.Errorf("[%v] skipped value; expected: %v got: %v", tcase.skipped, skipped)
+			t.Errorf("[%v] skipped value; expected: %v got: %v", idx, tcase.skipped, skipped)
 		}
 		gotFeatures := l.Features()
 		expectedFeatures := tcase.expected
@@ -49,7 +49,7 @@ func TestLayerAddFeatures(t *testing.T) {
 			expectedFeatures = tcase.features
 		}
 		if len(gotFeatures) != len(expectedFeatures) {
-			t.Errorf("[%v] number of features incorrect. expected: %v got: %v", len(expectedFeatures), len(gotFeatures))
+			t.Errorf("[%v] number of features incorrect. expected: %v got: %v", idx, len(expectedFeatures), len(gotFeatures))
 		}
 		for i := range expectedFeatures {
 			if !reflect.DeepEqual(expectedFeatures[i], gotFeatures[i]) {
