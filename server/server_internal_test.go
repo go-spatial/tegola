@@ -3,32 +3,67 @@ package server
 import (
 	"crypto/tls"
 	"net/http"
+	"net/url"
 	"testing"
 )
 
 func TestHostName(t *testing.T) {
+	// Helper function to set up table tests.
+	urlFromString := func(urlString string) *url.URL {
+		url, err := url.Parse(urlString)
+		if err != nil {
+			t.Errorf("Could not create url.URL from %v: %v", urlString, err)
+		}
+		return url
+	}
+
+	// Minimal http.Request with only URL & Host properties set
+	mockRequest := func(u *url.URL) http.Request {
+		r := http.Request{URL: u, Host: u.Host}
+		return r
+	}
+
 	testcases := []struct {
 		request  http.Request
 		hostName string
+		port     string
 		expected string
 	}{
 		{
-			request: http.Request{
-				Host: "localhost",
-			},
-			hostName: "",
-			expected: "localhost",
+			// With hostname & port unset in config, expect host:port matching URL
+			request:  mockRequest(urlFromString("http://localhost:8080/capabilities")),
+			expected: "localhost:8080",
 		},
 		{
-			request:  http.Request{},
+			// With hostname set and port set to "none" in config, expect "cdn.tegola.io"
+			request:  mockRequest(urlFromString("http://localhost:8080/capabilities")),
+			hostName: "cdn.tegola.io",
+			port:     "none",
+			expected: "cdn.tegola.io",
+		},
+		{
+			// Hostname set, no port in config, but port in url.  Expect <config_host>:<url_port>.
+			request:  mockRequest(urlFromString("http://localhost:8080/capabilities")),
+			hostName: "cdn.tegola.io",
+			expected: "cdn.tegola.io:8080",
+		},
+		{
+			// Hostname set, no port in config or url, expect hostname to match config.
+			request:  mockRequest(urlFromString("http://localhost/capabilities")),
 			hostName: "cdn.tegola.io",
 			expected: "cdn.tegola.io",
+		},
+		{
+			// Hostname unset, no port in config or url, expect hostname to match url host.
+			request:  mockRequest(urlFromString("http://localhost/capabilities")),
+			expected: "localhost",
 		},
 	}
 
 	for i, tc := range testcases {
 		//	set the package variable
 		HostName = tc.hostName
+		Port = tc.port
 
 		output := hostName(&tc.request)
 		if output != tc.expected {
