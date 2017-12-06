@@ -52,7 +52,7 @@ func TestHostName(t *testing.T) {
 
 		url, err := url.Parse(tc.url)
 		if err != nil {
-			t.Errorf("testcase (%v) failed. could not create url.URL from (%v): %v", tc.url, err)
+			t.Errorf("testcase (%v) failed. could not create url.URL from (%v): %v", i, tc.url, err)
 		}
 
 		req := http.Request{URL: url, Host: url.Host}
