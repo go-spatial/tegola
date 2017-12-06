@@ -1,10 +1,12 @@
 package mvt
 
 import (
+	"reflect"
 	"testing"
 
 	"context"
 
+	"github.com/gdey/tbltest"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -21,6 +23,56 @@ func newTileLayer(name string, keys []string, values []*vectorTile.Tile_Value, f
 		Values:   values,
 		Extent:   &extent,
 	}
+}
+
+func TestLayerAddFeatures(t *testing.T) {
+	type tc struct {
+		features []Feature
+		expected []Feature // Nil means that it's the same as the features.
+		skipped  bool
+	}
+	fn := func(idx int, tcase tc) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("[%v] did not expect AddFeatures to panic: recovered: %v", idx, r)
+			}
+		}()
+		// First create a blank layer to add the features to.
+		l := new(Layer)
+		skipped := l.AddFeatures(tcase.features...)
+		if tcase.skipped != skipped {
+			t.Errorf("[%v] skipped value; expected: %v got: %v", idx, tcase.skipped, skipped)
+		}
+		gotFeatures := l.Features()
+		expectedFeatures := tcase.expected
+		if expectedFeatures == nil {
+			expectedFeatures = tcase.features
+		}
+		if len(gotFeatures) != len(expectedFeatures) {
+			t.Errorf("[%v] number of features incorrect. expected: %v got: %v", idx, len(expectedFeatures), len(gotFeatures))
+		}
+		for i := range expectedFeatures {
+			if !reflect.DeepEqual(expectedFeatures[i], gotFeatures[i]) {
+				t.Errorf("[%v] expected feature %v to match. expected: %v got: %v", idx, i, expectedFeatures[i], gotFeatures[i])
+			}
+		}
+	}
+	newID := func(id uint64) *uint64 { return &id }
+	tbltest.Cases(
+		tc{
+			features: []Feature{
+				{
+					Tags:     map[string]interface{}{"btag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+				{
+					ID:       newID(1),
+					Tags:     map[string]interface{}{"atag": "tag"},
+					Geometry: basic.Point{12.0, 15.0},
+				},
+			},
+		},
+	).Run(fn)
 }
 
 func TestLayer(t *testing.T) {
