@@ -10,9 +10,7 @@ import (
 
 var standard Standard
 
-type Standard struct {
-	Interface
-}
+type Standard struct{}
 
 func SetOutput(w io.Writer) {
 	goLog.SetOutput(w)
