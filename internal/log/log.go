@@ -45,6 +45,10 @@ var (
 	IsTrace bool
 )
 
+func SetOutput(w io.Writer) {
+	logger.SetOutput(w)
+}
+
 func SetLogLevel(lvl Level) {
 	lock.Lock()
 	IsTrace = false

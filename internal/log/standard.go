@@ -12,7 +12,7 @@ var standard Standard
 
 type Standard struct{}
 
-func SetOutput(w io.Writer) {
+func (_ Standard) SetOutput(w io.Writer) {
 	goLog.SetOutput(w)
 }
 
