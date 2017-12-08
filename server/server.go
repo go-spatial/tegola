@@ -7,7 +7,6 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/terranodo/tegola/atlas"
-	_ "github.com/terranodo/tegola/cache/filecache"
 )
 
 const (
