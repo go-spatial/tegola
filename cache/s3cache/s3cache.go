@@ -177,12 +177,6 @@ func (s3c *S3Cache) Set(key *cache.Key, val []byte) error {
 
 	_, err = s3c.Client.PutObject(&input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			default:
-				return aerr
-			}
-		}
 		return err
 	}
 
@@ -229,12 +223,6 @@ func (s3c *S3Cache) Purge(key *cache.Key) error {
 
 	_, err = s3c.Client.DeleteObject(&input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			default:
-				return err
-			}
-		}
 		return err
 	}
 
