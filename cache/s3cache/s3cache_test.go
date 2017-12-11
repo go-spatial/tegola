@@ -22,8 +22,8 @@ func TestNew(t *testing.T) {
 		//	test static creds
 		{
 			config: map[string]interface{}{
-				"bucket":                "tegola-test-data",
-				"region":                "us-west-1",
+				"bucket":                os.Getenv("AWS_TEST_BUCKET"),
+				"region":                os.Getenv("AWS_REGION"),
 				"aws_access_key_id":     os.Getenv("AWS_ACCESS_KEY_ID"),
 				"aws_secret_access_key": os.Getenv("AWS_SECRET_ACCESS_KEY"),
 			},
@@ -32,9 +32,9 @@ func TestNew(t *testing.T) {
 		//	test env var creds and max zoom
 		{
 			config: map[string]interface{}{
-				"bucket":   "tegola-test-data",
+				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
 				"max_zoom": 9,
-				"region":   "us-west-1",
+				"region":   os.Getenv("AWS_REGION"),
 			},
 			err: nil,
 		},
@@ -46,7 +46,7 @@ func TestNew(t *testing.T) {
 		//	invalid value for max_zoom
 		{
 			config: map[string]interface{}{
-				"bucket":   "tegola-test-data",
+				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
 				"max_zoom": "foo",
 			},
 			err: fmt.Errorf("max_zoom value needs to be of type int. Value is of type string"),
@@ -82,13 +82,14 @@ func TestSetGetPurge(t *testing.T) {
 	}{
 		{
 			config: map[string]interface{}{
-				"bucket": "tegola-test-data",
-				"region": "us-west-1",
+				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
+				"basepath": "cache",
 			},
 			key: cache.Key{
-				Z: 0,
-				X: 1,
-				Y: 2,
+				MapName: "test-map",
+				Z:       0,
+				X:       1,
+				Y:       2,
 			},
 			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
 		},

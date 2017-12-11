@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -26,6 +27,7 @@ const (
 	//	required
 	ConfigKeyBucket = "bucket"
 	//	optional
+	ConfigKeyBasepath       = "basepath"
 	ConfigKeyMaxZoom        = "max_zoom"
 	ConfigKeyRegion         = "region" //	defaults to "us-east-1"
 	ConfigKeyAWSAccessKeyID = "aws_access_key_id"
@@ -49,6 +51,7 @@ func init() {
 //			region (string): the AWS region the bucket is located. defaults to 'us-east-1'
 //			aws_access_key_id (string): an AWS access key id
 //			aws_secret_access_key (string): an AWS secret access key
+//			basepath (string): a path prefix added to all cache operations inside of the S3 bucket
 //			max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
 
 func New(config map[string]interface{}) (cache.Interface, error) {
@@ -76,6 +79,13 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	}
 	if s3cache.Bucket == "" {
 		return nil, ErrMissingBucket
+	}
+
+	//	basepath
+	basepath := ""
+	s3cache.Basepath, err = c.String(ConfigKeyBasepath, &basepath)
+	if err != nil {
+		return nil, err
 	}
 
 	//	check for region env var
@@ -127,13 +137,23 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	}
 	//	write a test file
 	if err := s3cache.Set(&key, []byte("\x53\x69\x6c\x61\x73")); err != nil {
-		return nil, err
+		e := cache.ErrSettingToCache{
+			CacheType: CacheType,
+			Err:       err,
+		}
+
+		return nil, e
 	}
 
 	//	read the test file
 	_, hit, err := s3cache.Get(&key)
 	if err != nil {
-		return nil, err
+		e := cache.ErrGettingFromCache{
+			CacheType: CacheType,
+			Err:       err,
+		}
+
+		return nil, e
 	}
 	if !hit {
 		//	return an error?
@@ -141,7 +161,12 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 
 	//	purge the test file
 	if err := s3cache.Purge(&key); err != nil {
-		return nil, err
+		e := cache.ErrPurgingCache{
+			CacheType: CacheType,
+			Err:       err,
+		}
+
+		return nil, e
 	}
 
 	return &s3cache, nil
@@ -150,6 +175,10 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 type S3Cache struct {
 	//	Bucket is the name of the s3 bucket to operate on
 	Bucket string
+
+	//	Basepath is a path prefix added to all cache operations inside of the S3 bucket
+	//	helpful so a bucket does not need to be dedicated to only this cache
+	Basepath string
 
 	//	MaxZoom determins the max zoom the cache to persist. Beyond this
 	//	zoom, cache Set() calls will be ignored. This is useful if the cache
@@ -169,10 +198,13 @@ func (s3c *S3Cache) Set(key *cache.Key, val []byte) error {
 		return nil
 	}
 
+	//	add our basepath
+	k := filepath.Join(s3c.Basepath, key.String())
+
 	input := s3.PutObjectInput{
 		Body:   aws.ReadSeekCloser(bytes.NewReader(val)),
 		Bucket: aws.String(s3c.Bucket),
-		Key:    aws.String(key.String()),
+		Key:    aws.String(k),
 	}
 
 	_, err = s3c.Client.PutObject(&input)
@@ -186,9 +218,12 @@ func (s3c *S3Cache) Set(key *cache.Key, val []byte) error {
 func (s3c *S3Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	var err error
 
+	//	add our basepath
+	k := filepath.Join(s3c.Basepath, key.String())
+
 	input := s3.GetObjectInput{
 		Bucket: aws.String(s3c.Bucket),
-		Key:    aws.String(key.String()),
+		Key:    aws.String(k),
 	}
 
 	result, err := s3c.Client.GetObject(&input)
@@ -216,9 +251,12 @@ func (s3c *S3Cache) Get(key *cache.Key) ([]byte, bool, error) {
 func (s3c *S3Cache) Purge(key *cache.Key) error {
 	var err error
 
+	//	add our basepath
+	k := filepath.Join(s3c.Basepath, key.String())
+
 	input := s3.DeleteObjectInput{
 		Bucket: aws.String(s3c.Bucket),
-		Key:    aws.String(key.String()),
+		Key:    aws.String(k),
 	}
 
 	_, err = s3c.Client.DeleteObject(&input)
