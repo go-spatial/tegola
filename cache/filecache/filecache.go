@@ -12,7 +12,6 @@ import (
 
 var (
 	ErrMissingBasepath = errors.New("filecache: missing required param 'basepath'")
-	ErrCacheMiss       = errors.New("filecache: cache miss")
 )
 
 const CacheType = "file"
