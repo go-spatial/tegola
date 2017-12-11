@@ -10,6 +10,7 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/server"
 )
@@ -39,7 +40,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://localhost:8080/capabilities/test-map.json",
 						Tiles: []string{
 							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -82,7 +83,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
@@ -137,7 +138,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://localhost:8080/capabilities/test-map.json",
 						Tiles: []string{
 							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -180,7 +181,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
@@ -238,7 +239,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://cdn.tegola.io:8080/capabilities/test-map.json?debug=true",
 						Tiles: []string{
 							"http://cdn.tegola.io:8080/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
