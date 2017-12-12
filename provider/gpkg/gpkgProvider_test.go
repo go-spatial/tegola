@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	//	"reflect"
 	"runtime"
 	"testing"
 
@@ -144,7 +143,10 @@ func TestConfigFields(t *testing.T) {
 
 	// --- Check that features are populated
 	ctx := context.TODO()
-	pixelExtentEntireWorld := [4]float64{-20037508, 6196014515, 20037508, -6196014515}
+	// TODO: There's some confusion between pixel coordinates & WebMercator positions in the tile
+	//	bounding box, making the smallest y-value in pos #4 instead of pos #2
+	//	At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
+	pixelExtentEntireWorld := [4]float64{-20026376.39, 20048966.10, 20026376.39, -20048966.10}
 	mt := &MockTile{bbox: pixelExtentEntireWorld}
 	tags := make(map[string]interface{})
 
@@ -198,6 +200,117 @@ func TestConfigFields(t *testing.T) {
 			if actualTagCount != expectedTagCount {
 				t.Errorf("Testcase[%v]: ID: %v - Expecting %v tags, got %v\n",
 					i, expectedTagCount, actualTagCount)
+			}
+
+			// Check that expected tags are present and their values match expected values.
+			for tName, tValue := range f.Tags {
+				exTagValue := tc.expectedTags[*f.ID][tName]
+				if exTagValue != nil && exTagValue != tValue {
+					t.Errorf("TestCase[%v]: ID: %v - %v: %v != %v\n", i, *f.ID, tName, tValue, exTagValue)
+				}
+			}
+			testCount++
+		}
+
+		if testCount != len(tc.expectedTags) {
+			t.Errorf("TestCase[%v]: Tested tags for %v features, was expecting to test %v\n",
+				i, testCount, len(tc.expectedTags))
+		}
+	}
+}
+
+func TestConfigSQL(t *testing.T) {
+	// Checks the proper functioning of a "fields" config variable which specifies which
+	//	columns of a table should be converted to tags beyond the defaults.
+
+	// --- Get provider with sql specified for layers in config.
+	layers := []map[string]interface{}{
+		{"name": "a_points",
+			"sql": "SELECT fid, geom, amenity, religion, tourism, shop FROM amenities_points"},
+		// Currently only one BBOX token is supported per query, so we need to use a subquery here
+		{"name": "a_p_points",
+			"sql": "SELECT * FROM (" +
+				"SELECT fid, geom, NULL AS place, NULL AS is_in, amenity, religion, " +
+				"  tourism, shop, si.minx, si.miny, si.maxx, si.maxy" +
+				"  FROM amenities_points ap JOIN rtree_amenities_points_geom si ON ap.fid = si.id " +
+				"UNION " +
+				"SELECT fid, geom, place, is_in, NULL, NULL, NULL, NULL, " +
+				"	  si.minx, si.miny, si.maxx, si.maxy " +
+				"FROM places_points pp JOIN rtree_places_points_geom si ON pp.fid = si.id) " +
+				"WHERE !BBOX!"},
+	}
+
+	config := map[string]interface{}{
+		"FilePath": GPKGFilePath,
+		"layers":   layers,
+	}
+	p, err := NewProvider(config)
+	if err != nil {
+		fmt.Printf("Error creating provider: %v\n", err)
+		t.FailNow()
+	}
+
+	// --- Check that features are populated
+	ctx := context.TODO()
+	// TODO: There's some confusion between pixel coordinates & WebMercator positions in the tile
+	//	bounding box, making the smallest y-value in pos #4 instead of pos #2
+	//	At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
+	pixelExtentEntireWorld := [4]float64{-20026376.39, 20048966.10, 20026376.39, -20048966.10}
+	mt := &MockTile{bbox: pixelExtentEntireWorld}
+	tags := make(map[string]interface{})
+
+	type TagLookupByFeatureId map[uint64]map[string]interface{}
+	type TestCase struct {
+		lName        string
+		expectedTags TagLookupByFeatureId
+	}
+
+	testCases := []TestCase{
+		{
+			lName: "a_points",
+			expectedTags: TagLookupByFeatureId{
+				515: map[string]interface{}{
+					"amenity": "boat_rental",
+					"shop":    "yachts",
+				},
+				359: map[string]interface{}{
+					"amenity": "bench",
+					"tourism": "viewpoint",
+				},
+				273: map[string]interface{}{
+					"amenity":  "place_of_worship",
+					"religion": "christian",
+				},
+			},
+		},
+		{
+			lName: "a_p_points",
+			expectedTags: TagLookupByFeatureId{
+				255: map[string]interface{}{
+					"amenity":  "place_of_worship",
+					"religion": "christian",
+				},
+			},
+		},
+	}
+
+	for i, tc := range testCases {
+		l, err := p.MVTLayer(ctx, tc.lName, mt, tags)
+		if err != nil {
+			t.Errorf("TestCase[%v]: Error in call to p.MVTLayer(%v): %v\n", i, tc.lName, err)
+		}
+
+		var testCount int
+		for _, f := range l.Features() {
+			if tc.expectedTags[*f.ID] == nil {
+				continue
+			}
+
+			expectedTagCount := len(tc.expectedTags[*f.ID])
+			actualTagCount := len(f.Tags)
+			if actualTagCount != expectedTagCount {
+				t.Errorf("Testcase[%v]: ID: %v - Expecting %v tags, got %v\n",
+					i, *f.ID, expectedTagCount, actualTagCount)
 			}
 
 			// Check that expected tags are present and their values match expected values.

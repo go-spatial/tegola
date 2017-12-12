@@ -12,7 +12,9 @@ import (
 
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -73,65 +75,24 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
-func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.TegolaTile, dtags map[string]interface{}) (*mvt.Layer, error) {
-	util.CodeLogger.Debugf("GPKGProvider MVTLayer() called for %v", layerName)
-	filepath := p.FilePath
+func replaceTokens(qtext string) string {
+	// --- Convert tokens provided to SQL
+	// The BBOX token requires parameters ordered as [maxx, minx, maxy, miny] and checks for overlap.
+	// Until support for named parameters, we'll only support one BBOX token per query.
+	ttext := strings.Replace(qtext, "!BBOX!", "minx <= ? AND maxx >= ? AND miny <= ? AND maxy >= ?", 1)
+	return ttext
+}
 
-	// Check that layer is within bounding box
-	var layerBBox points.BoundingBox
-	layerBBox = p.layers[layerName].bbox
+func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[string]interface{}) (
+	layer *mvt.Layer, err error) {
 
-	// In DefaultSRID (web mercator - 3857)
-	tileBBoxStruct := tile.BoundingBox()
-	// TODO: There's some confusion between pixel coordinates & WebMercator positions in the tile
-	//	bounding box, making the smallest y-value tileBBoxStruct.Maxy and the largest Miny.
-	//	Hacking here to ensure a correct bounding box.
-	//	At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
-	tileBBox := points.BoundingBox{tileBBoxStruct.Minx, tileBBoxStruct.Maxy,
-		tileBBoxStruct.Maxx, tileBBoxStruct.Miny}
-	// Convert tile bounding box to gpkg geometry if necessary.
-	layerSRID := p.layers[layerName].srid
-	if layerSRID != DefaultSRID {
-		if DefaultSRID != tegola.WebMercator {
-			util.CodeLogger.Fatal("DefaultSRID != tegola.WebMercator requires changes here")
-		}
-		tileBBox = tileBBox.ConvertSrid(tegola.WebMercator, p.layers[layerName].srid)
-	}
+	layer = new(mvt.Layer)
+	layer.Name = pLayer.Name()
 
-	if layerBBox.DisjointBB(tileBBox) {
-		msg := fmt.Sprintf("Layer '%v' bounding box %v is outside tile bounding box %v, "+
-			"will not load any features", layerName, layerBBox, tileBBox)
-		util.CodeLogger.Debugf(msg)
-		return new(mvt.Layer), nil
-	}
+	idFieldname := pLayer.idFieldname
+	geomFieldname := pLayer.geomFieldname
 
-	db, err := getGpkgConnection(filepath)
-	if err != nil {
-		return nil, err
-	}
-	defer releaseGpkgConnection(filepath)
-
-	geomTablename := p.layers[layerName].tablename
-	geomFieldname := p.layers[layerName].geomFieldname
-	idFieldname := p.layers[layerName].idFieldname
-	// Get all feature rows for the layer requested.
-	rtreeTablename := fmt.Sprintf("rtree_%v_geom", geomTablename)
-	// l - layer table, si - spatial index
-	selectClause := fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", idFieldname, geomFieldname)
-	for _, tf := range p.layers[layerName].tagFieldnames {
-		selectClause += fmt.Sprintf(", `%v`", tf)
-	}
-	qtext := fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL "+
-		"AND NOT (si.minx > ? OR si.maxx < ? OR si.miny > ? OR si.maxy < ?);",
-		selectClause, geomTablename, rtreeTablename, idFieldname)
-	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
-	util.CodeLogger.Debugf("qtext: %v\nqparams: %v\n", qtext, qparams)
-	rows, err := db.Query(qtext, qparams...)
-	if err != nil {
-		util.CodeLogger.Errorf("Error during query: %v (%v)- %v", qtext, qparams, err)
-		return nil, err
-	}
-	defer rows.Close()
+	var geom tegola.Geometry
 
 	cols, err := rows.Columns()
 	if err != nil {
@@ -144,22 +105,17 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		valPtrs[i] = &vals[i]
 	}
 
-	pLayer := p.layers[layerName]
-	newLayer := new(mvt.Layer)
-	newLayer.Name = layerName
-
-	rowCount := 0
-	var geom tegola.Geometry
+	// Populates the "features" property of "layer"
 	for rows.Next() {
-		// Copy default tags to feature tag map
+		*rowCount++
+		// Copy default tags to kick off this feature's tags
 		ftags := make(map[string]interface{})
 		for k, v := range dtags {
 			ftags[k] = v
 		}
 
 		geom = nil
-		rowCount++
-		err = rows.Scan(valPtrs...)
+		err := rows.Scan(valPtrs...)
 		if err != nil {
 			util.CodeLogger.Error(err)
 			continue
@@ -169,9 +125,12 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		for i := 0; i < len(cols); i++ {
 			if vals[i] == nil {
 				continue
-			} else if cols[i] == idFieldname {
+			}
+
+			switch cols[i] {
+			case idFieldname:
 				fid = uint64(vals[i].(int64))
-			} else if cols[i] == geomFieldname {
+			case geomFieldname:
 				util.CodeLogger.Debugf("Doing gpkg geometry extraction...", vals[i])
 				var h GeoPackageBinaryHeader
 				geomData := vals[i].([]byte)
@@ -192,7 +151,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 						util.CodeLogger.Errorf(
 							"Was unable to transform geometry to webmercator from "+
 								"SRID (%v) for layer (%v) due to error: %v",
-							pLayer.srid, layerName, err)
+							pLayer.srid, layer.Name, err)
 						return nil, err
 					} else {
 						util.CodeLogger.Info("...conversion ok")
@@ -201,8 +160,11 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 				} else {
 					util.CodeLogger.Infof("SRID already default (%v), no conversion necessary", DefaultSRID)
 				}
-			} else {
-				// Grab any non-nil, non-id, & non-geometry column as a tag
+			case "minx", "miny", "maxx", "maxy":
+				// Skip these columns used for bounding box filtering
+				continue
+			default:
+				// Grab any non-nil, non-id, non-bounding box, & non-geometry column as a tag
 				switch v := vals[i].(type) {
 				case []uint8:
 					asBytes := make([]byte, len(v))
@@ -231,7 +193,89 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 			Tags:     ftags,
 			Geometry: geom,
 		}
-		newLayer.AddFeatures(f)
+		layer.AddFeatures(f)
+	}
+	return layer, nil
+}
+
+func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.TegolaTile, dtags map[string]interface{}) (*mvt.Layer, error) {
+	util.CodeLogger.Debugf("GPKGProvider MVTLayer() called for %v", layerName)
+	filepath := p.FilePath
+
+	// In DefaultSRID (web mercator - 3857)
+	tileBBoxStruct := tile.BoundingBox()
+	// TODO: There's some confusion between pixel coordinates & WebMercator positions in the tile
+	//	bounding box, making the smallest y-value tileBBoxStruct.Maxy and the largest Miny.
+	//	Hacking here to ensure a correct bounding box.
+	//	At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
+	tileBBox := points.BoundingBox{tileBBoxStruct.Minx, tileBBoxStruct.Maxy,
+		tileBBoxStruct.Maxx, tileBBoxStruct.Miny}
+
+	// Convert tile bounding box to gpkg geometry if necessary.
+	layerSRID := p.layers[layerName].srid
+	if layerSRID != DefaultSRID {
+		if DefaultSRID != tegola.WebMercator {
+			util.CodeLogger.Fatal("DefaultSRID != tegola.WebMercator requires changes here")
+		}
+		tileBBox = tileBBox.ConvertSrid(tegola.WebMercator, p.layers[layerName].srid)
+	}
+
+	// GPKG tables have a bounding box not available to custom queries.
+	if p.layers[layerName].tablename != "" {
+		// Check that layer is within bounding box
+		var layerBBox points.BoundingBox
+		layerBBox = p.layers[layerName].bbox
+
+		if layerBBox.DisjointBB(tileBBox) {
+			msg := fmt.Sprintf("Layer '%v' bounding box %v is outside tile bounding box %v, "+
+				"will not load any features", layerName, layerBBox, tileBBox)
+			util.CodeLogger.Debugf(msg)
+			return new(mvt.Layer), nil
+		}
+	}
+
+	db, err := getGpkgConnection(filepath)
+	if err != nil {
+		return nil, err
+	}
+	defer releaseGpkgConnection(filepath)
+
+	var qtext string
+	geomFieldname := p.layers[layerName].geomFieldname
+	idFieldname := p.layers[layerName].idFieldname
+
+	if p.layers[layerName].tablename != "" {
+		// If layer was specified via "tablename" in config, construct query.
+		geomTablename := p.layers[layerName].tablename
+		rtreeTablename := fmt.Sprintf("rtree_%v_geom", geomTablename)
+		// l - layer table, si - spatial index
+		selectClause := fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", idFieldname, geomFieldname)
+		for _, tf := range p.layers[layerName].tagFieldnames {
+			selectClause += fmt.Sprintf(", `%v`", tf)
+		}
+		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX!",
+			selectClause, geomTablename, rtreeTablename, idFieldname)
+		qtext = replaceTokens(qtext)
+	} else {
+		// If layer was specified via "sql" in config, collect it.
+		qtext = p.layers[layerName].sql
+	}
+
+	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
+	util.CodeLogger.Debugf("qtext: %v\nqparams: %v\n", qtext, qparams)
+	rows, err := db.Query(qtext, qparams...)
+	if err != nil {
+		util.CodeLogger.Errorf("Error during query: %v (%v)- %v", qtext, qparams, err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	pLayer := p.layers[layerName]
+	rowCount := 0
+	newLayer, err := layerFromQuery(&pLayer, rows, &rowCount, dtags)
+	if err != nil {
+		util.CodeLogger.Errorf("Problem in layerFromQuery(): %v", err)
+		return nil, err
 	}
 
 	if rowCount != len(newLayer.Features()) {
@@ -401,10 +445,40 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 				bbox:          geomTableDetails[tablename].bbox,
 			}
 		} else {
-			// Layer from custom sql
+			// --- Layer from custom sql
+			customSql := replaceTokens(layerConfig["sql"].(string))
+
+			// Get geometry type & srid from geometry of first row.
+			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSql)
+			var geomData []byte
+			// Bounds checks need params: maxx, minx, maxy, miny
+			qparams := []interface{}{float64(180.0), float64(-180.0), float64(85.0511), float64(-85.0511)}
+			util.CodeLogger.Debugf("qtext: %v, params: %v", qtext, qparams)
+			row := db.QueryRow(qtext, qparams...)
+			err = row.Scan(&geomData)
+			if err == sql.ErrNoRows {
+				util.CodeLogger.Warnf("Layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSql)
+				continue
+			} else if err != nil {
+				util.CodeLogger.Errorf("Layer '%v' problem executing custom SQL, skipping: %v",
+					layerName, err)
+				continue
+			}
+			var h GeoPackageBinaryHeader
+			h.Init(geomData)
+			reader := bytes.NewReader(geomData[h.Size():])
+			geom, err := wkb.Decode(reader)
+			if err != nil {
+				util.CodeLogger.Errorf("Problem extracting gpkg geometry: %v", err)
+			}
+
 			l = GPKGLayer{
-				name: layerName,
-				sql:  layerConfig["sql"].(string),
+				name:          layerName,
+				sql:           customSql,
+				srid:          int(h.SRSId()),
+				geomType:      geom,
+				geomFieldname: "geom",
+				idFieldname:   "fid",
 			}
 		}
 		p.layers[layerName] = l
