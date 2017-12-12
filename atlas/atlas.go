@@ -6,6 +6,8 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/cache"
+	_ "github.com/terranodo/tegola/cache/filecache"
+	_ "github.com/terranodo/tegola/cache/s3cache"
 )
 
 //	DefaultAtlas is instanitated for convenience

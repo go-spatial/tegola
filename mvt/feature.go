@@ -151,42 +151,6 @@ func NewCursor(tile *tegola.Tile) *cursor {
 	}
 }
 
-/*
-//	converts a point to a screen resolution point
-func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
-
-	nx = int64((p.X() - c.minx) * c.extent / c.xspan)
-	ny = int64((p.Y() - c.miny) * c.extent / c.yspan)
-
-	return nx, ny
-}
-
-func (c *cursor) TransformPt(p [2]float64) [2]float64 {
-
-	nx := int64((p[0] - c.minx) * c.extent / c.xspan)
-	ny := int64((p[1] - c.miny) * c.extent / c.yspan)
-	log.Println("Transforming: ", p, "to", [2]float64{float64(nx), float64(ny)})
-
-	return [2]float64{float64(nx), float64(ny)}
-}
-
-// TransformedExtent provides an extent based on screen resolutions.
-func (c *cursor) TransformedExtent() points.Extent {
-	return points.Extent{
-		c.TransformPt([2]float64{c.tile.Minx, c.tile.Miny}),
-		c.TransformPt([2]float64{c.tile.Maxx, c.tile.Maxy}),
-	}
-}
-
-func (c *cursor) MinMax() (min, max maths.Pt) {
-	return maths.Pt{X: 0 - c.buffer, Y: 0 - c.buffer},
-		maths.Pt{
-			X: float64(c.extent + c.buffer),
-			Y: float64(c.extent + c.buffer),
-		}
-}
-*/
-
 // GetDeltaPointAndUpdate assumes the Point is in WebMercator.
 func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	var ix, iy int64

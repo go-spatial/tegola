@@ -111,9 +111,7 @@ func (l *Layer) VTileLayer(ctx context.Context, tile *tegola.Tile) (*vectorTile.
 }
 
 //Version is the version of tile spec this layer is from.
-func (*Layer) Version() int {
-	return 2
-}
+func (*Layer) Version() int { return 2 }
 
 // Extent defaults to 4096
 func (l *Layer) Extent() int {
@@ -156,7 +154,7 @@ FEATURES_LOOP:
 			continue
 		}
 		for _, cf := range l.features {
-			if cf.ID != nil {
+			if cf.ID == nil {
 				continue
 			}
 			// We matched, we skip

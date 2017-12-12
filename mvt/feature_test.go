@@ -23,7 +23,7 @@ func TestEncodeGeometry(t *testing.T) {
 		}
 	*/
 	testcases := []struct {
-		desc string `"test":"desc"`
+		desc string `tbltest:"desc"`
 		geo  basic.Geometry
 		typ  vectorTile.Tile_GeomType
 		bbox tegola.BoundingBox
