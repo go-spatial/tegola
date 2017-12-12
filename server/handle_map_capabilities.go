@@ -170,8 +170,13 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		//	set CORS header
 		w.Header().Add("Access-Control-Allow-Origin", "*")
 
-		//	mimetype for protocol buffers
+		//	content type
 		w.Header().Add("Content-Type", "application/json")
+
+		//	cache control headers (no-cache)
+		w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Add("Pragma", "no-cache")
+		w.Header().Add("Expires", "0")
 
 		if err = json.NewEncoder(w).Encode(tileJSON); err != nil {
 			log.Printf("error encoding tileJSON for map (%v)", req.mapName)
