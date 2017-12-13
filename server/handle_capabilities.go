@@ -110,6 +110,17 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 		//	add the map to the capabilities struct
 		capabilities.Maps = append(capabilities.Maps, cMap)
+
+		//	content type
+		w.Header().Add("Content-Type", "application/json")
+
+		//	cache control headers (no-cache)
+		w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Add("Pragma", "no-cache")
+		w.Header().Add("Expires", "0")
+
+		//	setup a new json encoder and encode our capabilities
+		json.NewEncoder(w).Encode(capabilities)
 	}
 
 	//	setup a new json encoder and encode our capabilities

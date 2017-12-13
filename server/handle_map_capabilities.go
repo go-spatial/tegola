@@ -152,8 +152,13 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	//	build our URL scheme for the tile grid
 	tileJSON.Tiles = append(tileJSON.Tiles, tileURL)
 
-	//	mimetype for protocol buffers
+	//	content type
 	w.Header().Add("Content-Type", "application/json")
+
+	//	cache control headers (no-cache)
+	w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Add("Pragma", "no-cache")
+	w.Header().Add("Expires", "0")
 
 	if err = json.NewEncoder(w).Encode(tileJSON); err != nil {
 		log.Printf("error encoding tileJSON for map (%v)", req.mapName)
