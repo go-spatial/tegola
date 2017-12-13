@@ -219,6 +219,12 @@
 			"revisionTime": "2016-06-14T22:31:40Z"
 		},
 		{
+			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
+			"path": "github.com/inconshreveable/mousetrap",
+			"revision": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+			"revisionTime": "2014-10-17T20:07:13Z"
+		},
+		{
 			"checksumSHA1": "ZCMYdNAc0qTW5e7hWTZBVnYUXDs=",
 			"path": "github.com/jackc/pgx",
 			"revision": "558d5550cf5c08e7192eb2eb8635f21f4b700ff5",
