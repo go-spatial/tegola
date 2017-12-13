@@ -33,99 +33,85 @@ type CapabilitiesLayer struct {
 type HandleCapabilities struct{}
 
 func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	//	CORS preflight
-	case "OPTIONS":
-		//	TODO: how configurable do we want the CORS policy to be?
-		//	set CORS header
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-		w.WriteHeader(http.StatusNoContent)
-
-		//	options call does not have a body
-		w.Write(nil)
-		return
-
-	case "GET":
-		//	new capabilities struct
-		capabilities := Capabilities{
-			Version: Version,
-		}
-
-		//	parse our query string
-		var query = r.URL.Query()
-
-		//	iterate our registered maps
-		for _, m := range atlas.AllMaps() {
-			var debugQuery string
-
-			//	if we have a debug param add it to our URLs
-			if query.Get("debug") == "true" {
-				debugQuery = "?debug=true"
-
-				//	update our map to include the debug layers
-				m = m.EnableDebugLayers()
-			}
-
-			//	build the map details
-			cMap := CapabilitiesMap{
-				Name:        m.Name,
-				Attribution: m.Attribution,
-				Bounds:      m.Bounds,
-				Center:      m.Center,
-				Tiles: []string{
-					fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), m.Name, debugQuery),
-				},
-				Capabilities: fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), m.Name, debugQuery),
-			}
-
-			for i := range m.Layers {
-				//	skip disabled layers
-				if m.Layers[i].Disabled {
-					continue
-				}
-
-				//	check if the layer already exists in our slice. this can happen if the config
-				//	is using the "name" param for a layer to override the providerLayerName
-				var skip bool
-				for j := range cMap.Layers {
-					if cMap.Layers[j].Name == m.Layers[i].MVTName() {
-						//	we need to use the min and max of all layers with this name
-						if cMap.Layers[j].MinZoom > m.Layers[i].MinZoom {
-							cMap.Layers[j].MinZoom = m.Layers[i].MinZoom
-						}
-
-						if cMap.Layers[j].MaxZoom < m.Layers[i].MaxZoom {
-							cMap.Layers[j].MaxZoom = m.Layers[i].MaxZoom
-						}
-
-						skip = true
-						break
-					}
-				}
-				//	entry for layer already exists. move on
-				if skip {
-					continue
-				}
-
-				//	build the layer details
-				cLayer := CapabilitiesLayer{
-					Name: m.Layers[i].MVTName(),
-					Tiles: []string{
-						fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), m.Name, m.Layers[i].MVTName(), debugQuery),
-					},
-					MinZoom: m.Layers[i].MinZoom,
-					MaxZoom: m.Layers[i].MaxZoom,
-				}
-
-				//	add the layer to the map
-				cMap.Layers = append(cMap.Layers, cLayer)
-			}
-
-			//	add the map to the capabilities struct
-			capabilities.Maps = append(capabilities.Maps, cMap)
-		}
-
-		//	setup a new json encoder and encode our capabilities
-		json.NewEncoder(w).Encode(capabilities)
+	//	new capabilities struct
+	capabilities := Capabilities{
+		Version: Version,
 	}
+
+	//	parse our query string
+	var query = r.URL.Query()
+
+	//	iterate our registered maps
+	for _, m := range atlas.AllMaps() {
+		var debugQuery string
+
+		//	if we have a debug param add it to our URLs
+		if query.Get("debug") == "true" {
+			debugQuery = "?debug=true"
+
+			//	update our map to include the debug layers
+			m = m.EnableDebugLayers()
+		}
+
+		//	build the map details
+		cMap := CapabilitiesMap{
+			Name:        m.Name,
+			Attribution: m.Attribution,
+			Bounds:      m.Bounds,
+			Center:      m.Center,
+			Tiles: []string{
+				fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), m.Name, debugQuery),
+			},
+			Capabilities: fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), m.Name, debugQuery),
+		}
+
+		for i := range m.Layers {
+			//	skip disabled layers
+			if m.Layers[i].Disabled {
+				continue
+			}
+
+			//	check if the layer already exists in our slice. this can happen if the config
+			//	is using the "name" param for a layer to override the providerLayerName
+			var skip bool
+			for j := range cMap.Layers {
+				if cMap.Layers[j].Name == m.Layers[i].MVTName() {
+					//	we need to use the min and max of all layers with this name
+					if cMap.Layers[j].MinZoom > m.Layers[i].MinZoom {
+						cMap.Layers[j].MinZoom = m.Layers[i].MinZoom
+					}
+
+					if cMap.Layers[j].MaxZoom < m.Layers[i].MaxZoom {
+						cMap.Layers[j].MaxZoom = m.Layers[i].MaxZoom
+					}
+
+					skip = true
+					break
+				}
+			}
+			//	entry for layer already exists. move on
+			if skip {
+				continue
+			}
+
+			//	build the layer details
+			cLayer := CapabilitiesLayer{
+				Name: m.Layers[i].MVTName(),
+				Tiles: []string{
+					fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), m.Name, m.Layers[i].MVTName(), debugQuery),
+				},
+				MinZoom: m.Layers[i].MinZoom,
+				MaxZoom: m.Layers[i].MaxZoom,
+			}
+
+			//	add the layer to the map
+			cMap.Layers = append(cMap.Layers, cLayer)
+		}
+
+		//	add the map to the capabilities struct
+		capabilities.Maps = append(capabilities.Maps, cMap)
+	}
+
+	//	setup a new json encoder and encode our capabilities
+	json.NewEncoder(w).Encode(capabilities)
 }

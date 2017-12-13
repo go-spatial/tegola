@@ -1,3 +1,8 @@
+# Sever
+
+
+## Local development of the embeded inspector
+
 tegola's built in viewer code is stored in the static/ directory. To generate a bindata file so the static assets can be compiled into the binary, [bindata-assetfs](https://github.com/elazarl/go-bindata-assetfs) is used. Once bindata-assetfs is installed the following command can be used to generate the file for inclusion:
 
 ```

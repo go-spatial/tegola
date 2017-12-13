@@ -54,10 +54,11 @@ type Config struct {
 }
 
 type Webserver struct {
-	HostName  string `toml:"hostname"`
-	Port      string `toml:"port"`
-	LogFile   string `toml:"log_file"`
-	LogFormat string `toml:"log_format"`
+	HostName          string `toml:"hostname"`
+	Port              string `toml:"port"`
+	LogFile           string `toml:"log_file"`
+	LogFormat         string `toml:"log_format"`
+	CORSAllowedOrigin string `toml:"cors_allowed_origin"`
 }
 
 // A Map represents a map in the Tegola Config file.

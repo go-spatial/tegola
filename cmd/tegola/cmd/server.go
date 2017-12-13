@@ -27,6 +27,11 @@ var serverCmd = &cobra.Command{
 		server.Version = Version
 		server.HostName = conf.Webserver.HostName
 
+		//	set the CORSAllowedOrigin if a value is provided
+		if conf.Webserver.CORSAllowedOrigin != "" {
+			server.CORSAllowedOrigin = conf.Webserver.CORSAllowedOrigin
+		}
+
 		//	start our webserver
 		server.Start(serverPort)
 	},
