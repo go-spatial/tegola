@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/terranodo/tegola/internal/assert"
 )
 
 var geometryHeader = []byte{71, 80, 0, 3, 230, 16, 0, 0, 229, 109, 250, 182, 103, 182, 55, 64, 193, 171, 176, 208, 185, 203, 55, 64, 44, 201, 188, 229, 214, 242, 66, 64, 32, 194, 46, 134, 184, 248, 66, 64}

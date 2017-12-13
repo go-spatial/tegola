@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/terranodo/tegola/internal/assert"
 )
 
 var testDataPath string
@@ -33,20 +33,20 @@ func TestBasicConnectionPoolUse(t *testing.T) {
 	closeAge = 100 * 1000000
 
 	// --- Check that getting a connection once opens a new connection
-	assert.Equal(t, 0, len(gpkgPoolRegistry), "")
+	assert.Equal(t, 0, len(gpkgPoolRegistry))
 	getGpkgConnection(gpkgFiles[0]) // files[0] get #1
-	assert.Equal(t, 1, len(gpkgPoolRegistry), "")
+	assert.Equal(t, 1, len(gpkgPoolRegistry))
 
 	// --- Check that getting a connection more than once doesn't open a new connection
 	getGpkgConnection(gpkgFiles[0]) // files[0] get #2
-	assert.Equal(t, 1, len(gpkgPoolRegistry), "")
+	assert.Equal(t, 1, len(gpkgPoolRegistry))
 
 	// --- Check that getting a connection updates it's request timestamp.
 	t1 := gpkgPoolRegistry[gpkgFiles[0]].lastRequested
 	getGpkgConnection(gpkgFiles[0]) // files[0] get #3
 	t2 := gpkgPoolRegistry[gpkgFiles[0]].lastRequested
 
-	assert.True(t, t2 > t1, "")
+	assert.True(t, t2 > t1)
 
 	// --- Check that getting a different connection opens a new connection
 	getGpkgConnection(gpkgFiles[1]) // files[1] get #1
@@ -56,29 +56,29 @@ func TestBasicConnectionPoolUse(t *testing.T) {
 	releaseGpkgConnection(gpkgFiles[0]) // files[0] release #1
 	releaseGpkgConnection(gpkgFiles[0]) // files[0] release #2
 	releaseGpkgConnection(gpkgFiles[0]) // files[0] release #3
-	assert.Equal(t, 0, gpkgPoolRegistry[gpkgFiles[0]].shareCount, "")
+	assert.Equal(t, 0, gpkgPoolRegistry[gpkgFiles[0]].shareCount)
 
-	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[0]].db, "")
-	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[1]].db, "")
+	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[0]].db)
+	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[1]].db)
 
 	// gpkgFiles[1] hasn't been released, so should still be open after closeAge has passed.
 	// Sleep for the closeAge plus some to allow the connection to age and the close to be processed.
 	time.Sleep(time.Duration(closeAge*2) * time.Nanosecond)
-	assert.Nil(t, gpkgPoolRegistry[gpkgFiles[0]].db, "")
-	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[1]].db, "")
+	assert.Nil(t, gpkgPoolRegistry[gpkgFiles[0]].db)
+	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[1]].db)
 
 	// --- Check that SIGINT results in registry reset.
 	// TODO: Add mock to ensure that db.Close() is called for each connection.
 	getGpkgConnection(gpkgFiles[0])
-	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[0]].db, "")
-	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[1]].db, "")
+	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[0]].db)
+	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[1]].db)
 	// This instructs the connection pool cleanup code not to resend the signal and exit the process
 	resendSignal = false
 	p, err := os.FindProcess(os.Getpid())
-	assert.Nil(t, err, "")
+	assert.Nil(t, err)
 	p.Signal(syscall.SIGINT)
 
 	// Sleep briefly to allow cleanup code time to complete
 	time.Sleep(time.Duration(25) * time.Millisecond)
-	assert.Equal(t, 0, len(gpkgPoolRegistry), "")
+	assert.Equal(t, 0, len(gpkgPoolRegistry))
 }

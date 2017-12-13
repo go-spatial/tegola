@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/internal/assert"
 	"github.com/terranodo/tegola/maths/points"
 )
 
