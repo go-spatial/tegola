@@ -3,10 +3,10 @@ package gpkg
 import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/internal/log"
 	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
-	"github.com/terranodo/tegola/util"
 	"github.com/terranodo/tegola/util/dict"
 	"github.com/terranodo/tegola/wkb"
 
@@ -61,7 +61,7 @@ func (l GPKGLayer) SRID() int                 { return l.srid }
 func (l GPKGLayer) BBox() [4]float64          { return l.bbox }
 
 func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
-	util.CodeLogger.Debug("Attempting gpkg.Layers()")
+	log.Debug("Attempting gpkg.Layers()")
 	layerCount := len(p.layers)
 	ls := make([]mvt.LayerInfo, layerCount)
 
@@ -71,7 +71,7 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 		i++
 	}
 
-	util.CodeLogger.Debugf("Ok, returning mvt.LayerInfo array: %v", ls)
+	log.Debug("Ok, returning mvt.LayerInfo array: %v", ls)
 	return ls, nil
 }
 
@@ -117,7 +117,7 @@ func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[
 		geom = nil
 		err := rows.Scan(valPtrs...)
 		if err != nil {
-			util.CodeLogger.Error(err)
+			log.Error(err)
 			continue
 		}
 		var fid uint64
@@ -131,7 +131,7 @@ func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[
 			case idFieldname:
 				fid = uint64(vals[i].(int64))
 			case geomFieldname:
-				util.CodeLogger.Debugf("Doing gpkg geometry extraction...", vals[i])
+				log.Debug("Doing gpkg geometry extraction...", vals[i])
 				var h GeoPackageBinaryHeader
 				geomData := vals[i].([]byte)
 				h.Init(geomData)
@@ -140,25 +140,25 @@ func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[
 				geom, err = wkb.Decode(reader)
 
 				if err != nil {
-					util.CodeLogger.Errorf("Error decoding geometry: %v", err)
+					log.Error("Error decoding geometry: %v", err)
 				}
 
 				if h.SRSId() != DefaultSRID {
-					util.CodeLogger.Infof("SRID %v != %v, trying to convert...", pLayer.srid, DefaultSRID)
+					log.Info("SRID %v != %v, trying to convert...", pLayer.srid, DefaultSRID)
 					// We need to convert our points to Webmercator.
 					g, err := basic.ToWebMercator(pLayer.srid, geom)
 					if err != nil {
-						util.CodeLogger.Errorf(
+						log.Error(
 							"Was unable to transform geometry to webmercator from "+
 								"SRID (%v) for layer (%v) due to error: %v",
 							pLayer.srid, layer.Name, err)
 						return nil, err
 					} else {
-						util.CodeLogger.Info("...conversion ok")
+						log.Info("...conversion ok")
 					}
 					geom = g.Geometry
 				} else {
-					util.CodeLogger.Infof("SRID already default (%v), no conversion necessary", DefaultSRID)
+					log.Info("SRID already default (%v), no conversion necessary", DefaultSRID)
 				}
 			case "minx", "miny", "maxx", "maxy":
 				// Skip these columns used for bounding box filtering
@@ -178,13 +178,13 @@ func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[
 					ftags[cols[i]] = v
 				default:
 					err := fmt.Errorf("Unexpected type for sqlite column data: %v: %T\n", cols[i], v)
-					util.CodeLogger.Error(err)
+					log.Error(err)
 				}
 			}
 		}
 
 		if geom == nil {
-			util.CodeLogger.Warn("No geometry in row, skipping feature")
+			log.Warn("No geometry in row, skipping feature")
 			continue
 		}
 
@@ -199,7 +199,7 @@ func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[
 }
 
 func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.TegolaTile, dtags map[string]interface{}) (*mvt.Layer, error) {
-	util.CodeLogger.Debugf("GPKGProvider MVTLayer() called for %v", layerName)
+	log.Debug("GPKGProvider MVTLayer() called for %v", layerName)
 	filepath := p.FilePath
 
 	// In DefaultSRID (web mercator - 3857)
@@ -215,7 +215,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	layerSRID := p.layers[layerName].srid
 	if layerSRID != DefaultSRID {
 		if DefaultSRID != tegola.WebMercator {
-			util.CodeLogger.Fatal("DefaultSRID != tegola.WebMercator requires changes here")
+			log.Fatal("DefaultSRID != tegola.WebMercator requires changes here")
 		}
 		tileBBox = tileBBox.ConvertSrid(tegola.WebMercator, p.layers[layerName].srid)
 	}
@@ -229,7 +229,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		if layerBBox.DisjointBB(tileBBox) {
 			msg := fmt.Sprintf("Layer '%v' bounding box %v is outside tile bounding box %v, "+
 				"will not load any features", layerName, layerBBox, tileBBox)
-			util.CodeLogger.Debugf(msg)
+			log.Debug(msg)
 			return new(mvt.Layer), nil
 		}
 	}
@@ -262,10 +262,10 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	}
 
 	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
-	util.CodeLogger.Debugf("qtext: %v\nqparams: %v\n", qtext, qparams)
+	log.Debug("qtext: %v\nqparams: %v\n", qtext, qparams)
 	rows, err := db.Query(qtext, qparams...)
 	if err != nil {
-		util.CodeLogger.Errorf("Error during query: %v (%v)- %v", qtext, qparams, err)
+		log.Error("Error during query: %v (%v)- %v", qtext, qparams, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -274,12 +274,12 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	rowCount := 0
 	newLayer, err := layerFromQuery(&pLayer, rows, &rowCount, dtags)
 	if err != nil {
-		util.CodeLogger.Errorf("Problem in layerFromQuery(): %v", err)
+		log.Error("Problem in layerFromQuery(): %v", err)
 		return nil, err
 	}
 
 	if rowCount != len(newLayer.Features()) {
-		util.CodeLogger.Errorf("newLayer feature count doesn't match table row count (%v != %v)\n",
+		log.Error("newLayer feature count doesn't match table row count (%v != %v)\n",
 			len(newLayer.Features()), rowCount)
 	}
 
@@ -310,16 +310,16 @@ func gpkgGeomNameToTegolaGeometry(geomName string) (tegola.Geometry, error) {
 		return new(basic.MultiPolygon), nil
 	default:
 		err := fmt.Errorf("Unsupported gpkg geometry type: %v\n", geomName)
-		util.CodeLogger.Error(err)
+		log.Error(err)
 		return nil, err
 	}
 	err := fmt.Errorf("Execution should not leave switch block.")
-	util.CodeLogger.Fatal(err)
+	log.Fatal(err)
 	return nil, err
 }
 
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
-	util.CodeLogger.Info("GPKGProvider NewProvider() called with config: %v\n", config)
+	log.Info("GPKGProvider NewProvider() called with config: %v\n", config)
 	m := dict.M(config)
 	filepath, err := m.String("FilePath", nil)
 
@@ -334,16 +334,13 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	for _, layerConfig := range layerConfigs {
 		layerName := layerConfig["name"]
 		if layerName == nil {
-			err := fmt.Errorf("'name' is required for a feature's config.")
-			util.CodeLogger.Fatal(err)
+			log.Fatal("'name' is required for a feature's config.")
 		}
 		if layerConfig["tablename"] == nil && layerConfig["sql"] == nil {
-			err := fmt.Errorf("Either 'tablename' or 'sql' is required for a feature's config.")
-			util.CodeLogger.Fatal(err)
+			log.Fatal("Either 'tablename' or 'sql' is required for a feature's config.")
 		}
 		if layerConfig["tablename"] != nil && layerConfig["sql"] != nil {
-			err := fmt.Errorf("Only one of 'tablename', 'sql' may appear in a layer's config.")
-			util.CodeLogger.Fatal(err)
+			log.Fatal("Only one of 'tablename', 'sql' may appear in a layer's config.")
 		}
 
 		configMap := make(map[string]interface{})
@@ -363,14 +360,14 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		if err != nil {
 			msg += fmt.Sprintf(" error: %v\n", err)
 		}
-		util.CodeLogger.Error(msg)
+		log.Error(msg)
 		return nil, err
 	}
 
-	util.CodeLogger.Debugf("Opening gpkg at: %v", filepath)
+	log.Debug("Opening gpkg at: %v", filepath)
 	db, err := getGpkgConnection(filepath)
 	if err != nil {
-		util.CodeLogger.Errorf("Error opening gpkg file: %v", err)
+		log.Error("Error opening gpkg file: %v", err)
 		return nil, err
 	}
 	defer releaseGpkgConnection(filepath)
@@ -383,7 +380,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		"WHERE c.data_type = 'features';"
 	rows, err := db.Query(qtext)
 	if err != nil {
-		util.CodeLogger.Errorf("Error during query: %v - %v", qtext, err)
+		log.Error("Error during query: %v - %v", qtext, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -399,7 +396,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		// Get layer geometry as tegola geometry instance corresponding to dataType text for table
 		tg, err := gpkgGeomNameToTegolaGeometry(geomTypeName)
 		if err != nil {
-			util.CodeLogger.Errorf(
+			log.Error(
 				"Problem getting geometry type %v as tegola.Geometry: %v", geomTypeName, err)
 			return nil, err
 		}
@@ -453,14 +450,14 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			var geomData []byte
 			// Bounds checks need params: maxx, minx, maxy, miny
 			qparams := []interface{}{float64(180.0), float64(-180.0), float64(85.0511), float64(-85.0511)}
-			util.CodeLogger.Debugf("qtext: %v, params: %v", qtext, qparams)
+			log.Debug("qtext: %v, params: %v", qtext, qparams)
 			row := db.QueryRow(qtext, qparams...)
 			err = row.Scan(&geomData)
 			if err == sql.ErrNoRows {
-				util.CodeLogger.Warnf("Layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSql)
+				log.Warn("Layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSql)
 				continue
 			} else if err != nil {
-				util.CodeLogger.Errorf("Layer '%v' problem executing custom SQL, skipping: %v",
+				log.Error("Layer '%v' problem executing custom SQL, skipping: %v",
 					layerName, err)
 				continue
 			}
@@ -469,7 +466,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			reader := bytes.NewReader(geomData[h.Size():])
 			geom, err := wkb.Decode(reader)
 			if err != nil {
-				util.CodeLogger.Errorf("Problem extracting gpkg geometry: %v", err)
+				log.Error("Problem extracting gpkg geometry: %v", err)
 			}
 
 			l = GPKGLayer{

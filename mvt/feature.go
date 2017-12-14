@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/internal/log"
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/makevalid"
 	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
-	"github.com/terranodo/tegola/util"
 	"github.com/terranodo/tegola/wkb"
 )
 
@@ -84,11 +83,11 @@ func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interf
 
 	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent, simplify)
 	if err != nil {
-		util.CodeLogger.Errorf("Error encoding geometry: %v\n", err)
+		log.Error("Error encoding geometry: %v\n", err)
 		return tf, err
 	}
 
-	util.CodeLogger.Debugf("Geometry %T encoded for Mapbox as: %v", f.Geometry, geo)
+	log.Debug("Geometry %T encoded for Mapbox as: %v", f.Geometry, geo)
 
 	if len(geo) == 0 {
 		return nil, nil
@@ -521,12 +520,12 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	filename := fmt.Sprintf("/tmp/testcase_%v_%p.json", fln, geo)
 	bgeo, err := basic.CloneGeometry(geo)
 	if err != nil {
-		log.Println("Failed to clone geo for test case.", err)
+		log.Error("Failed to clone geo for test case. %v", err)
 		return
 	}
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Printf("Failed to create test file %v : %v.\n", filename, err)
+		log.Error("Failed to create test file %v : %v.\n", filename, err)
 		return
 	}
 	defer f.Close()
@@ -537,8 +536,7 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	}
 	enc := json.NewEncoder(f)
 	enc.Encode(geodebug)
-	log.Printf("Created file: %v", filename)
-	log.Printf("ERR: %v", err)
+	log.Info("Created file: %v", filename)
 }
 
 func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
@@ -574,7 +572,7 @@ func (c *cursor) ClosePath() uint32 {
 func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 
 	if geom == nil {
-		util.CodeLogger.Errorf("encodeGeometry() received <nil> geom parameter\n")
+		log.Error("encodeGeometry() received <nil> geom parameter\n")
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
 
@@ -590,38 +588,38 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 	geom, err = validate.CleanGeometry(ctx, sg, c.extent)
 
 	if err != nil {
-		util.CodeLogger.Errorf("encodeGeometry() error in validate.CleanGeometry(): %v\n", err)
+		log.Error("encodeGeometry() error in validate.CleanGeometry(): %v\n", err)
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
 	if geom == nil {
-		util.CodeLogger.Warnf("encodeGeometry() validate.CleanGeometry resulted in <nil> geom\n")
+		log.Warn("encodeGeometry() validate.CleanGeometry resulted in <nil> geom\n")
 		return []uint32{}, -1, nil
 	}
 	switch t := geom.(type) {
 	case tegola.Point:
-		util.CodeLogger.Debugf("Encoding tegola.Point\n")
+		log.Debug("Encoding tegola.Point\n")
 		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.Point3:
-		util.CodeLogger.Debugf("Encoding tegola.Point3\n")
+		log.Debug("Encoding tegola.Point3\n")
 		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.MultiPoint:
-		util.CodeLogger.Debugf("Encoding tegola.MultiPoint\n")
+		log.Debug("Encoding tegola.MultiPoint\n")
 		g = append(g, c.MoveTo(t.Points()...)...)
 		return g, vectorTile.Tile_POINT, nil
 
 	case tegola.LineString:
-		util.CodeLogger.Debugf("Encoding tegola.LineString\n")
+		log.Debug("Encoding tegola.LineString\n")
 		points := t.Subpoints()
 		g = append(g, c.MoveTo(points[0])...)
 		g = append(g, c.LineTo(points[1:]...)...)
 		return g, vectorTile.Tile_LINESTRING, nil
 
 	case tegola.MultiLine:
-		util.CodeLogger.Debugf("Encoding tegola.MultiLine\n")
+		log.Debug("Encoding tegola.MultiLine\n")
 		lines := t.Lines()
 		for _, l := range lines {
 			points := l.Subpoints()
@@ -631,7 +629,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 		return g, vectorTile.Tile_LINESTRING, nil
 
 	case tegola.Polygon:
-		util.CodeLogger.Debugf("Encoding tegola.Polygon\n")
+		log.Debug("Encoding tegola.Polygon\n")
 		// TODO: Right now c.ScaleGeo() never returns a Polygon, so this is dead code.
 		lines := t.Sublines()
 		for _, l := range lines {
@@ -643,7 +641,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 		return g, vectorTile.Tile_POLYGON, nil
 
 	case tegola.MultiPolygon:
-		util.CodeLogger.Debugf("Encoding tegola.MultiPolygon\n")
+		log.Debug("Encoding tegola.MultiPolygon\n")
 		polygons := t.Polygons()
 		for _, p := range polygons {
 			lines := p.Sublines()
@@ -657,7 +655,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 		return g, vectorTile.Tile_POLYGON, nil
 
 	default:
-		log.Printf("Geo: %v : %T", wkb.WKT(geo), geo)
+		log.Error("Geo: %v : %T", wkb.WKT(geo), geo)
 		return nil, vectorTile.Tile_UNKNOWN, ErrUnknownGeometryType
 	}
 }
@@ -905,7 +903,7 @@ func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []
 		}
 
 		if kidx == -1 {
-			log.Printf("Did not find key (%v) in keymap.", key)
+			log.Error("Did not find key (%v) in keymap.", key)
 			return tags, fmt.Errorf("Did not find key (%v) in keymap.", key)
 		}
 

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/terranodo/tegola/util"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 const (
@@ -37,14 +37,14 @@ func init() {
 	go func() {
 		// Block until a signal is received.
 		s := <-sigs
-		util.CodeLogger.Infof("Signal received: %v", s)
+		log.Info("Signal received: %v", s)
 
 		// Program is exiting, close db connections regardless of wait group status & reset registry.
 		gpkgPoolRegistryMutex.Lock()
 		for filepath, conn := range gpkgPoolRegistry {
 			conn.mutex.Lock()
 			if conn.db != nil {
-				util.CodeLogger.Infof("Closing gpkg db at: %v", conn.filepath)
+				log.Info("Closing gpkg db at: %v", conn.filepath)
 				conn.db.Close()
 				delete(gpkgPoolRegistry, filepath)
 			}
@@ -90,7 +90,7 @@ func getGpkgConnection(filepath string) (db *sql.DB, err error) {
 	conn.mutex.Lock()
 	if conn.db == nil {
 		// Open the database and stash the connection
-		util.CodeLogger.Infof("Opening gpkg at: %v", filepath)
+		log.Info("Opening gpkg at: %v", filepath)
 		db, err = sql.Open("sqlite3", filepath)
 		conn.db = db
 		if err == nil {
@@ -145,10 +145,10 @@ func closeConnection(conn *GpkgConnectionPool) {
 	if conn.db != nil {
 		if conn.shareCount < 1 {
 			if conn.shareCount < 0 {
-				util.CodeLogger.Warnf("Invalid GpkgConnectionPool.shareCount for %v: %v",
+				log.Warn("Invalid GpkgConnectionPool.shareCount for %v: %v",
 					conn.filepath, conn.shareCount)
 			}
-			util.CodeLogger.Infof("Closing GPKG unused in %f nanoseconds: %v", float32(closeAge)/1000000000.0, conn.filepath)
+			log.Info("Closing GPKG unused in %f nanoseconds: %v", float32(closeAge)/1000000000.0, conn.filepath)
 			conn.db.Close()
 			conn.db = nil
 		}

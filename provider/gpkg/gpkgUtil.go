@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/terranodo/tegola/util"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 // Byte ordering flags
@@ -27,7 +27,7 @@ type GeoPackageBinaryHeader struct {
 func bytesToFloat64(bytes []byte, byteOrder uint8) float64 {
 	if len(bytes) != 8 {
 		err := fmt.Errorf("bytesToFloat64(): Need 8 bytes, received %v", len(bytes))
-		util.CodeLogger.Fatal(err)
+		log.Fatal(err)
 	}
 
 	var bitConversion binary.ByteOrder
@@ -37,7 +37,7 @@ func bytesToFloat64(bytes []byte, byteOrder uint8) float64 {
 		bitConversion = binary.LittleEndian
 	} else {
 		err := fmt.Errorf("Invalid byte order flag leading WKBGeometry: %v", byteOrder)
-		util.CodeLogger.Fatal(err)
+		log.Fatal(err)
 	}
 
 	bits := bitConversion.Uint64(bytes[:])
@@ -49,7 +49,7 @@ func bytesToFloat64(bytes []byte, byteOrder uint8) float64 {
 func bytesToInt32(bytes []byte, byteOrder uint8) int32 {
 	if len(bytes) != 4 {
 		err := fmt.Errorf("Expecting 4 bytes, got %v", len(bytes))
-		util.CodeLogger.Error(err)
+		log.Error(err)
 		return -1
 	}
 
@@ -148,20 +148,20 @@ func (h *GeoPackageBinaryHeader) Init(geom []byte) {
 		h.envelope[6] = bytesToFloat64(geom[56:64], headerByteOrder)
 		h.envelope[7] = bytesToFloat64(geom[64:72], headerByteOrder)
 	default:
-		util.CodeLogger.Errorf("Invalid envelope type: %v", eType)
+		log.Error("Invalid envelope type: %v", eType)
 		h.envelope = make([]float64, 0)
 	}
 
 	h.headerSize = hSize
 
-	util.CodeLogger.Debugf("GeoPackageBinaryHeader.Init() header size: %v, geom blob size: %v", hSize, len(geom))
+	log.Debug("GeoPackageBinaryHeader.Init() header size: %v, geom blob size: %v", hSize, len(geom))
 
 	h.initialized = true
 }
 
 func (h *GeoPackageBinaryHeader) isInitialized(caller string) bool {
 	if !h.initialized {
-		util.CodeLogger.Errorf("%v: GeoPackageBinaryHeader not initialized", caller)
+		log.Error("%v: GeoPackageBinaryHeader not initialized", caller)
 		return false
 	} else {
 		return true
@@ -196,7 +196,7 @@ func (h *GeoPackageBinaryHeader) EnvelopeType() uint8 {
 	if h.flagsReady {
 		envelope = (h.flags & 0xE) >> 1
 	} else {
-		util.CodeLogger.Errorf("GeoPackageBinaryHeader.flags must be ready before calling this function")
+		log.Error("GeoPackageBinaryHeader.flags must be ready before calling this function")
 		envelope = 0
 	}
 

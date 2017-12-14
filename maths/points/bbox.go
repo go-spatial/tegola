@@ -6,8 +6,8 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/internal/log"
 	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/util"
 )
 
 type BoundingBox [4]float64
@@ -103,7 +103,7 @@ func (bb BoundingBox) ConvertSrid(fromId int, toId int) BoundingBox {
 		newBb := bb
 		return newBb
 	} else {
-		util.CodeLogger.Fatalf("Converting from srid %v -> %v is currently unsupported\n", fromId, toId)
+		log.Fatal("Converting from srid %v -> %v is currently unsupported\n", fromId, toId)
 	}
 
 	// Lower left & top right points
@@ -117,11 +117,11 @@ func (bb BoundingBox) ConvertSrid(fromId int, toId int) BoundingBox {
 	if err1 != nil || err2 != nil {
 		newBB := bb
 		msg := "Problem converting BoundingBox geometry from %v -> %v: %v"
-		util.CodeLogger.Error()
+		log.Error(msg, fromId, toId, bb)
 		if err1 != nil {
-			util.CodeLogger.Errorf(msg, fromId, toId, err1)
+			log.Error(msg, fromId, toId, err1)
 		} else {
-			util.CodeLogger.Errorf(msg, fromId, toId, err2)
+			log.Error(msg, fromId, toId, err2)
 		}
 		return newBB
 	}

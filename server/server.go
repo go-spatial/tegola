@@ -3,14 +3,13 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/terranodo/tegola/cache"
 	_ "github.com/terranodo/tegola/cache/filecache"
-	"github.com/terranodo/tegola/util"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 const (
@@ -51,7 +50,7 @@ func RegisterMap(m Map) error {
 //	Start starts the tile server binding to the provided port
 func Start(port string) {
 	//	notify the user the server is starting
-	log.Printf("Starting tegola server on port %v", port)
+	log.Info("Starting tegola server on port %v", port)
 
 	r := httptreemux.New()
 	group := r.NewGroup("/")
@@ -94,7 +93,7 @@ func hostName(r *http.Request) string {
 		requestHostname = substrs[0]
 		requestPort = substrs[1]
 	default:
-		util.CodeLogger.Warnf("Multiple colons (':') in host string: %v", r.Host)
+		log.Warn("Multiple colons (':') in host string: %v", r.Host)
 	}
 
 	var retHost string
