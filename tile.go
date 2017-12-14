@@ -150,11 +150,14 @@ func (t *Tile) FromPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
 	y := float64(int64(pt[1]))
 
 	/*
-		x = (spt[0] - t.extent[0][0]) * t.Extent / t.xspan
-		x * t.xspan = (spt[0] - t.extent[0][0]) * t.Extent
-		x * t.xspan / t.Extent = spt[0] - t.extent[0][0]
+		        n = (spt[0] - t.extent[0][0])
+			z = t.Extent / t.xspan
+			x = n * z
+			x/z = n
+			x/z = spt[0] - t.extent[0][0]
+			x/z + t.extent[0][0] = spt[0]
+			(x * t.xspan / t.Extent) + t.extent[0][0] = spt[0]
 	*/
-
 	wmx := (x * t.xspan / t.Extent) + t.extent[0][0]
 	wmy := (y * t.yspan / t.Extent) + t.extent[0][1]
 	return fromWebMercator(srid, [2]float64{wmx, wmy})

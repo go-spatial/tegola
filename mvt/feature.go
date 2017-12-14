@@ -556,6 +556,8 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, tile *tegola.Tile
 
 	// Project Geom
 
+	// TODO: gdey: We need to separate out the transform, simplification, and clipping from the encoding process. #224
+
 	geo := c.ScaleGeo(geom)
 	sg := SimplifyGeometry(geo, tile.ZEpislon(), simplify)
 

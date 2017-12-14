@@ -3,6 +3,7 @@ package tegola_test
 import (
 	"testing"
 
+	"github.com/gdey/tbltest"
 	"github.com/terranodo/tegola"
 )
 
@@ -113,4 +114,33 @@ func TestTileZRes(t *testing.T) {
 			t.Errorf("Failed test %v. Expected zres (%v), got (%v)", i, test.zres, zres)
 		}
 	}
+}
+
+func TestTileToFromPixel(t *testing.T) {
+	tile := tegola.NewTile(20, 0, 0)
+	fn := func(idx int, pt [2]float64) {
+		npt, err := tile.FromPixel(tegola.WebMercator, pt)
+		if err != nil {
+			t.Errorf("[%v] Error, Expected nil Got %v", idx, err)
+			return
+		}
+		gpt, err := tile.ToPixel(tegola.WebMercator, npt)
+		if err != nil {
+			t.Errorf("[%v] Error, Expected nil Got %v", idx, err)
+			return
+		}
+		// TODO: gdey need to find the utility math function for comparing floats.
+		if pt[0] != gpt[0] {
+			t.Errorf("[%v] unequal x value, Expected %v Got %v", idx, pt[0], gpt[0])
+		}
+		if pt[1] != gpt[1] {
+			t.Errorf("[%v] unequal y value, Expected %v Got %v", idx, pt[0], gpt[0])
+		}
+
+	}
+	tbltest.Cases(
+		[2]float64{1, 1},
+		[2]float64{0, 0},
+		[2]float64{4000, 4000},
+	).Run(fn)
 }
