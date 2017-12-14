@@ -2,10 +2,11 @@ package points
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/internal/assert"
 )
 
 func TestDisjointBB(t *testing.T) {
@@ -126,7 +127,9 @@ func TestConvertSrid(t *testing.T) {
 		convertedBBox := tc.bbox.ConvertSrid(tc.fromSrid, tc.toSrid)
 		failMsg := fmt.Sprintf("TestCase[%v]: %v != %v", i, convertedBBox, tc.expectedBbox)
 		for j := 0; j < 4; j++ {
-			assert.InDelta(t, tc.expectedBbox[j], convertedBBox[j], floatDelta, failMsg)
+			if math.Abs(tc.expectedBbox[j]-convertedBBox[j]) > floatDelta {
+				t.Error(failMsg)
+			}
 		}
 	}
 }

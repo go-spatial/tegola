@@ -144,7 +144,7 @@ func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[
 				}
 
 				if h.SRSId() != DefaultSRID {
-					log.Info("SRID %v != %v, trying to convert...", pLayer.srid, DefaultSRID)
+					log.Debug("SRID %v != %v, trying to convert...", pLayer.srid, DefaultSRID)
 					// We need to convert our points to Webmercator.
 					g, err := basic.ToWebMercator(pLayer.srid, geom)
 					if err != nil {
@@ -154,7 +154,7 @@ func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[
 							pLayer.srid, layer.Name, err)
 						return nil, err
 					} else {
-						log.Info("...conversion ok")
+						log.Debug("...conversion ok")
 					}
 					geom = g.Geometry
 				} else {
