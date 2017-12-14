@@ -189,12 +189,6 @@
 			"revisionTime": "2017-02-27T21:27:28Z"
 		},
 		{
-			"checksumSHA1": "IJdG3ioWEw8viliJgFJJTBcGUfM=",
-			"path": "github.com/gdey/gotrace",
-			"revision": "c2ec44e09a7c617dca103f481cae093ca338730f",
-			"revisionTime": "2017-10-05T20:20:57Z"
-		},
-		{
 			"checksumSHA1": "/TU0r8yAEpNvUWbxosqlXi416Os=",
 			"path": "github.com/gdey/tbltest",
 			"revision": "af8abc47b052b70d6527a2113c2cc417849889f2",
@@ -229,12 +223,6 @@
 			"path": "github.com/jmespath/go-jmespath",
 			"revision": "bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d",
 			"revisionTime": "2016-08-03T19:07:31Z"
-		},
-		{
-			"checksumSHA1": "je0xBtM96GQebMKfmSVzdthg3Rs=",
-			"path": "github.com/logrusorgru/aurora",
-			"revision": "962a6974312dde57d1f6f5738b4f83e1af9f38a4",
-			"revisionTime": "2016-12-16T17:00:44Z"
 		},
 		{
 			"checksumSHA1": "Se195FlZ160eaEk/uVx4KdTPSxU=",
