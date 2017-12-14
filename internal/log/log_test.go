@@ -121,7 +121,7 @@ func TestLogging(t *testing.T) {
 		},
 	}
 
-	loggerCalls := map[Level]func(string, ...interface{}){
+	loggerCalls := map[Level]func(interface{}, ...interface{}){
 		FATAL: Fatal,
 		ERROR: Error,
 		WARN:  Warn,

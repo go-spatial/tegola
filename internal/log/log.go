@@ -81,41 +81,83 @@ func SetLogLevel(lvl Level) {
 }
 
 // Output format should be: "timestamp•LOG_LEVEL•filename.go•linenumber•output"
-func Fatal(format string, args ...interface{}) {
-	logger.Fatal(format, args...)
+func Fatal(msg interface{}, args ...interface{}) {
+	var msgString string
+	switch m := msg.(type) {
+	case string:
+		msgString = m
+	case error:
+		msgString = m.Error()
+	}
+	logger.Fatal(msgString, args...)
 }
 
-func Error(format string, args ...interface{}) {
+func Error(msg interface{}, args ...interface{}) {
 	if !IsError {
 		return
 	}
-	logger.Error(format, args...)
+	var msgString string
+	switch m := msg.(type) {
+	case string:
+		msgString = m
+	case error:
+		msgString = m.Error()
+	}
+	logger.Error(msgString, args...)
 }
 
-func Warn(format string, args ...interface{}) {
+func Warn(msg interface{}, args ...interface{}) {
 	if !IsWarn {
 		return
 	}
-	logger.Warn(format, args...)
+	var msgString string
+	switch m := msg.(type) {
+	case string:
+		msgString = m
+	case error:
+		msgString = m.Error()
+	}
+	logger.Warn(msgString, args...)
 }
 
-func Info(format string, args ...interface{}) {
+func Info(msg interface{}, args ...interface{}) {
 	if !IsInfo {
 		return
 	}
-	logger.Info(format, args...)
+	var msgString string
+	switch m := msg.(type) {
+	case string:
+		msgString = m
+	case error:
+		msgString = m.Error()
+	}
+	logger.Info(msgString, args...)
 }
 
-func Debug(format string, args ...interface{}) {
+func Debug(msg interface{}, args ...interface{}) {
 	if !IsDebug {
 		return
 	}
-	logger.Debug(format, args...)
+	var msgString string
+	switch m := msg.(type) {
+	case string:
+		msgString = m
+	case error:
+		msgString = m.Error()
+	}
+	logger.Debug(msgString, args...)
 }
 
-func Trace(format string, args ...interface{}) {
+func Trace(msg interface{}, args ...interface{}) {
 	if !IsTrace {
 		return
 	}
-	logger.Trace(format, args...)
+	var msgString string
+	switch m := msg.(type) {
+	case string:
+		msgString = m
+	case error:
+		msgString = m.Error()
+	}
+	logger.Trace(msgString, args...)
 }
