@@ -1,12 +1,16 @@
 ## 0.5.0 (2017-12-XX)
-- Added: Command line `cache seed` and `cache purge` commands
-- Added: More robust command line interface
+
+- Added: Command line `cache seed` and `cache purge` commands (#64)
+- Added: Support for Amazon S3 as a cache backend (#64)
+- Added: More robust command line interface (#64)
+- Added: No-Cache headers to `/capabilities`, `/capabilities/:map_name` and `/maps/:map_name/style.json` endpoints. (#176)
 - Fixed: Possible Panic if a feature without an ID is added before a feature with an ID; when constructing Layers (#195)
 
 Breaking changes:
 - To use tegola as a web server, use the command `tegola serve --config=/path/to/config.toml`
 
 ## 0.4.2 (2017-11-28)
+
 - Fixed: Performance affected by unused log statements (#197, @remster)
 
 ## 0.4.1 (2017-11-21)
