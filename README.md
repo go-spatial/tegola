@@ -119,7 +119,7 @@ database = "tegola"         # postgis database name (required)
 user = "tegola"             # postgis database user (required)
 password = ""               # postgis database password (required)
 srid = 3857                 # The default srid for this provider. Defaults to WebMercator (3857) (optional)
-max_connections = "50"      # The max connections to maintain in the connection pool. Default is 100. (optional)
+max_connections = 50        # The max connections to maintain in the connection pool. Default is 100. (optional)
 
 	[[providers.layers]]
 	name = "landuse"                    # will be encoded as the layer name in the tile
@@ -156,7 +156,7 @@ max_connections = "50"      # The max connections to maintain in the connection 
 name = "zoning"                              # used in the URL to reference this map (/maps/:map_name)
 
 	[[maps.layers]]
-	provider_layer = "test_postgis.landuse"	 # must match a data provider layer
+	provider_layer = "test_postgis.landuse"  # must match a data provider layer
 	min_zoom = 12                            # minimum zoom level to include this layer
 	max_zoom = 16                            # maximum zoom level to include this layer
 
