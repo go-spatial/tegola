@@ -2,6 +2,7 @@ package postgis_test
 
 import (
 	"os"
+	"strconv"
 	"testing"
 
 	"context"
@@ -11,8 +12,13 @@ import (
 )
 
 func TestNewProvider(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TEST") != "yes" {
+	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
 		return
+	}
+
+	port, err := strconv.ParseInt(os.Getenv("PG_PORT"), 10, 64)
+	if err != nil {
+		t.Fatalf("err parsing PG_PORT: %v", err)
 	}
 
 	testcases := []struct {
@@ -20,11 +26,11 @@ func TestNewProvider(t *testing.T) {
 	}{
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     "localhost",
-				postgis.ConfigKeyPort:     int64(5432),
-				postgis.ConfigKeyDB:       "tegola",
-				postgis.ConfigKeyUser:     "postgres",
-				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyHost:     os.Getenv("PG_HOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PG_DB"),
+				postgis.ConfigKeyUser:     os.Getenv("PG_USER"),
+				postgis.ConfigKeyPassword: os.Getenv("PG_PW"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -45,8 +51,13 @@ func TestNewProvider(t *testing.T) {
 }
 
 func TestMVTLayer(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TEST") != "yes" {
+	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
 		return
+	}
+
+	port, err := strconv.ParseInt(os.Getenv("PG_PORT"), 10, 64)
+	if err != nil {
+		t.Fatalf("err parsing PG_PORT: %v", err)
 	}
 
 	testcases := []struct {
@@ -56,11 +67,11 @@ func TestMVTLayer(t *testing.T) {
 	}{
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     "localhost",
-				postgis.ConfigKeyPort:     int64(5432),
-				postgis.ConfigKeyDB:       "tegola",
-				postgis.ConfigKeyUser:     "postgres",
-				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyHost:     os.Getenv("PG_HOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PG_DB"),
+				postgis.ConfigKeyUser:     os.Getenv("PG_USER"),
+				postgis.ConfigKeyPassword: os.Getenv("PG_PW"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -78,11 +89,11 @@ func TestMVTLayer(t *testing.T) {
 		//	scalerank test
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     "localhost",
-				postgis.ConfigKeyPort:     int64(5432),
-				postgis.ConfigKeyDB:       "tegola",
-				postgis.ConfigKeyUser:     "postgres",
-				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyHost:     os.Getenv("PG_HOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PG_DB"),
+				postgis.ConfigKeyUser:     os.Getenv("PG_USER"),
+				postgis.ConfigKeyPassword: os.Getenv("PG_PW"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -100,11 +111,11 @@ func TestMVTLayer(t *testing.T) {
 		//	decode numeric(x,x) types
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     "localhost",
-				postgis.ConfigKeyPort:     int64(5432),
-				postgis.ConfigKeyDB:       "tegola",
-				postgis.ConfigKeyUser:     "postgres",
-				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyHost:     os.Getenv("PG_HOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PG_DB"),
+				postgis.ConfigKeyUser:     os.Getenv("PG_USER"),
+				postgis.ConfigKeyPassword: os.Getenv("PG_PW"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName:   "buildings",

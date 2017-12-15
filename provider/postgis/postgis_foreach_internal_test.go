@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/terranodo/tegola"
@@ -11,8 +12,13 @@ import (
 )
 
 func TestForEachFeature(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TEST") != "yes" {
+	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
 		return
+	}
+
+	port, err := strconv.ParseInt(os.Getenv("PG_PORT"), 10, 64)
+	if err != nil {
+		t.Fatalf("err parsing PG_PORT: %v", err)
 	}
 
 	testcases := []struct {
@@ -22,11 +28,11 @@ func TestForEachFeature(t *testing.T) {
 	}{
 		{
 			config: map[string]interface{}{
-				ConfigKeyHost:     "localhost",
-				ConfigKeyPort:     int64(5432),
-				ConfigKeyDB:       "tegola",
-				ConfigKeyUser:     "postgres",
-				ConfigKeyPassword: "",
+				ConfigKeyHost:     os.Getenv("PG_HOST"),
+				ConfigKeyPort:     port,
+				ConfigKeyDB:       os.Getenv("PG_DB"),
+				ConfigKeyUser:     os.Getenv("PG_USER"),
+				ConfigKeyPassword: os.Getenv("PG_PW"),
 				ConfigKeyLayers: []map[string]interface{}{
 					{
 						ConfigKeyLayerName:   "buildings",
