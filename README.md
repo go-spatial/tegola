@@ -43,7 +43,7 @@ Use "tegola [command] --help" for more information about a command.
 2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
-./tegola seve --config=/path/to/config.toml
+./tegola serve --config=/path/to/config.toml
 ```
 
 ## Server Endpoints
