@@ -5,7 +5,7 @@ The PostGIS provider manages querying for tile requests against a Postgres datab
 ```toml
 [[providers]]
 name = "test_postgis"       # provider name is referenced from map layers (required)
-type = "postgis"            # the type of data provider. currently only supports PostGIS (required)
+type = "postgis"            # the type of data provider must be "postgis" for this data provider (required)
 host = "localhost"          # PostGIS database host (required)
 port = 5432                 # PostGIS database port (required)
 database = "tegola"         # PostGIS database name (required)
