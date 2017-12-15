@@ -43,7 +43,7 @@ Use "tegola [command] --help" for more information about a command.
 2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
-./tegola sever --config=/path/to/config.toml
+./tegola seve --config=/path/to/config.toml
 ```
 
 ## Server Endpoints
@@ -140,23 +140,15 @@ max_connections = "50"      # The max connections to maintain in the connection 
 	geometry_fieldname = "geom"         # geom field. default is geom
 	id_fieldname = "gid"                # geom id field. default is gid
 	# Custom sql to be used for this layer. Note: that the geometery field is wraped
-	# in a ST_AsBinary, as tegola only understand wkb.
-	sql = """
-        SELECT
-            gid,
-            ST_AsBinary(geom) AS geom
-        FROM
-            gis.rivers
-        WHERE
-            geom && !BBOX!
-	"""
+	# in a ST_AsBinary() and the use of the !BBOX! token
+	sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
 
 # maps are made up of layers
 [[maps]]
 name = "zoning"                              # used in the URL to reference this map (/maps/:map_name)
 
 	[[maps.layers]]
-	provider_layer = "test_postgis.landuse"	 # must match a data provider layer
+	provider_layer = "test_postgis.landuse"  # must match a data provider layer
 	min_zoom = 12                            # minimum zoom level to include this layer
 	max_zoom = 16                            # maximum zoom level to include this layer
 
