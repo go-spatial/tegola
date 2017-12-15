@@ -61,6 +61,8 @@ func wkt(geo tegola.Geometry) string {
 func WKT(geo tegola.Geometry) string {
 	switch g := geo.(type) {
 	default:
+		// This is temporary till the new wkt package is ready.
+		panic("Don't know the geometry type!")
 		return ""
 	case tegola.Point:
 		// POINT( 10 10)
@@ -105,7 +107,7 @@ func WKT(geo tegola.Geometry) string {
 
 		}
 		var geometries []string
-		for sg := range g.Geometries() {
+		for _, sg := range g.Geometries() {
 			s := WKT(sg)
 			geometries = append(geometries, s)
 		}
