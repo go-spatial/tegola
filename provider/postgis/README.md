@@ -1,37 +1,38 @@
 # PostGIS
-The PostGIS provider manages querying for tile requests against a Postgres database with the PostGIS extension installed. The connection between tegola and postgis is configured in a `tegola.toml` file. An example minimum config:
+The PostGIS provider manages querying for tile requests against a Postgres database with the [PostGIS](http://postgis.net/) extension installed. The connection between tegola and Postgis is configured in a `tegola.toml` file. An example minimum connection config:
 
 
 ```toml
 [[providers]]
 name = "test_postgis"       # provider name is referenced from map layers (required)
-type = "postgis"            # the type of data provider. currently only supports postgis (required)
-host = "localhost"          # postgis database host (required)
-port = 5432                 # postgis database port (required)
-database = "tegola"         # postgis database name (required)
-user = "tegola"             # postgis database user (required)
-password = ""               # postgis database password (required)
+type = "postgis"            # the type of data provider. currently only supports PostGIS (required)
+host = "localhost"          # PostGIS database host (required)
+port = 5432                 # PostGIS database port (required)
+database = "tegola"         # PostGIS database name (required)
+user = "tegola"             # PostGIS database user (required)
+password = ""               # PostGIS database password (required)
 ```
 
 ### Connection Properties
 
 - `name` (string): [Required] provider name is referenced from map layers (required)
 - `type` (string): [Required] the type of data provider. must be "postgis" to use this data provider
-- `host` (string): [Required] postgis database host
-- `port` (int): [Required] postgis database port (required)
-- `database` (string): [Required] postgis database name
-- `user` (string): [Required] postgis database user
-- `password` (string): [Required] postgis database password
+- `host` (string): [Required] PostGIS database host
+- `port` (int): [Required] PostGIS database port (required)
+- `database` (string): [Required] PostGIS database name
+- `user` (string): [Required] PostGIS database user
+- `password` (string): [Required] PostGIS database password
 - `srid` (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
-- `max_connections` : [Optional] The max connections to maintain in the connection pool. Default is 100. 0 means no max.
+- `max_connections` (int): [Optional] The max connections to maintain in the connection pool. Defaults to 100. 0 means no max.
 
 ## Provider Layers
-In addition to the provider top level configuration, the provider needs to have Provider Layers configured. A Provider Layer tells tegola how to query PostGIS for a certain layer. An example minimum config:
+In addition to the connection configuration above, Provider Layers need to be configured. A Provider Layer tells tegola how to query PostGIS for a certain layer. An example minimum config:
 
 ```toml
 [[providers.layers]]
-name = "landuse"                    # will be encoded as the layer name in the tile
-tablename = "gis.zoning_base_3857"  # this table uses "geom" for the geometry field name and "gid" for the id_fieldname so they're not required
+name = "landuse"
+# this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
+tablename = "gis.zoning_base_3857"  
 ```
 
 ### Provider Layers Properties
