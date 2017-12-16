@@ -54,8 +54,8 @@ tablename = "gis.zoning_base_3857"
 
 ```toml
 [[providers.layers]]
-name = "rivers"                     # will be encoded as the layer name in the tile
-# custom SQL to be used for this layer. Note: that the geometery field is wraped
+name = "rivers"
+# custom SQL to be used for this layer. Note: that the geometery field is wrapped
 # in ST_AsBinary() and a !BBOX! token is supplied for querying the table with the tile bounds
 sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
 ```
