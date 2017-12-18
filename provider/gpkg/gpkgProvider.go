@@ -83,7 +83,7 @@ func replaceTokens(qtext string) string {
 	return ttext
 }
 
-func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[string]interface{}) (
+func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[string]interface{}) (
 	layer *mvt.Layer, err error) {
 
 	layer = new(mvt.Layer)
@@ -107,6 +107,11 @@ func layerFromQuery(pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[
 
 	// Populates the "features" property of "layer"
 	for rows.Next() {
+		// Check if the context cancelled or timed out.
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		*rowCount++
 		// Copy default tags to kick off this feature's tags
 		ftags := make(map[string]interface{})
@@ -272,7 +277,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 
 	pLayer := p.layers[layerName]
 	rowCount := 0
-	newLayer, err := layerFromQuery(&pLayer, rows, &rowCount, dtags)
+	newLayer, err := layerFromQuery(ctx, &pLayer, rows, &rowCount, dtags)
 	if err != nil {
 		log.Error("Problem in layerFromQuery(): %v", err)
 		return nil, err
