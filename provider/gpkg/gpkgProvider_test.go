@@ -15,11 +15,14 @@ import (
 var filePath string
 var directory string
 var GPKGFilePath string
+var GPKGNaturalEarthFilePath string
 
 func init() {
 	_, filePath, _, _ = runtime.Caller(0)
 	directory, _ = filepath.Split(filePath)
 	GPKGFilePath = directory + "test_data/athens-osm-20170921.gpkg"
+	// This gpkg has zoom level information
+	GPKGNaturalEarthFilePath = directory + "test_data/natural_earth_minimal.gpkg"
 }
 
 func TestNewGPKGProvider(t *testing.T) {
@@ -44,12 +47,17 @@ func TestNewGPKGProvider(t *testing.T) {
 
 type MockTile struct {
 	tegola.TegolaTile
-	bbox [4]float64
+	bbox   [4]float64
+	zlevel int
 }
 
 func (tile *MockTile) BoundingBox() tegola.BoundingBox {
 	bb := tegola.BoundingBox{Minx: tile.bbox[0], Miny: tile.bbox[1], Maxx: tile.bbox[2], Maxy: tile.bbox[3]}
 	return bb
+}
+
+func (tile *MockTile) ZLevel() int {
+	return tile.zlevel
 }
 
 func TestMVTLayerFiltering(t *testing.T) {
@@ -328,4 +336,73 @@ func TestConfigSQL(t *testing.T) {
 				i, testCount, len(tc.expectedTags))
 		}
 	}
+}
+
+func TestConfigZOOM(t *testing.T) {
+	// Checks the proper functioning of a "fields" config variable which specifies which
+	//	columns of a table should be converted to tags beyond the defaults.
+
+	// --- Get provider with sql specified for layers in config.
+	layers := []map[string]interface{}{
+		{"name": "land1",
+			"sql": "SELECT fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy " +
+				"FROM ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id " +
+				"WHERE !BBOX! AND !ZOOM!",
+		},
+		{"name": "land2",
+			"sql": "SELECT fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy " +
+				"FROM ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id " +
+				"WHERE !BBOX! AND !ZOOM!",
+		},
+	}
+
+	config := map[string]interface{}{
+		"FilePath": GPKGNaturalEarthFilePath,
+		"layers":   layers,
+	}
+	p, err := NewProvider(config)
+	if err != nil {
+		fmt.Printf("Error creating provider: %v\n", err)
+		t.FailNow()
+	}
+
+	// --- Check that features are populated
+	ctx := context.TODO()
+	// TODO: There's some confusion between pixel coordinates & WebMercator positions in the tile
+	//	bounding box, making the smallest y-value in pos #4 instead of pos #2
+	//	At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
+	pixelExtentEntireWorld := [4]float64{-20026376.39, 20048966.10, 20026376.39, -20048966.10}
+	mt := &MockTile{bbox: pixelExtentEntireWorld}
+	tags := make(map[string]interface{})
+
+	type TagLookupByFeatureId map[uint64]map[string]interface{}
+	type TestCase struct {
+		lName                string
+		zlevel               int
+		expectedFeatureCount int
+	}
+
+	testCases := []TestCase{
+		{
+			lName:                "land1",
+			zlevel:               1,
+			expectedFeatureCount: 101,
+		},
+		{
+			lName:                "land2",
+			zlevel:               0,
+			expectedFeatureCount: 44,
+		},
+	}
+
+	for i, tc := range testCases {
+		mt.zlevel = tc.zlevel
+		l, err := p.MVTLayer(ctx, tc.lName, mt, tags)
+		if err != nil {
+			t.Errorf("TestCase[%v]: Error in call to p.MVTLayer(%v): %v\n", i, tc.lName, err)
+		}
+
+		assert.Equal(t, tc.expectedFeatureCount, len(l.Features()))
+	}
+
 }

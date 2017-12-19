@@ -15,6 +15,7 @@ type TegolaTile interface {
 	BoundingBox() BoundingBox
 	ZRes() float64
 	ZEpislon() float64
+	ZLevel() int
 }
 
 //Tile slippy map tilenames
@@ -66,6 +67,11 @@ func (t *Tile) BoundingBox() BoundingBox {
 		Y:       t.Y,
 		Z:       t.Z,
 	}
+}
+
+// Returns web mercator zoom level
+func (t *Tile) ZLevel() int {
+	return t.Z
 }
 
 //ZRes takes a web mercator zoom level and returns the pixel resolution for that

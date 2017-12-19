@@ -75,12 +75,26 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
-func replaceTokens(qtext string) string {
+func replaceTokens(qtext string) (ttext string, tokensPresent map[string]bool) {
 	// --- Convert tokens provided to SQL
 	// The BBOX token requires parameters ordered as [maxx, minx, maxy, miny] and checks for overlap.
-	// Until support for named parameters, we'll only support one BBOX token per query.
-	ttext := strings.Replace(qtext, "!BBOX!", "minx <= ? AND maxx >= ? AND miny <= ? AND maxy >= ?", 1)
-	return ttext
+	// 	Until support for named parameters, we'll only support one BBOX token per query.
+	// The ZOOM token requires two parameters, both filled with the current zoom level.
+	//	Until support for named parameters, the ZOOM token must follow the BBOX token.
+	ttext = string(qtext)
+	tokensPresent = make(map[string]bool)
+
+	if strings.Count(ttext, "!BBOX!") > 0 {
+		tokensPresent["BBOX"] = true
+		ttext = strings.Replace(qtext, "!BBOX!", "minx <= ? AND maxx >= ? AND miny <= ? AND maxy >= ?", 1)
+	}
+
+	if strings.Count(ttext, "!ZOOM!") > 0 {
+		tokensPresent["ZOOM"] = true
+		ttext = strings.Replace(ttext, "!ZOOM!", "min_zoom <= ? AND max_zoom >= ?", 1)
+	}
+
+	return ttext, tokensPresent
 }
 
 func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[string]interface{}) (
@@ -165,8 +179,8 @@ func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowC
 				} else {
 					log.Info("SRID already default (%v), no conversion necessary", DefaultSRID)
 				}
-			case "minx", "miny", "maxx", "maxy":
-				// Skip these columns used for bounding box filtering
+			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
+				// Skip these columns used for bounding box and zoom filtering
 				continue
 			default:
 				// Grab any non-nil, non-id, non-bounding box, & non-geometry column as a tag
@@ -249,6 +263,7 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	geomFieldname := p.layers[layerName].geomFieldname
 	idFieldname := p.layers[layerName].idFieldname
 
+	var tokensPresent map[string]bool
 	if p.layers[layerName].tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
 		geomTablename := p.layers[layerName].tablename
@@ -260,13 +275,18 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		}
 		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX!",
 			selectClause, geomTablename, rtreeTablename, idFieldname)
-		qtext = replaceTokens(qtext)
+		qtext, tokensPresent = replaceTokens(qtext)
 	} else {
 		// If layer was specified via "sql" in config, collect it.
 		qtext = p.layers[layerName].sql
+		qtext, tokensPresent = replaceTokens(qtext)
 	}
 
 	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
+	if tokensPresent["ZOOM"] {
+		// Add the zoom level, once for comparison to min, once for max.
+		qparams = append(qparams, tile.ZLevel(), tile.ZLevel())
+	}
 	log.Debug("qtext: %v\nqparams: %v\n", qtext, qparams)
 	rows, err := db.Query(qtext, qparams...)
 	if err != nil {
@@ -448,13 +468,19 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			}
 		} else {
 			// --- Layer from custom sql
-			customSql := replaceTokens(layerConfig["sql"].(string))
+			customSqlTemplate := layerConfig["sql"].(string)
+			customSql, tokensPresent := replaceTokens(customSqlTemplate)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSql)
 			var geomData []byte
+			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			qparams := []interface{}{float64(180.0), float64(-180.0), float64(85.0511), float64(-85.0511)}
+			if tokensPresent["ZOOM"] {
+				// min_zoom will always be less than 100, and max_zoom will always be greater than 0.
+				qparams = append(qparams, 100, 0)
+			}
 			log.Debug("qtext: %v, params: %v", qtext, qparams)
 			row := db.QueryRow(qtext, qparams...)
 			err = row.Scan(&geomData)
@@ -476,7 +502,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 
 			l = GPKGLayer{
 				name:          layerName,
-				sql:           customSql,
+				sql:           customSqlTemplate,
 				srid:          int(h.SRSId()),
 				geomType:      geom,
 				geomFieldname: "geom",
