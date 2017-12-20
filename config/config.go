@@ -6,9 +6,11 @@ package config
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -136,6 +138,33 @@ func Parse(reader io.Reader, location string) (conf Config, err error) {
 	return conf, err
 }
 
+func replaceEnvVars(reader io.Reader) (io.Reader, error) {
+	// Replaces environment variable placeholders in reader stream with values
+	// i.e. "val = $VAR" -> "val = 3"
+	// Variable definition follows IEEE Std 1003.1-2001
+	//   A dollar sign ($) followed by an upper-case letter, followed by
+	//   zero or more upper-case letters, digits, or underscores (_).
+	regexStr := `\$[A-Z]+[A-Z1-9_]*`
+	varFinder := regexp.MustCompile(regexStr)
+	configBytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		log.Printf("Problem reading from config reader: %v", err)
+		return nil, err
+	}
+	configStr := string(configBytes)
+
+	varPlaceHolders := varFinder.FindAllString(configStr, -1)
+	for _, ph := range varPlaceHolders {
+		// Get the environment variable value (drop the leading dollar sign ($))
+		envVal := os.Getenv(ph[1:])
+		// Escape the leading dollar sign for use in regex.
+		replr := regexp.MustCompile(fmt.Sprintf("\\%v", ph))
+		configStr = replr.ReplaceAllString(configStr, envVal)
+	}
+
+	return strings.NewReader(configStr), nil
+}
+
 // Load will load and parse the config file from the given location.
 func Load(location string) (conf Config, err error) {
 	var reader io.Reader
@@ -171,6 +200,10 @@ func Load(location string) (conf Config, err error) {
 		}
 	}
 
+	reader, err = replaceEnvVars(reader)
+	if err != nil {
+		log.Printf("Problem with call to replaceEnvVars: %v\n", err)
+	}
 	return Parse(reader, location)
 }
 
