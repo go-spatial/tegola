@@ -119,7 +119,7 @@ database = "tegola"         # postgis database name (required)
 user = "tegola"             # postgis database user (required)
 password = ""               # postgis database password (required)
 srid = 3857                 # The default srid for this provider. Defaults to WebMercator (3857) (optional)
-max_connections = "50"      # The max connections to maintain in the connection pool. Default is 100. (optional)
+max_connections = 50        # The max connections to maintain in the connection pool. Default is 100. (optional)
 
 	[[providers.layers]]
 	name = "landuse"                    # will be encoded as the layer name in the tile
