@@ -8,7 +8,10 @@ go:
 env:
   global:
     - RUN_POSTGIS_TESTS=yes
-    - PGUSER=postgres
+    - PGHOST="localhost"
+    - PGPORT=5432
+    - PGDATABASE="tegola"
+    - PGUSER="postgres"
 
 services:
   - postgresql
