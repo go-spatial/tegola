@@ -10,7 +10,7 @@ import (
 const (
 	DefaultEpislon    = 10.0
 	DefaultExtent     = 4096
-	DefaultTileBuffer = 32
+	DefaultTileBuffer = 64
 	MaxZ              = 20
 )
 
