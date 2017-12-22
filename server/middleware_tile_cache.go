@@ -55,7 +55,7 @@ func TileCacheHandler(next http.Handler) http.Handler {
 			}
 
 			if err := cacher.Set(key, buff.Bytes()); err != nil {
-				log.Println("cache response writer err: %v", err)
+				log.Printf("cache response writer err: %v", err)
 			}
 			return
 		}
