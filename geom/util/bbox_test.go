@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/geom/util"
+	"github.com/terranodo/tegola/geom/util"
 )
 
 func TestBBox(t *testing.T) {
@@ -18,8 +18,8 @@ func TestBBox(t *testing.T) {
 				{1.0, 2.0},
 			},
 			expected: util.BoundingBox{
-				1.0, 2.0,
-				1.0, 2.0,
+				[2]float64{1.0, 2.0},
+				[2]float64{1.0, 2.0},
 			},
 		},
 		{
@@ -29,8 +29,8 @@ func TestBBox(t *testing.T) {
 				{3.0, 7.0},
 			},
 			expected: util.BoundingBox{
-				0.0, 0.0,
-				6.0, 7.0,
+				[2]float64{0.0, 0.0},
+				[2]float64{6.0, 7.0},
 			},
 		},
 	}
