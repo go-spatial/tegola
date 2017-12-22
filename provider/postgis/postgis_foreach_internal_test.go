@@ -16,9 +16,9 @@ func TestForEachFeature(t *testing.T) {
 		return
 	}
 
-	port, err := strconv.ParseInt(os.Getenv("PG_PORT"), 10, 64)
+	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
 	if err != nil {
-		t.Fatalf("err parsing PG_PORT: %v", err)
+		t.Fatalf("err parsing PGPORT: %v", err)
 	}
 
 	testcases := []struct {
@@ -28,11 +28,11 @@ func TestForEachFeature(t *testing.T) {
 	}{
 		{
 			config: map[string]interface{}{
-				ConfigKeyHost:     os.Getenv("PG_HOST"),
+				ConfigKeyHost:     os.Getenv("PGHOST"),
 				ConfigKeyPort:     port,
-				ConfigKeyDB:       os.Getenv("PG_DB"),
-				ConfigKeyUser:     os.Getenv("PG_USER"),
-				ConfigKeyPassword: os.Getenv("PG_PW"),
+				ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				ConfigKeyUser:     os.Getenv("PGUSER"),
+				ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				ConfigKeyLayers: []map[string]interface{}{
 					{
 						ConfigKeyLayerName:   "buildings",

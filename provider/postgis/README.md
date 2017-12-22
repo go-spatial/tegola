@@ -65,9 +65,9 @@ Testing is designed to work against a live PostGIS database. To run the PostGIS 
 
 ```bash
 $ export RUN_POSTGIS_TESTS=yes
-$ export PG_HOST="localhost"
-$ export PG_PORT=5432
-$ export PG_DB="tegola"
-$ export PG_USER="postgres"
-$ export PG_PW=""
+$ export PGHOST="localhost"
+$ export PGPORT=5432
+$ export PGDATABASE="tegola"
+$ export PGUSER="postgres"
+$ export PGPASSWORD=""
 ```

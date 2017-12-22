@@ -16,9 +16,9 @@ func TestNewProvider(t *testing.T) {
 		return
 	}
 
-	port, err := strconv.ParseInt(os.Getenv("PG_PORT"), 10, 64)
+	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
 	if err != nil {
-		t.Fatalf("err parsing PG_PORT: %v", err)
+		t.Fatalf("err parsing PGPORT: %v", err)
 	}
 
 	testcases := []struct {
@@ -26,11 +26,11 @@ func TestNewProvider(t *testing.T) {
 	}{
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     os.Getenv("PG_HOST"),
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PG_DB"),
-				postgis.ConfigKeyUser:     os.Getenv("PG_USER"),
-				postgis.ConfigKeyPassword: os.Getenv("PG_PW"),
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -55,9 +55,9 @@ func TestMVTLayer(t *testing.T) {
 		return
 	}
 
-	port, err := strconv.ParseInt(os.Getenv("PG_PORT"), 10, 64)
+	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
 	if err != nil {
-		t.Fatalf("err parsing PG_PORT: %v", err)
+		t.Fatalf("err parsing PGPORT: %v", err)
 	}
 
 	testcases := []struct {
@@ -67,11 +67,11 @@ func TestMVTLayer(t *testing.T) {
 	}{
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     os.Getenv("PG_HOST"),
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PG_DB"),
-				postgis.ConfigKeyUser:     os.Getenv("PG_USER"),
-				postgis.ConfigKeyPassword: os.Getenv("PG_PW"),
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -89,11 +89,11 @@ func TestMVTLayer(t *testing.T) {
 		//	scalerank test
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     os.Getenv("PG_HOST"),
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PG_DB"),
-				postgis.ConfigKeyUser:     os.Getenv("PG_USER"),
-				postgis.ConfigKeyPassword: os.Getenv("PG_PW"),
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -111,11 +111,11 @@ func TestMVTLayer(t *testing.T) {
 		//	decode numeric(x,x) types
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     os.Getenv("PG_HOST"),
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PG_DB"),
-				postgis.ConfigKeyUser:     os.Getenv("PG_USER"),
-				postgis.ConfigKeyPassword: os.Getenv("PG_PW"),
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName:   "buildings",
