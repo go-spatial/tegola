@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/geom"
+	"github.com/terranodo/tegola/geom"
 )
 
 func TestMultiPointSetter(t *testing.T) {
