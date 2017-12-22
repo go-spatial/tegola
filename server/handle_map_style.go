@@ -12,6 +12,7 @@ import (
 	"gopkg.in/go-playground/colors.v1"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/mapbox/style"
 )
 
@@ -45,19 +46,21 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//	lookup our Map
-	m, ok := maps[req.mapName]
-	if !ok {
+	m, err := atlas.GetMap(req.mapName)
+	if err != nil {
 		log.Printf("map (%v) not configured. check your config file", req.mapName)
 		http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusNotFound)
 		return
 	}
 
-	debug := r.URL.Query().Get("debug")
+	var debugQuery string
+	if r.URL.Query().Get("debug") == "true" {
+		debugQuery = "?debug=true"
 
-	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json", scheme(r), hostName(r), req.mapName)
-	if debug == "true" {
-		sourceURL += "?debug=true"
+		m = m.EnableDebugLayers()
 	}
+
+	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), req.mapName, debugQuery)
 
 	mapboxStyle := style.Root{
 		Name:    m.Name,
@@ -72,42 +75,13 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		},
 		Layers: []style.Layer{},
 	}
-	//	if we have a debug param create a layer style
-	if debug == "true" {
-		debugTileOutline := style.Layer{
-			ID:          "debug-tile-outline",
-			Source:      req.mapName,
-			SourceLayer: "debug-tile-outline",
-			Layout: &style.LayerLayout{
-				Visibility: style.LayoutVisible,
-			},
-			Type: style.LayerTypeLine,
-			Paint: &style.LayerPaint{
-				LineColor: stringToColorHex("debug"),
-			},
-		}
-
-		mapboxStyle.Layers = append(mapboxStyle.Layers, debugTileOutline)
-
-		debugTileCenter := style.Layer{
-			ID:          "debug-tile-center",
-			Source:      req.mapName,
-			SourceLayer: "debug-tile-center",
-			Layout: &style.LayerLayout{
-				Visibility: style.LayoutVisible,
-			},
-			Type: style.LayerTypeCircle,
-			Paint: &style.LayerPaint{
-				CircleRadius: 3,
-				CircleColor:  stringToColorHex("debug"),
-			},
-		}
-
-		mapboxStyle.Layers = append(mapboxStyle.Layers, debugTileCenter)
-	}
 
 	//	determing the min and max zoom for this map
 	for _, l := range m.Layers {
+		//	skip disabled layers
+		if l.Disabled {
+			continue
+		}
 		//	check if the layer already exists in our slice. this can happen if the config
 		//	is using the "name" param for a layer to override the providerLayerName
 		var skip bool
@@ -177,6 +151,11 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	mimetype for protocol buffers
 	w.Header().Add("Content-Type", "application/json")
+
+	//	cache control headers (no-cache)
+	w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Add("Pragma", "no-cache")
+	w.Header().Add("Expires", "0")
 
 	if err = json.NewEncoder(w).Encode(mapboxStyle); err != nil {
 		log.Printf("error encoding tileJSON for map (%v)", req.mapName)

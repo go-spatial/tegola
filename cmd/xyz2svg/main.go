@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"os"
@@ -132,7 +133,7 @@ func DrawGeometries() {
 	}
 
 	p := provider.provider
-	baseDir := fmt.Sprintf("svg_files/%v_%v_%v", configStruct.Coords[1], configStruct.Coords[2], configStruct.Coords[0])
+	baseDir := fmt.Sprintf("svg_files/z%v_x%v_y%v", tile.Z, tile.X, tile.Y)
 	if err := os.MkdirAll(baseDir, 0711); err != nil {
 		panic(err)
 	}
@@ -168,8 +169,17 @@ func DrawGeometries() {
 			Region: svg.MinMax{0, 0, 4096, 4096},
 		}
 
-		filename := fmt.Sprintf(baseDir+"/geo_%v.svg", gid)
-		file, err := os.Create(filename)
+		path := filepath.Join(baseDir, layer.Name())
+
+		if err = os.MkdirAll(path, os.ModePerm); err != nil {
+			return err
+		}
+
+		filename := fmt.Sprintf("geo_%v.svg", gid)
+		path = filepath.Join(path, filename)
+
+		log.Println(path)
+		file, err := os.Create(path)
 		if err != nil {
 			return err
 		}

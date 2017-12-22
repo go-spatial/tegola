@@ -2,50 +2,35 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/terranodo/tegola/cache"
-	_ "github.com/terranodo/tegola/cache/filecache"
+	"github.com/terranodo/tegola/atlas"
 )
 
 const (
 	//	MaxTileSize is 500k. Currently just throws a warning when tile
 	//	is larger than MaxTileSize
 	MaxTileSize = 500000
-	//	MaxZoom will not render tile beyond this zoom level
-	MaxZoom = 20
 )
 
 var (
 	//	set at runtime from main
 	Version string
-	//	configurable via the tegola config.toml file
+	//	configurable via the tegola config.toml file (set in main.go)
 	HostName string
-	//	cache interface to use
-	Cache cache.Interface
+	//	configurable via the tegola config.toml file (set in main.go)
+	Port string
+	//	reference to the version of atlas to work with
+	Atlas *atlas.Atlas
 )
-
-//	incoming requests are associated with a map
-var maps = map[string]Map{}
-
-//	RegisterMap associates layers with map names
-func RegisterMap(m Map) error {
-	//	check if our map is already registered
-	if _, ok := maps[m.Name]; ok {
-		return fmt.Errorf("map (%v) is alraedy registered", m.Name)
-	}
-
-	//	associate our layers with a map
-	maps[m.Name] = m
-
-	return nil
-}
 
 //	Start starts the tile server binding to the provided port
 func Start(port string) {
+	Atlas = atlas.DefaultAtlas
+
 	//	notify the user the server is starting
 	log.Printf("Starting tegola server on port %v", port)
 
@@ -75,17 +60,36 @@ func Start(port string) {
 	log.Fatal(http.ListenAndServe(port, r))
 }
 
-//	determins the hostname to return based on the following hierarchy
-//	- HostName var as configured via the config file
-//	- The request host
+//	determines the hostname:port to return based on the following hierarchy
+//	- HostName / Port vars as configured via the config file
+//	- The request host / port if config HostName or Port is missing
 func hostName(r *http.Request) string {
-	//	configured
-	if HostName != "" {
-		return HostName
+	var requestHostname string
+	var requestPort string
+	substrs := strings.Split(r.Host, ":")
+	switch len(substrs) {
+	case 1:
+		requestHostname = substrs[0]
+	case 2:
+		requestHostname = substrs[0]
+		requestPort = substrs[1]
+	default:
+		log.Printf("multiple colons (':') in host string: %v", r.Host)
 	}
 
-	//	default to the Host provided in the request
-	return r.Host
+	retHost := HostName
+	if HostName == "" {
+		retHost = requestHostname
+	}
+
+	if Port != "" && Port != "none" {
+		return retHost + Port
+	}
+	if requestPort != "" && Port != "none" {
+		return retHost + ":" + requestPort
+	}
+
+	return retHost
 }
 
 //	various checks to determin if the request is http or https. the scheme is needed for the TileURLs

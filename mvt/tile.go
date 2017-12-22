@@ -46,7 +46,12 @@ func (t *Tile) VTile(ctx context.Context, extent tegola.BoundingBox) (vt *vector
 	for _, l := range t.layers {
 		vtl, err := l.VTileLayer(ctx, extent)
 		if err != nil {
-			return nil, fmt.Errorf("Error Getting VTileLayer: %v", err)
+			switch err {
+			case context.Canceled:
+				return nil, err
+			default:
+				return nil, fmt.Errorf("Error Getting VTileLayer: %v", err)
+			}
 		}
 		vt.Layers = append(vt.Layers, vtl)
 	}

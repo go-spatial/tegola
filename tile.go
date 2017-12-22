@@ -1,8 +1,6 @@
 package tegola
 
-import (
-	"math"
-)
+import "math"
 
 const (
 	DefaultEpislon = 10.0
@@ -85,13 +83,7 @@ func (t *Tile) ZEpislon() float64 {
 	if t.Extent != nil {
 		ext = *t.Extent
 	}
-	/*
-		exp := t.Z - 1
-		if exp < 0 {
-			exp = 0
-		}
-		denom := math.Exp2(float64(exp))
-	*/
+
 	denom := (math.Exp2(float64(t.Z)) * ext)
 
 	e := epi / denom

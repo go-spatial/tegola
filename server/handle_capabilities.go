@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/terranodo/tegola/atlas"
 )
 
 type Capabilities struct {
@@ -53,14 +55,15 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		var query = r.URL.Query()
 
 		//	iterate our registered maps
-		for _, m := range maps {
-			var tileURL = fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), m.Name)
-			var capabilitiesURL = fmt.Sprintf("%v://%v/capabilities/%v.json", scheme(r), hostName(r), m.Name)
+		for _, m := range atlas.AllMaps() {
+			var debugQuery string
 
 			//	if we have a debug param add it to our URLs
 			if query.Get("debug") == "true" {
-				tileURL = tileURL + "?debug=true"
-				capabilitiesURL = capabilitiesURL + "?debug=true"
+				debugQuery = "?debug=true"
+
+				//	update our map to include the debug layers
+				m = m.EnableDebugLayers()
 			}
 
 			//	build the map details
@@ -70,24 +73,29 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				Bounds:      m.Bounds,
 				Center:      m.Center,
 				Tiles: []string{
-					tileURL,
+					fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), m.Name, debugQuery),
 				},
-				Capabilities: capabilitiesURL,
+				Capabilities: fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), m.Name, debugQuery),
 			}
 
-			for _, layer := range m.Layers {
+			for i := range m.Layers {
+				//	skip disabled layers
+				if m.Layers[i].Disabled {
+					continue
+				}
+
 				//	check if the layer already exists in our slice. this can happen if the config
 				//	is using the "name" param for a layer to override the providerLayerName
 				var skip bool
-				for i := range cMap.Layers {
-					if cMap.Layers[i].Name == layer.MVTName() {
+				for j := range cMap.Layers {
+					if cMap.Layers[j].Name == m.Layers[i].MVTName() {
 						//	we need to use the min and max of all layers with this name
-						if cMap.Layers[i].MinZoom > layer.MinZoom {
-							cMap.Layers[i].MinZoom = layer.MinZoom
+						if cMap.Layers[j].MinZoom > m.Layers[i].MinZoom {
+							cMap.Layers[j].MinZoom = m.Layers[i].MinZoom
 						}
 
-						if cMap.Layers[i].MaxZoom < layer.MaxZoom {
-							cMap.Layers[i].MaxZoom = layer.MaxZoom
+						if cMap.Layers[j].MaxZoom < m.Layers[i].MaxZoom {
+							cMap.Layers[j].MaxZoom = m.Layers[i].MaxZoom
 						}
 
 						skip = true
@@ -99,58 +107,31 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 					continue
 				}
 
-				tileURL = fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf", scheme(r), hostName(r), m.Name, layer.MVTName())
-
-				//	if we have a debug param add it to our tileURL
-				if query.Get("debug") == "true" {
-					tileURL = tileURL + "?debug=true"
-				}
-
 				//	build the layer details
 				cLayer := CapabilitiesLayer{
-					Name: layer.MVTName(),
+					Name: m.Layers[i].MVTName(),
 					Tiles: []string{
-						tileURL,
+						fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), m.Name, m.Layers[i].MVTName(), debugQuery),
 					},
-					MinZoom: layer.MinZoom,
-					MaxZoom: layer.MaxZoom,
+					MinZoom: m.Layers[i].MinZoom,
+					MaxZoom: m.Layers[i].MaxZoom,
 				}
 
 				//	add the layer to the map
 				cMap.Layers = append(cMap.Layers, cLayer)
 			}
 
-			//	check for debug
-			if query.Get("debug") == "true" {
-				//	build the layer details
-				debugTileOutline := CapabilitiesLayer{
-					Name: "debug-tile-outline",
-					Tiles: []string{
-						fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-outline"),
-					},
-					MinZoom: 0,
-					MaxZoom: MaxZoom,
-				}
-
-				//	add the layer to the map
-				cMap.Layers = append(cMap.Layers, debugTileOutline)
-
-				debugTileCenter := CapabilitiesLayer{
-					Name: "debug-tile-center",
-					Tiles: []string{
-						fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf?debug=true", scheme(r), hostName(r), m.Name, "debug-tile-center"),
-					},
-					MinZoom: 0,
-					MaxZoom: MaxZoom,
-				}
-
-				//	add the layer to the map
-				cMap.Layers = append(cMap.Layers, debugTileCenter)
-			}
-
 			//	add the map to the capabilities struct
 			capabilities.Maps = append(capabilities.Maps, cMap)
 		}
+
+		//	content type
+		w.Header().Add("Content-Type", "application/json")
+
+		//	cache control headers (no-cache)
+		w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Add("Pragma", "no-cache")
+		w.Header().Add("Expires", "0")
 
 		//	setup a new json encoder and encode our capabilities
 		json.NewEncoder(w).Encode(capabilities)

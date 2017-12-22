@@ -149,8 +149,8 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 
 	for i, v := range values {
 		// Do a quick check
-		if ctx.Err() != nil {
-			return 0, nil, nil, ctx.Err()
+		if err := ctx.Err(); err != nil {
+			return 0, nil, nil, err
 		}
 		// Skip nil values.
 		if values[i] == nil {
