@@ -29,7 +29,7 @@ install:
 before_deploy:
   - go get github.com/mitchellh/gox
   - cd cmd/tegola/
-  - gox -ldflags "-w -X main.Version=$TRAVIS_TAG" -output "{{.Dir}}_{{.OS}}_{{.Arch}}"
+  - gox -ldflags "-w -X github.com/terranodo/tegola/cmd/tegola/cmd.Version=$TRAVIS_TAG" -output "{{.Dir}}_{{.OS}}_{{.Arch}}"
 
 deploy:
   provider: releases

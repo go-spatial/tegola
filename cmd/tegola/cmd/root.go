@@ -22,8 +22,6 @@ import (
 
 var (
 	configFile string
-	//	set at build time via the CI
-	Version = "version not set"
 	//	parsed config
 	conf config.Config
 )
