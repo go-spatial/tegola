@@ -2,7 +2,9 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
@@ -24,7 +26,7 @@ var (
 	//	configurable via the tegola config.toml file (set in main.go)
 	HostName string
 	//	configurable via the tegola config.toml file (set in main.go)
-	Port string
+	Port int
 	//	the "Access-Control-Allow-Origin" CORS header.
 	//	configurable via the tegola config.toml file (set in main.go)
 	CORSAllowedOrigin = "*"
@@ -35,7 +37,7 @@ var (
 )
 
 //	Start starts the tile server binding to the provided port
-func Start(port string) *http.Server {
+func Start(addr string, port int) *http.Server {
 	Atlas = atlas.DefaultAtlas
 
 	//	notify the user the server is starting
@@ -64,7 +66,8 @@ func Start(port string) *http.Server {
 	group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
 
 	//	start our server
-	srv := &http.Server{Addr: port, Handler: r}
+	bindAddr := fmt.Sprintf("%v:%v", addr, port)
+	srv := &http.Server{Addr: bindAddr, Handler: r}
 	go func() { log.Error(srv.ListenAndServe()) }()
 	return srv
 }
@@ -74,7 +77,8 @@ func Start(port string) *http.Server {
 //	- The request host / port if config HostName or Port is missing
 func hostName(r *http.Request) string {
 	var requestHostname string
-	var requestPort string
+	var requestPort int
+	var err error
 
 	substrs := strings.Split(r.Host, ":")
 
@@ -83,7 +87,11 @@ func hostName(r *http.Request) string {
 		requestHostname = substrs[0]
 	case 2:
 		requestHostname = substrs[0]
-		requestPort = substrs[1]
+		requestPort, err = strconv.Atoi(substrs[1])
+		if err != nil {
+			requestPort = 0
+			log.Error(err.Error())
+		}
 	default:
 		log.Warnf("multiple colons (':') in host string: %v", r.Host)
 	}
@@ -93,11 +101,14 @@ func hostName(r *http.Request) string {
 		retHost = requestHostname
 	}
 
-	if Port != "" && Port != "none" {
-		return retHost + Port
+	if Port > 0 {
+		return retHost + ":" + strconv.Itoa(Port)
 	}
-	if requestPort != "" && Port != "none" {
-		return retHost + ":" + requestPort
+	if Port < 0 {
+		return retHost
+	}
+	if requestPort != 0 {
+		return retHost + ":" + strconv.Itoa(requestPort)
 	}
 
 	return retHost

@@ -10,7 +10,6 @@ import (
 
 //	test server config
 const (
-	httpPort       = ":8080"
 	serverVersion  = "0.4.0"
 	serverHostName = "tegola.io"
 )

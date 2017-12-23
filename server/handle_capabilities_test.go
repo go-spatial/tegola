@@ -21,7 +21,7 @@ func TestHandleCapabilities(t *testing.T) {
 	testcases := []struct {
 		handler    http.Handler
 		hostname   string
-		port       string
+		port       int
 		uri        string
 		uriPattern string
 		reqMethod  string
@@ -67,12 +67,12 @@ func TestHandleCapabilities(t *testing.T) {
 				},
 			},
 		},
-		// With hostname set and port set to "none" in config, urls should have host "cdn.tegola.io"
+		// With hostname set and port negative in config, urls should have host "cdn.tegola.io"
 		// debug layers turned on
 		{
 			handler:    server.HandleCapabilities{},
 			hostname:   "cdn.tegola.io",
-			port:       "none", // Set to none or port 8080 from uri will be used.
+			port:       -1,
 			uri:        "http://localhost:8080/capabilities?debug=true",
 			uriPattern: "/capabilities",
 			reqMethod:  "GET",
@@ -170,7 +170,6 @@ func TestHandleCapabilities(t *testing.T) {
 		{
 			handler:    server.HandleCapabilities{},
 			hostname:   "cdn.tegola.io",
-			port:       "none", // Set to none or port 8080 from uri will be used.
 			uri:        "http://localhost/capabilities?debug=true",
 			uriPattern: "/capabilities",
 			reqMethod:  "GET",
@@ -324,8 +323,7 @@ func TestHandleCapabilities(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(test.expected, capabilities) {
-			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, test.expected, capabilities)
-			continue
+			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, capabilities, test.expected)
 		}
 	}
 }

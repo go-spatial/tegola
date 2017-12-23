@@ -8,6 +8,11 @@ import (
 )
 
 var (
+	defaultPort     = 8080
+	defaultHostName = ""
+	port            int
+	hostName        string
+
 	bindAddress        string
 	defaultBindAddress = ":8080"
 )
@@ -21,10 +26,14 @@ var serverCmd = &cobra.Command{
 		initConfig()
 		gdcmd.OnComplete(provider.Cleanup)
 
-		//	check config for server port setting
-		//	if you set the port via the comand line it will override the port setting in the config
-		if bindAddress == defaultBindAddress && conf.Webserver.Bind != "" {
-			bindAddress = conf.Webserver.Bind
+		port = defaultPort
+		if conf.Webserver.Port != 0 {
+			port = conf.Webserver.Port
+		}
+
+		hostName = defaultHostName
+		if conf.Webserver.HostName != "" {
+			hostName = conf.Webserver.HostName
 		}
 
 		//	set our server version
@@ -42,7 +51,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		//	start our webserver
-		server.Start(bindAddress)
+		srv := server.Start(hostName, port)
 		shutdown(srv)
 		<-gdcmd.Cancelled()
 		gdcmd.Complete()

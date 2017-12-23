@@ -21,7 +21,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 	testcases := []struct {
 		handler    http.Handler
 		hostName   string
-		port       string
+		port       int
 		uri        string
 		uriPattern string
 		reqMethod  string
@@ -83,7 +83,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 		{
 			handler:    server.HandleCapabilities{},
 			hostName:   "cdn.tegola.io",
-			port:       "none",
+			port:       -1,
 			uri:        "http://localhost:8080/capabilities/test-map.json?debug=true",
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
@@ -158,6 +158,61 @@ func TestHandleMapCapabilities(t *testing.T) {
 				},
 			},
 		},
+		// Check that port config value is respected in capablity's urls
+		{
+			handler:    server.HandleCapabilities{},
+			hostName:   "",
+			port:       9000,
+			uri:        "http://localhost:8080/capabilities/test-map.json",
+			uriPattern: "/capabilities/:map_name",
+			reqMethod:  "GET",
+			expected: tilejson.TileJSON{
+				Attribution: &testMapAttribution,
+				Bounds:      [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+				Center:      testMapCenter,
+				Format:      "pbf",
+				MinZoom:     4,
+				MaxZoom:     testLayer3.MaxZoom, //	the max zoom for the test group is in layer 3
+				Name:        &testMapName,
+				Description: nil,
+				Scheme:      tilejson.SchemeXYZ,
+				TileJSON:    tilejson.Version,
+				Tiles: []string{
+					"http://localhost:9000/maps/test-map/{z}/{x}/{y}.pbf",
+				},
+				Grids:    []string{},
+				Data:     []string{},
+				Version:  "1.0.0",
+				Template: nil,
+				Legend:   nil,
+				VectorLayers: []tilejson.VectorLayer{
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           testLayer1.MVTName(),
+						Name:         testLayer1.MVTName(),
+						GeometryType: tilejson.GeomTypePoint,
+						MinZoom:      testLayer1.MinZoom,
+						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+						Tiles: []string{
+							fmt.Sprintf("http://localhost:9000/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           testLayer2.MVTName(),
+						Name:         testLayer2.MVTName(),
+						GeometryType: tilejson.GeomTypeLine,
+						MinZoom:      testLayer2.MinZoom,
+						MaxZoom:      testLayer2.MaxZoom,
+						Tiles: []string{
+							fmt.Sprintf("http://localhost:9000/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer2.MVTName()),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for i, test := range testcases {
@@ -201,8 +256,12 @@ func TestHandleMapCapabilities(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(test.expected, tileJSON) {
-			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
+			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, tileJSON, test.expected)
 			continue
 		}
+
+		// Reset server values to avoid polluting future tests
+		server.HostName = ""
+		server.Port = 0
 	}
 }

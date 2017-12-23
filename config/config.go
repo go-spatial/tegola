@@ -37,7 +37,7 @@ type Config struct {
 type Webserver struct {
 	Bind              string `toml:"bind"`
 	HostName          string `toml:"hostname"`
-	Port              string `toml:"port"`
+	Port              int    `toml:"port"`
 	CORSAllowedOrigin string `toml:"cors_allowed_origin"`
 	LogFile           string `toml:"log_file"`
 	LogFormat         string `toml:"log_format"`

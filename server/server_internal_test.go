@@ -11,7 +11,7 @@ func TestHostName(t *testing.T) {
 	testcases := []struct {
 		url      string
 		hostName string
-		port     string
+		port     int
 		expected string
 	}{
 		// With no host or port set in config, the hostname should match that used in request uri
@@ -22,11 +22,18 @@ func TestHostName(t *testing.T) {
 		},
 		// With a hostname set in config, that's what the resulting hostname should equal
 		{
-			// With hostname set and port set to "none" in config, expect "cdn.tegola.io"
+			// With hostname set and negative port in config, expect "cdn.tegola.io" despite url port
 			url:      "http://localhost:8080/capabilities",
+			port:     -1,
 			hostName: "cdn.tegola.io",
-			port:     "none",
 			expected: "cdn.tegola.io",
+		},
+		{
+			// With hostname and port set in config, expect <config_host>:<config_port>
+			url:      "http://localhost:8080/capabilities",
+			port:     9000,
+			hostName: "cdn.tegola.io",
+			expected: "cdn.tegola.io:9000",
 		},
 		{
 			// Hostname set, no port in config, but port in url.  Expect <config_host>:<url_port>.
