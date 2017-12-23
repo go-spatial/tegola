@@ -9,31 +9,29 @@ import (
 
 	"github.com/gdey/tbltest"
 	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/geom/encoding/wkt/internal/symbol"
 )
 
-func assertError(idx int, expErr, gotErr error) (msg string, ok bool) {
+func assertError(expErr, gotErr error) (msg, expected, got string, ok bool) {
 	if expErr != gotErr {
 		// could be because test.err == nil and err != nil.
 		if expErr == nil && gotErr != nil {
-			msg = fmt.Sprintf("[%v] unexpected error, Expected nil Got %v", idx, gotErr)
-			return msg, false
+			return "unexpected", "nil", gotErr.Error(), false
 		}
 		if expErr != nil && gotErr == nil {
-			msg = fmt.Sprintf("[%v] expected error, Expected %v Got nil", idx, expErr)
-			return msg, false
+			return "expected error", expErr.Error(), "nil", false
 		}
 		if expErr.Error() != gotErr.Error() {
-			msg = fmt.Sprintf("[%v] did not get correct error value, Expected %v Got %v", idx, expErr, gotErr)
-			return msg, false
+			return "did not get correct error value", expErr.Error(), gotErr.Error(), false
 
 		}
-		return "", false
+		return "", "", "", false
 	}
 	if expErr != nil {
 		// No need to look at other values, expected an error.
-		return "", false
+		return "", "", "", false
 	}
-	return "", true
+	return "", "", "", true
 }
 
 func TestParsePointValue(t *testing.T) {
@@ -45,9 +43,9 @@ func TestParsePointValue(t *testing.T) {
 	fn := func(idx int, test tcase) {
 		tt := NewT(strings.NewReader(test.input))
 		pts, err := tt.parsePointValue()
-		if msg, ok := assertError(idx, test.err, err); !ok {
+		if msg, expstr, gotstr, ok := assertError(test.err, err); !ok {
 			if msg != "" {
-				t.Error(msg)
+				t.Errorf("[%v] %v, Expected %v Got %v", idx, msg, expstr, gotstr)
 			}
 			return
 		}
@@ -79,10 +77,11 @@ func TestParsePointe(t *testing.T) {
 	}
 	fn := func(idx int, test tcase) {
 		tt := NewT(strings.NewReader(test.input))
+		t.Log("Calling ParsePoint.", idx, test.input)
 		pt, err := tt.ParsePoint()
-		if msg, ok := assertError(idx, test.err, err); !ok {
+		if msg, expstr, gotstr, ok := assertError(test.err, err); !ok {
 			if msg != "" {
-				t.Error(msg)
+				t.Errorf("[%v] %v, Expected %v Got %v", idx, msg, expstr, gotstr)
 			}
 			return
 		}
@@ -111,7 +110,7 @@ func TestParsePointe(t *testing.T) {
 		},
 		tcase{
 			input: "POINT 1 2",
-			err:   fmt.Errorf("expected to find “(” or “EMPTY”"),
+			err:   fmt.Errorf("expected to find “(” , “ZM”, “M” or “EMPTY”"),
 		},
 		tcase{
 			input: "POINT ( 1 2",
@@ -124,6 +123,102 @@ func TestParsePointe(t *testing.T) {
 		tcase{
 			input: "POINT ( 1 2 3 4 5 )",
 			err:   fmt.Errorf("expected to have no more then 4 coordinates in a POINT"),
+		},
+	).Run(fn)
+}
+
+func Test_ParsePointValue(t *testing.T) {
+	type tcase struct {
+		input string
+		zm    byte
+
+		pt  []float64
+		err error
+	}
+	fn := func(tests map[string]tcase) {
+		for name, tc := range tests {
+			tc := tc
+			t.Run(name, func(t *testing.T) {
+				tt := NewT(strings.NewReader(tc.input))
+				gpt, err := tt._parsePointValue(tc.zm)
+				if msg, expstr, gotstr, ok := assertError(tc.err, err); !ok {
+					if msg != "" {
+						t.Errorf("[%v] %v, Expected %v Got %v", name, msg, expstr, gotstr)
+					}
+					return
+				}
+
+				if !reflect.DeepEqual(tc.pt, gpt) {
+					t.Errorf("[%v] did not get correct point values, Expected %v Got %v", name, tc.pt, gpt)
+				}
+
+			})
+		}
+
+	}
+	fn(map[string]tcase{
+		"simple pt1 with lpren": {
+			input: "( 10 10 )",
+			pt:    []float64{10.0, 10.0},
+		},
+		"simple pt1 with lpren1": {
+			input: "( 10 10 )",
+			pt:    []float64{10.0, 10.0},
+		},
+		"simple M pt1 with lpren": {
+			input: "( 10 10 10)",
+			pt:    []float64{10.0, 10.0, 10.0},
+			zm:    symbol.M,
+		},
+
+		"simple M pt1 with lpren1": {
+			input: "(10 10 10 )",
+			pt:    []float64{10.0, 10.0, 10.0},
+			zm:    symbol.M,
+		},
+		"simple ZM pt1 with lpren": {
+			input: "( 10 10 10 10)",
+			pt:    []float64{10.0, 10.0, 10.0, 10.0},
+			zm:    symbol.ZM,
+		},
+		"simple ZM pt1 with lpren1": {
+			input: "(10 10 10 10)",
+			pt:    []float64{10.0, 10.0, 10.0, 10.0},
+			zm:    symbol.ZM,
+		},
+	})
+
+}
+
+func TestParseMultiPointe(t *testing.T) {
+	type tcase struct {
+		input string
+		exp   geom.MultiPoint
+		err   error
+	}
+	fn := func(idx int, test tcase) {
+		tt := NewT(strings.NewReader(test.input))
+		mpt, err := tt.ParseMultiPoint()
+		if msg, expstr, gotstr, ok := assertError(test.err, err); !ok {
+			if msg != "" {
+				t.Errorf("[%v] %v, Expected %v Got %v", idx, msg, expstr, gotstr)
+			}
+			return
+		}
+		if !reflect.DeepEqual(test.exp, mpt) {
+			t.Errorf("[%v] did not get correct multipoint values, Expected %v Got %v", idx, test.exp, mpt)
+		}
+
+	}
+	tbltest.Cases(
+		tcase{input: "MultiPoint EMPTY"},
+		tcase{
+			input: "MULTIPOINT ( 10 10, 12 12 )",
+			exp:   geom.MultiPoint{{10, 10}, {12, 12}},
+		},
+		tcase{
+			input: "MULTIPOINT ( (10 10), (12 12) )",
+			exp:   geom.MultiPoint{{10, 10}, {12, 12}},
 		},
 	).Run(fn)
 }
