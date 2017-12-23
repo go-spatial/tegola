@@ -32,8 +32,8 @@ func init() {
 	// root
 	RootCmd.PersistentFlags().StringVar(&configFile, "config", "config.toml", "path to config file")
 
-	// server
-	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
+	//	server
+	serverCmd.Flags().StringVarP(&bindAddress, "bind", "b", ":8080", "address to bind tile server to")
 	RootCmd.AddCommand(serverCmd)
 
 	// cache seed / purge

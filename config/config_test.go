@@ -59,8 +59,11 @@ func TestParse(t *testing.T) {
 
 				[webserver]
 				hostname = "cdn.tegola.io"
-				port = ":8080"
+				port = 8080
+				bind = ":8080"
 				cors_allowed_origin = "tegola.io"
+				log_file = "/var/log/tegola/tegola.log"
+				log_format = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
 
 				[cache]
 				type = "file"
@@ -97,8 +100,11 @@ func TestParse(t *testing.T) {
 				LocationName: "",
 				Webserver: config.Webserver{
 					HostName:          "cdn.tegola.io",
-					Port:              ":8080",
+					Port:              8080,
+					Bind:              ":8080",
 					CORSAllowedOrigin: "tegola.io",
+					LogFile:           "/var/log/tegola/tegola.log",
+					LogFormat:         "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
 				},
 				Cache: map[string]interface{}{
 					"type":     "file",
@@ -145,7 +151,10 @@ func TestParse(t *testing.T) {
 			config: `
 				[webserver]
 				hostname = "cdn.tegola.io"
-				port = ":8080"
+				port = 8080
+				bind = ":8080"
+				log_file = "/var/log/tegola/tegola.log"
+				log_format = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
 
 				[[providers]]
 				name = "provider1"
@@ -206,8 +215,11 @@ func TestParse(t *testing.T) {
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName: "cdn.tegola.io",
-					Port:     ":8080",
+					HostName:  "cdn.tegola.io",
+					Port:      8080,
+					Bind:      ":8080",
+					LogFile:   "/var/log/tegola/tegola.log",
+					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
 				},
 				Providers: []map[string]interface{}{
 					{
@@ -309,7 +321,10 @@ func TestValidate(t *testing.T) {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					Port: ":8080",
+					Port:      8080,
+					Bind:      ":8080",
+					LogFile:   "/var/log/tegola/tegola.log",
+					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
 				},
 				Providers: []map[string]interface{}{
 					{
@@ -443,7 +458,10 @@ func TestValidate(t *testing.T) {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					Port: ":8080",
+					Port:      8080,
+					Bind:      ":8080",
+					LogFile:   "/var/log/tegola/tegola.log",
+					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
 				},
 				Providers: []map[string]interface{}{
 					{
