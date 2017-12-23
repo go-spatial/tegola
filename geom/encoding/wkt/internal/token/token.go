@@ -206,48 +206,107 @@ LOOP:
 	return &geom.Point{pt[0], pt[1]}, nil
 }
 
-/*
-
 func (t *T) ParseMultiPoint() (pts geom.MultiPoint, err error) {
-	//  [ XXX.xxx,YYY.yyy XXX.xxx,YYY.yyy ]
-	var stringStarted bool
-	for !t.AtEnd() {
-		switch t.Peek() {
-		case symbol.Space, symbol.Newline:
-			// Skip any spaces.
-			t.Scan()
-		case symbol.Comment:
-			// Skip any comments
-			t.ParseComment()
-		case symbol.Lncomment:
-			t.ParseLineComment()
-		case symbol.Pren:
-			stringStarted = true
-			t.Scan()
-		case symbol.Cpren:
-			t.Scan()
-			return pts, nil
-		case symbol.Digit, symbol.Dash, symbol.Dot, symbol.Plus:
-			if !stringStarted {
-				return nil, fmt.Errorf("Expected '(', found '%v'", t.NextText())
-			}
-			// Looks like a number, assume we have a point.
-			pt, err := t.ParsePoint()
-			if err != nil {
-				return nil, err
-			}
-			pts = append(pts, pt)
-
-		default:
-			if !stringStarted {
-				return nil, fmt.Errorf("Expected '(', found '%v'", t.NextText())
-			}
-			return nil, fmt.Errorf("Expected point or ')' not '%v'", t.NextText())
-		}
+	// MULTIPOINT (XXX YYY, XXX YYY )
+	// MULTIPOINT ((XXX YYY), (XXX YYY))
+	t.EatSpace()
+	// First expect to see POINT
+	if t.Peek() != symbol.Multipoint {
+		return nil, fmt.Errorf("expected to find “MULTIPOINT”.")
 	}
-	return nil, fmt.Errorf("Expected point or ')' not end of file.")
+	t.Scan()
+	t.EatSpace()
+	switch t.Peek() {
+	case symbol.LeftPren:
+		t.Scan()
+	case symbol.Empty:
+		t.Scan()
+		// It's a empty point.
+		return nil, nil
+
+	default:
+		return nil, fmt.Errorf("expected to find “(” or “EMPTY”")
+	}
+	t.EatSpace()
+	// Grab the sub points. Need to check to see if there is a (
+	var needRightPren bool
+	var needLeftPren bool
+
+	if t.Peek() == symbol.LeftPren {
+		t.Scan()
+		needRightPren = true
+	}
+
+	pt, err := t.parsePointValue()
+	//TODO: Only supporting standard points and M and ZM.
+	pts = append(pts, [2]float64{pt[0], pt[1]})
+	// First We need to see if there is a '('
+	if err != nil {
+		return nil, err
+	}
+	t.EatSpace()
+	if needRightPren {
+		if t.Peek() != symbol.RightPren {
+			return nil, fmt.Errorf("expected to find “)”")
+		}
+		t.Scan()
+		needRightPren = false
+		t.EatSpace()
+	}
+	switch t.Peek() {
+	case symbol.Comma:
+		t.Scan()
+		// Let's loop and get more points.
+	case symbol.RightPren:
+		t.Scan()
+		// return the single point.
+		return pts, nil
+	default:
+		return nil, fmt.Errorf("expected to find “,” or “)”")
+	}
+
+	return nil, nil
+	/*
+		var stringStarted bool
+		for !t.AtEnd() {
+			switch t.Peek() {
+			case symbol.Space, symbol.Newline:
+				// Skip any spaces.
+				t.Scan()
+			case symbol.Comment:
+				// Skip any comments
+				t.ParseComment()
+			case symbol.Lncomment:
+				t.ParseLineComment()
+			case symbol.Pren:
+				stringStarted = true
+				t.Scan()
+			case symbol.Cpren:
+				t.Scan()
+				return pts, nil
+			case symbol.Digit, symbol.Dash, symbol.Dot, symbol.Plus:
+				if !stringStarted {
+					return nil, fmt.Errorf("Expected '(', found '%v'", t.NextText())
+				}
+				// Looks like a number, assume we have a point.
+				pt, err := t.ParsePoint()
+				if err != nil {
+					return nil, err
+				}
+				pts = append(pts, pt)
+
+			default:
+				if !stringStarted {
+					return nil, fmt.Errorf("Expected '(', found '%v'", t.NextText())
+				}
+				return nil, fmt.Errorf("Expected point or ')' not '%v'", t.NextText())
+			}
+		}
+		return nil, fmt.Errorf("Expected point or ')' not end of file.")
+	*/
 }
 
+/*
 func (t *T) ParseLineString() (pts geom.LineString, err error) {
 	//  [ XXX.xxx,YYY.yyy XXX.xxx,YYY.yyy ]
 	var stringStarted bool

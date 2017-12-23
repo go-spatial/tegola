@@ -11,29 +11,26 @@ import (
 	"github.com/terranodo/tegola/geom"
 )
 
-func assertError(idx int, expErr, gotErr error) (msg string, ok bool) {
+func assertError(expErr, gotErr error) (msg, expected, got string, ok bool) {
 	if expErr != gotErr {
 		// could be because test.err == nil and err != nil.
 		if expErr == nil && gotErr != nil {
-			msg = fmt.Sprintf("[%v] unexpected error, Expected nil Got %v", idx, gotErr)
-			return msg, false
+			return "unexpected", "nil", gotErr.Error(), false
 		}
 		if expErr != nil && gotErr == nil {
-			msg = fmt.Sprintf("[%v] expected error, Expected %v Got nil", idx, expErr)
-			return msg, false
+			return "expected error", expErr.Error(), "nil", false
 		}
 		if expErr.Error() != gotErr.Error() {
-			msg = fmt.Sprintf("[%v] did not get correct error value, Expected %v Got %v", idx, expErr, gotErr)
-			return msg, false
+			return "did not get correct error value", expErr.Error(), gotErr.Error(), false
 
 		}
-		return "", false
+		return "", "", "", false
 	}
 	if expErr != nil {
 		// No need to look at other values, expected an error.
-		return "", false
+		return "", "", "", false
 	}
-	return "", true
+	return "", "", "", true
 }
 
 func TestParsePointValue(t *testing.T) {
@@ -45,9 +42,9 @@ func TestParsePointValue(t *testing.T) {
 	fn := func(idx int, test tcase) {
 		tt := NewT(strings.NewReader(test.input))
 		pts, err := tt.parsePointValue()
-		if msg, ok := assertError(idx, test.err, err); !ok {
+		if msg, expstr, gotstr, ok := assertError(test.err, err); !ok {
 			if msg != "" {
-				t.Error(msg)
+				t.Errorf("[%v] %v, Expected %v Got %v", idx, msg, expstr, gotstr)
 			}
 			return
 		}
@@ -80,9 +77,9 @@ func TestParsePointe(t *testing.T) {
 	fn := func(idx int, test tcase) {
 		tt := NewT(strings.NewReader(test.input))
 		pt, err := tt.ParsePoint()
-		if msg, ok := assertError(idx, test.err, err); !ok {
+		if msg, expstr, gotstr, ok := assertError(test.err, err); !ok {
 			if msg != "" {
-				t.Error(msg)
+				t.Errorf("[%v] %v, Expected %v Got %v", idx, msg, expstr, gotstr)
 			}
 			return
 		}
@@ -124,6 +121,39 @@ func TestParsePointe(t *testing.T) {
 		tcase{
 			input: "POINT ( 1 2 3 4 5 )",
 			err:   fmt.Errorf("expected to have no more then 4 coordinates in a POINT"),
+		},
+	).Run(fn)
+}
+
+func TestParseMultiPointe(t *testing.T) {
+	type tcase struct {
+		input string
+		exp   geom.MultiPoint
+		err   error
+	}
+	fn := func(idx int, test tcase) {
+		tt := NewT(strings.NewReader(test.input))
+		mpt, err := tt.ParseMultiPoint()
+		if msg, expstr, gotstr, ok := assertError(test.err, err); !ok {
+			if msg != "" {
+				t.Errorf("[%v] %v, Expected %v Got %v", idx, msg, expstr, gotstr)
+			}
+			return
+		}
+		if !reflect.DeepEqual(test.exp, mpt) {
+			t.Errorf("[%v] did not get correct multipoint values, Expected %v Got %v", idx, test.exp, mpt)
+		}
+
+	}
+	tbltest.Cases(
+		tcase{input: "MultiPoint EMPTY"},
+		tcase{
+			input: "MULTIPOINT ( 10 10, 12 12 )",
+			exp:   &geom.MultiPoint{{10, 10}, {12, 12}},
+		},
+		tcase{
+			input: "MULTIPOINT ( (10 10), (12 12) )",
+			exp:   &geom.MultiPoint{{10, 10}, {12, 12}},
 		},
 	).Run(fn)
 }
