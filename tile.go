@@ -31,7 +31,7 @@ func (t *Tile) Deg2Num() (x, y int, err error) {
 		msg := fmt.Sprintf("One or both outside valid range (Long, Lat): (%v, %v)", t.Long, t.Lat)
 		err = fmt.Errorf("%v", msg)
 		log.Print(err)
-		return 0, 0, err
+		return -1, -1, err
 	}
 
 	x = int(math.Floor((t.Long + 180.0) / 360.0 * (math.Exp2(float64(t.Z)))))
@@ -40,7 +40,7 @@ func (t *Tile) Deg2Num() (x, y int, err error) {
 	return
 }
 
-func (t *Tile) Num2Deg() (lat, lng float64) {
+func (t *Tile) Num2Deg() (lat, lng float64, err error) {
 	//	WGS84Bounds       = [4]float64{-180.0, -85.0511, 180.0, 85.0511}
 	//	WebMercatorBounds = [4]float64{-20026376.39, -20048966.10, 20026376.39, 20048966.10}
 	n := math.Pi - 2.0*math.Pi*float64(t.Y)/math.Exp2(float64(t.Z))
@@ -48,7 +48,14 @@ func (t *Tile) Num2Deg() (lat, lng float64) {
 	lat = 180.0 / math.Pi * math.Atan(0.5*(math.Exp(n)-math.Exp(-n)))
 	lng = float64(t.X)/math.Exp2(float64(t.Z))*360.0 - 180.0
 
-	return lat, lng
+	if lat < -85.0511 || lat > 85.0511 || lng < -180.0 || lng > 180.0 {
+		msg := fmt.Sprintf("One or both outside valid range (x, y): (%v, %v)", t.X, t.Y)
+		err = fmt.Errorf("%v", msg)
+		log.Print(err)
+		return -400.0, -400.0, err
+	}
+
+	return lat, lng, nil
 }
 
 //BoundingBox returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
