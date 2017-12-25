@@ -35,6 +35,27 @@ func TestHandleMapZXY(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 			expected:     []byte("negative zoom levels are not allowed"),
 		},
+		{ // Check that values outside expected zoom result in 404.
+			handler:      server.HandleMapZXY{},
+			uri:          "/maps/test-map/-1/2/3.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
+		{ // Check that negative y value results in 404. (issue-229)
+			handler:      server.HandleMapZXY{},
+			uri:          "/maps/test-map/1/2/-1.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
+		{ // Check that nagative x value results in 404.
+			handler:      server.HandleMapZXY{},
+			uri:          "/maps/test-map/1/-1/3.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
 	}
 
 	for i, test := range testcases {

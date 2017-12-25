@@ -55,7 +55,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 
 	x := params["x"]
 	req.x, err = strconv.Atoi(x)
-	if err != nil {
+	if err != nil || req.x < 0 {
 		log.Printf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
@@ -64,7 +64,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	y := params["y"]
 	yParts := strings.Split(y, ".")
 	req.y, err = strconv.Atoi(yParts[0])
-	if err != nil {
+	if err != nil || req.y < 0 {
 		log.Printf("invalid Y value (%v)", y)
 		return fmt.Errorf("invalid Y value (%v)", y)
 	}

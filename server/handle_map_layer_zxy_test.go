@@ -27,6 +27,22 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			reqMethod:    "GET",
 			expectedCode: http.StatusOK,
 		},
+		{ // Negative row (y) not allowed (issue-229)
+			handler:      server.HandleMapLayerZXY{},
+			uri:          "/maps/test-map/test-layer/1/2/-1.pbf",
+			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+			expected:     []byte("invalid Y value (-1.pbf)"),
+		},
+		{ // Negative column (x) not allowed
+			handler:      server.HandleMapLayerZXY{},
+			uri:          "/maps/test-map/test-layer/1/-1/3.pbf",
+			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+			expected:     []byte("invalid X value (-1)"),
+		},
 		{ // issue-163
 			handler:      server.HandleMapZXY{},
 			uri:          "/maps/test-map/test-layer/-1/0/0.pbf",
@@ -62,7 +78,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			wbody := strings.TrimSpace(w.Body.String())
 
 			if string(test.expected) != wbody {
-				t.Errorf("failed test %v. handler returned wrong body: got (%v) expected (%v)", i, wbody, test.expected)
+				t.Errorf("failed test %v. handler returned wrong body: got (%v) expected (%v)", i, wbody, string(test.expected))
 			}
 		}
 	}
