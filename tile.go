@@ -1,6 +1,10 @@
 package tegola
 
-import "math"
+import (
+	"fmt"
+	"log"
+	"math"
+)
 
 const (
 	DefaultEpislon = 10.0
@@ -19,7 +23,17 @@ type Tile struct {
 	Extent    *float64
 }
 
-func (t *Tile) Deg2Num() (x, y int) {
+func (t *Tile) Deg2Num() (x, y int, err error) {
+	// Converts from WGS84 Lat/Long postion to tile position (x,y)
+
+	// Check that input lat/long values are within WGS84 bounds
+	if t.Lat < -85.0511 || t.Lat > 85.0511 || t.Long < -180.0 || t.Long > 180.0 {
+		msg := fmt.Sprintf("One or both outside valid range (Long, Lat): (%v, %v)", t.Long, t.Lat)
+		err = fmt.Errorf("%v", msg)
+		log.Print(err)
+		return 0, 0, err
+	}
+
 	x = int(math.Floor((t.Long + 180.0) / 360.0 * (math.Exp2(float64(t.Z)))))
 	y = int(math.Floor((1.0 - math.Log(math.Tan(t.Lat*math.Pi/180.0)+1.0/math.Cos(t.Lat*math.Pi/180.0))/math.Pi) / 2.0 * (math.Exp2(float64(t.Z)))))
 
@@ -27,6 +41,8 @@ func (t *Tile) Deg2Num() (x, y int) {
 }
 
 func (t *Tile) Num2Deg() (lat, lng float64) {
+	//	WGS84Bounds       = [4]float64{-180.0, -85.0511, 180.0, 85.0511}
+	//	WebMercatorBounds = [4]float64{-20026376.39, -20048966.10, 20026376.39, 20048966.10}
 	n := math.Pi - 2.0*math.Pi*float64(t.Y)/math.Exp2(float64(t.Z))
 
 	lat = 180.0 / math.Pi * math.Atan(0.5*(math.Exp(n)-math.Exp(-n)))

@@ -240,10 +240,17 @@ var cacheCmd = &cobra.Command{
 		for i := range zooms {
 
 			topLeft := tegola.Tile{Z: zooms[i], Long: bounds[0], Lat: bounds[1]}
-			minx, maxy = topLeft.Deg2Num()
+			var errTL error
+			minx, maxy, errTL = topLeft.Deg2Num()
 
 			bottomRight := tegola.Tile{Z: zooms[i], Long: bounds[2], Lat: bounds[3]}
-			maxx, miny = bottomRight.Deg2Num()
+			var errBR error
+			maxx, miny, errBR = bottomRight.Deg2Num()
+
+			if errTL != nil || errBR != nil {
+				log.Printf("Problem(s) with Deg2Num() at zoom %v, skipping: %v / %v", zooms[i], errTL, errBR)
+				continue
+			}
 
 			//	range rows
 			for x := minx; x <= maxx; x++ {

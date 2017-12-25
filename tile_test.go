@@ -36,9 +36,10 @@ func TestTileNum2Deg(t *testing.T) {
 
 func TestTileDeg2Num(t *testing.T) {
 	testcases := []struct {
-		tile      tegola.Tile
-		expectedX int
-		expectedY int
+		tile        tegola.Tile
+		expectedX   int
+		expectedY   int
+		expectedErr string
 	}{
 		{
 			tile: tegola.Tile{
@@ -49,10 +50,38 @@ func TestTileDeg2Num(t *testing.T) {
 			expectedX: 0,
 			expectedY: 0,
 		},
+		{ // Check for error if Lat outside WGS84 Range
+			tile: tegola.Tile{
+				Z:    0,
+				Lat:  -85.1,
+				Long: -180,
+			},
+			expectedX:   0,
+			expectedY:   0,
+			expectedErr: "One or both outside valid range (Long, Lat): (-180, -85.1)",
+		},
+		{ // Check for error if Long outside WGS84 Range
+			tile: tegola.Tile{
+				Z:    0,
+				Lat:  -85,
+				Long: -180.1,
+			},
+			expectedX:   0,
+			expectedY:   0,
+			expectedErr: "One or both outside valid range (Long, Lat): (-180.1, -85)",
+		},
 	}
 
 	for i, tc := range testcases {
-		x, y := tc.tile.Deg2Num()
+		x, y, err := tc.tile.Deg2Num()
+
+		if tc.expectedErr != "" {
+			if err == nil {
+				t.Errorf("testcase (%v) failed. Got nil error", i)
+			} else if err.Error() != tc.expectedErr {
+				t.Errorf("testcase (%v) failed. expected err (%v) does not match output (%v)", i, tc.expectedErr, err)
+			}
+		}
 
 		if tc.expectedX != x {
 			t.Errorf("testcase (%v) failed. expected X value (%v) does not match output (%v)", i, tc.expectedX, x)
