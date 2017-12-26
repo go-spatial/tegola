@@ -5,6 +5,8 @@ import (
 	"sync"
 )
 
+var TimestampRegex string = `\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}` // Ex: "2006-01-02 15:04:05"
+
 type Interface interface {
 	// These all take args the same as calls to fmt.Printf()
 	Fatal(string, ...interface{})

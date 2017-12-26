@@ -72,7 +72,7 @@ func TestLogging(t *testing.T) {
 			loggerLevel: INFO,
 			msgLevel:    INFO,
 			msg:         "Hello",
-			expected:    ".*•INFO•.*log_test.go•.*•Hello",
+			expected:    fmt.Sprintf("%v•INFO•.*log_test.go•.*•Hello", TimestampRegex),
 		},
 		// Logging with logger's level set higher than message should result in no output.
 		{
@@ -85,31 +85,31 @@ func TestLogging(t *testing.T) {
 			loggerLevel: TRACE,
 			msgLevel:    TRACE,
 			msg:         "Hello",
-			expected:    ".*•TRACE•.*log_test.go•.*•Hello",
+			expected:    fmt.Sprintf("%v•TRACE•.*log_test.go•.*•Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    DEBUG,
 			msg:         "Hello",
-			expected:    ".*•DEBUG•.*log_test.go•.*•Hello",
+			expected:    fmt.Sprintf("%v•DEBUG•.*log_test.go•.*•Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    INFO,
 			msg:         "Hello",
-			expected:    ".*•INFO•.*log_test.go•.*•Hello",
+			expected:    fmt.Sprintf("%v•INFO•.*log_test.go•.*•Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    WARN,
 			msg:         "Hello",
-			expected:    ".*•WARN•.*log_test.go•.*•Hello",
+			expected:    fmt.Sprintf("%v•WARN•.*log_test.go•.*•Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    ERROR,
 			msg:         "Hello",
-			expected:    ".*•ERROR•.*log_test.go•.*•Hello",
+			expected:    fmt.Sprintf("%v•ERROR•.*log_test.go•.*•Hello", TimestampRegex),
 		},
 		// Check use of formatting args.
 		{
@@ -117,7 +117,7 @@ func TestLogging(t *testing.T) {
 			msgLevel:    ERROR,
 			msg:         "Hello #%v %v",
 			msgArgs:     []interface{}{1, "Joe"},
-			expected:    ".*•ERROR•.*log_test.go•.*•Hello",
+			expected:    fmt.Sprintf("%v•ERROR•.*log_test.go•.*•Hello", TimestampRegex),
 		},
 	}
 
