@@ -30,7 +30,7 @@ func TestTileNum2Deg(t *testing.T) {
 			},
 			expectedLat: -400.0,
 			expectedLng: -400.0,
-			expectedErr: "One or both outside valid range (x, y): (-1, 1)",
+			expectedErr: "one or both outside valid range (x, y): (-1, 1)",
 		},
 		{ // Confirm that negative row (y) value results in an error
 			tile: tegola.Tile{
@@ -40,7 +40,7 @@ func TestTileNum2Deg(t *testing.T) {
 			},
 			expectedLat: -400.0,
 			expectedLng: -400.0,
-			expectedErr: "One or both outside valid range (x, y): (1, -1)",
+			expectedErr: "one or both outside valid range (x, y): (1, -1)",
 		},
 	}
 
@@ -86,7 +86,7 @@ func TestTileDeg2Num(t *testing.T) {
 			},
 			expectedX:   -1,
 			expectedY:   -1,
-			expectedErr: "One or both outside valid range (Long, Lat): (-180, -85.1)",
+			expectedErr: "one or both outside valid range (Long, Lat): (-180, -85.1)",
 		},
 		{ // Check for error if Long outside WGS84 Range
 			tile: tegola.Tile{
@@ -96,7 +96,7 @@ func TestTileDeg2Num(t *testing.T) {
 			},
 			expectedX:   -1,
 			expectedY:   -1,
-			expectedErr: "One or both outside valid range (Long, Lat): (-180.1, -85)",
+			expectedErr: "one or both outside valid range (Long, Lat): (-180.1, -85)",
 		},
 	}
 

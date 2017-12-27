@@ -28,8 +28,7 @@ func (t *Tile) Deg2Num() (x, y int, err error) {
 
 	// Check that input lat/long values are within WGS84 bounds
 	if t.Lat < -85.0511 || t.Lat > 85.0511 || t.Long < -180.0 || t.Long > 180.0 {
-		msg := fmt.Sprintf("One or both outside valid range (Long, Lat): (%v, %v)", t.Long, t.Lat)
-		err = fmt.Errorf("%v", msg)
+		err := fmt.Errorf("one or both outside valid range (Long, Lat): (%v, %v)", t.Long, t.Lat)
 		log.Print(err)
 		return -1, -1, err
 	}
@@ -49,8 +48,7 @@ func (t *Tile) Num2Deg() (lat, lng float64, err error) {
 	lng = float64(t.X)/math.Exp2(float64(t.Z))*360.0 - 180.0
 
 	if lat < -85.0511 || lat > 85.0511 || lng < -180.0 || lng > 180.0 {
-		msg := fmt.Sprintf("One or both outside valid range (x, y): (%v, %v)", t.X, t.Y)
-		err = fmt.Errorf("%v", msg)
+		err := fmt.Errorf("one or both outside valid range (x, y): (%v, %v)", t.X, t.Y)
 		log.Print(err)
 		return -400.0, -400.0, err
 	}
