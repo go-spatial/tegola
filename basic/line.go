@@ -12,6 +12,21 @@ import (
 // TODO: We don't really check to make sure the points don't intersect.
 type Line []Point
 
+func LinesEqual(l1 Line, l2 Line, delta float64) (equal bool) {
+	// Checks if points from each line are equal with coordinates within delta of each other.
+	if len(l1) != len(l2) {
+		return false
+	}
+
+	for i := 0; i < len(l1); i++ {
+		if !PointsEqual(l1[i], l2[i], delta) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Just to make basic collection only usable with basic types.
 func (Line) basicType()                      {}
 func (Line) String() string                  { return "Line" }

@@ -19,6 +19,7 @@ func (p Polygon) Sublines() (slines []tegola.LineString) {
 	}
 	return slines
 }
+
 func (Polygon) String() string {
 	return "Polygon"
 }

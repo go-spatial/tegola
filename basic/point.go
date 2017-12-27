@@ -2,10 +2,19 @@ package basic
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths"
 )
+
+func PointsEqual(p1 Point, p2 Point, delta float64) (equal bool) {
+	// Checks if p1 == p2 within floatDelta for each coordinate.
+	if math.Abs(p1[0]-p2[0]) < delta && math.Abs(p1[1]-p2[1]) < delta {
+		equal = true
+	}
+	return equal
+}
 
 // Point describes a simple 2d point
 type Point [2]float64
