@@ -16,8 +16,8 @@ func float64Equal(f1, f2, delta float64) (equal bool) {
 }
 
 func TestPToLonLat(t *testing.T) {
-	// Acceptable fuzziness in equality between floats
-	floatDelta := 0.00001
+	// Acceptable fuzziness in equality between longitude/latitude float values
+	floatDelta := 0.00000001
 
 	// Expected values according to 'https://mygeodata.cloud/cs2cs/' and/or 'https://twcc.fr/#'
 	type TestCase struct {
@@ -70,6 +70,65 @@ func TestPToLonLat(t *testing.T) {
 
 			t.Errorf("[%v] Converted (lng,lat) doesn't match expected: (%v,%v) != (%v,%v)",
 				i, resultLng, resultLat, tc.expectedLng, tc.expectedLat)
+		}
+	}
+}
+
+func TestPToXY(t *testing.T) {
+	// Acceptable fuzziness in equality between x,y float values
+	floatDelta := 0.001
+
+	// Expected values according to 'https://mygeodata.cloud/cs2cs/' and/or 'https://twcc.fr/#'
+	type TestCase struct {
+		// longitude, latitude
+		lng float64
+		lat float64
+		// Expected x, y
+		expectedX float64
+		expectedY float64
+	}
+
+	testCases := []TestCase{
+		{
+			lng:       -144.84375,
+			lat:       -72.18180355624852,
+			expectedX: -16123932.495,
+			expectedY: -11818999.062,
+		},
+		{
+			lng:       137.8125,
+			lat:       -49.38237278700955,
+			expectedX: 15341217.325,
+			expectedY: -6339992.874,
+		},
+		{
+			lng:       140.2734375,
+			lat:       59.355596110016315,
+			expectedX: 15615167.634,
+			expectedY: 8257645.04,
+		},
+		{
+			lng:       -101.6015625,
+			lat:       56.75272287205736,
+			expectedX: -11310234.201,
+			expectedY: 7709744.421,
+		},
+	}
+
+	for i, tc := range testCases {
+		var resultXY []float64
+		resultXY, err := webmercator.PToXY(tc.lng, tc.lat)
+		if err != nil {
+			t.Errorf("[%v] Error in webmercator.PToLonLat(): %v", i, err)
+		}
+
+		resultX := resultXY[0]
+		resultY := resultXY[1]
+		if !float64Equal(resultX, tc.expectedX, floatDelta) ||
+			!float64Equal(resultY, tc.expectedY, floatDelta) {
+
+			t.Errorf("[%v] Converted (x,y) doesn't match expected: (%v,%v) != (%v,%v)",
+				i, resultX, resultY, tc.expectedX, tc.expectedY)
 		}
 	}
 }
