@@ -18,7 +18,7 @@ func TestReplaceTokens(t *testing.T) {
 				srid: tegola.WebMercator,
 			},
 			tile:     tegola.NewTile(2, 1, 1),
-			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.0097025686953126e+07,1.0097025686953126e+07,78271.5169531256,-78271.5169531256,3857)",
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,1.017529720390625e+07,156543.03390624933,-156543.03390624933,3857)",
 		},
 		{
 			layer: Layer{
@@ -26,20 +26,20 @@ func TestReplaceTokens(t *testing.T) {
 				srid: tegola.WebMercator,
 			},
 			tile:     tegola.NewTile(2, 1, 1),
-			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.0097025686953126e+07,1.0097025686953126e+07,78271.5169531256,-78271.5169531256,3857)",
+			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,1.017529720390625e+07,156543.03390624933,-156543.03390624933,3857)",
 		},
 	}
 
 	for i, tc := range testcases {
 		sql, err := replaceTokens(&tc.layer, tc.tile)
 		if err != nil {
-			t.Errorf("Failed test %v. err: %v", i, err)
-			return
+			t.Errorf("[%v] unexpected error, Expected nil Got %v", i, err)
+			// Skip to next test
+			continue
 		}
 
 		if sql != tc.expected {
-			t.Errorf("Failed test %v. Expected (%v), got (%v)", i, tc.expected, sql)
-			return
+			t.Errorf("[%v] incorrect sql, Expected (%v) Got (%v)", i, tc.expected, sql)
 		}
 	}
 }
