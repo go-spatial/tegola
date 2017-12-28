@@ -15,15 +15,7 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 	switch geo := geometry.(type) {
 	default:
 		return G{}, fmt.Errorf("Unknown Geometry: %+v", geometry)
-	case tegola.Point:
-		c, err := f(geo.X(), geo.Y())
-		if err != nil {
-			return G{}, err
-		}
-		if len(c) < 2 {
-			return G{}, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 2", len(c))
-		}
-		return G{Point{c[0], c[1]}}, nil
+	// Any tegola.Point3 is also a valid tegola.Point, make sure the check for Point3 comes before Point.
 	case tegola.Point3:
 		c, err := f(geo.X(), geo.Y(), geo.Z())
 		if err != nil {
@@ -33,6 +25,29 @@ func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float6
 			return G{}, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 3", len(c))
 		}
 		return G{Point3{c[0], c[1], c[2]}}, nil
+	case tegola.Point:
+		c, err := f(geo.X(), geo.Y())
+		if err != nil {
+			return G{}, err
+		}
+		if len(c) < 2 {
+			return G{}, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 2", len(c))
+		}
+		return G{Point{c[0], c[1]}}, nil
+	// Any tegola.MultiPoint3 is also a valid tegola.MultiPoint, make sure the check for MultiPoint3 comes before MultiPoint.
+	case tegola.MultiPoint3:
+		var pts MultiPoint3
+		for _, pt := range geo.Points() {
+			c, err := f(pt.X(), pt.Y(), pt.Z())
+			if err != nil {
+				return G{}, err
+			}
+			if len(c) < 3 {
+				return G{}, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 3", len(c))
+			}
+			pts = append(pts, Point3{c[0], c[1], c[2]})
+		}
+		return G{pts}, nil
 	case tegola.MultiPoint:
 		var pts MultiPoint
 		for _, pt := range geo.Points() {

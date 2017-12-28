@@ -30,6 +30,12 @@ type MultiPoint interface {
 	Points() []Point
 }
 
+// MultiPoint is a Geometry with multiple individual points.
+type MultiPoint3 interface {
+	Geometry
+	Points() []Point3
+}
+
 // LineString is a Geometry of a line.
 type LineString interface {
 	Geometry

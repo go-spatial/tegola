@@ -8,6 +8,22 @@ import (
 // Polygon describes a basic polygon; made up of multiple lines.
 type Polygon []Line
 
+func PolygonsEqual(p1, p2 Polygon, delta float64) bool {
+	if len(p1.Sublines()) != len(p2.Sublines()) {
+		return false
+	}
+
+	for i := 0; i < len(p1.Sublines()); i++ {
+		l1 := p1.Sublines()[i].(Line)
+		l2 := p2.Sublines()[i].(Line)
+		if !LinesEqual(l1, l2, delta) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Just to make basic collection only usable with basic types.
 func (Polygon) basicType() {}
 
@@ -26,6 +42,23 @@ func (Polygon) String() string {
 
 // MultiPolygon describes a set of polygons.
 type MultiPolygon []Polygon
+
+// Checks for mp1 == mp2 with coordinate values within delta
+func MultiPolygonsEqual(mp1, mp2 MultiPolygon, delta float64) bool {
+	if len(mp1.Polygons()) != len(mp2.Polygons()) {
+		return false
+	}
+
+	for i := 0; i < len(mp1.Polygons()); i++ {
+		p1 := mp1.Polygons()[i].(Polygon)
+		p2 := mp2.Polygons()[i].(Polygon)
+		if !PolygonsEqual(p1, p2, delta) {
+			return false
+		}
+	}
+
+	return true
+}
 
 // Just to make basic collection only usable with basic types.
 func (MultiPolygon) basicType() {}

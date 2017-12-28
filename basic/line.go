@@ -117,6 +117,19 @@ func (l Line) Subpoints() (points []tegola.Point) {
 // MultiLine is a set of lines.
 type MultiLine []Line
 
+// Checks that ml1 == ml2 with coordinates within delta
+func MultiLinesEqual(ml1, ml2 MultiLine, delta float64) bool {
+	if len(ml1) != len(ml2) {
+		return false
+	}
+	for i := 0; i < len(ml1); i++ {
+		if !LinesEqual(ml1[i], ml2[i], delta) {
+			return false
+		}
+	}
+	return true
+}
+
 func NewMultiLine(pointPairLines ...[]float64) (ml MultiLine) {
 	for _, pp := range pointPairLines {
 		ml = append(ml, NewLine(pp...))
