@@ -1,6 +1,7 @@
 package points
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/terranodo/tegola/maths"
@@ -51,6 +52,31 @@ func (bb BoundingBox) ContainsLine(l maths.Line) bool {
 
 func (bb BoundingBox) Area() float64 {
 	return math.Abs((bb[2] - bb[0]) * (bb[3] - bb[1]))
+}
+
+func BBoxFloat64(pts ...[2]float64) (bb [2][2]float64, err error) {
+	if len(pts) == 0 {
+		return bb, fmt.Errorf("No points given.")
+	}
+	bb = [2][2]float64{
+		{pts[0][0], pts[0][1]},
+		{pts[0][0], pts[0][1]},
+	}
+	for i := 1; i < len(pts); i++ {
+		if pts[i][0] < bb[0][0] {
+			bb[0][0] = pts[i][0]
+		}
+		if pts[i][1] < bb[0][1] {
+			bb[0][1] = pts[i][1]
+		}
+		if pts[i][0] > bb[1][0] {
+			bb[1][0] = pts[i][0]
+		}
+		if pts[i][1] > bb[1][1] {
+			bb[1][1] = pts[i][1]
+		}
+	}
+	return bb, nil
 }
 
 // TODO:gdey — should we return an error?

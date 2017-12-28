@@ -3,7 +3,6 @@ package makevalid
 import (
 	"context"
 	"errors"
-	"log"
 	"runtime"
 	"sort"
 	"sync"
@@ -17,7 +16,6 @@ import (
 var numWorkers = 1
 
 func init() {
-	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 	numWorkers = runtime.NumCPU()
 }
 
@@ -79,7 +77,6 @@ func MinF64(vals ...float64) (min float64) {
 	if len(vals) == 0 {
 		return 0
 	}
-
 	min = vals[0]
 	for _, f := range vals[1:] {
 		if f < min {
@@ -95,224 +92,86 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 
 	// linesToSplit holds a list of points for that segment to be split at. This list will have to be
 	// ordered and deuped.
-	splitPts := make([][]maths.Pt, len(segments))
 
-	maths.FindIntersects(segments, func(src, dest int, ptfn func() maths.Pt) bool {
-
-		if ctx.Err() != nil {
-			return true
-		}
-
-		sline, dline := segments[src], segments[dest]
-
-		// Check to see if the end points of sline and dline intersect?
-		if (sline[0].IsEqual(dline[0])) ||
-			(sline[0].IsEqual(dline[1])) ||
-			(sline[1].IsEqual(dline[0])) ||
-			(sline[1].IsEqual(dline[1])) {
-			return true
-		}
-
-		pt := ptfn().Round() // left most point.
-		if !sline.InBetween(pt) || !dline.InBetween(pt) {
-			return true
-		}
-		if !(pt.IsEqual(sline[0]) || pt.IsEqual(sline[1])) {
-			splitPts[src] = append(splitPts[src], pt)
-		}
-		if !(pt.IsEqual(dline[0]) || pt.IsEqual(dline[1])) {
-			splitPts[dest] = append(splitPts[dest], pt)
-		}
-		return true
-	})
-	if err := ctx.Err(); err != nil {
+	flines, err := splitSegments(ctx, segments, clipbox)
+	if err != nil {
 		return nil, err
 	}
-
-	var xs []float64
-	var uxs []float64
-	miny, maxy := segments[0][1].Y, segments[0][1].Y
+	pts := allPointsForSegments(flines)
+	xs := allCoordForPts(0, pts...)
+	xs = sortUniqueF64(xs)
+	miny, maxy := clipbox[0][1], clipbox[1][1]
 	{
-		mappts := make(map[maths.Pt]struct{}, len(segments)*2)
-		var slrln maths.Line
-		var lrln [2][2]float64
-
-		for i := range segments {
-			////log.Println("Looking at segment", i, segments[i])
-			if splitPts[i] == nil {
-				slrln = segments[i].LeftRightMostAsLine()
-				lrln = [2][2]float64{{slrln[0].X, slrln[0].Y}, {slrln[1].X, slrln[1].Y}}
-				if !clipbox.ContainsLine(lrln) {
-					// Outside of the clipping area.
-					continue
-				}
-				mappts[slrln[0]] = struct{}{}
-				mappts[slrln[1]] = struct{}{}
-				//log.Println("Adding to xs:", lrln[0][0], lrln[1][0])
-				xs = append(xs, lrln[0][0], lrln[1][0])
-				miny = MinF64(miny, lrln[0][1], lrln[1][1])
-				maxy = MaxF64(maxy, lrln[0][1], lrln[1][1])
-
-				lines = append(lines, slrln)
-				continue
-			}
-			// Context cancelled.
-			if err := ctx.Err(); err != nil {
-				return nil, err
-			}
-			sort.Sort(points.ByXY(splitPts[i]))
-			lidx, ridx := maths.Line(segments[i]).XYOrderedPtsIdx()
-			lpt, rpt := segments[i][lidx], segments[i][ridx]
-			for j := range splitPts[i] {
-				if lpt.IsEqual(splitPts[i][j]) {
-					// Skipp dups.
-					continue
-				}
-				slrln = maths.Line{lpt, splitPts[i][j]}.LeftRightMostAsLine()
-				lrln = [2][2]float64{{slrln[0].X, slrln[0].Y}, {slrln[1].X, slrln[1].Y}}
-				lpt = splitPts[i][j]
-				if !clipbox.ContainsLine(lrln) {
-					// Outside of the clipping area.
-					continue
-				}
-				mappts[slrln[0]] = struct{}{}
-				mappts[slrln[1]] = struct{}{}
-				//log.Println("Adding to xs:", lrln[0][0], lrln[1][0])
-				xs = append(xs, lrln[0][0], lrln[1][0])
-				lines = append(lines, slrln)
-				// Context cancelled.
-				if err := ctx.Err(); err != nil {
-					return nil, err
-				}
-			}
-			if !lpt.IsEqual(rpt) {
-				slrln = maths.Line{lpt, rpt}.LeftRightMostAsLine()
-				lrln = [2][2]float64{{slrln[0].X, slrln[0].Y}, {slrln[1].X, slrln[1].Y}}
-				if !clipbox.ContainsLine(lrln) {
-					// Outside of the clipping area.
-					continue
-				}
-				mappts[slrln[0]] = struct{}{}
-				mappts[slrln[1]] = struct{}{}
-				//log.Println("Adding to xs:", lrln[0][0], lrln[1][0])
-				xs = append(xs, lrln[0][0], lrln[1][0])
-				lines = append(lines, slrln)
-			}
-			// Context cancelled.
-			if err := ctx.Err(); err != nil {
-				return nil, err
-			}
+		linesbb, err := points.BBoxFloat64(pts...)
+		if err != nil {
+			return nil, err
+		}
+		if miny < linesbb[0][1] {
+			miny = linesbb[0][1]
+		}
+		if maxy > linesbb[1][1] {
+			maxy = linesbb[1][1]
 		}
 	}
-	// Context cancelled.
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
 
-	sort.Float64s(xs)
-	minx, maxx := xs[0], xs[len(xs)-1]
-	xs = append(append([]float64{minx}, xs...), maxx)
-	lx := xs[0]
-	uxs = append(uxs, lx)
-	lines = append(lines, maths.Line{maths.Pt{lx, miny}, maths.Pt{lx, maxy}})
-	// Draw lines along each x to make columns
-	for _, x := range xs[1:] {
-		if x == lx {
+	// Add lines at each x going from the miny to maxy.
+	for i := range xs {
+		if clipbox != nil && (xs[i] < miny || xs[i] > maxy) {
 			continue
 		}
-		lines = append(lines,
-			maths.Line{maths.Pt{x, miny}, maths.Pt{x, maxy}},
-		)
-		lx = x
-		uxs = append(uxs, x)
+		flines = append(flines, [2][2]float64{{xs[i], miny}, {xs[i], maxy}})
 	}
-	// Context cancelled.
-	if err := ctx.Err(); err != nil {
+
+	lines = maths.NewLinesFloat64(flines...)
+	splitPts, err := splitPoints(ctx, lines)
+	if err != nil {
 		return nil, err
 	}
 
-	splitPts = make([][]maths.Pt, len(lines))
-
-	maths.FindIntersects(lines, func(src, dest int, ptfn func() maths.Pt) bool {
-
-		// Context cancelled.
-		if ctx.Err() != nil {
-			return true
-		}
-		sline, dline := lines[src], lines[dest]
-		// Check to see if the end points of sline and dline intersect?
-		if (sline[0].IsEqual(dline[0])) ||
-			(sline[0].IsEqual(dline[1])) ||
-			(sline[1].IsEqual(dline[0])) ||
-			(sline[1].IsEqual(dline[1])) {
-			return true
-		}
-
-		pt := ptfn().Round() // left most point.
-		if !sline.InBetween(pt) || !dline.InBetween(pt) {
-			return true
-		}
-		if !(pt.IsEqual(sline[0]) || pt.IsEqual(sline[1])) {
-			splitPts[src] = append(splitPts[src], pt)
-		}
-		if !(pt.IsEqual(dline[0]) || pt.IsEqual(dline[1])) {
-			splitPts[dest] = append(splitPts[dest], pt)
-		}
-		return true
-	})
-	// Context cancelled.
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
+	// The split points should now include the columns. We need to associate
+	// each point with the value of their x, and the max y value to the next
+	// x.
 
 	var x2pts = make(map[float64][]maths.Pt)
 	var pt2MaxY = make(map[maths.Pt]int64)
+	var clipMaxY100 int64
+	if clipbox != nil {
+		clipMaxY100 = int64(clipbox[1][1] * 100)
+	}
+	var maxY100Val = func(y float64) int64 {
+		y100 := int64(y * 100)
+		if clipbox == nil {
+			return y100
+		}
+		if y < clipbox[1][1] {
+			return y100
+		}
+		return clipMaxY100
+	}
 	var add2Maps = func(pt1, pt2 maths.Pt) {
 		x2pts[pt1.X] = append(x2pts[pt1.X], pt1)
 		x2pts[pt2.X] = append(x2pts[pt2.X], pt2)
 		if pt2.X != pt1.X {
-			if y1, ok := pt2MaxY[pt1]; !ok || y1 < int64(pt2.Y*100) {
-				pt2MaxY[pt1] = int64(pt2.Y * 100)
+			y1, ok := pt2MaxY[pt1]
+			y100 := maxY100Val(pt2.Y)
+
+			if !ok || y1 < y100 {
+				pt2MaxY[pt1] = y100
 			}
 		}
 	}
-	{
-		for i := range lines {
-			// Context cancelled.
-			if err := ctx.Err(); err != nil {
-				return nil, err
-			}
-
-			if splitPts[i] == nil {
-				// We are not splitting the line.
-				add2Maps(lines[i][0], lines[i][1])
-				continue
-			}
-
-			sort.Sort(points.ByXY(splitPts[i]))
-			lidx, ridx := lines[i].XYOrderedPtsIdx()
-			lpt, rpt := lines[i][lidx], lines[i][ridx]
-			for j := range splitPts[i] {
-				if lpt.IsEqual(splitPts[i][j]) {
-					// Skipp dups.
-					continue
-				}
-				add2Maps(lpt, splitPts[i][j])
-				lpt = splitPts[i][j]
-			}
-			if !lpt.IsEqual(rpt) {
-				add2Maps(lpt, rpt)
-			}
+	for i := range splitPts {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		for j := 1; j < len(splitPts[i]); j++ {
+			add2Maps(splitPts[i][j-1], splitPts[i][j])
 		}
 	}
 
-	// Context cancelled.
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-
-	for i := range uxs {
-		x2pts[uxs[i]] = points.SortAndUnique(x2pts[uxs[i]])
+	// Remove any duplicate points.
+	for i := range xs {
+		x2pts[xs[i]] = points.SortAndUnique(x2pts[xs[i]])
 	}
 
 	// Context cancelled.
@@ -322,17 +181,26 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 
 	var wg sync.WaitGroup
 	var idChan = make(chan int)
-	var lenuxs = len(uxs) - 1
+	var lenxs = len(xs) - 1
 
-	var ringCols = make([]plyg.RingCol, lenuxs)
+	var ringCols = make([]plyg.RingCol, lenxs)
 
 	var worker = func(id int, ctx context.Context) {
 		for i := range idChan {
+			if clipbox != nil {
+				if xs[i] < clipbox[0][0] || xs[i] > clipbox[1][0] {
+					// Skip working on this one.
+					continue
+				}
+				if xs[i+1] > clipbox[1][0] {
+					continue
+				}
+			}
 			ringCols[i] = plyg.BuildRingCol(
 				ctx,
 				hm,
-				x2pts[uxs[i]],
-				x2pts[uxs[i+1]],
+				x2pts[xs[i]],
+				x2pts[xs[i+1]],
 				pt2MaxY,
 			)
 
@@ -344,7 +212,7 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 	for i := 0; i < numWorkers; i++ {
 		go worker(i, ctx)
 	}
-	for i := 0; i < lenuxs; i++ {
+	for i := 0; i < lenxs; i++ {
 		select {
 		case <-ctx.Done():
 		case idChan <- i:

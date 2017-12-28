@@ -17,7 +17,7 @@ const TileBuffer = 16
 
 var extent = points.Extent{
 	{0.0 - TileBuffer, 0.0 - TileBuffer},
-	{4096.0, 4096.0},
+	{4096.0 + TileBuffer, 4096.0 + TileBuffer},
 }
 
 func TestPointPairs(t *testing.T) {
@@ -60,8 +60,72 @@ func TestMakeValid(t *testing.T) {
 		polygons [][][]maths.Pt
 		err      error
 	}
+	//tests.RunOrder = "0"
+	ctx := context.Background()
+	/*
+		drawfn := func(w io.Writer, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) {
+			return
+			mm := svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer}
+			for i := range original {
+				mm.OfGeometry(original[i])
+			}
+			for i := range expectedPolygon {
+				mm.OfGeometry(expectedPolygon[i])
+			}
+			for i := range gotPolygon {
+				mm.OfGeometry(gotPolygon[i])
+			}
+			mm.Expandby(100)
+			canvas := &svg.Canvas{
+				Board:  mm,
+				Region: svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer},
+			}
+			canvas.Gid("original_lines")
+			canvas.Comment(fmt.Sprintf("Original Lines(%v)", len(original)))
+			for i := range original {
+				canvas.Comment(fmt.Sprintf("Ring %v", i))
+				canvas.Gid("polygon_segments")
+				for j := range original[i] {
+				}
 
-	tests := tbltest.Cases(
+			}
+			canvas.GEnd()
+
+
+		}
+		drawfn()
+	*/
+
+	fn := func(idx int, test testcase) {
+
+		hm := hitmap.NewFromLines(test.lines)
+		got, err := MakeValid(ctx, &hm, &extent, test.lines...)
+		if err != test.err {
+			t.Errorf("[%v] Unexpected error: Expected: %v, got: %v", idx, test.err, err)
+			return
+		}
+		if diff := deep.Equal(got, test.polygons); diff != nil {
+			out := fmt.Sprintf("[%v] Points do not match:\n", idx)
+			out += fmt.Sprintf("\tExpected MultiPolygon with (%v) polygons:\n", len(test.polygons))
+			for i := range test.polygons {
+				out += fmt.Sprintf("\t\tPolygon(%v) with (%v) rings:\n", i, len(test.polygons[i]))
+				for j := range test.polygons[i] {
+					out += fmt.Sprintf("\t\t\tRing(%v): %v\n", j, test.polygons[i][j])
+				}
+			}
+			out += fmt.Sprintf("\n---------------------------------------------\n\tGot MultiPolygon with (%v) polygons:\n", len(got))
+			for i := range got {
+				out += fmt.Sprintf("\t\tPolygon(%v) with (%v) rings:\n", i, len(got[i]))
+				for j := range got[i] {
+					out += fmt.Sprintf("\t\t\tRing(%v): %v\n", j, got[i][j])
+				}
+			}
+			out += fmt.Sprintf("\tDiff: %v", diff)
+			t.Error(out)
+		}
+	}
+
+	test := tbltest.Cases(
 		testcase{
 			lines: [][]maths.Line{
 				{
@@ -190,37 +254,8 @@ func TestMakeValid(t *testing.T) {
 		},
 	)
 	//log.Println("We need to get 1,2 passing right now they do not.")
-
-	tests.RunOrder = "0"
-	ctx := context.Background()
-
-	tests.Run(func(idx int, test testcase) {
-		hm := hitmap.NewFromLines(test.lines)
-		got, err := MakeValid(ctx, &hm, &extent, test.lines...)
-		if err != test.err {
-			t.Errorf("( %v ) Unexpected error: Expected: %v, got: %v", idx, test.err, err)
-			return
-		}
-		if diff := deep.Equal(got, test.polygons); diff != nil {
-			out := fmt.Sprintf("(%v) Points do not match:\n", idx)
-			out += fmt.Sprintf("\tExpected MultiPolygon with (%v) polygons:\n", len(test.polygons))
-			for i := range test.polygons {
-				out += fmt.Sprintf("\t\tPolygon(%v) with (%v) rings:\n", i, len(test.polygons[i]))
-				for j := range test.polygons[i] {
-					out += fmt.Sprintf("\t\t\tRing(%v): %v\n", j, test.polygons[i][j])
-				}
-			}
-			out += fmt.Sprintf("\n---------------------------------------------\n\tGot MultiPolygon with (%v) polygons:\n", len(got))
-			for i := range got {
-				out += fmt.Sprintf("\t\tPolygon(%v) with (%v) rings:\n", i, len(got[i]))
-				for j := range got[i] {
-					out += fmt.Sprintf("\t\t\tRing(%v): %v\n", j, got[i][j])
-				}
-			}
-			out += fmt.Sprintf("\tDiff: %v", diff)
-			t.Error(out)
-		}
-	})
+	test.RunOrder = "0"
+	test.Run(fn)
 
 }
 
