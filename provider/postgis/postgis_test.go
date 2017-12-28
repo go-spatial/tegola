@@ -87,7 +87,7 @@ func TestMVTLayer(t *testing.T) {
 				},
 			},
 			tile:                 tegola.NewTile(1, 1, 1),
-			expectedFeatureCount: 23,
+			expectedFeatureCount: 98,
 		},
 		//	decode numeric(x,x) types
 		{
@@ -115,7 +115,7 @@ func TestMVTLayer(t *testing.T) {
 		p, err := postgis.NewProvider(tc.config)
 		if err != nil {
 			t.Errorf("[%v] unexpected error; unable to create a new provider, Expected: nil Got %v", i, err)
-			return
+			continue
 		}
 
 		//	iterate our configured layers
