@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -131,8 +132,8 @@ func replaceEnvVars(reader io.Reader) (io.Reader, error) {
 	varPlaceHolders := varFinder.FindAllString(configStr, -1)
 	for _, ph := range varPlaceHolders {
 		// Get the environment variable value (drop the leading dollar sign ($))
-		envVal := os.Getenv(ph[1:])
-		if envVal == "" {
+		envVal, found := syscall.Getenv(ph[1:])
+		if !found {
 			return nil, ErrMissingEnvVar{
 				EnvVar: ph[1:],
 			}
