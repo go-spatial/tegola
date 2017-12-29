@@ -64,23 +64,6 @@ func (p *Provider) MVTLayer(ctx context.Context, layerName string, tile *tegola.
 		if err != nil {
 			return nil, err
 		}
-		/*
-			log.Printf("debug outlines: \n\tDbg:%#v\n\tNon:%#v", ext1, ext)
-			log.Printf("debug line:\n%#v", &basic.Line{ //	tile outline
-				basic.Point{ext1.Minx, ext1.Miny},
-				basic.Point{ext1.Maxx, ext1.Miny},
-				basic.Point{ext1.Maxx, ext1.Maxy},
-				basic.Point{ext1.Minx, ext1.Maxy},
-			},
-			)
-			log.Printf("non line:\n%#v", &basic.Line{ //	tile outline
-				basic.Point{ext.Minx, ext.Miny},
-				basic.Point{ext.Maxx, ext.Miny},
-				basic.Point{ext.Maxx, ext.Maxy},
-				basic.Point{ext.Minx, ext.Maxy},
-			},
-			)
-		*/
 		debugBufferOutline := mvt.Feature{
 			Tags: map[string]interface{}{
 				"type": "debug_buffer_outline",

@@ -138,6 +138,7 @@ func TestLayer(t *testing.T) {
 		Maxx: 4096,
 		Maxy: 4096,
 	}
+	//TODO: gdey — thing of a better way to build out features for a layer.
 	fromPixel := func(x, y float64) *basic.Point {
 		pt, err := tile.FromPixel(tegola.WebMercator, [2]float64{x, y})
 		if err != nil {
