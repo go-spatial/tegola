@@ -76,9 +76,9 @@ func TestTileBBox(t *testing.T) {
 				Y: 1,
 			},
 			minx: -10018754.17,
-			miny: 10018754.17,
+			miny: 0,
 			maxx: 0,
-			maxy: 0,
+			maxy: 10018754.17,
 		},
 		{
 			tile: tegola.Tile{
@@ -87,9 +87,9 @@ func TestTileBBox(t *testing.T) {
 				Y: 26461,
 			},
 			minx: -13044437.497219238996,
-			miny: 3856706.6986199953,
+			miny: 3856095.202393799,
 			maxx: -13043826.000993041,
-			maxy: 3856095.202393799,
+			maxy: 3856706.6986199953,
 		},
 	}
 

@@ -46,9 +46,9 @@ func (t *Tile) BoundingBox() BoundingBox {
 
 	return BoundingBox{
 		Minx:    -max + (float64(t.X) * res),
-		Miny:    max - (float64(t.Y) * res),
+		Miny:    max - (float64(t.Y) * res) - res,
 		Maxx:    -max + (float64(t.X) * res) + res,
-		Maxy:    max - (float64(t.Y) * res) - res,
+		Maxy:    max - (float64(t.Y) * res),
 		Epsilon: t.ZEpislon(),
 		HasXYZ:  true,
 		X:       t.X,
