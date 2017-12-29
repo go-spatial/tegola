@@ -48,6 +48,10 @@ func (a *Atlas) AllMaps() []Map {
 //	SeedMapTile will generate a tile and persist it to the
 //	configured cache backend
 func (a *Atlas) SeedMapTile(m Map, tile *tegola.Tile) error {
+	// 	confirm we have a tile
+	if tile == nil {
+		return ErrMissingTile
+	}
 	//	confirm we have a cache backend
 	if a.cacher == nil {
 		return ErrMissingCache

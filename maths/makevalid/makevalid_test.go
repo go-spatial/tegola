@@ -17,7 +17,7 @@ const TileBuffer = 16
 
 var extent = points.Extent{
 	{0.0 - TileBuffer, 0.0 - TileBuffer},
-	{4096.0, 4096.0},
+	{4096.0 + TileBuffer, 4096.0 + TileBuffer},
 }
 
 func TestPointPairs(t *testing.T) {

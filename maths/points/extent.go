@@ -67,13 +67,13 @@ func (e Extent) ContainsLine(line [2][2]float64) bool {
 	return e.Contains(line[0]) && e.Contains(line[1])
 }
 
-// ContainsExtent returns waather the points of the second extent are containted by the first extent.
+// ContainsExtent returns weather the points of the second extent are containted by the first extent.
 func (e Extent) ContainsExtent(ee Extent) bool { return e.Contains(ee[1]) && e.Contains(ee[1]) }
 
 // Area returns the are of the Extent.
 func (e Extent) Area() float64 { return math.Abs(e[1][0]-e[0][0]) * (e[1][1] - e[0][1]) }
 
-// IntersectPt returns the intersect point if the one exists.
+// IntersectPt returns the intersect point if one exists.
 func (e Extent) IntersectPt(ln [2][2]float64) (pts [][2]float64, ok bool) {
 	lln := maths.NewLineWith2Float64(ln)
 loop:
