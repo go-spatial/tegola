@@ -22,7 +22,7 @@ func TestReplaceTokens(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,1.001875417e+07,0,0,3857)",
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,0,0,1.001875417e+07,3857)",
 		},
 		{
 			layer: Layer{
@@ -34,7 +34,7 @@ func TestReplaceTokens(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,1.001875417e+07,0,0,3857)",
+			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.001875417e+07,0,0,1.001875417e+07,3857)",
 		},
 	}
 
