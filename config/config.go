@@ -17,31 +17,6 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-type ErrMapNotFound struct {
-	MapName string
-}
-
-func (e ErrMapNotFound) Error() string {
-	return fmt.Sprintf("config: map (%v) not found", e.MapName)
-}
-
-type ErrInvalidProviderLayerName struct {
-	ProviderLayerName string
-}
-
-func (e ErrInvalidProviderLayerName) Error() string {
-	return fmt.Sprintf("config: invalid provider layer name (%v)", e.ProviderLayerName)
-}
-
-type ErrOverlappingLayerZooms struct {
-	ProviderLayer1 string
-	ProviderLayer2 string
-}
-
-func (e ErrOverlappingLayerZooms) Error() string {
-	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
-}
-
 // Config represents a tegola config file.
 type Config struct {
 	// LocationName is the file name or http server that the config was read from.
@@ -138,9 +113,9 @@ func Parse(reader io.Reader, location string) (conf Config, err error) {
 	return conf, err
 }
 
+// replaceEnvVars replaces environment variable placeholders in reader stream with values
+// i.e. "val = $VAR" -> "val = 3"
 func replaceEnvVars(reader io.Reader) (io.Reader, error) {
-	// Replaces environment variable placeholders in reader stream with values
-	// i.e. "val = $VAR" -> "val = 3"
 	// Variable definition follows IEEE Std 1003.1-2001
 	//   A dollar sign ($) followed by an upper-case letter, followed by
 	//   zero or more upper-case letters, digits, or underscores (_).
@@ -148,15 +123,21 @@ func replaceEnvVars(reader io.Reader) (io.Reader, error) {
 	varFinder := regexp.MustCompile(regexStr)
 	configBytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		log.Printf("Problem reading from config reader: %v", err)
 		return nil, err
 	}
+
 	configStr := string(configBytes)
 
 	varPlaceHolders := varFinder.FindAllString(configStr, -1)
 	for _, ph := range varPlaceHolders {
 		// Get the environment variable value (drop the leading dollar sign ($))
 		envVal := os.Getenv(ph[1:])
+		if envVal == "" {
+			return nil, ErrMissingEnvVar{
+				EnvVar: ph[1:],
+			}
+		}
+
 		// Escape the leading dollar sign for use in regex.
 		replr := regexp.MustCompile(fmt.Sprintf("\\%v", ph))
 		configStr = replr.ReplaceAllString(configStr, envVal)
@@ -202,8 +183,9 @@ func Load(location string) (conf Config, err error) {
 
 	reader, err = replaceEnvVars(reader)
 	if err != nil {
-		log.Printf("Problem with call to replaceEnvVars: %v\n", err)
+		return conf, err
 	}
+
 	return Parse(reader, location)
 }
 
