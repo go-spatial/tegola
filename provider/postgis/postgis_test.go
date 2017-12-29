@@ -69,7 +69,7 @@ func TestMVTLayer(t *testing.T) {
 				},
 			},
 			tile:                 tegola.NewTile(1, 1, 1),
-			expectedFeatureCount: 614,
+			expectedFeatureCount: 4032,
 		},
 		//	scalerank test
 		{
@@ -87,7 +87,7 @@ func TestMVTLayer(t *testing.T) {
 				},
 			},
 			tile:                 tegola.NewTile(1, 1, 1),
-			expectedFeatureCount: 23,
+			expectedFeatureCount: 98,
 		},
 		//	decode numeric(x,x) types
 		{
@@ -114,8 +114,8 @@ func TestMVTLayer(t *testing.T) {
 	for i, tc := range testcases {
 		p, err := postgis.NewProvider(tc.config)
 		if err != nil {
-			t.Errorf("test (%v) failed. Unable to create a new provider. err: %v", i, err)
-			return
+			t.Errorf("[%v] unexpected error; unable to create a new provider, Expected: nil Got %v", i, err)
+			continue
 		}
 
 		//	iterate our configured layers
@@ -124,13 +124,12 @@ func TestMVTLayer(t *testing.T) {
 
 			l, err := p.MVTLayer(context.Background(), layerName, tc.tile, map[string]interface{}{})
 			if err != nil {
-				t.Errorf("test (%v) failed to create mvt layer err: %v", i, err)
-				return
+				t.Errorf("[%v] unexpected error; failed to create mvt layer, Expected nil Got %v", i, err)
+				continue
 			}
 
 			if len(l.Features()) != tc.expectedFeatureCount {
-				t.Errorf("test (%v) failed.. expected feature count (%v), got (%v)", i, tc.expectedFeatureCount, len(l.Features()))
-				return
+				t.Errorf("[%v] feature count, Expected %v Got %v", i, tc.expectedFeatureCount, len(l.Features()))
 			}
 		}
 	}
