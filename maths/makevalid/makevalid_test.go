@@ -3,11 +3,15 @@ package makevalid
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/gdey/tbltest"
 	"github.com/go-test/deep"
+	"github.com/terranodo/tegola/draw/svg"
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/hitmap"
 	"github.com/terranodo/tegola/maths/points"
@@ -62,39 +66,67 @@ func TestMakeValid(t *testing.T) {
 	}
 	//tests.RunOrder = "0"
 	ctx := context.Background()
-	/*
-		drawfn := func(w io.Writer, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) {
-			return
-			mm := svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer}
-			for i := range original {
-				mm.OfGeometry(original[i])
-			}
-			for i := range expectedPolygon {
-				mm.OfGeometry(expectedPolygon[i])
-			}
-			for i := range gotPolygon {
-				mm.OfGeometry(gotPolygon[i])
-			}
-			mm.Expandby(100)
-			canvas := &svg.Canvas{
-				Board:  mm,
-				Region: svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer},
-			}
-			canvas.Gid("original_lines")
-			canvas.Comment(fmt.Sprintf("Original Lines(%v)", len(original)))
-			for i := range original {
-				canvas.Comment(fmt.Sprintf("Ring %v", i))
-				canvas.Gid("polygon_segments")
-				for j := range original[i] {
-				}
-
-			}
-			canvas.GEnd()
-
-
+	drawfn := func(w io.Writer, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) {
+		mm := svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer}
+		for i := range original {
+			mm.OfGeometry(original[i])
 		}
-		drawfn()
-	*/
+		for i := range expectedPolygon {
+			mm.OfGeometry(expectedPolygon[i])
+		}
+		for i := range gotPolygon {
+			mm.OfGeometry(gotPolygon[i])
+		}
+		mm.ExpandBy(100)
+		canvas := &svg.Canvas{
+			Board:  mm,
+			Region: svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer},
+		}
+		canvas.Init(w, 1440, 900, false)
+		canvas.Gid("original_lines")
+		canvas.Comment(fmt.Sprintf("Original Lines(%v)", len(original)))
+		for i := range original {
+			id := fmt.Sprintf("Ring_%v", i)
+			canvas.Gid(id)
+			canvas.DrawMathSegments(original[i], "", "stroke: #00ff00")
+			canvas.Gend()
+		}
+		canvas.Gend()
+		canvas.Gid("Expected MultiPolygon")
+		canvas.Comment(fmt.Sprintf("Expected MultiPolygon(%v)", len(expectedPolygon)))
+		for i := range expectedPolygon {
+			canvas.Comment(fmt.Sprintf("Expected (%v) Polygon(%v)", i, len(expectedPolygon[i])))
+			id := fmt.Sprintf("Polygon_%v", i)
+			canvas.Gid(id)
+			for j := range expectedPolygon[i] {
+				id := fmt.Sprintf("Ring_%v", i)
+				canvas.Gid(id)
+				canvas.DrawMathPoints(expectedPolygon[i][j], "", "stroke: #0000ff")
+				canvas.Gend()
+			}
+			canvas.Gend()
+		}
+
+		canvas.Gend()
+		canvas.Gid("Got MultiPolygon")
+		canvas.Comment(fmt.Sprintf("Got MultiPolygon(%v)", len(expectedPolygon)))
+		for i := range gotPolygon {
+			canvas.Comment(fmt.Sprintf("Got (%v) Polygon(%v)", i, len(gotPolygon[i])))
+			id := fmt.Sprintf("Polygon_%v", i)
+			canvas.Gid(id)
+			for j := range gotPolygon[i] {
+				id := fmt.Sprintf("Ring_%v", i)
+				canvas.Gid(id)
+				canvas.DrawMathPoints(gotPolygon[i][j], "", "stroke: #ff0000")
+				canvas.Gend()
+			}
+			canvas.Gend()
+		}
+
+		canvas.Gend()
+		canvas.End()
+
+	}
 
 	fn := func(idx int, test testcase) {
 
@@ -105,6 +137,18 @@ func TestMakeValid(t *testing.T) {
 			return
 		}
 		if diff := deep.Equal(got, test.polygons); diff != nil {
+			baseDir := "_test_failures/TestMakeValid"
+			var err error
+			var file *os.File
+			if err = os.MkdirAll(baseDir, 0711); err == nil {
+				file, err = os.Create(filepath.Join(baseDir, fmt.Sprintf("tc_%v.svg", idx)))
+			}
+			if err != nil {
+				t.Logf("Could create svg test file: %v ", err)
+			} else {
+				defer file.Close()
+				drawfn(file, test.lines, test.polygons, got)
+			}
 			out := fmt.Sprintf("[%v] Points do not match:\n", idx)
 			out += fmt.Sprintf("\tExpected MultiPolygon with (%v) polygons:\n", len(test.polygons))
 			for i := range test.polygons {
@@ -177,23 +221,19 @@ func TestMakeValid(t *testing.T) {
 				maths.Line{maths.Pt{X: 2811, Y: 894}, maths.Pt{X: 2818, Y: 910}},
 				maths.Line{maths.Pt{X: 2818, Y: 910}, maths.Pt{X: 2784, Y: 960}},
 			}},
+
 			polygons: [][][]maths.Pt{
 				{
-					[]maths.Pt{{2734, 934}, {2735, 936}, {2762, 945}, {2739, 930}},
+					[]maths.Pt{{2734, 934}, {2735, 933}, {2739, 930}, {2759, 943}, {2763, 946}, {2759, 945}, {2739, 937}, {2735, 936}},
 				},
 				{
-					[]maths.Pt{{2762, 945}, {2782, 959}, {2784, 953}},
+					[]maths.Pt{{2759, 913}, {2763, 908}, {2766, 908}, {2770, 911}, {2770, 914}, {2778, 924}, {2781, 926}, {2782, 927}, {2784, 928}, {2785, 928}, {2787, 930}, {2792, 933}, {2800, 919}, {2805, 912}, {2808, 908}, {2809, 907}, {2808, 904}, {2805, 902}, {2808, 895}, {2809, 895}, {2811, 894}, {2818, 910}, {2811, 920}, {2809, 923}, {2808, 925}, {2805, 929}, {2800, 936}, {2792, 948}, {2787, 955}, {2786, 954}, {2785, 954}, {2784, 955}, {2782, 959}, {2781, 958}, {2778, 956}, {2770, 951}, {2766, 948}, {2763, 946}, {2766, 947}, {2770, 949}, {2778, 951}, {2781, 953}, {2782, 953}, {2784, 954}, {2785, 953}, {2781, 949}, {2782, 947}, {2784, 942}, {2786, 938}, {2781, 933}, {2778, 931}, {2766, 919}, {2763, 917}},
 				},
 				{
-					[]maths.Pt{{2783, 960}, {2837, 993}, {2850, 977}, {2787, 954}},
+					[]maths.Pt{{2784, 960}, {2785, 958}, {2786, 957}, {2787, 955}, {2792, 957}, {2800, 960}, {2805, 961}, {2808, 963}, {2809, 963}, {2811, 964}, {2818, 966}, {2838, 973}, {2851, 978}, {2838, 994}, {2818, 981}, {2811, 977}, {2809, 976}, {2808, 975}, {2805, 973}, {2800, 970}, {2792, 965}, {2787, 962}, {2786, 961}, {2785, 961}},
 				},
 				{
-					[]maths.Pt{{2805, 902}, {2808, 895}, {2811, 894}, {2808, 904}},
-					[]maths.Pt{{2759, 913}, {2763, 908}, {2766, 908}, {2770, 911}, {2770, 914}, {2778, 924}, {2792, 933}, {2800, 919}, {2809, 907}, {2808, 904}, {2781, 949}, {2786, 938}},
-					[]maths.Pt{{2781, 949}, {2785, 953}, {2784, 953}, {2787, 954}, {2818, 910}, {2811, 894}},
-				},
-				{
-					[]maths.Pt{{2850, 977}, {2852, 975}, {2856, 975}, {2857, 977}, {2857, 980}},
+					[]maths.Pt{{2851, 978}, {2853, 975}, {2856, 975}, {2857, 977}, {2857, 980}, {2856, 980}, {2853, 979}},
 				},
 			},
 		},
@@ -230,31 +270,23 @@ func TestMakeValid(t *testing.T) {
 			polygons: [][][]maths.Pt{
 
 				{
-					[]maths.Pt{{0, 40}, {1, 42}, {28, 51}, {5, 36}},
+					[]maths.Pt{{0, 40}, {1, 39}, {5, 36}, {25, 49}, {29, 52}, {25, 51}, {5, 43}, {1, 42}},
 				},
 
 				{
-					[]maths.Pt{{28, 51}, {48, 65}, {50, 59}},
+					[]maths.Pt{{25, 19}, {29, 14}, {32, 14}, {36, 17}, {36, 20}, {44, 30}, {47, 32}, {48, 33}, {50, 34}, {51, 34}, {53, 36}, {58, 39}, {66, 25}, {71, 18}, {74, 14}, {75, 13}, {74, 10}, {71, 8}, {74, 1}, {75, 1}, {77, 0}, {84, 16}, {77, 26}, {75, 29}, {74, 31}, {71, 35}, {66, 42}, {58, 54}, {53, 61}, {52, 60}, {51, 60}, {50, 61}, {48, 65}, {47, 64}, {44, 62}, {36, 57}, {32, 54}, {29, 52}, {32, 53}, {36, 55}, {44, 57}, {47, 59}, {48, 59}, {50, 60}, {51, 59}, {47, 55}, {48, 53}, {50, 48}, {52, 44}, {47, 39}, {44, 37}, {32, 25}, {29, 23}},
 				},
 
 				{
-					[]maths.Pt{{49, 66}, {104, 100}, {116, 83}, {53, 60}},
+					[]maths.Pt{{50, 66}, {51, 64}, {52, 63}, {53, 61}, {58, 63}, {66, 66}, {71, 67}, {74, 69}, {75, 69}, {77, 70}, {84, 72}, {104, 79}, {117, 84}, {104, 100}, {84, 87}, {77, 83}, {75, 82}, {74, 81}, {71, 79}, {66, 76}, {58, 71}, {53, 68}, {52, 67}, {51, 67}},
 				},
 
 				{
-					[]maths.Pt{{71, 8}, {74, 0}, {77, 0}, {74, 10}},
-					[]maths.Pt{{25, 19}, {29, 14}, {32, 14}, {36, 17}, {36, 20}, {44, 30}, {58, 39}, {66, 25}, {75, 13}, {74, 10}, {47, 55}, {52, 44}},
-					[]maths.Pt{{47, 55}, {51, 59}, {50, 59}, {53, 60}, {84, 16}, {77, 0}},
-				},
-
-				{
-					[]maths.Pt{{116, 83}, {119, 81}, {122, 81}, {123, 83}, {123, 86}},
+					[]maths.Pt{{117, 84}, {119, 81}, {122, 81}, {123, 83}, {123, 86}, {122, 86}, {119, 85}},
 				},
 			},
 		},
 	)
-	//log.Println("We need to get 1,2 passing right now they do not.")
-	test.RunOrder = "0"
 	test.Run(fn)
 
 }
