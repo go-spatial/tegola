@@ -7,6 +7,7 @@ import (
 
 var (
 	ErrMissingCache = errors.New("atlas: missing cache")
+	ErrMissingTile  = errors.New("atlas: missing tile")
 )
 
 type ErrMapNotFound struct {

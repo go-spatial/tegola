@@ -11,10 +11,11 @@ import (
 	"errors"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/maths/webmercator"
 )
 
 const (
-	WebMercator = tegola.WebMercator
+	WebMercator = webmercator.SRID
 	WGS84       = tegola.WGS84
 	Deg2Rad     = math.Pi / 180
 	Rad2Deg     = 180 / math.Pi

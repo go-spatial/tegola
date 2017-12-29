@@ -19,7 +19,7 @@ func (p *Provider) Layer(name string) (Layer, bool) {
 	return plyr, ok
 }
 
-func (p *Provider) ForEachFeature(ctx context.Context, layerName string, tile tegola.Tile, fn func(layer Layer, gid uint64, geom wkb.Geometry, tags map[string]interface{}) error) error {
+func (p *Provider) ForEachFeature(ctx context.Context, layerName string, tile *tegola.Tile, fn func(layer Layer, gid uint64, geom wkb.Geometry, tags map[string]interface{}) error) error {
 	plyr, ok := p.Layer(layerName)
 	if !ok {
 		return fmt.Errorf("layer (%v) not found ", layerName)

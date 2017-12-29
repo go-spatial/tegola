@@ -165,7 +165,7 @@ func (m Map) EnableLayersByName(names ...string) Map {
 }
 
 //	TODO: support for max zoom
-func (m Map) Encode(ctx context.Context, tile tegola.Tile) ([]byte, error) {
+func (m Map) Encode(ctx context.Context, tile *tegola.Tile) ([]byte, error) {
 	//	generate a tile
 	var mvtTile mvt.Tile
 	//	wait group for concurrent layer fetching
@@ -230,7 +230,7 @@ func (m Map) Encode(ctx context.Context, tile tegola.Tile) ([]byte, error) {
 	mvtTile.AddLayers(mvtLayers...)
 
 	//	generate our tile
-	vtile, err := mvtTile.VTile(ctx, tile.BoundingBox())
+	vtile, err := mvtTile.VTile(ctx, tile)
 	if err != nil {
 		return nil, err
 	}

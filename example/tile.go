@@ -13,7 +13,7 @@ import (
 	"github.com/terranodo/tegola/wkb"
 )
 
-// TileExample is a quick example of how to use the interface to marshal a tile.
+// TileExample is a quick example of how to use the interface to marshall a tile.
 func TileExample() {
 	// We have our point in wkb format.
 	var point = []byte{0, 0, 0, 0, 1, 70, 129, 246, 35, 46, 74, 93, 192, 3, 70, 27, 60, 175, 91, 64, 64}
@@ -69,11 +69,8 @@ func TileExample() {
 
 	// VTile is the protobuff representation of the tile. This is what you can
 	// send to the protobuff Marshal functions.
-	bbox := tegola.BoundingBox{
-		Maxx: 4096,
-		Maxy: 4096,
-	}
-	vtile, err := tile.VTile(context.Background(), bbox)
+	ttile := tegola.NewTile(0, 0, 0)
+	vtile, err := tile.VTile(context.Background(), ttile)
 	if err != nil {
 		panic(err)
 	}

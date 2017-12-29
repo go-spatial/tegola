@@ -239,10 +239,10 @@ var cacheCmd = &cobra.Command{
 		//	iterate our zoom range
 		for i := range zooms {
 
-			topLeft := tegola.Tile{Z: zooms[i], Long: bounds[0], Lat: bounds[1]}
+			topLeft := *tegola.NewTileLatLong(zooms[i], bounds[1], bounds[0])
 			minx, maxy = topLeft.Deg2Num()
 
-			bottomRight := tegola.Tile{Z: zooms[i], Long: bounds[2], Lat: bounds[3]}
+			bottomRight := *tegola.NewTileLatLong(zooms[i], bounds[3], bounds[2])
 			maxx, miny = bottomRight.Deg2Num()
 
 			//	range rows
@@ -253,7 +253,7 @@ var cacheCmd = &cobra.Command{
 					for m := range maps {
 						mapTile := MapTile{
 							MapName: maps[m].Name,
-							Tile:    tegola.Tile{Z: zooms[i], X: x, Y: y},
+							Tile:    tegola.NewTile(zooms[i], x, y),
 						}
 
 						tiler <- mapTile
@@ -272,12 +272,12 @@ var cacheCmd = &cobra.Command{
 
 type MapTile struct {
 	MapName string
-	Tile    tegola.Tile
+	Tile    *tegola.Tile
 }
 
 //	parseTileString converts a Z/X/Y formatted string into a tegola tile
-func parseTileString(str string) (tegola.Tile, error) {
-	var tile tegola.Tile
+func parseTileString(str string) (*tegola.Tile, error) {
+	var tile *tegola.Tile
 
 	parts := strings.Split(cacheZXY, "/")
 	if len(parts) != 3 {
@@ -301,12 +301,7 @@ func parseTileString(str string) (tegola.Tile, error) {
 	if err != nil {
 		return tile, fmt.Errorf("invalid Y value (%v)", y)
 	}
-
-	tile = tegola.Tile{
-		Z: z,
-		X: x,
-		Y: y,
-	}
+	tile = tegola.NewTile(z, x, y)
 
 	return tile, nil
 }

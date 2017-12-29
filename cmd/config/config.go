@@ -39,14 +39,7 @@ func (cfg *C) InitFlags() {
 	flag.Int64Var(&(cfg.IsolateGeo), "g", -1, "Only grab the feature with the geoid. -1 means all of them.")
 }
 
-func (cfg *C) Tile() tegola.Tile {
-	return tegola.Tile{
-		X: cfg.Coords[1],
-		Y: cfg.Coords[2],
-		Z: cfg.Coords[0],
-	}
-}
-
+func (cfg *C) Tile() tegola.Tile { return *tegola.NewTile(cfg.Coords[1], cfg.Coords[2], cfg.Coords[0]) }
 func (cfg *C) X() int {
 	return cfg.Coords[1]
 }

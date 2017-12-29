@@ -263,7 +263,7 @@ func (p Provider) layerGeomType(l *Layer) error {
 	var err error
 
 	//	we need a tile to run our sql through the replacer
-	tile := tegola.Tile{Z: 0, X: 0, Y: 0}
+	tile := tegola.NewTile(0, 0, 0)
 
 	sql, err := replaceTokens(l, tile)
 	if err != nil {
@@ -331,7 +331,7 @@ func (p Provider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
-func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
+func (p Provider) MVTLayer(ctx context.Context, layerName string, tile *tegola.Tile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
 
 	layer = &mvt.Layer{
 		Name: layerName,
@@ -364,9 +364,7 @@ func (p Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Ti
 				Tags:     tags,
 				Geometry: geom,
 			})
-
 			return nil
-
 		})
 
 	return layer, err

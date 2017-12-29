@@ -10,7 +10,15 @@ import (
 	"github.com/go-test/deep"
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/hitmap"
+	"github.com/terranodo/tegola/maths/points"
 )
+
+const TileBuffer = 16
+
+var extent = points.Extent{
+	{0.0 - TileBuffer, 0.0 - TileBuffer},
+	{4096.0 + TileBuffer, 4096.0 + TileBuffer},
+}
 
 func TestPointPairs(t *testing.T) {
 	type testcase struct {
@@ -188,7 +196,7 @@ func TestMakeValid(t *testing.T) {
 
 	tests.Run(func(idx int, test testcase) {
 		hm := hitmap.NewFromLines(test.lines)
-		got, err := MakeValid(ctx, &hm, 4096, test.lines...)
+		got, err := MakeValid(ctx, &hm, &extent, test.lines...)
 		if err != test.err {
 			t.Errorf("( %v ) Unexpected error: Expected: %v, got: %v", idx, test.err, err)
 			return
@@ -253,7 +261,7 @@ func BenchmarkMakeValid5PolyA(b *testing.B) {
 	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
-		MakeValid(ctx, &hm, 4096, lines...)
+		MakeValid(ctx, &hm, &extent, lines...)
 	}
 }
 func BenchmarkMakeValid5PolyB(b *testing.B) {
@@ -292,7 +300,7 @@ func BenchmarkMakeValid5PolyB(b *testing.B) {
 	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
-		MakeValid(ctx, &hm, 4096, lines...)
+		MakeValid(ctx, &hm, &extent, lines...)
 	}
 }
 
@@ -3845,7 +3853,7 @@ func BenchmarkMakeValid5PolyC(b *testing.B) {
 	var nresultPolygon [][][]maths.Pt
 	ctx := context.Background()
 	for n := 0; n < b.N; n++ {
-		nresultPolygon, _ = MakeValid(ctx, &hm, 4096, lines...)
+		nresultPolygon, _ = MakeValid(ctx, &hm, &extent, lines...)
 	}
 
 	resultPolygon = nresultPolygon
