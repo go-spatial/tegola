@@ -92,6 +92,12 @@ func initConfig() {
 			atlas.SetCache(cache)
 		}
 	}
+
+	//	set tile buffer
+	if conf.TileBuffer > 0 {
+		tegola.DefaultTileBuffer = float64(conf.TileBuffer)
+		log.Println(tegola.DefaultTileBuffer)
+	}
 }
 
 func initCache(config map[string]interface{}) (cache.Interface, error) {

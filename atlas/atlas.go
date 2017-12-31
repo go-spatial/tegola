@@ -15,7 +15,7 @@ var DefaultAtlas = &Atlas{}
 
 const (
 	//	MaxZoom will not render tile beyond this zoom level
-	MaxZoom = 22
+	MaxZoom = tegola.MaxZ
 )
 
 type Atlas struct {

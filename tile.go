@@ -11,7 +11,7 @@ const (
 	DefaultEpislon    = 10.0
 	DefaultExtent     = 4096
 	DefaultTileBuffer = 64
-	MaxZ              = 20
+	MaxZ              = 22
 )
 
 var UnknownConversionError = fmt.Errorf("do not know how to convert value to requested value")

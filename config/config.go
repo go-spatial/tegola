@@ -15,33 +15,10 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-type ErrMapNotFound struct {
-	MapName string
-}
-
-func (e ErrMapNotFound) Error() string {
-	return fmt.Sprintf("config: map (%v) not found", e.MapName)
-}
-
-type ErrInvalidProviderLayerName struct {
-	ProviderLayerName string
-}
-
-func (e ErrInvalidProviderLayerName) Error() string {
-	return fmt.Sprintf("config: invalid provider layer name (%v)", e.ProviderLayerName)
-}
-
-type ErrOverlappingLayerZooms struct {
-	ProviderLayer1 string
-	ProviderLayer2 string
-}
-
-func (e ErrOverlappingLayerZooms) Error() string {
-	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
-}
-
 // Config represents a tegola config file.
 type Config struct {
+	//	the tile buffer to use
+	TileBuffer uint64 `toml:"tile_buffer"`
 	// LocationName is the file name or http server that the config was read from.
 	// If this is an empty string, it means that the location was unknown. This is the case if
 	// the Parse() function is used directly.
@@ -172,23 +149,4 @@ func Load(location string) (conf Config, err error) {
 	}
 
 	return Parse(reader, location)
-}
-
-// FindMap will find the map with the provided name. If "" is used for the name, it will return the first
-// Map in the config, if one is defined.
-// If a map with the name is not found it will return ErrMapNotFound error.
-func (cfg *Config) FindMap(name string) (Map, error) {
-	if name == "" && len(cfg.Maps) > 0 {
-		return cfg.Maps[0], nil
-	}
-
-	for _, m := range cfg.Maps {
-		if m.Name == name {
-			return m, nil
-		}
-	}
-
-	return Map{}, ErrMapNotFound{
-		MapName: name,
-	}
 }
