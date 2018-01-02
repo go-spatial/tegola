@@ -49,7 +49,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
-			expected:     []byte("negative zoom levels are not allowed"),
+			expected:     []byte("invalid Z value (-1)"),
 		},
 	}
 

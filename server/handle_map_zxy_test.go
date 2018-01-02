@@ -33,7 +33,7 @@ func TestHandleMapZXY(t *testing.T) {
 			uriPattern:   "/maps/:map_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
-			expected:     []byte("negative zoom levels are not allowed"),
+			expected:     []byte("invalid Z value (-1)"),
 		},
 		{ // Check that values outside expected zoom result in 404.
 			handler:      server.HandleMapZXY{},
@@ -84,7 +84,7 @@ func TestHandleMapZXY(t *testing.T) {
 			wbody := strings.TrimSpace(w.Body.String())
 
 			if string(test.expected) != wbody {
-				t.Errorf("failed test %v. handler returned wrong body: got (%v) expected (%v)", i, wbody, test.expected)
+				t.Errorf("failed test %v. handler returned wrong body: got (%v) expected (%v)", i, wbody, string(test.expected))
 			}
 		}
 	}
