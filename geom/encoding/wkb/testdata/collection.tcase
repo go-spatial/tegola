@@ -1,0 +1,37 @@
+desc: 1. Collection containing a point and line.
+bytes:
+{{//01 02 03 04 05 06 07 08
+    01                      // Byte order marker little
+    07 00 00 00             // Type (7) Collection
+    02 00 00 00             // Number of Geometries in the Collection
+    01                      // Byte order marker for LittleEndian,
+    01 00 00 00             // Type (1) Point
+    00 00 00 00 00 00 10 40 // X1 4
+    00 00 00 00 00 00 18 40 // Y1 6
+    01                      // Byte order marker little
+    02 00 00 00             // Type (2) Line
+    02 00 00 00             // Number of Points (2)
+    00 00 00 00 00 00 10 40 // X1 4
+    00 00 00 00 00 00 18 40 // Y1 6
+    00 00 00 00 00 00 1c 40 // X2 7
+    00 00 00 00 00 00 24 40 // Y2 10
+}}
+bom: Little 
+geometry: (( 4,6 [ 4,6 7,10 ] ))
+
+desc: 2. Collection  containing only a line
+bom: Little 
+bytes:
+{{//01 02 03 04  05 06 07 08
+   01                        // BOM (byte order marker) little
+   07 00 00 00               // Type (7) Collection
+   01 00 00 00               // Number of Geometries in the collection
+   01                        // BOM little
+   02 00 00 00               // Type (2) LineString
+   02 00 00 00               // Number of points.
+   00 00 00 00  00 00 F0 3F  // X1 1
+   00 00 00 00  00 00 00 40  // Y1 2
+   00 00 00 00  00 00 08 40  // X2 3
+   00 00 00 00  00 00 10 40  // Y2 4
+}}
+geometry: (( [ 1,2 3,4 ] ))
