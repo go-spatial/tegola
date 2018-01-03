@@ -38,7 +38,7 @@ func insureConnected(polygons ...[]maths.Line) (ret [][]maths.Line) {
 	return ret
 }
 
-// destructure2 will split the ploygons up and split lines where they intersect. It will also, add a bounding box and a set of lines crossing from the end points of the bounding box to the center.
+// destructure2  splits the polygon into a set of segements adding the segments of the clipbox as well.
 func destructure2(polygons [][]maths.Line, clipbox *points.Extent) []maths.Line {
 	// First we need to combine all the segments.
 	segs := make(map[maths.Line]struct{})
@@ -47,10 +47,15 @@ func destructure2(polygons [][]maths.Line, clipbox *points.Extent) []maths.Line 
 			segs[ln.LeftRightMostAsLine()] = struct{}{}
 		}
 	}
+
 	var segments []maths.Line
+	// Add the clipbox segments to the set of segments.
 	if clipbox != nil {
 		edges := clipbox.LREdges()
-		segments = append(segments, maths.NewLinesFloat64(edges[:]...)...)
+		lns := maths.NewLinesFloat64(edges[:]...)
+		for i := range lns {
+			segs[lns[i]] = struct{}{}
+		}
 	}
 	for ln := range segs {
 		segments = append(segments, ln)
@@ -90,16 +95,18 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 
 	var lines []maths.Line
 
-	// linesToSplit holds a list of points for that segment to be split at. This list will have to be
-	// ordered and deuped.
-
 	flines, err := splitSegments(ctx, segments, clipbox)
 	if err != nil {
 		return nil, err
 	}
+
 	pts := allPointsForSegments(flines)
-	xs := allCoordForPts(0, pts...)
-	xs = sortUniqueF64(xs)
+
+	xs := sortUniqueF64(allCoordForPts(0, pts...))
+
+	// If what we are working on does not go outside one of the edges of the
+	// clip box, let's bring that edge in. Basically, reduce the amount of
+	// space we are dealing with.
 	miny, maxy := clipbox[0][1], clipbox[1][1]
 	{
 		linesbb, err := points.BBoxFloat64(pts...)
@@ -116,9 +123,6 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 
 	// Add lines at each x going from the miny to maxy.
 	for i := range xs {
-		if clipbox != nil && (xs[i] < miny || xs[i] > maxy) {
-			continue
-		}
 		flines = append(flines, [2][2]float64{{xs[i], miny}, {xs[i], maxy}})
 	}
 

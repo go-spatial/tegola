@@ -14,6 +14,7 @@ func destructure (polygons ...[][][2]float64)(ret [][2][2]float64){
 }
 */
 
+/*
 func appendUniquePt(pts []maths.Pt, pt maths.Pt) []maths.Pt {
 	for _, p := range pts {
 		if p.IsEqual(pt) {
@@ -23,6 +24,7 @@ func appendUniquePt(pts []maths.Pt, pt maths.Pt) []maths.Pt {
 	}
 	return append(pts, pt)
 }
+*/
 
 func allCoordForPts(idx int, pts ...[2]float64) (fs []float64) {
 	if idx != 0 && idx != 1 {
