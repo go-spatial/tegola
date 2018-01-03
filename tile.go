@@ -2,7 +2,6 @@ package tegola
 
 import (
 	"fmt"
-	"log"
 	"math"
 )
 
@@ -10,6 +9,22 @@ const (
 	DefaultEpislon = 10.0
 	DefaultExtent  = 4096
 )
+
+type ErrInvalidLatLong struct {
+	Lat, Long float64
+}
+
+func (e ErrInvalidLatLong) Error() string {
+	return fmt.Sprintf("tile: invalid lat / long pair. one or both outside are outside the valid range (Lat, Long): (%v, %v)", e.Lat, e.Long)
+}
+
+type ErrInvalidXY struct {
+	X, Y int
+}
+
+func (e ErrInvalidXY) Error() string {
+	return fmt.Sprintf("tile: invalid X / Y pair. one or both outside valid range (x, y): (%v, %v)", e.X, e.Y)
+}
 
 //Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
@@ -28,9 +43,10 @@ func (t *Tile) Deg2Num() (x, y int, err error) {
 
 	// Check that input lat/long values are within WGS84 bounds
 	if t.Lat < -85.0511 || t.Lat > 85.0511 || t.Long < -180.0 || t.Long > 180.0 {
-		err := fmt.Errorf("one or both outside valid range (Long, Lat): (%v, %v)", t.Long, t.Lat)
-		log.Print(err)
-		return -1, -1, err
+		return 0, 0, ErrInvalidLatLong{
+			Lat:  t.Lat,
+			Long: t.Long,
+		}
 	}
 
 	x = int(math.Floor((t.Long + 180.0) / 360.0 * (math.Exp2(float64(t.Z)))))
@@ -48,9 +64,10 @@ func (t *Tile) Num2Deg() (lat, lng float64, err error) {
 	lng = float64(t.X)/math.Exp2(float64(t.Z))*360.0 - 180.0
 
 	if lat < -85.0511 || lat > 85.0511 || lng < -180.0 || lng > 180.0 {
-		err := fmt.Errorf("one or both outside valid range (x, y): (%v, %v)", t.X, t.Y)
-		log.Print(err)
-		return -400.0, -400.0, err
+		return 0.0, 0.0, ErrInvalidXY{
+			X: t.X,
+			Y: t.Y,
+		}
 	}
 
 	return lat, lng, nil

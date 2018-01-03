@@ -11,7 +11,7 @@ func TestTileNum2Deg(t *testing.T) {
 		tile        tegola.Tile
 		expectedLat float64
 		expectedLng float64
-		expectedErr string
+		expectedErr error
 	}{
 		{
 			tile: tegola.Tile{
@@ -28,9 +28,12 @@ func TestTileNum2Deg(t *testing.T) {
 				X: -1,
 				Y: 1,
 			},
-			expectedLat: -400.0,
-			expectedLng: -400.0,
-			expectedErr: "one or both outside valid range (x, y): (-1, 1)",
+			expectedLat: 0.0,
+			expectedLng: 0.0,
+			expectedErr: tegola.ErrInvalidXY{
+				X: -1,
+				Y: 1,
+			},
 		},
 		{ // Confirm that negative row (y) value results in an error
 			tile: tegola.Tile{
@@ -38,26 +41,32 @@ func TestTileNum2Deg(t *testing.T) {
 				X: 1,
 				Y: -1,
 			},
-			expectedLat: -400.0,
-			expectedLng: -400.0,
-			expectedErr: "one or both outside valid range (x, y): (1, -1)",
+			expectedLat: 0.0,
+			expectedLng: 0.0,
+			expectedErr: tegola.ErrInvalidXY{
+				X: 1,
+				Y: -1,
+			},
 		},
 	}
 
 	for i, test := range testcases {
 		lat, lng, err := test.tile.Num2Deg()
 
-		if test.expectedErr != "" {
-			if err.Error() != test.expectedErr {
-				t.Errorf("Failed test %v. Expected err (%v), got (%v)", i, test.expectedErr, err.Error())
+		if test.expectedErr != nil {
+			if err != test.expectedErr {
+				t.Errorf("[%v]. Expected err (%v), got (%v)", i, test.expectedErr, err.Error())
+				continue
 			}
 		}
 
 		if lat != test.expectedLat {
-			t.Errorf("Failed test %v. Expected lat (%v), got (%v)", i, test.expectedLat, lat)
+			t.Errorf("[%v]. Expected lat (%v), got (%v)", i, test.expectedLat, lat)
+			continue
 		}
 		if lng != test.expectedLng {
-			t.Errorf("Failed test %v. Expected lng (%v), got (%v)", i, test.expectedLng, lng)
+			t.Errorf("[%v]. Expected lng (%v), got (%v)", i, test.expectedLng, lng)
+			continue
 		}
 	}
 }
@@ -67,7 +76,7 @@ func TestTileDeg2Num(t *testing.T) {
 		tile        tegola.Tile
 		expectedX   int
 		expectedY   int
-		expectedErr string
+		expectedErr error
 	}{
 		{
 			tile: tegola.Tile{
@@ -84,9 +93,12 @@ func TestTileDeg2Num(t *testing.T) {
 				Lat:  -85.1,
 				Long: -180,
 			},
-			expectedX:   -1,
-			expectedY:   -1,
-			expectedErr: "one or both outside valid range (Long, Lat): (-180, -85.1)",
+			expectedX: 0,
+			expectedY: 0,
+			expectedErr: tegola.ErrInvalidLatLong{
+				Lat:  -85.1,
+				Long: -180,
+			},
 		},
 		{ // Check for error if Long outside WGS84 Range
 			tile: tegola.Tile{
@@ -94,29 +106,37 @@ func TestTileDeg2Num(t *testing.T) {
 				Lat:  -85,
 				Long: -180.1,
 			},
-			expectedX:   -1,
-			expectedY:   -1,
-			expectedErr: "one or both outside valid range (Long, Lat): (-180.1, -85)",
+			expectedX: 0,
+			expectedY: 0,
+			expectedErr: tegola.ErrInvalidLatLong{
+				Lat:  -85,
+				Long: -180.1,
+			},
 		},
 	}
 
 	for i, tc := range testcases {
 		x, y, err := tc.tile.Deg2Num()
 
-		if tc.expectedErr != "" {
+		if tc.expectedErr != nil {
 			if err == nil {
-				t.Errorf("testcase (%v) failed. Got nil error", i)
-			} else if err.Error() != tc.expectedErr {
-				t.Errorf("testcase (%v) failed. expected err (%v) does not match output (%v)", i, tc.expectedErr, err)
+				t.Errorf("[%v]. got nil error but expected err: %v", i, tc.expectedErr)
+				continue
+			}
+			if err != tc.expectedErr {
+				t.Errorf("[%v]. expected err (%v) does not match output (%v)", i, tc.expectedErr, err)
+				continue
 			}
 		}
 
 		if tc.expectedX != x {
-			t.Errorf("testcase (%v) failed. expected X value (%v) does not match output (%v)", i, tc.expectedX, x)
+			t.Errorf("[%v]. expected X value (%v) does not match output (%v)", i, tc.expectedX, x)
+			continue
 		}
 
 		if tc.expectedY != y {
-			t.Errorf("testcase (%v) failed. expected X value (%v) does not match output (%v)", i, tc.expectedY, y)
+			t.Errorf("[%v]. expected Y value (%v) does not match output (%v)", i, tc.expectedY, y)
+			continue
 		}
 	}
 }
