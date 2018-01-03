@@ -1,18 +1,21 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"sync"
 )
 
+var TimestampRegex string = `\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}` // Ex: "2006-01-02 15:04:05"
+
 type Interface interface {
 	// These all take args the same as calls to fmt.Printf()
-	Fatal(string, ...interface{})
-	Error(string, ...interface{})
-	Warn(string, ...interface{})
-	Info(string, ...interface{})
-	Debug(string, ...interface{})
-	Trace(string, ...interface{})
+	Fatal(...interface{})
+	Error(...interface{})
+	Warn(...interface{})
+	Info(...interface{})
+	Debug(...interface{})
+	Trace(...interface{})
 	SetOutput(io.Writer)
 }
 
@@ -81,41 +84,86 @@ func SetLogLevel(lvl Level) {
 }
 
 // Output format should be: "timestamp•LOG_LEVEL•filename.go•linenumber•output"
-func Fatal(format string, args ...interface{}) {
-	logger.Fatal(format, args...)
+func Fatalf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	logger.Fatal(msg)
 }
 
-func Error(format string, args ...interface{}) {
+func Errorf(format string, args ...interface{}) {
 	if !IsError {
 		return
 	}
-	logger.Error(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Error(msg)
 }
 
-func Warn(format string, args ...interface{}) {
+func Warnf(format string, args ...interface{}) {
 	if !IsWarn {
 		return
 	}
-	logger.Warn(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Warn(msg)
 }
 
-func Info(format string, args ...interface{}) {
+func Infof(format string, args ...interface{}) {
 	if !IsInfo {
 		return
 	}
-	logger.Info(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Info(msg)
 }
 
-func Debug(format string, args ...interface{}) {
+func Debugf(format string, args ...interface{}) {
 	if !IsDebug {
 		return
 	}
-	logger.Debug(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Debug(msg)
 }
 
-func Trace(format string, args ...interface{}) {
+func Tracef(format string, args ...interface{}) {
 	if !IsTrace {
 		return
 	}
-	logger.Trace(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Trace(msg)
+}
+
+func Fatal(args ...interface{}) {
+	logger.Fatal(args...)
+}
+
+func Error(args ...interface{}) {
+	if !IsError {
+		return
+	}
+	logger.Error(args...)
+}
+
+func Warn(args ...interface{}) {
+	if !IsWarn {
+		return
+	}
+	logger.Warn(args...)
+}
+
+func Info(args ...interface{}) {
+	if !IsInfo {
+		return
+	}
+	logger.Info(args...)
+}
+
+func Debug(args ...interface{}) {
+	if !IsDebug {
+		return
+	}
+	logger.Debug(args...)
+}
+
+func Trace(args ...interface{}) {
+	if !IsTrace {
+		return
+	}
+	logger.Trace(args...)
 }
