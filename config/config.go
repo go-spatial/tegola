@@ -120,8 +120,18 @@ func replaceEnvVars(reader io.Reader) (io.Reader, error) {
 	// Variable definition follows IEEE Std 1003.1-2001
 	//   A dollar sign ($) followed by an upper-case letter, followed by
 	//   zero or more upper-case letters, digits, or underscores (_).
-	regexStr := `\$[A-Z]+[A-Z1-9_]*`
+	varNameRegexStr := `[A-Z]+[A-Z1-9_]*`
+	// Var prepended by dollar sign ($)
+	// Ex: $MY_VAR7
+	regexStrDS := fmt.Sprintf(`\$%v`, varNameRegexStr)
+	// Additionally, match a variable surrounded by curly braces with leading dollar sign.
+	// Ex: ${MY_VAR7}
+	regexStrBraces := fmt.Sprintf(`\$\{%v\}`, varNameRegexStr)
+
+	// Regex to capture either syntax
+	regexStr := fmt.Sprintf("(%v|%v)", regexStrDS, regexStrBraces)
 	varFinder := regexp.MustCompile(regexStr)
+
 	configBytes, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
@@ -129,19 +139,23 @@ func replaceEnvVars(reader io.Reader) (io.Reader, error) {
 
 	configStr := string(configBytes)
 
+	// Grab the regular & braced placeholders
 	varPlaceHolders := varFinder.FindAllString(configStr, -1)
+
+	varNameFinder := regexp.MustCompile(varNameRegexStr)
+
 	for _, ph := range varPlaceHolders {
-		// Get the environment variable value (drop the leading dollar sign ($))
-		envVal, found := syscall.Getenv(ph[1:])
+		// Get the environment variable value (drop the leading dollar sign ($) and surrounding braces ({}))
+		varName := varNameFinder.FindString(ph)
+		envVal, found := syscall.Getenv(varName)
 		if !found {
 			return nil, ErrMissingEnvVar{
-				EnvVar: ph[1:],
+				EnvVar: varName,
 			}
 		}
 
-		// Escape the leading dollar sign for use in regex.
-		replr := regexp.MustCompile(fmt.Sprintf("\\%v", ph))
-		configStr = replr.ReplaceAllString(configStr, envVal)
+		// Explicit string replacement, no need for regex funny business any longer.
+		configStr = strings.Replace(configStr, ph, envVal, -1)
 	}
 
 	return strings.NewReader(configStr), nil

@@ -41,6 +41,49 @@ func TestReplaceEnvVars(t *testing.T) {
 			expected: "SomeParam3 = p3, SomeOtherParam3 = $32.78",
 			err:      nil,
 		},
+		{
+			config: "SomeParam = ${MY_ENV_VAR}, SomeOtherParam = ${MY_2ND_VAR}",
+			envVars: map[string]string{
+				"MY_ENV_VAR": "p1",
+				"MY_2ND_VAR": "p2",
+			},
+			expected: "SomeParam = p1, SomeOtherParam = p2",
+			err:      nil,
+		},
+		{
+			config: "SomeParam2 = ${MY_ENV_VAR}, SomeOtherParam2 = ${MY_2ND_VAR}",
+			envVars: map[string]string{
+				"MY_ENV_VAR": "p2",
+			},
+			err: ErrMissingEnvVar{"MY_2ND_VAR"},
+		},
+		{
+			config: "SomeParam3 = ${MY_ENV_VAR}, SomeOtherParam3 = $32.78",
+			envVars: map[string]string{
+				"MY_ENV_VAR": "p3",
+				"UNUSED_VAR": "notused",
+			},
+			expected: "SomeParam3 = p3, SomeOtherParam3 = $32.78",
+			err:      nil,
+		},
+		{ // Make sure an unclosed leading brace doesn't get substituted
+			config: "SomeParam = ${MY_ENV_VAR, SomeOtherParam = ${MY_2ND_VAR}",
+			envVars: map[string]string{
+				"MY_ENV_VAR": "p1",
+				"MY_2ND_VAR": "p2",
+			},
+			expected: "SomeParam = ${MY_ENV_VAR, SomeOtherParam = p2",
+			err:      nil,
+		},
+		{ // Make sure an unpaired closing brace doesn't get substituted
+			config: "SomeParam = $MY_ENV_VAR}, SomeOtherParam = ${MY_2ND_VAR}",
+			envVars: map[string]string{
+				"MY_ENV_VAR": "p1",
+				"MY_2ND_VAR": "p2",
+			},
+			expected: "SomeParam = p1}, SomeOtherParam = p2",
+			err:      nil,
+		},
 	}
 
 	for i, tc := range testCases {
