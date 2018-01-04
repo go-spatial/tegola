@@ -90,6 +90,14 @@ func NewLineFromSubPoints(points ...tegola.Point) (l Line) {
 	return l
 }
 
+func NewLineFrom2Float64(points ...[2]float64) (l Line) {
+	l = make(Line, 0, len(points))
+	for i := range points {
+		l = append(l, Point{points[i][0], points[i][1]})
+	}
+	return l
+}
+
 // Subpoints return the points in a line.
 func (l Line) Subpoints() (points []tegola.Point) {
 	points = make([]tegola.Point, 0, len(l))

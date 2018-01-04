@@ -66,7 +66,7 @@ func valMapToVTileValue(valMap []interface{}) (vt []*vectorTile.Tile_Value) {
 }
 
 // VTileLayer returns a vectorTile Tile_Layer object that represents this layer.
-func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vectorTile.Tile_Layer, error) {
+func (l *Layer) VTileLayer(ctx context.Context, tile *tegola.Tile) (*vectorTile.Tile_Layer, error) {
 	kmap, vmap, err := keyvalMapsFromFeatures(l.features)
 	if err != nil {
 		return nil, err
@@ -82,9 +82,9 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 			l.MaxSimplificationZoom = uint(simplificationMaxZoom)
 		}
 
-		simplify = simplify && extent.Z < int(l.MaxSimplificationZoom)
+		simplify = simplify && tile.Z < int(l.MaxSimplificationZoom)
 
-		vtf, err := f.VTileFeature(ctx, kmap, vmap, extent, l.Extent(), simplify)
+		vtf, err := f.VTileFeature(ctx, kmap, vmap, tile, simplify)
 		if err != nil {
 			switch err {
 			case context.Canceled:
@@ -97,7 +97,7 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 			features = append(features, vtf)
 		}
 	}
-	ext := uint32(l.Extent())
+	ext := uint32(tile.Extent)
 	version := uint32(l.Version())
 	vtl := new(vectorTile.Tile_Layer)
 	vtl.Version = &version

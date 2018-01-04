@@ -3,20 +3,11 @@ package webmercator
 import (
 	"math"
 
-	"errors"
 	"log"
-
-	"github.com/terranodo/tegola/maths"
 )
-
-const (
-	EarthRadius = RMajor
-)
-
-var ErrCoordsRequire2Values = errors.New("Coords should have at least 2 coords")
 
 func PLonToX(lon float64) float64 {
-	rad := maths.DegToRad(lon)
+	rad := DegToRad(lon)
 	val := rad * EarthRadius
 	if val == math.NaN() {
 
@@ -30,9 +21,9 @@ func PLonToX(lon float64) float64 {
 }
 
 func PLatToY(lat float64) float64 {
-	rad := maths.DegToRad(lat)
+	rad := DegToRad(lat)
 	raddiv2 := rad / 2
-	radiv2p4 := maths.PiDiv4 + raddiv2
+	radiv2p4 := PiDiv4 + raddiv2
 	tan := math.Tan(radiv2p4)
 	logTan := math.Log(tan)
 	val := EarthRadius * logTan
@@ -51,7 +42,7 @@ func PLatToY(lat float64) float64 {
 }
 
 func PXToLon(x float64) float64 {
-	return maths.RadToDeg(x / EarthRadius)
+	return RadToDeg(x / EarthRadius)
 }
 
 func PYToLat(y float64) float64 {
@@ -59,7 +50,7 @@ func PYToLat(y float64) float64 {
 	ydivexp := math.Exp(ydivr)
 	atanexp := math.Atan(ydivexp)
 	atanexp2x := 2 * atanexp
-	val := maths.RadToDeg(atanexp2x - maths.PiDiv2)
+	val := RadToDeg(atanexp2x - PiDiv2)
 
 	if math.IsNaN(val) {
 		log.Println("Whe have an issue with y", y,
@@ -67,7 +58,7 @@ func PYToLat(y float64) float64 {
 			"ydivexp", ydivexp,
 			"atanexp", atanexp,
 			"atanexp2x", atanexp2x,
-			"atanexp2x-π/2", atanexp2x-maths.PiDiv2,
+			"atanexp2x-π/2", atanexp2x-PiDiv2,
 		)
 	}
 	return val

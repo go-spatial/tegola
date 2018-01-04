@@ -11,6 +11,33 @@ func NewLine(x1, y1, x2, y2 float64) Line {
 	}
 }
 
+func NewLineFloat64(ln [2][2]float64) Line {
+	return Line{
+		Pt{ln[0][0], ln[0][1]},
+		Pt{ln[1][0], ln[1][1]},
+	}
+}
+func NewLinesFloat64(ln ...[2][2]float64) (lns []Line) {
+	for i := range ln {
+		lns = append(lns, Line{
+			Pt{ln[i][0][0], ln[i][0][1]},
+			Pt{ln[i][1][0], ln[i][1][1]},
+		})
+	}
+	return lns
+}
+
+// NewLineWith2Float64 is a transistional function till I have had a change to move
+// over the geom package and covert the maths functions to use it or they have migrated over
+// to it.
+// TODO: gdey – remove this function one the transition is over.
+func NewLineWith2Float64(ln [2][2]float64) Line {
+	return Line{
+		Pt{ln[0][0], ln[0][1]},
+		Pt{ln[1][0], ln[1][1]},
+	}
+}
+
 // InBetween will check to see if the given point lies on the line provided inbetween the endpoints.
 func (l Line) InBetween(pt Pt) bool {
 	lx, gx := l[0].X, l[1].X
