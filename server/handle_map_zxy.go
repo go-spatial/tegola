@@ -44,18 +44,14 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	//	parse our URL vals to ints
 	z := params["z"]
 	req.z, err = strconv.Atoi(z)
-	if err != nil {
+	if err != nil || req.z < 0 {
 		log.Printf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
-	}
-	if req.z < 0 {
-		log.Printf("invalid Z value (%v)", req.z)
-		return fmt.Errorf("negative zoom levels are not allowed")
 	}
 
 	x := params["x"]
 	req.x, err = strconv.Atoi(x)
-	if err != nil {
+	if err != nil || req.x < 0 {
 		log.Printf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
@@ -64,7 +60,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	y := params["y"]
 	yParts := strings.Split(y, ".")
 	req.y, err = strconv.Atoi(yParts[0])
-	if err != nil {
+	if err != nil || req.y < 0 {
 		log.Printf("invalid Y value (%v)", y)
 		return fmt.Errorf("invalid Y value (%v)", y)
 	}
