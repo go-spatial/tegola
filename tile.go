@@ -38,6 +38,7 @@ type Tile struct {
 	bufpext [2][2]float64
 }
 
+// NewTile will return a non-nil tile object.
 func NewTile(z, x, y int) (t *Tile) {
 	t = &Tile{
 		Z:         z,
@@ -51,6 +52,8 @@ func NewTile(z, x, y int) (t *Tile) {
 	t.Init()
 	return t
 }
+
+// NewTileLatLong will return a non-nil tile object.
 func NewTileLatLong(z int, lat, lon float64) (t *Tile) {
 	t = &Tile{
 		Z:         z,
@@ -84,6 +87,18 @@ func (t *Tile) Init() {
 	}
 	t.xspan = t.extent[1][0] - t.extent[0][0]
 	t.yspan = t.extent[1][1] - t.extent[0][1]
+	/*
+		// This is how we can calculate it. But, it will always be a constant.
+		// So, we just return that constant.
+		bounds, err = t.PixelBounds()
+		if err != nil {
+			return bounds, err
+		}
+		bounds[0][0] -= t.Buffer
+		bounds[0][1] -= t.Buffer
+		bounds[1][0] += t.Buffer
+		bounds[1][1] += t.Buffer
+	*/
 	t.bufpext = [2][2]float64{{0 - t.Buffer, 0 - t.Buffer}, {t.Extent + t.Buffer, t.Extent + t.Buffer}}
 
 }
@@ -149,15 +164,6 @@ func (t *Tile) FromPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
 	x := float64(int64(pt[0]))
 	y := float64(int64(pt[1]))
 
-	/*
-		        n = (spt[0] - t.extent[0][0])
-			z = t.Extent / t.xspan
-			x = n * z
-			x/z = n
-			x/z = spt[0] - t.extent[0][0]
-			x/z + t.extent[0][0] = spt[0]
-			(x * t.xspan / t.Extent) + t.extent[0][0] = spt[0]
-	*/
 	wmx := (x * t.xspan / t.Extent) + t.extent[0][0]
 	wmy := (y * t.yspan / t.Extent) + t.extent[0][1]
 	return fromWebMercator(srid, [2]float64{wmx, wmy})
@@ -212,8 +218,8 @@ func (t *Tile) BufferedBoundingBox() (BoundingBox, error) {
 
 func (t *Tile) PixelBounds() (bounds [2][2]float64, err error) {
 	/*
-			// This is how we can calculate it. But, it will always be a constant.
-			// So, we just return that constant.
+		// This is how we can calculate it. But, it will always be a constant.
+		// So, we just return that constant.
 		bounds[0], err = t.ToPixel(WebMercator, t.extent[0])
 		if err != nil {
 			return bounds, err
@@ -222,27 +228,11 @@ func (t *Tile) PixelBounds() (bounds [2][2]float64, err error) {
 		if err != nil {
 			return bounds, err
 		}
-		log.Println("Z", t.Z, "X", t.X, "Y", t.Y)
-		log.Println("Tile extent:", t.extent)
-		log.Println("Tile Pixel :", bounds)
 	*/
 	return [2][2]float64{{0.0, 0.0}, {t.Extent, t.Extent}}, nil
 }
 
 func (t *Tile) PixelBufferedBounds() (bounds [2][2]float64, err error) {
-	/*
-		// This is how we can calculate it. But, it will always be a constant.
-		// So, we just return that constant.
-		bounds, err = t.PixelBounds()
-		if err != nil {
-			return bounds, err
-		}
-		bounds[0][0] -= t.Buffer
-		bounds[0][1] -= t.Buffer
-		bounds[1][0] += t.Buffer
-		bounds[1][1] += t.Buffer
-		return bounds, nil
-	*/
 	return t.bufpext, nil
 }
 
