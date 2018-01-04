@@ -204,6 +204,11 @@ var cacheCmd = &cobra.Command{
 							}
 						}
 
+						//	set tile buffer if it was configured by the user
+						if conf.TileBuffer > 0 {
+							mt.Tile.Buffer = conf.TileBuffer
+						}
+
 						//	seed the tile
 						if err = atlas.SeedMapTile(m, mt.Tile); err != nil {
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
