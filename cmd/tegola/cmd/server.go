@@ -29,7 +29,7 @@ var serverCmd = &cobra.Command{
 
 		//	set tile buffer
 		if conf.TileBuffer > 0 {
-			server.TileBuffer = conf.TileBuffer
+			server.TileBuffer = float64(conf.TileBuffer)
 		}
 
 		//	start our webserver

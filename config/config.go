@@ -18,7 +18,7 @@ import (
 // Config represents a tegola config file.
 type Config struct {
 	//	the tile buffer to use
-	TileBuffer float64 `toml:"tile_buffer"`
+	TileBuffer int64 `toml:"tile_buffer"`
 	// LocationName is the file name or http server that the config was read from.
 	// If this is an empty string, it means that the location was unknown. This is the case if
 	// the Parse() function is used directly.

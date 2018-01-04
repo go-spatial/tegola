@@ -206,7 +206,7 @@ var cacheCmd = &cobra.Command{
 
 						//	set tile buffer if it was configured by the user
 						if conf.TileBuffer > 0 {
-							mt.Tile.Buffer = conf.TileBuffer
+							mt.Tile.Buffer = float64(conf.TileBuffer)
 						}
 
 						//	seed the tile
