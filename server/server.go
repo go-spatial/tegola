@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
 )
 
@@ -25,6 +26,8 @@ var (
 	Port string
 	//	reference to the version of atlas to work with
 	Atlas *atlas.Atlas
+	//	tile buffer to use. can be overwritten in the config file
+	TileBuffer float64 = tegola.DefaultTileBuffer
 )
 
 //	Start starts the tile server binding to the provided port
