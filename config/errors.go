@@ -26,3 +26,11 @@ type ErrOverlappingLayerZooms struct {
 func (e ErrOverlappingLayerZooms) Error() string {
 	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
 }
+
+type ErrMissingEnvVar struct {
+	EnvVar string
+}
+
+func (e ErrMissingEnvVar) Error() string {
+	return fmt.Sprintf("config: config file is referencing an environment variable that is not set (%v)", e.EnvVar)
+}
