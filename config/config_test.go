@@ -20,6 +20,7 @@ func TestParse(t *testing.T) {
 				[webserver]
 				hostname = "cdn.tegola.io"
 				port = ":8080"
+				cors_allowed_origin = "tegola.io"
 				log_file = "/var/log/tegola/tegola.log"
 				log_format = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
 
@@ -56,10 +57,11 @@ func TestParse(t *testing.T) {
 				TileBuffer:   12,
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName:  "cdn.tegola.io",
-					Port:      ":8080",
-					LogFile:   "/var/log/tegola/tegola.log",
-					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
+					HostName:          "cdn.tegola.io",
+					Port:              ":8080",
+					CORSAllowedOrigin: "tegola.io",
+					LogFile:           "/var/log/tegola/tegola.log",
+					LogFormat:         "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
 				},
 				Cache: map[string]interface{}{
 					"type":     "file",

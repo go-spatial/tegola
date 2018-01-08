@@ -145,10 +145,6 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		mapboxStyle.Layers = append(mapboxStyle.Layers, layer)
 	}
 
-	//	TODO: how configurable do we want the CORS policy to be?
-	//	set CORS header
-	w.Header().Add("Access-Control-Allow-Origin", "*")
-
 	//	mimetype for protocol buffers
 	w.Header().Add("Content-Type", "application/json")
 

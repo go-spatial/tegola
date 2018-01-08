@@ -65,10 +65,6 @@ func TileCacheHandler(next http.Handler) http.Handler {
 			return
 		}
 
-		//	TODO: how configurable do we want the CORS policy to be?
-		//	set CORS header
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-
 		//	mimetype for protocol buffers
 		w.Header().Add("Content-Type", "application/x-protobuf")
 

@@ -24,6 +24,9 @@ var (
 	HostName string
 	//	configurable via the tegola config.toml file (set in main.go)
 	Port string
+	//	the "Access-Control-Allow-Origin" CORS header.
+	//	configurable via the tegola config.toml file (set in main.go)
+	CORSAllowedOrigin = "*"
 	//	reference to the version of atlas to work with
 	Atlas *atlas.Atlas
 	//	tile buffer to use. can be overwritten in the config file
@@ -41,19 +44,19 @@ func Start(port string) {
 	group := r.NewGroup("/")
 
 	//	capabilities endpoints
-	group.UsingContext().Handler("GET", "/capabilities", HandleCapabilities{})
-	group.UsingContext().Handler("OPTIONS", "/capabilities", HandleCapabilities{})
-	group.UsingContext().Handler("GET", "/capabilities/:map_name", HandleMapCapabilities{})
-	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", HandleMapCapabilities{})
+	group.UsingContext().Handler("GET", "/capabilities", CORSHandler(HandleCapabilities{}))
+	group.UsingContext().Handler("OPTIONS", "/capabilities", CORSHandler(HandleCapabilities{}))
+	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
+	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
 
 	//	map tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", TileCacheHandler(HandleMapZXY{}))
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", HandleMapZXY{})
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HandleMapStyle{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapZXY{})))
+	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", CORSHandler(HandleMapZXY{}))
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
 
 	//	map layer tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", TileCacheHandler(HandleMapLayerZXY{}))
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", HandleMapLayerZXY{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapLayerZXY{})))
+	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(HandleMapLayerZXY{}))
 
 	//	static convenience routes
 	group.UsingContext().Handler("GET", "/", http.FileServer(assetFS()))
