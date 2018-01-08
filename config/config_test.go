@@ -15,6 +15,8 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			config: `
+				tile_buffer = 12
+
 				[webserver]
 				hostname = "cdn.tegola.io"
 				port = ":8080"
@@ -52,6 +54,7 @@ func TestParse(t *testing.T) {
 					min_zoom = 10
 					max_zoom = 20`,
 			expected: config.Config{
+				TileBuffer:   12,
 				LocationName: "",
 				Webserver: config.Webserver{
 					HostName:          "cdn.tegola.io",
@@ -254,22 +257,27 @@ func TestParse(t *testing.T) {
 
 		//	compare the various parts fo the config
 		if !reflect.DeepEqual(conf.LocationName, tc.expected.LocationName) {
-			t.Errorf("test case (%v) failed. LocationName output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.LocationName, tc.expected.LocationName)
+			t.Errorf("[%v] LocationName output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.LocationName, tc.expected.LocationName)
 			return
 		}
 
 		if !reflect.DeepEqual(conf.Webserver, tc.expected.Webserver) {
-			t.Errorf("test case (%v) failed. Webserver output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Webserver, tc.expected.Webserver)
+			t.Errorf("[%v] Webserver output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Webserver, tc.expected.Webserver)
 			return
 		}
 
 		if !reflect.DeepEqual(conf.Providers, tc.expected.Providers) {
-			t.Errorf("test case (%v) failed. Providers output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Providers, tc.expected.Providers)
+			t.Errorf("[%v] Providers output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Providers, tc.expected.Providers)
 			return
 		}
 
 		if !reflect.DeepEqual(conf.Maps, tc.expected.Maps) {
-			t.Errorf("test case (%v) failed. Maps output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Maps, tc.expected.Maps)
+			t.Errorf("[%v] Maps output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Maps, tc.expected.Maps)
+			return
+		}
+
+		if !reflect.DeepEqual(conf, tc.expected) {
+			t.Errorf("[%v] output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf, tc.expected)
 			return
 		}
 	}
@@ -506,7 +514,7 @@ func TestValidate(t *testing.T) {
 	for i, tc := range testcases {
 		err := tc.config.Validate()
 		if err != tc.expected {
-			t.Errorf("test case (%v) failed. \n\n expected \n\n (%v) \n\n got \n\n (%v)", i, tc.expected, err)
+			t.Errorf("[%v] \n\n expected \n\n (%v) \n\n got \n\n (%v)", i, tc.expected, err)
 			return
 		}
 	}

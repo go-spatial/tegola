@@ -32,6 +32,11 @@ var serverCmd = &cobra.Command{
 			server.CORSAllowedOrigin = conf.Webserver.CORSAllowedOrigin
 		}
 
+		//	set tile buffer
+		if conf.TileBuffer > 0 {
+			server.TileBuffer = float64(conf.TileBuffer)
+		}
+
 		//	start our webserver
 		server.Start(serverPort)
 	},
