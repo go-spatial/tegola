@@ -4,14 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"log"
 
 	"github.com/terranodo/tegola/geom/encoding/wkb/internal/consts"
 )
-
-func init() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
 
 type Encoder struct {
 	// W is the writer to which the binary data will be writen to.
