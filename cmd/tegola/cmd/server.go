@@ -27,6 +27,11 @@ var serverCmd = &cobra.Command{
 		server.Version = Version
 		server.HostName = conf.Webserver.HostName
 
+		//	set tile buffer
+		if conf.TileBuffer > 0 {
+			server.TileBuffer = float64(conf.TileBuffer)
+		}
+
 		//	start our webserver
 		server.Start(serverPort)
 	},

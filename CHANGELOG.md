@@ -1,4 +1,7 @@
-## 0.5.0 (2017-12-XX)
+## 0.6.0 (2018-)
+- Fixed: 
+
+## 0.5.0 (2017-12-12)
 
 - Added: Command line `cache seed` and `cache purge` commands (#64)
 - Added: Support for Amazon S3 as a cache backend (#64)

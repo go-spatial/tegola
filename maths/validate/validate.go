@@ -9,6 +9,7 @@ import (
 	"github.com/terranodo/tegola/maths/clip"
 	"github.com/terranodo/tegola/maths/hitmap"
 	"github.com/terranodo/tegola/maths/makevalid"
+	"github.com/terranodo/tegola/maths/points"
 )
 
 func CleanLinestring(g []float64) (l []float64, err error) {
@@ -40,7 +41,7 @@ func LineStringToSegments(l tegola.LineString) ([]maths.Line, error) {
 	ppln := tegola.LineAsPointPairs(l)
 	return maths.NewSegments(ppln)
 }
-func makePolygonValid(ctx context.Context, hm hitmap.M, extent float64, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
+func makePolygonValid(ctx context.Context, hm *hitmap.M, extent *points.Extent, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
 	var plygLines [][]maths.Line
 	for _, g := range gs {
 		for _, l := range g.Sublines() {
@@ -54,7 +55,7 @@ func makePolygonValid(ctx context.Context, hm hitmap.M, extent float64, gs ...te
 			}
 		}
 	}
-	plyPoints, err := makevalid.MakeValid(ctx, &hm, extent, plygLines...)
+	plyPoints, err := makevalid.MakeValid(ctx, hm, extent, plygLines...)
 	if err != nil {
 		return mp, err
 	}
@@ -74,21 +75,22 @@ func makePolygonValid(ctx context.Context, hm hitmap.M, extent float64, gs ...te
 	return mp, err
 }
 
-func CleanGeometry(ctx context.Context, g tegola.Geometry, extent float64) (geo tegola.Geometry, err error) {
+func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *points.Extent) (geo tegola.Geometry, err error) {
 	if g == nil {
 		return nil, nil
 	}
 	hm := hitmap.NewFromGeometry(g)
 	switch gg := g.(type) {
 	case tegola.Polygon:
-		return makePolygonValid(ctx, hm, extent, gg)
+		return makePolygonValid(ctx, &hm, extent, gg)
 	case tegola.MultiPolygon:
-		return makePolygonValid(ctx, hm, extent, gg.Polygons()...)
+		return makePolygonValid(ctx, &hm, extent, gg.Polygons()...)
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		lns := gg.Lines()
 		for i := range lns {
-			nls, err := clip.LineString(lns[i], maths.Pt{-8, -8}, maths.Pt{4104, 4104}, 0)
+			//	log.Println("Clip MultiLine Buff", buff)
+			nls, err := clip.LineString(lns[i], extent)
 			if err != nil {
 				return ml, err
 			}
@@ -96,7 +98,8 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent float64) (geo 
 		}
 		return ml, nil
 	case tegola.LineString:
-		nls, err := clip.LineString(gg, maths.Pt{-8, -8}, maths.Pt{4104, 4104}, 0)
+		//		log.Println("Clip LineString Buff", buff)
+		nls, err := clip.LineString(gg, extent)
 		return basic.MultiLine(nls), err
 	}
 	return g, nil

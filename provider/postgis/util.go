@@ -74,9 +74,12 @@ const (
 //
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
-func replaceTokens(plyr *Layer, tile tegola.Tile) (string, error) {
+func replaceTokens(plyr *Layer, tile *tegola.Tile) (string, error) {
 
-	textent := tile.BoundingBox()
+	textent, err := tile.BufferedBoundingBox()
+	if err != nil {
+		return "", nil
+	}
 
 	minGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent.Minx, textent.Miny})
 	if err != nil {

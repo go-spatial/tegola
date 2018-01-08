@@ -14,8 +14,6 @@ import (
 	"github.com/terranodo/tegola/maths/points"
 )
 
-const TileBuffer = 16
-
 var numWorkers = 1
 
 func init() {
@@ -43,7 +41,7 @@ func insureConnected(polygons ...[]maths.Line) (ret [][]maths.Line) {
 }
 
 // destructure2 will split the ploygons up and split lines where they intersect. It will also, add a bounding box and a set of lines crossing from the end points of the bounding box to the center.
-func destructure2(polygons [][]maths.Line, clipbox *points.BoundingBox) []maths.Line {
+func destructure2(polygons [][]maths.Line, clipbox *points.Extent) []maths.Line {
 	// First we need to combine all the segments.
 	segs := make(map[maths.Line]struct{})
 	for i := range polygons {
@@ -54,7 +52,7 @@ func destructure2(polygons [][]maths.Line, clipbox *points.BoundingBox) []maths.
 	var segments []maths.Line
 	if clipbox != nil {
 		edges := clipbox.LREdges()
-		segments = append(segments, edges[:]...)
+		segments = append(segments, maths.NewLinesFloat64(edges[:]...)...)
 	}
 	for ln := range segs {
 		segments = append(segments, ln)
@@ -65,7 +63,33 @@ func destructure2(polygons [][]maths.Line, clipbox *points.BoundingBox) []maths.
 	return segments
 }
 
-func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.BoundingBox, segments []maths.Line) ([][][]maths.Pt, error) {
+func MaxF64(vals ...float64) (max float64) {
+	if len(vals) == 0 {
+		return 0
+	}
+	max = vals[0]
+	for _, f := range vals[1:] {
+		if f > max {
+			max = f
+		}
+	}
+	return max
+}
+func MinF64(vals ...float64) (min float64) {
+	if len(vals) == 0 {
+		return 0
+	}
+
+	min = vals[0]
+	for _, f := range vals[1:] {
+		if f < min {
+			min = f
+		}
+	}
+	return min
+}
+
+func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Extent, segments []maths.Line) ([][][]maths.Pt, error) {
 
 	var lines []maths.Line
 
@@ -110,32 +134,26 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Boun
 	miny, maxy := segments[0][1].Y, segments[0][1].Y
 	{
 		mappts := make(map[maths.Pt]struct{}, len(segments)*2)
-		var lrln maths.Line
+		var slrln maths.Line
+		var lrln [2][2]float64
 
 		for i := range segments {
+			////log.Println("Looking at segment", i, segments[i])
 			if splitPts[i] == nil {
-				lrln = segments[i].LeftRightMostAsLine()
+				slrln = segments[i].LeftRightMostAsLine()
+				lrln = [2][2]float64{{slrln[0].X, slrln[0].Y}, {slrln[1].X, slrln[1].Y}}
 				if !clipbox.ContainsLine(lrln) {
 					// Outside of the clipping area.
 					continue
 				}
-				mappts[lrln[0]] = struct{}{}
-				mappts[lrln[1]] = struct{}{}
-				xs = append(xs, lrln[0].X, lrln[1].X)
+				mappts[slrln[0]] = struct{}{}
+				mappts[slrln[1]] = struct{}{}
+				//log.Println("Adding to xs:", lrln[0][0], lrln[1][0])
+				xs = append(xs, lrln[0][0], lrln[1][0])
+				miny = MinF64(miny, lrln[0][1], lrln[1][1])
+				maxy = MaxF64(maxy, lrln[0][1], lrln[1][1])
 
-				if lrln[0].Y < miny {
-					miny = lrln[0].Y
-				}
-				if lrln[0].Y > maxy {
-					maxy = lrln[0].Y
-				}
-				if lrln[1].Y < miny {
-					miny = lrln[0].Y
-				}
-				if lrln[1].Y > maxy {
-					maxy = lrln[1].Y
-				}
-				lines = append(lines, lrln)
+				lines = append(lines, slrln)
 				continue
 			}
 			// Context cancelled.
@@ -150,31 +168,35 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Boun
 					// Skipp dups.
 					continue
 				}
-				lrln = maths.Line{lpt, splitPts[i][j]}.LeftRightMostAsLine()
+				slrln = maths.Line{lpt, splitPts[i][j]}.LeftRightMostAsLine()
+				lrln = [2][2]float64{{slrln[0].X, slrln[0].Y}, {slrln[1].X, slrln[1].Y}}
 				lpt = splitPts[i][j]
 				if !clipbox.ContainsLine(lrln) {
 					// Outside of the clipping area.
 					continue
 				}
-				mappts[lrln[0]] = struct{}{}
-				mappts[lrln[1]] = struct{}{}
-				xs = append(xs, lrln[0].X, lrln[1].X)
-				lines = append(lines, lrln)
+				mappts[slrln[0]] = struct{}{}
+				mappts[slrln[1]] = struct{}{}
+				//log.Println("Adding to xs:", lrln[0][0], lrln[1][0])
+				xs = append(xs, lrln[0][0], lrln[1][0])
+				lines = append(lines, slrln)
 				// Context cancelled.
 				if err := ctx.Err(); err != nil {
 					return nil, err
 				}
 			}
 			if !lpt.IsEqual(rpt) {
-				lrln = maths.Line{lpt, rpt}.LeftRightMostAsLine()
+				slrln = maths.Line{lpt, rpt}.LeftRightMostAsLine()
+				lrln = [2][2]float64{{slrln[0].X, slrln[0].Y}, {slrln[1].X, slrln[1].Y}}
 				if !clipbox.ContainsLine(lrln) {
 					// Outside of the clipping area.
 					continue
 				}
-				mappts[lrln[0]] = struct{}{}
-				mappts[lrln[1]] = struct{}{}
-				xs = append(xs, lrln[0].X, lrln[1].X)
-				lines = append(lines, lrln)
+				mappts[slrln[0]] = struct{}{}
+				mappts[slrln[1]] = struct{}{}
+				//log.Println("Adding to xs:", lrln[0][0], lrln[1][0])
+				xs = append(xs, lrln[0][0], lrln[1][0])
+				lines = append(lines, slrln)
 			}
 			// Context cancelled.
 			if err := ctx.Err(); err != nil {
@@ -341,13 +363,13 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Boun
 	return plygs, nil
 }
 
-func MakeValid(ctx context.Context, hm hitmap.Interface, extent float64, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
-	clipbox := points.BoundingBox{0 - TileBuffer, 0 - TileBuffer, extent + TileBuffer, extent + TileBuffer}
-	segments := destructure2(insureConnected(plygs...), &clipbox)
+func MakeValid(ctx context.Context, hm hitmap.Interface, extent *points.Extent, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
+
+	segments := destructure2(insureConnected(plygs...), extent)
 	if segments == nil {
 		return nil, nil
 	}
-	return destructure5(ctx, hm, &clipbox, segments)
+	return destructure5(ctx, hm, extent, segments)
 }
 
 type byArea []*ring

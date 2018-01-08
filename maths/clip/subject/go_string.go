@@ -3,8 +3,6 @@ package subject
 import (
 	"fmt"
 
-	colour "github.com/logrusorgru/aurora"
-
 	"github.com/terranodo/tegola/container/singlelist/point/list"
 	"github.com/terranodo/tegola/maths"
 )
@@ -12,7 +10,7 @@ import (
 func (s *Subject) GoString() string {
 	str := fmt.Sprintf("  Subject:(%v)", s.winding)
 	s.ForEachIdx(func(idx int, pt list.ElementerPointer) bool {
-		str += fmt.Sprintf("[%v](%#v)", idx, colour.Green(pt))
+		str += fmt.Sprintf("[%v](%#v)", idx, pt)
 		return true
 	})
 	return str

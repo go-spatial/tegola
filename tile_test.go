@@ -3,6 +3,7 @@ package tegola_test
 import (
 	"testing"
 
+	"github.com/gdey/tbltest"
 	"github.com/terranodo/tegola"
 )
 
@@ -13,11 +14,7 @@ func TestTileNum2Deg(t *testing.T) {
 		expectedLng float64
 	}{
 		{
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
+			tile:        *tegola.NewTile(2, 1, 1),
 			expectedLat: 66.51326044311185,
 			expectedLng: -90,
 		},
@@ -41,11 +38,7 @@ func TestTileDeg2Num(t *testing.T) {
 		expectedY int
 	}{
 		{
-			tile: tegola.Tile{
-				Z:    0,
-				Lat:  -85,
-				Long: -180,
-			},
+			tile:      *tegola.NewTileLatLong(0, -85, -180),
 			expectedX: 0,
 			expectedY: 0,
 		},
@@ -59,7 +52,7 @@ func TestTileDeg2Num(t *testing.T) {
 		}
 
 		if tc.expectedY != y {
-			t.Errorf("testcase (%v) failed. expected X value (%v) does not match output (%v)", i, tc.expectedY, y)
+			t.Errorf("testcase (%v) failed. expected Y value (%v) does not match output (%v)", i, tc.expectedY, y)
 		}
 	}
 }
@@ -70,22 +63,14 @@ func TestTileBBox(t *testing.T) {
 		minx, miny, maxx, maxy float64
 	}{
 		{
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
+			tile: *tegola.NewTile(2, 1, 1),
 			minx: -10018754.17,
 			miny: 10018754.17,
 			maxx: 0,
 			maxy: 0,
 		},
 		{
-			tile: tegola.Tile{
-				Z: 16,
-				X: 11436,
-				Y: 26461,
-			},
+			tile: *tegola.NewTile(16, 11436, 26461),
 			minx: -13044437.497219238996,
 			miny: 3856706.6986199953,
 			maxx: -13043826.000993041,
@@ -117,11 +102,7 @@ func TestTileZRes(t *testing.T) {
 		zres float64
 	}{
 		{
-			tile: tegola.Tile{
-				Z: 2,
-				X: 1,
-				Y: 1,
-			},
+			tile: *tegola.NewTile(2, 1, 1),
 			zres: 39135.75848201026,
 		},
 	}
@@ -133,4 +114,33 @@ func TestTileZRes(t *testing.T) {
 			t.Errorf("Failed test %v. Expected zres (%v), got (%v)", i, test.zres, zres)
 		}
 	}
+}
+
+func TestTileToFromPixel(t *testing.T) {
+	tile := tegola.NewTile(20, 0, 0)
+	fn := func(idx int, pt [2]float64) {
+		npt, err := tile.FromPixel(tegola.WebMercator, pt)
+		if err != nil {
+			t.Errorf("[%v] Error, Expected nil Got %v", idx, err)
+			return
+		}
+		gpt, err := tile.ToPixel(tegola.WebMercator, npt)
+		if err != nil {
+			t.Errorf("[%v] Error, Expected nil Got %v", idx, err)
+			return
+		}
+		// TODO: gdey need to find the utility math function for comparing floats.
+		if pt[0] != gpt[0] {
+			t.Errorf("[%v] unequal x value, Expected %v Got %v", idx, pt[0], gpt[0])
+		}
+		if pt[1] != gpt[1] {
+			t.Errorf("[%v] unequal y value, Expected %v Got %v", idx, pt[0], gpt[0])
+		}
+
+	}
+	tbltest.Cases(
+		[2]float64{1, 1},
+		[2]float64{0, 0},
+		[2]float64{4000, 4000},
+	).Run(fn)
 }

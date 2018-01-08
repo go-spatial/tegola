@@ -10,7 +10,6 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/makevalid"
 	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
@@ -24,8 +23,6 @@ var (
 	ErrUnknownGeometryType = fmt.Errorf("Unknown geometry type")
 	ErrNilGeometryType     = fmt.Errorf("Nil geometry passed")
 )
-
-const tilebuffer = makevalid.TileBuffer
 
 // TODO: Need to put in validation for the Geometry, at current the system
 // does not check to make sure that the geometry is following the rules as
@@ -74,14 +71,14 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, extent tegola.BoundingBox, layerExtent int, simplify bool) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, tile *tegola.Tile, simplify bool) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 	if tf.Tags, err = keyvalTagsMap(keys, vals, f); err != nil {
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent, simplify)
+	geo, gtype, err := encodeGeometry(ctx, f.Geometry, tile, simplify)
 	if err != nil {
 		return tf, err
 	}
@@ -141,56 +138,33 @@ type cursor struct {
 	x int64
 	y int64
 
-	// The dimensions for the screen tile.
-	tile tegola.BoundingBox
-
-	// The extent — it is an int, but to make computations easier and not lose precision
-	// Until we convert the ∆'s to int32.
-	extent float64
-
-	// These values are cached
-	xspan float64
-	yspan float64
+	// The tile of the screen.
+	tile *tegola.Tile
 
 	// Disabling scaling Use this when using clipping and scaling
 	DisableScaling bool
 }
 
-func NewCursor(tile tegola.BoundingBox, layerExtent int) *cursor {
-	xspan := tile.Maxx - tile.Minx
-	yspan := tile.Maxy - tile.Miny
+func NewCursor(tile *tegola.Tile) *cursor {
 	return &cursor{
-		extent: float64(layerExtent),
-		tile:   tile,
-		xspan:  xspan,
-		yspan:  yspan,
+		tile: tile,
 	}
 }
 
-//	converts a point to a screen resolution point
-func (c *cursor) ScalePoint(p tegola.Point) (nx, ny int64) {
-
-	nx = int64((p.X() - c.tile.Minx) * c.extent / c.xspan)
-	ny = int64((p.Y() - c.tile.Miny) * c.extent / c.yspan)
-
-	return nx, ny
-}
-
-func (c *cursor) MinMax() (min, max maths.Pt) {
-	return maths.Pt{X: 0 - tilebuffer, Y: 0 - tilebuffer},
-		maths.Pt{
-			X: float64(c.extent + tilebuffer),
-			Y: float64(c.extent + tilebuffer),
-		}
-}
-
+// GetDeltaPointAndUpdate assumes the Point is in WebMercator.
 func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	var ix, iy int64
-	if c.DisableScaling {
-		ix, iy = int64(p.X()), int64(p.Y())
-	} else {
-		ix, iy = c.ScalePoint(p)
+	var tx, ty = p.X(), p.Y()
+	// TODO: gdey — We should get rid of this, as we generally disable scaling; now.
+	if !c.DisableScaling {
+		tpt, err := c.tile.ToPixel(tegola.WebMercator, [2]float64{tx, ty})
+		if err != nil {
+			// Conversion error most likly, need to panic.
+			panic(err)
+		}
+		tx, ty = tpt[0], tpt[1]
 	}
+	ix, iy = int64(tx), int64(ty)
 	//	computer our point delta
 	dx = ix - int64(c.x)
 	dy = iy - int64(c.y)
@@ -202,10 +176,11 @@ func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 }
 
 func (c *cursor) scalept(g tegola.Point) basic.Point {
-	return basic.Point{
-		float64(int64((g.X() - c.tile.Minx) * c.extent / c.xspan)),
-		float64(int64((g.Y() - c.tile.Miny) * c.extent / c.yspan)),
+	pt, err := c.tile.ToPixel(tegola.WebMercator, [2]float64{g.X(), g.Y()})
+	if err != nil {
+		panic(err)
 	}
+	return basic.Point{pt[0], pt[1]}
 }
 
 func chk3Pts(pt1, pt2, pt3 basic.Point) int {
@@ -568,23 +543,31 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.BoundingBox, layerExtent int, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(ctx context.Context, geom tegola.Geometry, tile *tegola.Tile, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 
 	if geom == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
 
 	//	new cursor
-	c := NewCursor(extent, layerExtent)
+	c := NewCursor(tile)
 	// We are scaling separately, no need to scale in cursor.
 	c.DisableScaling = true
 
 	// Project Geom
 
-	geo := c.ScaleGeo(geom)
-	sg := SimplifyGeometry(geo, extent.Epsilon, simplify)
+	// TODO: gdey: We need to separate out the transform, simplification, and clipping from the encoding process. #224
 
-	geom, err = validate.CleanGeometry(ctx, sg, c.extent)
+	geo := c.ScaleGeo(geom)
+	sg := SimplifyGeometry(geo, tile.ZEpislon(), simplify)
+
+	pbb, err := tile.PixelBufferedBounds()
+	if err != nil {
+		return nil, vectorTile.Tile_UNKNOWN, err
+	}
+	ext := points.Extent(pbb)
+
+	geom, err = validate.CleanGeometry(ctx, sg, &ext)
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}

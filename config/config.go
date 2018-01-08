@@ -20,6 +20,8 @@ import (
 
 // Config represents a tegola config file.
 type Config struct {
+	//	the tile buffer to use
+	TileBuffer int64 `toml:"tile_buffer"`
 	// LocationName is the file name or http server that the config was read from.
 	// If this is an empty string, it means that the location was unknown. This is the case if
 	// the Parse() function is used directly.
@@ -202,23 +204,4 @@ func Load(location string) (conf Config, err error) {
 	}
 
 	return Parse(reader, location)
-}
-
-// FindMap will find the map with the provided name. If "" is used for the name, it will return the first
-// Map in the config, if one is defined.
-// If a map with the name is not found it will return ErrMapNotFound error.
-func (cfg *Config) FindMap(name string) (Map, error) {
-	if name == "" && len(cfg.Maps) > 0 {
-		return cfg.Maps[0], nil
-	}
-
-	for _, m := range cfg.Maps {
-		if m.Name == name {
-			return m, nil
-		}
-	}
-
-	return Map{}, ErrMapNotFound{
-		MapName: name,
-	}
 }

@@ -32,7 +32,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 // Provider provides the debug provider
 type Provider struct{}
 
-func (p *Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.Tile, dtags map[string]interface{}) (*mvt.Layer, error) {
+func (p *Provider) MVTLayer(ctx context.Context, layerName string, tile *tegola.Tile, dtags map[string]interface{}) (*mvt.Layer, error) {
 	var layer mvt.Layer
 
 	//	get tile bounding box
@@ -60,6 +60,22 @@ func (p *Provider) MVTLayer(ctx context.Context, layerName string, tile tegola.T
 			},
 		}
 		layer.AddFeatures(debugOutline)
+		ext1, err := tile.BufferedBoundingBox()
+		if err != nil {
+			return nil, err
+		}
+		debugBufferOutline := mvt.Feature{
+			Tags: map[string]interface{}{
+				"type": "debug_buffer_outline",
+			},
+			Geometry: &basic.Line{ //	tile outline
+				basic.Point{ext1.Minx, ext1.Miny},
+				basic.Point{ext1.Maxx, ext1.Miny},
+				basic.Point{ext1.Maxx, ext1.Maxy},
+				basic.Point{ext1.Minx, ext1.Maxy},
+			},
+		}
+		layer.AddFeatures(debugBufferOutline)
 
 	case "debug-tile-center":
 		//	debug center points

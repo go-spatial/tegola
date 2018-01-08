@@ -54,8 +54,13 @@ func TileCacheHandler(next http.Handler) http.Handler {
 				return
 			}
 
+			//	if nothing has been written to the buffer, don't write to the cache
+			if buff.Len() == 0 {
+				return
+			}
+
 			if err := cacher.Set(key, buff.Bytes()); err != nil {
-				log.Println("cache response writer err: %v", err)
+				log.Printf("cache response writer err: %v", err)
 			}
 			return
 		}
@@ -85,8 +90,10 @@ func newTileCacheResponseWriter(resp http.ResponseWriter, w io.Writer) http.Resp
 //	tileCacheResponsWriter wraps http.ResponseWriter (https://golang.org/pkg/net/http/#ResponseWriter)
 //	to additionally write the response to a cache when there is a cache MISS
 type tileCacheResponseWriter struct {
-	resp  http.ResponseWriter
-	multi io.Writer
+	//	status response code
+	status int
+	resp   http.ResponseWriter
+	multi  io.Writer
 }
 
 func (w *tileCacheResponseWriter) Header() http.Header {
@@ -97,10 +104,18 @@ func (w *tileCacheResponseWriter) Header() http.Header {
 }
 
 func (w *tileCacheResponseWriter) Write(b []byte) (int, error) {
-	//	write to our multi writer
-	return w.multi.Write(b)
+	//	only write to the multi writer when http response == StatusOK
+	if w.status == http.StatusOK {
+		//	write to our multi writer
+		return w.multi.Write(b)
+	}
+
+	//	write to the original response writer
+	return w.resp.Write(b)
 }
 
 func (w *tileCacheResponseWriter) WriteHeader(i int) {
+	w.status = i
+
 	w.resp.WriteHeader(i)
 }
