@@ -1,0 +1,8 @@
+*.toml
+tegola
+static/debug
+static/landuse2
+*.log
+configs
+osm_tools
+
