@@ -1,4 +1,6 @@
 language: go
+# Does nothing when building on terranodo/tegola, but makes builds work cleanly on forks.
+go_import_path: github.com/terranodo/tegola
 
 go:
   - 1.9.x
@@ -7,6 +9,8 @@ go:
 
 env:
   global:
+  # Secure DOCKER_USER & DOCKER_PASSWORD
+    - secure: "FyqhU6uxoXdod4i4RlSWE+bvvG0BmctIhGE+oWOlO6kvpOLO9UwDhCkQdq7XQipzR0w5Na7jH4DwZVpksRVJMqj12jS0aA5+ABXK0uskIukJEPjmpbzfqZENPSY7iIeT8bZCO5o/0a3a8dcGVlnCDtC2SHva/V6jhujhH2BAjzwWYhkIdAF8bPc2zW5TqqPXAft8ePFsApUba0QXXdnrEIvSbmaH6s3DCSQxR5QjccgCZyb2uNMLTffyLeRPp5cdDW+ps2ew5IhShMFhdcefhVYmIoh1fd9++tCuI/rSemg6VYPF5SF5hj3kZeKoG/HhFWUri0DbjJXVQ5L3Vgj7AxjFHITtIQ5tPDU6ewKDSw7kXjTZflL0zRCCPx0foaZSdyADysj2tC3wclj9+VH7eZMjpQ0p/BuiA9YT5VA9a6MvPSyz8YFXkRBljsDKz/HNRoGkSPiXAUgcGNxB9Qg3s2BRWh/s35NpjYOmaowRw1bCOrZtWtMhLsV8dNRjZhzgwfRgMAJq7bBP94Ov6qyP6xmYF/H8c0fubw+G2i7bXQUgM1BQXqfll8R/24tKAvdAZvI7YpYXfKrU2bf59U3tNEHkew9CansmRWVjb6QIyna0nlTWTAQ5ElQDV1/1f1a4aqV6JIoyfpTh9xFsl5vMIXktOANLeT/Bc+I5SvX+aAo="
     - RUN_POSTGIS_TESTS=yes
     - PGHOST="localhost"
     - PGPORT=5432
@@ -28,8 +32,12 @@ install:
 
 before_deploy:
   - go get github.com/mitchellh/gox
-  - cd cmd/tegola/
   - gox -ldflags "-w -X github.com/terranodo/tegola/cmd/tegola/cmd.Version=$TRAVIS_TAG" -output "{{.Dir}}_{{.OS}}_{{.Arch}}"
+  - pushd cmd/tegola/
+  - popd
+  - docker build -f docker/Dockerfile -t jivanamara/tegola:alpha_01 .
+  - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+  - docker push jivanamara/tegola:alpha_01
 
 deploy:
   provider: releases
