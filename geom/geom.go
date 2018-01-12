@@ -1,6 +1,13 @@
 // Package geom describes geometry interfaces.
 package geom
 
+type _ungeoerr struct{}
+
+func (_ungeoerr) Error() string { return "unknown geometry" }
+
+// UnknownGeometryErrror is returned when the geometry type is unknown or unsupported.
+var UnknownGeometryError _ungeoerr
+
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
 type Geometry interface{}

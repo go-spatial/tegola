@@ -3,6 +3,7 @@ package makevalid
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"sort"
 	"sync"
@@ -38,6 +39,33 @@ func insureConnected(polygons ...[]maths.Line) (ret [][]maths.Line) {
 	return ret
 }
 
+/*
+func MaxF64(vals ...float64) (max float64) {
+	if len(vals) == 0 {
+		return 0
+	}
+	max = vals[0]
+	for _, f := range vals[1:] {
+		if f > max {
+			max = f
+		}
+	}
+	return max
+}
+func MinF64(vals ...float64) (min float64) {
+	if len(vals) == 0 {
+		return 0
+	}
+	min = vals[0]
+	for _, f := range vals[1:] {
+		if f < min {
+			min = f
+		}
+	}
+	return min
+}
+*/
+
 // destructure2  splits the polygon into a set of segements adding the segments of the clipbox as well.
 func destructure2(polygons [][]maths.Line, clipbox *points.Extent) []maths.Line {
 	// First we need to combine all the segments.
@@ -66,60 +94,116 @@ func destructure2(polygons [][]maths.Line, clipbox *points.Extent) []maths.Line 
 	return segments
 }
 
-func MaxF64(vals ...float64) (max float64) {
-	if len(vals) == 0 {
-		return 0
+func logOutBuildRings(pt2maxy map[maths.Pt]int64, xs []float64, x2pts map[float64][]maths.Pt) (output string) {
+	output = fmt.Sprintf("xs := %#v\n", xs)
+	output += fmt.Sprintf("x2pts := %#v\n", x2pts)
+	output += fmt.Sprintf("Pt2MaxY := %#v\n", pt2maxy)
+	output += fmt.Sprintf("Cols := []struct{ idx int,  col1 []maths.Pt, col2 []maths.Pt}{")
+	for i := 0; i < len(xs)-1; i++ {
+		output += fmt.Sprintf("{idx: %[1]v, col1: %v, col2: %v}, ", i, x2pts[xs[i]], x2pts[xs[i+1]])
 	}
-	max = vals[0]
-	for _, f := range vals[1:] {
-		if f > max {
-			max = f
-		}
-	}
-	return max
-}
-func MinF64(vals ...float64) (min float64) {
-	if len(vals) == 0 {
-		return 0
-	}
-	min = vals[0]
-	for _, f := range vals[1:] {
-		if f < min {
-			min = f
-		}
-	}
-	return min
+	output += "}\n"
+	return output
 }
 
-func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Extent, segments []maths.Line) ([][][]maths.Pt, error) {
+func _adjustClipBox(cpbx *points.Extent, plygs [][]maths.Line) (clipbox *points.Extent) {
+
+	var pts [][2]float64
+	for i := range plygs {
+		for j := range plygs[i] {
+			pts = append(
+				pts,
+				[2]float64{plygs[i][j][0].X, plygs[i][j][0].Y},
+				[2]float64{plygs[i][j][1].X, plygs[i][j][1].Y},
+			)
+
+		}
+	}
+
+	// if there is a clipbox, let's adjust it to the polygon.
+	// If what we are working on does not go outside one of the edges of the
+	// clip box, let's bring that edge in. Basically, reduce the amount of
+	// space we are dealing with.
+	bb := points.Extent{pts[0], pts[0]}
+
+	for i := 1; i < len(pts); i++ {
+		// if the point is not in the clipbox we want to ignore it.
+		// pt is outside of the x coords of clipbox.
+		if clipbox != nil {
+			if pts[i][0] < cpbx[0][0] || pts[i][0] > cpbx[1][0] {
+				continue
+			}
+			// pt is outside of the y coords of clipbox.
+			if pts[i][1] < cpbx[0][1] || pts[i][1] > cpbx[1][1] {
+				continue
+			}
+		}
+		if pts[i][0] < bb[0][0] {
+			bb[0][0] = pts[i][0]
+		}
+		if pts[i][1] < bb[0][1] {
+			bb[0][1] = pts[i][1]
+		}
+		if pts[i][0] > bb[1][0] {
+			bb[1][0] = pts[i][0]
+		}
+		if pts[i][1] > bb[1][1] {
+			bb[1][1] = pts[i][1]
+		}
+	}
+	if cpbx == nil {
+		return &bb
+	}
+	clipbox = &points.Extent{cpbx[0], cpbx[1]}
+	//log.Println("Before Clipbox:", clipbox)
+	if clipbox[0][0] < bb[0][0] {
+		clipbox[0][0] = bb[0][0]
+	}
+	if clipbox[1][0] > bb[1][0] {
+		clipbox[1][0] = bb[1][0]
+	}
+	if clipbox[0][1] < bb[0][1] {
+		clipbox[0][1] = bb[0][1]
+	}
+	if clipbox[1][1] > bb[1][1] {
+		clipbox[1][1] = bb[1][1]
+	}
+	return clipbox
+
+}
+
+func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent, plygs [][]maths.Line) ([][][]maths.Pt, error) {
+
+	// Make copy because we are going to modify the clipbox.
+	clipbox := _adjustClipBox(cpbx, plygs)
+	// Just trying to clip a polygon that is on the border.
+	if clipbox[0][0] == clipbox[1][0] || clipbox[0][1] == clipbox[1][1] {
+		//log.Println("clip area too small: Clipbox:", cpbx, "bb:", bb, miny, maxy)
+		return nil, nil
+	}
+	miny, maxy := clipbox[0][1], clipbox[1][1]
+
+	segments := destructure2(plygs, clipbox)
+	if segments == nil {
+		return nil, nil
+	}
 
 	var lines []maths.Line
+	//log.Println("Destructure5 called.")
+	//defer log.Println("Destructure5 ended.")
 
+	//log.Printf("segments(%v) := %#v", len(segments), segments)
+	//log.Printf("clipbox := %#v", clipbox)
 	flines, err := splitSegments(ctx, segments, clipbox)
+
 	if err != nil {
 		return nil, err
 	}
+	//log.Printf("flines := %#v", flines)
 
 	pts := allPointsForSegments(flines)
 
 	xs := sortUniqueF64(allCoordForPts(0, pts...))
-
-	// If what we are working on does not go outside one of the edges of the
-	// clip box, let's bring that edge in. Basically, reduce the amount of
-	// space we are dealing with.
-	miny, maxy := clipbox[0][1], clipbox[1][1]
-	{
-		linesbb, err := points.BBoxFloat64(pts...)
-		if err != nil {
-			return nil, err
-		}
-		if miny < linesbb[0][1] {
-			miny = linesbb[0][1]
-		}
-		if maxy > linesbb[1][1] {
-			maxy = linesbb[1][1]
-		}
-	}
 
 	// Add lines at each x going from the miny to maxy.
 	for i := range xs {
@@ -136,17 +220,11 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 	// each point with the value of their x, and the max y value to the next
 	// x.
 
-	var x2pts = make(map[float64][]maths.Pt)
-	var pt2MaxY = make(map[maths.Pt]int64)
-	var clipMaxY100 int64
-	if clipbox != nil {
-		clipMaxY100 = int64(clipbox[1][1] * 100)
-	}
-	var maxY100Val = func(y float64) int64 {
+	x2pts := make(map[float64][]maths.Pt)
+	pt2MaxY := make(map[maths.Pt]int64)
+	clipMaxY100 := int64(clipbox[1][1] * 100)
+	maxY100Val := func(y float64) int64 {
 		y100 := int64(y * 100)
-		if clipbox == nil {
-			return y100
-		}
 		if y < clipbox[1][1] {
 			return y100
 		}
@@ -187,10 +265,21 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 	var idChan = make(chan int)
 	var lenxs = len(xs) - 1
 
+	if lenxs <= 0 {
+		return nil, nil
+	}
 	var ringCols = make([]plyg.RingCol, lenxs)
+	//logout := fmt.Sprintf("clipbox := %v\n", clipbox)
+	//logout += fmt.Sprintf("plygs := %v\n", plygs)
+	//logout += logOutBuildRings(pt2MaxY, xs, x2pts)
+	//log.Println("Going to buld out rings:", logout)
 
 	var worker = func(id int, ctx context.Context) {
+		var cancelled bool
 		for i := range idChan {
+			if cancelled {
+				continue
+			}
 			if clipbox != nil {
 				if xs[i] < clipbox[0][0] || xs[i] > clipbox[1][0] {
 					// Skip working on this one.
@@ -200,13 +289,25 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 					continue
 				}
 			}
-			ringCols[i] = plyg.BuildRingCol(
+			ringCols[i], err = plyg.BuildRingCol(
 				ctx,
 				hm,
 				x2pts[xs[i]],
 				x2pts[xs[i+1]],
 				pt2MaxY,
 			)
+			if err != nil {
+				switch err {
+				case context.Canceled:
+					cancelled = true
+				default:
+					// logout := fmt.Sprintf("clipbox := %v\n", clipbox)
+					// logout += fmt.Sprintf("plygs := %v\n", plygs)
+					// logout += logOutBuildRings(pt2MaxY, xs, x2pts)
+					// log.Println(logout+"For ", i, "Got error (", err, ") trying to process ")
+					//panic(err)
+				}
+			}
 
 		}
 		wg.Done()
@@ -231,17 +332,13 @@ func destructure5(ctx context.Context, hm hitmap.Interface, clipbox *points.Exte
 
 	}
 
-	plygs := plyg.GenerateMultiPolygon(ringCols)
-	return plygs, nil
+	ploygs := plyg.GenerateMultiPolygon(ringCols)
+	return ploygs, nil
 }
 
 func MakeValid(ctx context.Context, hm hitmap.Interface, extent *points.Extent, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
 
-	segments := destructure2(insureConnected(plygs...), extent)
-	if segments == nil {
-		return nil, nil
-	}
-	return destructure5(ctx, hm, extent, segments)
+	return destructure5(ctx, hm, extent, insureConnected(plygs...))
 }
 
 type byArea []*ring

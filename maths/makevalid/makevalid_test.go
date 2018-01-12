@@ -57,6 +57,85 @@ func TestPointPairs(t *testing.T) {
 	})
 }
 
+func _createFile(basedir, filename string) (file *os.File, err error) {
+	if err = os.MkdirAll(baseDir, 0711); err != nil {
+		return nil, err
+	}
+	return os.Create(filepath.Join(baseDir, filename))
+}
+
+func _drawMakeValidPolygons(w io.Writer, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) {
+	mm := svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer}
+	for i := range original {
+		mm.OfGeometry(original[i])
+	}
+	for i := range expectedPolygon {
+		mm.OfGeometry(expectedPolygon[i])
+	}
+	for i := range gotPolygon {
+		mm.OfGeometry(gotPolygon[i])
+	}
+	mm.ExpandBy(100)
+	canvas := &svg.Canvas{
+		Board:  mm,
+		Region: svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer},
+	}
+	canvas.Init(w, 1440, 900, false)
+	canvas.Gid("original_lines")
+	canvas.Comment(fmt.Sprintf("Original Lines(%v)", len(original)))
+	for i := range original {
+		id := fmt.Sprintf("Ring_%v", i)
+		canvas.Gid(id)
+		canvas.DrawMathSegments(original[i], "", "stroke: #00ff00")
+		canvas.Gend()
+	}
+	canvas.Gend()
+	canvas.Gid("Expected MultiPolygon")
+	canvas.Comment(fmt.Sprintf("Expected MultiPolygon(%v)", len(expectedPolygon)))
+	for i := range expectedPolygon {
+		canvas.Comment(fmt.Sprintf("Expected (%v) Polygon(%v)", i, len(expectedPolygon[i])))
+		id := fmt.Sprintf("Polygon_%v", i)
+		canvas.Gid(id)
+		for j := range expectedPolygon[i] {
+			id := fmt.Sprintf("Ring_%v", i)
+			canvas.Gid(id)
+			canvas.DrawMathPoints(expectedPolygon[i][j], "", "stroke: #0000ff")
+			canvas.Gend()
+		}
+		canvas.Gend()
+	}
+
+	canvas.Gend()
+	canvas.Gid("Got MultiPolygon")
+	canvas.Comment(fmt.Sprintf("Got MultiPolygon(%v)", len(expectedPolygon)))
+	for i := range gotPolygon {
+		canvas.Comment(fmt.Sprintf("Got (%v) Polygon(%v)", i, len(gotPolygon[i])))
+		id := fmt.Sprintf("Polygon_%v", i)
+		canvas.Gid(id)
+		for j := range gotPolygon[i] {
+			id := fmt.Sprintf("Ring_%v", i)
+			canvas.Gid(id)
+			canvas.DrawMathPoints(gotPolygon[i][j], "", "stroke: #ff0000")
+			canvas.Gend()
+		}
+		canvas.Gend()
+	}
+
+	canvas.Gend()
+	canvas.End()
+
+}
+
+func drawMakeValidTestCase(basedir string, filename string, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) error {
+	file, err := _createFile(basedir, filename)
+	if err != nil {
+		return err
+	}
+	defer file.close()
+	_drawMakeValidPolygons(file, original, expectedPolygon, gotPolygon)
+	return nil
+}
+
 func TestMakeValid(t *testing.T) {
 
 	type testcase struct {
@@ -66,67 +145,6 @@ func TestMakeValid(t *testing.T) {
 	}
 	//tests.RunOrder = "0"
 	ctx := context.Background()
-	drawfn := func(w io.Writer, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) {
-		mm := svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer}
-		for i := range original {
-			mm.OfGeometry(original[i])
-		}
-		for i := range expectedPolygon {
-			mm.OfGeometry(expectedPolygon[i])
-		}
-		for i := range gotPolygon {
-			mm.OfGeometry(gotPolygon[i])
-		}
-		mm.ExpandBy(100)
-		canvas := &svg.Canvas{
-			Board:  mm,
-			Region: svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer},
-		}
-		canvas.Init(w, 1440, 900, false)
-		canvas.Gid("original_lines")
-		canvas.Comment(fmt.Sprintf("Original Lines(%v)", len(original)))
-		for i := range original {
-			id := fmt.Sprintf("Ring_%v", i)
-			canvas.Gid(id)
-			canvas.DrawMathSegments(original[i], "", "stroke: #00ff00")
-			canvas.Gend()
-		}
-		canvas.Gend()
-		canvas.Gid("Expected MultiPolygon")
-		canvas.Comment(fmt.Sprintf("Expected MultiPolygon(%v)", len(expectedPolygon)))
-		for i := range expectedPolygon {
-			canvas.Comment(fmt.Sprintf("Expected (%v) Polygon(%v)", i, len(expectedPolygon[i])))
-			id := fmt.Sprintf("Polygon_%v", i)
-			canvas.Gid(id)
-			for j := range expectedPolygon[i] {
-				id := fmt.Sprintf("Ring_%v", i)
-				canvas.Gid(id)
-				canvas.DrawMathPoints(expectedPolygon[i][j], "", "stroke: #0000ff")
-				canvas.Gend()
-			}
-			canvas.Gend()
-		}
-
-		canvas.Gend()
-		canvas.Gid("Got MultiPolygon")
-		canvas.Comment(fmt.Sprintf("Got MultiPolygon(%v)", len(expectedPolygon)))
-		for i := range gotPolygon {
-			canvas.Comment(fmt.Sprintf("Got (%v) Polygon(%v)", i, len(gotPolygon[i])))
-			id := fmt.Sprintf("Polygon_%v", i)
-			canvas.Gid(id)
-			for j := range gotPolygon[i] {
-				id := fmt.Sprintf("Ring_%v", i)
-				canvas.Gid(id)
-				canvas.DrawMathPoints(gotPolygon[i][j], "", "stroke: #ff0000")
-				canvas.Gend()
-			}
-			canvas.Gend()
-		}
-
-		canvas.Gend()
-		canvas.End()
-
-	}
 
 	fn := func(idx int, test testcase) {
 
@@ -137,17 +155,15 @@ func TestMakeValid(t *testing.T) {
 			return
 		}
 		if diff := deep.Equal(got, test.polygons); diff != nil {
-			baseDir := "_test_failures/TestMakeValid"
-			var err error
-			var file *os.File
-			if err = os.MkdirAll(baseDir, 0711); err == nil {
-				file, err = os.Create(filepath.Join(baseDir, fmt.Sprintf("tc_%v.svg", idx)))
-			}
+			err := drawMakeValidTestCase(
+				"_test_failures/TestMakeValid",
+				fmt.Sprintf("tc_%v.svg", idx),
+				test.lines,
+				test.polygons,
+				got,
+			)
 			if err != nil {
-				t.Logf("Could create svg test file: %v ", err)
-			} else {
-				defer file.Close()
-				drawfn(file, test.lines, test.polygons, got)
+				t.Logf("Could not create svg test file: %v ", err)
 			}
 			out := fmt.Sprintf("[%v] Points do not match:\n", idx)
 			out += fmt.Sprintf("\tExpected MultiPolygon with (%v) polygons:\n", len(test.polygons))

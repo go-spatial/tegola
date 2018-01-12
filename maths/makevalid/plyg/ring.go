@@ -516,7 +516,8 @@ func _getTrianglesForCol(ctx context.Context, pt2maxy map[maths.Pt]int64, col1, 
 	return tris, nil
 }
 
-func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.Pt, pt2my map[maths.Pt]int64) (col RingCol) {
+// TODO: Gdey have this return and error.
+func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.Pt, pt2my map[maths.Pt]int64) (col RingCol, err error) {
 	var len1, len2 = len(col1), len(col2)
 	_, _ = len1, len2
 
@@ -525,13 +526,19 @@ func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.P
 	// Get all the triangles
 	tris, err := _getTrianglesForCol(ctx, pt2my, col1, col2)
 	if err != nil {
-		switch err {
-		case context.Canceled:
-			return col
-		default:
-			panic(err)
-		}
+		return col, err
 	}
+	/*
+		if err != nil {
+			switch err {
+			case context.Canceled:
+				return col
+			default:
+				log.Println("Got error (", err, ") trying to process ", col1, col2, pt2my)
+				panic(err)
+			}
+		}
+	*/
 	for _, t := range tris {
 		col.addPts(hm, &b, col1[t[0]:t[0]+t[1]], col2[t[2]:t[2]+t[3]])
 	}
@@ -546,7 +553,7 @@ func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.P
 		}
 		sort.Sort(EdgeByY(col.Y1s))
 		sort.Sort(EdgeByY(col.Y2s))
-		return col
+		return col, nil
 	}
 	col.X1 = x1
 	col.X2 = x2
@@ -562,11 +569,11 @@ func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.P
 	}
 	// Context cancelled.
 	if ctx.Err() != nil {
-		return col
+		return col, ctx.Err()
 	}
 	sort.Sort(EdgeByY(col.Y1s))
 	sort.Sort(EdgeByY(col.Y2s))
-	return col
+	return col, nil
 }
 
 func slopeCheck(pt1, pt2, pt3 maths.Pt, x1, x2 float64) bool {
