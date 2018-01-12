@@ -3,6 +3,7 @@ package server_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -83,7 +84,7 @@ func TestHandleMapStyle(t *testing.T) {
 
 		r, err := http.NewRequest(tc.reqMethod, tc.uri, nil)
 		if err != nil {
-			t.Errorf("test case (%v) failed: %v", i, err)
+			t.Errorf("[%v] failed: %v", i, err)
 			continue
 		}
 
@@ -91,17 +92,26 @@ func TestHandleMapStyle(t *testing.T) {
 		router.ServeHTTP(w, r)
 
 		if w.Code != http.StatusOK {
-			t.Errorf("test case (%v). handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			t.Errorf("[%v] handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			continue
+		}
+
+		bytes, err := ioutil.ReadAll(w.Body)
+		if err != nil {
+			t.Errorf("[%v] err reading response body: %v", i, err)
+			continue
 		}
 
 		var output style.Root
-		if err = json.NewDecoder(w.Body).Decode(&output); err != nil {
-			t.Errorf("test case (%v) failed: %v", i, err)
+		//	read the response body
+		if err := json.Unmarshal(bytes, &output); err != nil {
+			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
 			continue
 		}
 
 		if !reflect.DeepEqual(output, tc.expected) {
-			t.Errorf("test case (%v) failed. output \n\n %+v \n\n does not match expected \n\n %+v", i, output, tc.expected)
+			t.Errorf("[%v] failed. output \n\n %+v \n\n does not match expected \n\n %+v", i, output, tc.expected)
+			continue
 		}
 	}
 }

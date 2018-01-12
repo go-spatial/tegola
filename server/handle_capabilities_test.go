@@ -3,6 +3,7 @@ package server_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -305,17 +306,27 @@ func TestHandleCapabilities(t *testing.T) {
 		router.ServeHTTP(w, r)
 
 		if w.Code != http.StatusOK {
-			t.Errorf("Failed test %v. handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			t.Errorf("[%v] status code, expected %v got %v", i, http.StatusOK, w.Code)
+			continue
+		}
+
+		bytes, err := ioutil.ReadAll(w.Body)
+		if err != nil {
+			t.Errorf("[%v] err reading response body: %v", i, err)
+			continue
 		}
 
 		var capabilities server.Capabilities
+
 		//	read the respons body
-		if err := json.NewDecoder(w.Body).Decode(&capabilities); err != nil {
-			t.Errorf("Failed test %v. Unable to decode JSON response body", i)
+		if err := json.Unmarshal(bytes, &capabilities); err != nil {
+			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
+			continue
 		}
 
 		if !reflect.DeepEqual(test.expected, capabilities) {
-			t.Errorf("Failed test %v. Response body and expected do not match \n%+v\n%+v", i, test.expected, capabilities)
+			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, test.expected, capabilities)
+			continue
 		}
 	}
 }
