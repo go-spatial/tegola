@@ -3,6 +3,7 @@ package server_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -175,23 +176,33 @@ func TestHandleMapCapabilities(t *testing.T) {
 		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
 		if err != nil {
 			t.Fatal(err)
+			continue
 		}
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, r)
 
 		if w.Code != http.StatusOK {
-			t.Errorf("Failed test %v. handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			t.Errorf("[%v] handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			continue
+		}
+
+		bytes, err := ioutil.ReadAll(w.Body)
+		if err != nil {
+			t.Errorf("[%v] err reading response body: %v", i, err)
+			continue
 		}
 
 		var tileJSON tilejson.TileJSON
-		//	read the respons body
-		if err := json.NewDecoder(w.Body).Decode(&tileJSON); err != nil {
-			t.Errorf("Failed test %v. Unable to decode JSON response body", i)
+		//	read the response body
+		if err := json.Unmarshal(bytes, &tileJSON); err != nil {
+			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
+			continue
 		}
 
 		if !reflect.DeepEqual(test.expected, tileJSON) {
-			t.Errorf("Failed test %v. Response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
+			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
+			continue
 		}
 	}
 }

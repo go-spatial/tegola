@@ -118,9 +118,6 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Add("Pragma", "no-cache")
 		w.Header().Add("Expires", "0")
-
-		//	setup a new json encoder and encode our capabilities
-		json.NewEncoder(w).Encode(capabilities)
 	}
 
 	//	setup a new json encoder and encode our capabilities
