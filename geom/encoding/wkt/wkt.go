@@ -1,4 +1,4 @@
-package wkb
+package wkt
 
 import (
 	"fmt"

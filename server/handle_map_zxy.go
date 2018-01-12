@@ -87,88 +87,65 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 //		x - row
 //		y - column
 func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//	check http verb
-	switch r.Method {
-	//	preflight check for CORS request
-	case "OPTIONS":
-		//	TODO: how configurable do we want the CORS policy to be?
-		//	set CORS header
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-		w.WriteHeader(http.StatusNoContent)
-
-		//	options call does not have a body
-		w.Write(nil)
-		return
-
-	//	tile request
-	case "GET":
-
-		//	parse our URI
-		if err := req.parseURI(r); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		//	lookup our Map
-		m, err := atlas.GetMap(req.mapName)
-		if err != nil {
-			log.Printf("map (%v) not configured. check your config file", req.mapName)
-			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
-			return
-		}
-
-		//	new tile
-		tile := tegola.NewTile(req.z, req.x, req.y)
-
-		//	filter down the layers we need for this zoom
-		m = m.DisableAllLayers().EnableLayersByZoom(tile.Z)
-
-		//	check for the debug query string
-		if req.debug {
-			m = m.EnableDebugLayers()
-		}
-
-		pbyte, err := m.Encode(r.Context(), tile)
-		if err != nil {
-			switch err {
-			case mvt.ErrCanceled:
-				//	TODO: add debug logs
-				return
-			case context.Canceled:
-				//	TODO: add debug logs
-				return
-			default:
-				errMsg := fmt.Sprintf("Error marshalling tile: %v", err)
-				log.Printf(errMsg)
-				http.Error(w, errMsg, http.StatusInternalServerError)
-				return
-			}
-		}
-
-		//	TODO: how configurable do we want the CORS policy to be?
-		//	set CORS header
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-
-		//	mimetype for protocol buffers
-		w.Header().Add("Content-Type", "application/x-protobuf")
-
-		w.Write(pbyte)
-
-		//	check for tile size warnings
-		if len(pbyte) > MaxTileSize {
-			log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, humanize.Bytes(uint64(len(pbyte))))
-		}
-
-		//	log the request
-		L.Log(logItem{
-			X:         tile.X,
-			Y:         tile.Y,
-			Z:         tile.Z,
-			RequestIP: r.RemoteAddr,
-		})
-
-	default:
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	//	parse our URI
+	if err := req.parseURI(r); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	//	lookup our Map
+	m, err := atlas.GetMap(req.mapName)
+	if err != nil {
+		log.Printf("map (%v) not configured. check your config file", req.mapName)
+		http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
+		return
+	}
+
+	//	new tile
+	tile := tegola.NewTile(req.z, req.x, req.y)
+	//	set the buffer to our server's configured buffer in case it was set in the config
+	tile.Buffer = TileBuffer
+
+	//	filter down the layers we need for this zoom
+	m = m.DisableAllLayers().EnableLayersByZoom(tile.Z)
+
+	//	check for the debug query string
+	if req.debug {
+		m = m.EnableDebugLayers()
+	}
+
+	pbyte, err := m.Encode(r.Context(), tile)
+	if err != nil {
+		switch err {
+		case mvt.ErrCanceled:
+			//	TODO: add debug logs
+			return
+		case context.Canceled:
+			//	TODO: add debug logs
+			return
+		default:
+			errMsg := fmt.Sprintf("Error marshalling tile: %v", err)
+			log.Printf(errMsg)
+			http.Error(w, errMsg, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	//	mimetype for protocol buffers
+	w.Header().Add("Content-Type", "application/x-protobuf")
+
+	w.Write(pbyte)
+
+	//	check for tile size warnings
+	if len(pbyte) > MaxTileSize {
+		log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, humanize.Bytes(uint64(len(pbyte))))
+	}
+
+	//	log the request
+	L.Log(logItem{
+		X:         tile.X,
+		Y:         tile.Y,
+		Z:         tile.Z,
+		RequestIP: r.RemoteAddr,
+	})
 }
