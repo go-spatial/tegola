@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"runtime"
 	"sort"
 	"sync"
@@ -95,14 +96,16 @@ func destructure2(polygons [][]maths.Line, clipbox *points.Extent) []maths.Line 
 }
 
 func logOutBuildRings(pt2maxy map[maths.Pt]int64, xs []float64, x2pts map[float64][]maths.Pt) (output string) {
-	output = fmt.Sprintf("xs := %#v\n", xs)
-	output += fmt.Sprintf("x2pts := %#v\n", x2pts)
-	output += fmt.Sprintf("Pt2MaxY := %#v\n", pt2maxy)
-	output += fmt.Sprintf("Cols := []struct{ idx int,  col1 []maths.Pt, col2 []maths.Pt}{")
-	for i := 0; i < len(xs)-1; i++ {
-		output += fmt.Sprintf("{idx: %[1]v, col1: %v, col2: %v}, ", i, x2pts[xs[i]], x2pts[xs[i+1]])
+	if debug {
+		output = fmt.Sprintf("xs := %#v\n", xs)
+		output += fmt.Sprintf("x2pts := %#v\n", x2pts)
+		output += fmt.Sprintf("Pt2MaxY := %#v\n", pt2maxy)
+		output += fmt.Sprintf("Cols := []struct{ idx int,  col1 []maths.Pt, col2 []maths.Pt}{")
+		for i := 0; i < len(xs)-1; i++ {
+			output += fmt.Sprintf("{idx: %[1]v, col1: %v, col2: %v}, ", i, x2pts[xs[i]], x2pts[xs[i+1]])
+		}
+		output += "}\n"
 	}
-	output += "}\n"
 	return output
 }
 
@@ -155,7 +158,9 @@ func _adjustClipBox(cpbx *points.Extent, plygs [][]maths.Line) (clipbox *points.
 		return &bb
 	}
 	clipbox = &points.Extent{cpbx[0], cpbx[1]}
-	//log.Println("Before Clipbox:", clipbox)
+	if debug {
+		log.Println("Before Clipbox:", clipbox)
+	}
 	if clipbox[0][0] < bb[0][0] {
 		clipbox[0][0] = bb[0][0]
 	}
@@ -172,13 +177,20 @@ func _adjustClipBox(cpbx *points.Extent, plygs [][]maths.Line) (clipbox *points.
 
 }
 
+const DEBUG = true
+
 func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent, plygs [][]maths.Line) ([][][]maths.Pt, error) {
 
 	// Make copy because we are going to modify the clipbox.
 	clipbox := _adjustClipBox(cpbx, plygs)
+	if DEBUG {
+
+	}
 	// Just trying to clip a polygon that is on the border.
 	if clipbox[0][0] == clipbox[1][0] || clipbox[0][1] == clipbox[1][1] {
-		//log.Println("clip area too small: Clipbox:", cpbx, "bb:", bb, miny, maxy)
+		if debug {
+			log.Println("clip area too small: Clipbox:", cpbx)
+		}
 		return nil, nil
 	}
 	miny, maxy := clipbox[0][1], clipbox[1][1]
@@ -189,17 +201,27 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 	}
 
 	var lines []maths.Line
-	//log.Println("Destructure5 called.")
-	//defer log.Println("Destructure5 ended.")
+	if debug {
+		log.Println("Destructure5 called.")
+		defer func() {
+			if debug {
+				log.Println("Destructure5 ended.")
+			}
+		}()
+	}
+	if debug {
 
-	//log.Printf("segments(%v) := %#v", len(segments), segments)
-	//log.Printf("clipbox := %#v", clipbox)
+		log.Printf("segments /*(%v)*/ := %#v", len(segments), segments)
+		log.Printf("clipbox := %#v", clipbox)
+	}
 	flines, err := splitSegments(ctx, segments, clipbox)
 
 	if err != nil {
 		return nil, err
 	}
-	//log.Printf("flines := %#v", flines)
+	if debug {
+		log.Printf("flines := %#v", flines)
+	}
 
 	pts := allPointsForSegments(flines)
 
@@ -269,10 +291,12 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 		return nil, nil
 	}
 	var ringCols = make([]plyg.RingCol, lenxs)
-	//logout := fmt.Sprintf("clipbox := %v\n", clipbox)
-	//logout += fmt.Sprintf("plygs := %v\n", plygs)
-	//logout += logOutBuildRings(pt2MaxY, xs, x2pts)
-	//log.Println("Going to buld out rings:", logout)
+	if debug {
+		logout := fmt.Sprintf("clipbox := %v\n", clipbox)
+		logout += fmt.Sprintf("plygs := %v\n", plygs)
+		logout += logOutBuildRings(pt2MaxY, xs, x2pts)
+		log.Println("Going to buld out rings:", logout)
+	}
 
 	var worker = func(id int, ctx context.Context) {
 		var cancelled bool
@@ -301,10 +325,12 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 				case context.Canceled:
 					cancelled = true
 				default:
-					// logout := fmt.Sprintf("clipbox := %v\n", clipbox)
-					// logout += fmt.Sprintf("plygs := %v\n", plygs)
-					// logout += logOutBuildRings(pt2MaxY, xs, x2pts)
-					// log.Println(logout+"For ", i, "Got error (", err, ") trying to process ")
+					if debug {
+						logout := fmt.Sprintf("clipbox := %v\n", clipbox)
+						logout += fmt.Sprintf("plygs := %v\n", plygs)
+						logout += logOutBuildRings(pt2MaxY, xs, x2pts)
+						log.Println(logout+"For ", i, "Got error (", err, ") trying to process ")
+					}
 					//panic(err)
 				}
 			}

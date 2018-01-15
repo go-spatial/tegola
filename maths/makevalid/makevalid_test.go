@@ -58,10 +58,10 @@ func TestPointPairs(t *testing.T) {
 }
 
 func _createFile(basedir, filename string) (file *os.File, err error) {
-	if err = os.MkdirAll(baseDir, 0711); err != nil {
+	if err = os.MkdirAll(basedir, 0711); err != nil {
 		return nil, err
 	}
-	return os.Create(filepath.Join(baseDir, filename))
+	return os.Create(filepath.Join(basedir, filename))
 }
 
 func _drawMakeValidPolygons(w io.Writer, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) {
@@ -126,12 +126,56 @@ func _drawMakeValidPolygons(w io.Writer, original [][]maths.Line, expectedPolygo
 
 }
 
+func Test_adjustClipBox(t *testing.T) {
+	type testCase struct {
+		cpbx    *points.Extent
+		plygs   [][]maths.Line
+		clipbox *points.Extent
+	}
+	var tests map[string]testCase
+	fn := func() {
+		for name, tc := range tests {
+			tc := tc // make a copy.
+			t.Run(name, func(t *testing.T) {
+				clipbox := _adjustClipBox(tc.cpbx, tc.plygs)
+				if reflect.DeepEqual(clipbox, tc.clipbox) {
+					t.Errorf("Clipbox do not match, Expected %v Got %v", name, tc.clipbox, clipbox)
+				}
+			})
+		}
+	}
+
+	tests = map[string]testCase{
+		"nil clipbox 1": testCase{
+			plygs: [][]maths.Line{
+				[]maths.Line{
+					maths.Line{{0, 0}, {0, 10}},
+					maths.Line{{0, 10}, {10, 10}},
+					maths.Line{{10, 0}, {10, 10}},
+					maths.Line{{10, 0}, {0, 0}},
+				},
+			},
+			clipbox: &points.Extent{
+				{0, 0},
+				{10, 10},
+			},
+		},
+		"nil clipbox 2": testCase{
+			plygs: [][]maths.Line{
+				[]maths.Line{maths.Line{maths.Pt{X: 2853, Y: 975}, maths.Pt{X: 2856, Y: 975}}, maths.Line{maths.Pt{X: 2782, Y: 959}, maths.Pt{X: 2785, Y: 953}}, maths.Line{maths.Pt{X: 2781, Y: 949}, maths.Pt{X: 2786, Y: 938}}, maths.Line{maths.Pt{X: 2838, Y: 994}, maths.Pt{X: 2853, Y: 975}}, maths.Line{maths.Pt{X: 2739, Y: 930}, maths.Pt{X: 2782, Y: 959}}, maths.Line{maths.Pt{X: 2808, Y: 904}, maths.Pt{X: 2809, Y: 907}}, maths.Line{maths.Pt{X: 2808, Y: 895}, maths.Pt{X: 2811, Y: 894}}, maths.Line{maths.Pt{X: 2857, Y: 894}, maths.Pt{X: 2857, Y: 994}}, maths.Line{maths.Pt{X: 2857, Y: 977}, maths.Pt{X: 2857, Y: 980}}, maths.Line{maths.Pt{X: 2766, Y: 908}, maths.Pt{X: 2770, Y: 911}}, maths.Line{maths.Pt{X: 2805, Y: 902}, maths.Pt{X: 2808, Y: 904}}, maths.Line{maths.Pt{X: 2734, Y: 994}, maths.Pt{X: 2857, Y: 994}}, maths.Line{maths.Pt{X: 2734, Y: 934}, maths.Pt{X: 2735, Y: 936}}, maths.Line{maths.Pt{X: 2734, Y: 934}, maths.Pt{X: 2739, Y: 930}}, maths.Line{maths.Pt{X: 2778, Y: 924}, maths.Pt{X: 2792, Y: 933}}, maths.Line{maths.Pt{X: 2805, Y: 902}, maths.Pt{X: 2808, Y: 895}}, maths.Line{maths.Pt{X: 2734, Y: 894}, maths.Pt{X: 2857, Y: 894}}, maths.Line{maths.Pt{X: 2784, Y: 960}, maths.Pt{X: 2838, Y: 994}}, maths.Line{maths.Pt{X: 2759, Y: 913}, maths.Pt{X: 2786, Y: 938}}, maths.Line{maths.Pt{X: 2759, Y: 913}, maths.Pt{X: 2763, Y: 908}}, maths.Line{maths.Pt{X: 2770, Y: 914}, maths.Pt{X: 2778, Y: 924}}, maths.Line{maths.Pt{X: 2781, Y: 949}, maths.Pt{X: 2785, Y: 953}}, maths.Line{maths.Pt{X: 2770, Y: 911}, maths.Pt{X: 2770, Y: 914}}, maths.Line{maths.Pt{X: 2811, Y: 894}, maths.Pt{X: 2818, Y: 910}}, maths.Line{maths.Pt{X: 2856, Y: 975}, maths.Pt{X: 2857, Y: 977}}, maths.Line{maths.Pt{X: 2763, Y: 908}, maths.Pt{X: 2766, Y: 908}}, maths.Line{maths.Pt{X: 2792, Y: 933}, maths.Pt{X: 2800, Y: 919}}, maths.Line{maths.Pt{X: 2800, Y: 919}, maths.Pt{X: 2809, Y: 907}}, maths.Line{maths.Pt{X: 2734, Y: 894}, maths.Pt{X: 2734, Y: 994}}, maths.Line{maths.Pt{X: 2735, Y: 936}, maths.Pt{X: 2857, Y: 980}}, maths.Line{maths.Pt{X: 2784, Y: 960}, maths.Pt{X: 2818, Y: 910}}}},
+			clipbox: &points.Extent{[2]float64{2734, 894}, [2]float64{2857, 994}},
+		},
+	}
+	fn()
+
+}
+
 func drawMakeValidTestCase(basedir string, filename string, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) error {
 	file, err := _createFile(basedir, filename)
 	if err != nil {
 		return err
 	}
-	defer file.close()
+	defer file.Close()
 	_drawMakeValidPolygons(file, original, expectedPolygon, gotPolygon)
 	return nil
 }

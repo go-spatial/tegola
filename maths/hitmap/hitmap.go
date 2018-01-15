@@ -273,6 +273,9 @@ func (hm *M) LabelFor(pt maths.Pt) maths.Label {
 
 func NewFromPolygon(p tegola.Polygon) (hm M) {
 	sl := p.Sublines()
+	if len(sl) == 0 {
+		return hm
+	}
 	hm.s = make([]Segment, len(sl))
 	hm.s[0] = NewSegment(maths.Inside, sl[0])
 	for i := range sl[1:] {
