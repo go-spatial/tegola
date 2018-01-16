@@ -18,8 +18,8 @@ env:
     - PGUSER="postgres"
     - DOCKERHUB_ORG="gospatial"
     - DOCKERHUB_REPO="tegola"
-    # "COVERALLS_TOKEN" nvp encrypted using travis CLI - contains api key used to post test coverage results to coveralls.io account repo associated w/ github repo - note that this must be regenerated against official tegola repo since it was originally generated against my tegola github fork
-    - secure: Mo8VnGNYL6BKmtcLNcR9lvQuelqs06kvTVq3WIsG8KsjVp+ql6ZEPlhvqdtMfsc7KE69xOpHJA8n6pGJz5PwgUukEmOD32ZjPs0ipdTzFD+DMfaKeKMTKpeUeKqTa2eOhmBsNAv/pWlkEqhwJsKeEH/1DSIblam04HUhpkpSDzS1HJv78bH4YTQlEpkgbkewpGJduG6g2Y9y6J3dr5JAtLYWVsgbbjNJfRw4y/TdxAdZEjWWI2bXVFI/yEHHTiF4y7JOPOyWCy5jmSDimiUnqZGEDWUiLnUHMFyLudVhR9ZkpyMpD46+vjE6SpeMiIhdLAXiRevHUTgJ4sQWbotCkD8HAWzM5sbu+c9UTsS2LyeWEtIGGV/0xM9wrMK+5sBrPec2BR8TE8Kml2SNLTkoT+scphXfmgFx55/61t7eJZu7ysOzUAPRfSf5Ukpwb16Z1KLpXEVG6jfqwR9cfyVfNQzD0ERY33SMitONwPY0ViW3J2yK0djrjA16MKFHRqTyM6Q2H8wcVnFZGVpMLkdpRJlVoOoEn5INXJ4pqsDb+q+95MTUV9GnJRLspOaCb54du6iduJ89H1QbersQNMFGinBz/WR8ZP0pRIzVzxo3oo/9LcVZALPnyQqNLrdZhxr5r9UYmh33NQBK/S3cHARI7rpOQXAI0shWZhGNA8NV1C4=
+    # "COVERALLS_TOKEN" nvp encrypted using travis CLI - contains api key used to post test coverage results to coveralls.io account repo associated w/ github repo
+    - secure: UtUTE+1Qhw2xal+Tcrsiag7H8bOjanksc0h/dmYE0NwC/nXIgmJPkA5zvowaP631Orw2iNeYM7mqOJqiNZ1fV30V4fbELogkDcpJEK9oYxl0xYpPMrd+EMrkm+aRZAnh31pvtxHNzf3lTpg2L3TAREEsDTU5tunxRBysgGjf89hmCWQ7GzN1+qSIIgCCZrX5tdAwUMDztrGc8aQJxhDPJZ+rHeEZ5qASTI7VdJxJ8wez+PmDQRPYp1glqXDU8JCDxhmBrD+8n3YZs/O0P7qEX41Dn670+ZLtZBp/EqbGGN8zOCOH3LrxnnmX/zopyvD0L6i8zkWIYDb0O9wwtahNT4ibT700h0v86B/ii9mvVjo3eSpBIiqfmqfaNuLaIQZl5q/UM9NMhdhYswmhjaBmLf2JEAtH+r7iQc9npR4hwxm7Fc04me3jkgBySE2uQfghAMpIgOwsGN9ip6ktJrvO047rnyMd7Zp95Z2MqoOOr21FS+7dqTTzfNWBf4eWa8sQALsQ54G9JC9CmO4poijcZmXPHcPtWHNvmjMbPHm5u0kYeZyi3XmvANC9N/bSmsMvhWT77ck7yQsiXiaLPNRftQj3YclGeCOz0QXc+vC7ECu9HCazri9NvymwHQ6uFFJMgzrIKDBrOA20cCj8sQwIhysIiwS6PFNEU8gQYApuJUY=
 
 services:
   - postgresql
