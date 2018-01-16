@@ -15,7 +15,7 @@ password = ""               # PostGIS database password (required)
 
 ### Connection Properties
 
-- `name` (string): [Required] provider name is referenced from map layers (required)
+- `name` (string): [Required] provider name is referenced from map layers
 - `type` (string): [Required] the type of data provider. must be "postgis" to use this data provider
 - `host` (string): [Required] PostGIS database host
 - `port` (int): [Required] PostGIS database port (required)
