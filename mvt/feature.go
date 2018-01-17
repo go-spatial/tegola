@@ -432,8 +432,10 @@ func (c *cursor) scalePolygon(g tegola.Polygon) (p basic.Polygon) {
 	for i := range lines {
 		ln := c.scalelinestr(lines[i])
 		if len(ln) < 2 {
-			// skip lines that don't make sense.
-			log.Println("Skipping line 2", lines[i], len(ln))
+			if debug {
+				// skip lines that have been reduced to less then 2 points.
+				log.Println("Skipping line 2", lines[i], len(ln))
+			}
 			continue
 		}
 		p = append(p, ln)

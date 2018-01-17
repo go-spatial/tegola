@@ -109,83 +109,14 @@ func logOutBuildRings(pt2maxy map[maths.Pt]int64, xs []float64, x2pts map[float6
 	return output
 }
 
-func _adjustClipBox(cpbx *points.Extent, plygs [][]maths.Line) (clipbox *points.Extent) {
-
-	var pts [][2]float64
-	for i := range plygs {
-		for j := range plygs[i] {
-			pts = append(
-				pts,
-				[2]float64{plygs[i][j][0].X, plygs[i][j][0].Y},
-				[2]float64{plygs[i][j][1].X, plygs[i][j][1].Y},
-			)
-
-		}
-	}
-
-	// if there is a clipbox, let's adjust it to the polygon.
-	// If what we are working on does not go outside one of the edges of the
-	// clip box, let's bring that edge in. Basically, reduce the amount of
-	// space we are dealing with.
-	bb := points.Extent{pts[0], pts[0]}
-
-	for i := 1; i < len(pts); i++ {
-		// if the point is not in the clipbox we want to ignore it.
-		// pt is outside of the x coords of clipbox.
-		if clipbox != nil {
-			if pts[i][0] < cpbx[0][0] || pts[i][0] > cpbx[1][0] {
-				continue
-			}
-			// pt is outside of the y coords of clipbox.
-			if pts[i][1] < cpbx[0][1] || pts[i][1] > cpbx[1][1] {
-				continue
-			}
-		}
-		if pts[i][0] < bb[0][0] {
-			bb[0][0] = pts[i][0]
-		}
-		if pts[i][1] < bb[0][1] {
-			bb[0][1] = pts[i][1]
-		}
-		if pts[i][0] > bb[1][0] {
-			bb[1][0] = pts[i][0]
-		}
-		if pts[i][1] > bb[1][1] {
-			bb[1][1] = pts[i][1]
-		}
-	}
-	if cpbx == nil {
-		return &bb
-	}
-	clipbox = &points.Extent{cpbx[0], cpbx[1]}
-	if debug {
-		log.Println("Before Clipbox:", clipbox)
-	}
-	if clipbox[0][0] < bb[0][0] {
-		clipbox[0][0] = bb[0][0]
-	}
-	if clipbox[1][0] > bb[1][0] {
-		clipbox[1][0] = bb[1][0]
-	}
-	if clipbox[0][1] < bb[0][1] {
-		clipbox[0][1] = bb[0][1]
-	}
-	if clipbox[1][1] > bb[1][1] {
-		clipbox[1][1] = bb[1][1]
-	}
-	return clipbox
-
-}
-
-const DEBUG = true
-
 func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent, plygs [][]maths.Line) ([][][]maths.Pt, error) {
+
+	if len(plygs) == 0 {
+		return nil, nil
+	}
 
 	// Make copy because we are going to modify the clipbox.
 	clipbox := _adjustClipBox(cpbx, plygs)
-	if DEBUG {
-
-	}
 	// Just trying to clip a polygon that is on the border.
 	if clipbox[0][0] == clipbox[1][0] || clipbox[0][1] == clipbox[1][1] {
 		if debug {
@@ -193,7 +124,6 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 		}
 		return nil, nil
 	}
-	miny, maxy := clipbox[0][1], clipbox[1][1]
 
 	segments := destructure2(plygs, clipbox)
 	if segments == nil {
@@ -208,28 +138,25 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 				log.Println("Destructure5 ended.")
 			}
 		}()
-	}
-	if debug {
-
 		log.Printf("segments /*(%v)*/ := %#v", len(segments), segments)
 		log.Printf("clipbox := %#v", clipbox)
 	}
-	flines, err := splitSegments(ctx, segments, clipbox)
 
+	flines, err := splitSegments(ctx, segments, clipbox)
 	if err != nil {
 		return nil, err
 	}
+
 	if debug {
 		log.Printf("flines := %#v", flines)
 	}
 
 	pts := allPointsForSegments(flines)
-
 	xs := sortUniqueF64(allCoordForPts(0, pts...))
 
 	// Add lines at each x going from the miny to maxy.
 	for i := range xs {
-		flines = append(flines, [2][2]float64{{xs[i], miny}, {xs[i], maxy}})
+		flines = append(flines, [2][2]float64{{xs[i], clipbox[0][1]}, {xs[i], clipbox[1][1]}})
 	}
 
 	lines = maths.NewLinesFloat64(flines...)
@@ -363,7 +290,6 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 }
 
 func MakeValid(ctx context.Context, hm hitmap.Interface, extent *points.Extent, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
-
 	return destructure5(ctx, hm, extent, insureConnected(plygs...))
 }
 

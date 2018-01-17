@@ -2,6 +2,7 @@ package makevalid
 
 import (
 	"context"
+	"log"
 	"sort"
 
 	"github.com/terranodo/tegola/maths"
@@ -152,5 +153,80 @@ func splitLines(ctx context.Context, segments []maths.Line, clipbox *points.Exte
 		return nil, err
 	}
 	return maths.NewLinesFloat64(lns...), nil
+
+}
+
+// _adjustClipBox contracts the clipbox to just the region that the polygon exists in.
+func _adjustClipBox(cpbx *points.Extent, plygs [][]maths.Line) (clipbox *points.Extent) {
+
+	var pts [][2]float64
+	for i := range plygs {
+		for j := range plygs[i] {
+			pts = append(
+				pts,
+				[2]float64{plygs[i][j][0].X, plygs[i][j][0].Y},
+				[2]float64{plygs[i][j][1].X, plygs[i][j][1].Y},
+			)
+
+		}
+	}
+	if len(pts) == 0 {
+		if cpbx == nil {
+			return nil
+		}
+		return &points.Extent{cpbx[0], cpbx[1]}
+	}
+
+	// if there is a clipbox, let's adjust it to the polygon.
+	// If what we are working on does not go outside one of the edges of the
+	// clip box, let's bring that edge in. Basically, reduce the amount of
+	// space we are dealing with.
+	bb := points.Extent{pts[0], pts[0]}
+
+	for i := 1; i < len(pts); i++ {
+		// if the point is not in the clipbox we want to ignore it.
+		// pt is outside of the x coords of clipbox.
+		if clipbox != nil {
+			if pts[i][0] < cpbx[0][0] || pts[i][0] > cpbx[1][0] {
+				continue
+			}
+			// pt is outside of the y coords of clipbox.
+			if pts[i][1] < cpbx[0][1] || pts[i][1] > cpbx[1][1] {
+				continue
+			}
+		}
+		if pts[i][0] < bb[0][0] {
+			bb[0][0] = pts[i][0]
+		}
+		if pts[i][1] < bb[0][1] {
+			bb[0][1] = pts[i][1]
+		}
+		if pts[i][0] > bb[1][0] {
+			bb[1][0] = pts[i][0]
+		}
+		if pts[i][1] > bb[1][1] {
+			bb[1][1] = pts[i][1]
+		}
+	}
+	if cpbx == nil {
+		return &bb
+	}
+	clipbox = &points.Extent{cpbx[0], cpbx[1]}
+	if debug {
+		log.Println("Before Clipbox:", clipbox)
+	}
+	if clipbox[0][0] < bb[0][0] {
+		clipbox[0][0] = bb[0][0]
+	}
+	if clipbox[1][0] > bb[1][0] {
+		clipbox[1][0] = bb[1][0]
+	}
+	if clipbox[0][1] < bb[0][1] {
+		clipbox[0][1] = bb[0][1]
+	}
+	if clipbox[1][1] > bb[1][1] {
+		clipbox[1][1] = bb[1][1]
+	}
+	return clipbox
 
 }
