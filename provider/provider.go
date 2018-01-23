@@ -18,11 +18,13 @@ var ErrCanceled = errors.New("provider: canceled")
 
 type Tile interface {
 	Zoom() uint64
-	Extent() [2][2]float64
+	//	Extent returns the extent of the tile including any
+	//	tile buffer and the SRID the extent values are in
+	Extent() (extent [2][2]float64, srid uint64)
 }
 
 type Tiler interface {
 	// TileFeature will stream decoded features to the callback function fn
 	// if fn returns ErrCanceled, the TileFeatures method should stop processing
-	TileFeatures(ctx context.Context, layer string, t Tile, fn func(f Feature) error) error
+	TileFeatures(ctx context.Context, layer string, t Tile, fn func(f *Feature) error) error
 }

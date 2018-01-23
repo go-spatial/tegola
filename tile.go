@@ -159,6 +159,7 @@ func (t *Tile) ToPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
 	ny := int64((spt[1] - t.extent[0][1]) * t.Extent / t.yspan)
 	return [2]float64{float64(nx), float64(ny)}, nil
 }
+
 func (t *Tile) FromPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
 
 	x := float64(int64(pt[0]))
