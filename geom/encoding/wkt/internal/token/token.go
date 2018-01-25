@@ -236,7 +236,7 @@ func (t *T) ParseMultiPoint() (pts geom.MultiPoint, err error) {
 	}
 	for {
 		t.EatSpace()
-		// Grab the sub points. Need to check to see if there is a (
+		// Grab the sub points. Need to check to see if there is a '('
 		var needRightPren bool
 
 		// First We need to see if there is a '('

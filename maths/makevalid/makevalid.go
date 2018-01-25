@@ -9,24 +9,6 @@ import (
 	"github.com/terranodo/tegola/maths/points"
 )
 
-// destructure will split a polygon up into line segments, that do not interset. If a polygon contains line segments that do interset those line segments will be split at the intersect point. If a clipbox is given, additional line segments representing the boundries of the clip will be added. Any line segments outside of the clip box will be disgarded.
-/*
-func destructure (polygons ...[][][2]float64)(ret [][2][2]float64){
-}
-*/
-
-/*
-func appendUniquePt(pts []maths.Pt, pt maths.Pt) []maths.Pt {
-	for _, p := range pts {
-		if p.IsEqual(pt) {
-			// point is already in the array.
-			return pts
-		}
-	}
-	return append(pts, pt)
-}
-*/
-
 func allCoordForPts(idx int, pts ...[2]float64) (fs []float64) {
 	if idx != 0 && idx != 1 {
 		panic("idx can only be 0 or 1 for x, and y")
@@ -91,21 +73,8 @@ func splitPoints(ctx context.Context, segments []maths.Line) (pts [][]maths.Pt, 
 		if !sline.InBetween(pt) || !dline.InBetween(pt) {
 			return true
 		}
-		/*
-			log.Println("Checking src end points:", !pt.IsEqual(sline[0]), !pt.IsEqual(sline[1]))
-			// Check the end points.
-			if !pt.IsEqual(sline[0]) && !pt.IsEqual(sline[1]) {
-		*/
 		pts[src] = append(pts[src], pt)
-		/*
-			}
-			log.Println("Checking dest end points:", !pt.IsEqual(dline[0]), !pt.IsEqual(dline[1]))
-			if !pt.IsEqual(dline[0]) && !pt.IsEqual(dline[1]) {
-		*/
 		pts[dest] = append(pts[dest], pt)
-		/*
-			}
-		*/
 		return true
 	})
 	if err := ctx.Err(); err != nil {
@@ -156,6 +125,7 @@ func splitLines(ctx context.Context, segments []maths.Line, clipbox *points.Exte
 
 }
 
+// TODO: gdey — This is an intersect. We should move this onto points.Extent
 // _adjustClipBox contracts the clipbox to just the region that the polygon exists in.
 func _adjustClipBox(cpbx *points.Extent, plygs [][]maths.Line) (clipbox *points.Extent) {
 

@@ -13,11 +13,11 @@ use to take a tagola.Geometry and convert it to a wkt string. It will, also,
 contain functions to parse a wkt string into a wkb.Geometry.
 */
 
-type UnknownGeometryError struct {
+type ErrUnknownGeometry struct {
 	Geom geom.Geometry
 }
 
-func (e UnknownGeometryError) Error() string {
+func (e ErrUnknownGeometry) Error() string {
 	return fmt.Sprintf("Unknown Geometry! %v", e.Geom)
 }
 
@@ -67,7 +67,7 @@ func _encode(geo geom.Geometry) string {
 func Encode(geo geom.Geometry) (string, error) {
 	switch g := geo.(type) {
 	default:
-		return "", UnknownGeometryError{geo}
+		return "", ErrUnknownGeometry{geo}
 	case geom.Pointer:
 		// POINT( 10 10)
 		if g == nil {

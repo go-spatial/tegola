@@ -8,13 +8,6 @@ import (
 	"github.com/terranodo/tegola/maths/points"
 )
 
-func linestring2floats(l tegola.LineString) (ls []float64) {
-	for _, p := range l.Subpoints() {
-		ls = append(ls, p.X(), p.Y())
-	}
-	return ls
-}
-
 func LineString(linestr tegola.LineString, extent *points.Extent) (ls []basic.Line, err error) {
 	line := lines.FromTLineString(linestr)
 

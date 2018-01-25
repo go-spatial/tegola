@@ -204,9 +204,11 @@ func TestBuildRingCol(t *testing.T) {
 	)
 	tests.Run(func(idx int, test testcase) {
 		t.Logf("Running %v (%v)", idx, test.desc)
-		//var ys [2][]YEdge
-		// TODO: gdey check error
-		col1, _ := BuildRingCol(context.Background(), test.hm, test.icols[0], test.icols[1], test.pt2my)
+		//TODO: gdey — rewite tests to include err value, and not assume only happy paths.
+		col1, err := BuildRingCol(context.Background(), test.hm, test.icols[0], test.icols[1], test.pt2my)
+		if err != nil {
+			panic(fmt.Sprintf("Bad test %v got err building ring column: %v", idx, err))
+		}
 
 		if ok, reason := ringDiff(&col1, &test.Col, test.testYs); ok {
 			t.Errorf("For %v (%v) %v", idx, test.desc, reason)
@@ -607,8 +609,14 @@ func TestMerge2AdjecentRings(t *testing.T) {
 	// cases }}}1
 	tests.Run(func(idx int, test testcase) {
 		t.Logf("Running %v (%v)", idx, test.desc)
-		col1, _ := BuildRingCol(context.Background(), test.hm, test.icols[0][0], test.icols[0][1], test.pt2my[0])
-		col2, _ := BuildRingCol(context.Background(), test.hm, test.icols[1][0], test.icols[1][1], test.pt2my[1])
+		col1, err := BuildRingCol(context.Background(), test.hm, test.icols[0][0], test.icols[0][1], test.pt2my[0])
+		if err != nil {
+			panic(fmt.Sprintf("Bad test %v got err building ring column: %v", idx, err))
+		}
+		col2, err := BuildRingCol(context.Background(), test.hm, test.icols[1][0], test.icols[1][1], test.pt2my[1])
+		if err != nil {
+			panic(fmt.Sprintf("Bad test %v got err building ring column: %v", idx, err))
+		}
 
 		mcol := merge2AdjectRC(col1, col2)
 		if ok, reason := ringDiff(&mcol, &test.Col, test.testYs); ok {
