@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/terranodo/tegola.svg?branch=master)](https://travis-ci.org/terranodo/tegola)
 [![Report Card](https://goreportcard.com/badge/github.com/terranodo/tegola)](https://goreportcard.com/badge/github.com/terranodo/tegola)
+[![Coverage Status](https://coveralls.io/repos/github/terranodo/tegola/badge.svg?branch=v0.6.0)](https://coveralls.io/github/terranodo/tegola?branch=v0.6.0)
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/terranodo/tegola)
 [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/terranodo/tegola/blob/master/LICENSE.md)
 
@@ -52,7 +53,7 @@ Use "tegola [command] --help" for more information about a command.
 /
 ```
 
-The server root will display a built in viewer with an auto generated style. For example: 
+The server root will display a built in viewer with an auto generated style. For example:
 
 ![tegola built in viewer](https://raw.githubusercontent.com/terranodo/tegola/v0.4.0/docs/screenshots/built-in-viewer.png "tegola built in viewer")
 

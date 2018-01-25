@@ -110,8 +110,8 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m = m.DisableAllLayers().EnableLayersByZoom(tile.Z)
 
 	//	check for the debug query string
-	if req.debug {
-		m = m.EnableDebugLayers()
+	if !req.debug {
+		m = m.DisableDebugLayers()
 	}
 
 	pbyte, err := m.Encode(r.Context(), tile)

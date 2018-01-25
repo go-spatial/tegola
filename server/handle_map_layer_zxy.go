@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/mvt"
@@ -110,11 +111,11 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tile.Buffer = TileBuffer
 
 	//	filter down the layers we need for this zoom
-	m = m.DisableAllLayers().EnableLayersByZoom(tile.Z)
+	m = m.DisableAllLayers().DisableDebugLayers().EnableLayersByZoom(tile.Z)
 
 	//	check for the debug query string
-	if req.debug {
-		m = m.EnableDebugLayers()
+	if !req.debug {
+		m = m.DisableDebugLayers()
 	}
 
 	pbyte, err := m.Encode(r.Context(), tile)
@@ -127,7 +128,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			//	TODO: add debug logs
 			return
 		default:
-			errMsg := fmt.Sprintf("Error marshalling tile: %v", err)
+			errMsg := fmt.Sprintf("error marshalling tile: %v", err)
 			log.Printf(errMsg)
 			http.Error(w, errMsg, http.StatusInternalServerError)
 			return
