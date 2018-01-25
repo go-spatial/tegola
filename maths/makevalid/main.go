@@ -169,41 +169,10 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 	// each point with the value of their x, and the max y value to the next
 	// x.
 
-	x2pts := make(map[float64][]maths.Pt)
-	pt2MaxY := make(map[maths.Pt]int64)
-	clipMaxY100 := int64(clipbox[1][1] * 100)
-	maxY100Val := func(y float64) int64 {
-		y100 := int64(y * 100)
-		if y < clipbox[1][1] {
-			return y100
-		}
-		return clipMaxY100
-	}
-	var add2Maps = func(pt1, pt2 maths.Pt) {
-		x2pts[pt1.X] = append(x2pts[pt1.X], pt1)
-		x2pts[pt2.X] = append(x2pts[pt2.X], pt2)
-		if pt2.X != pt1.X {
-			y1, ok := pt2MaxY[pt1]
-			y100 := maxY100Val(pt2.Y)
+	colptmap := _NewColPtMap(splitPts, clipbox[1][1])
 
-			if !ok || y1 < y100 {
-				pt2MaxY[pt1] = y100
-			}
-		}
-	}
-	for i := range splitPts {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		for j := 1; j < len(splitPts[i]); j++ {
-			add2Maps(splitPts[i][j-1], splitPts[i][j])
-		}
-	}
-
-	// Remove any duplicate points.
-	for i := range xs {
-		x2pts[xs[i]] = points.SortAndUnique(x2pts[xs[i]])
-	}
+	x2pts := colptmap.X2Pt
+	pt2MaxY := colptmap.Pt2MaxY
 
 	// Context cancelled.
 	if err := ctx.Err(); err != nil {

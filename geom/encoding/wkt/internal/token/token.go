@@ -3,6 +3,7 @@ package token
 import (
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 
@@ -219,91 +220,75 @@ func (t *T) ParseMultiPoint() (pts geom.MultiPoint, err error) {
 	switch t.Peek() {
 	case symbol.LeftPren:
 		t.Scan()
+		if debug {
+			log.Println("found Left Pren")
+		}
 	case symbol.Empty:
 		t.Scan()
+		if debug {
+			log.Println("found Empty")
+		}
 		// It's a empty point.
 		return nil, nil
 
 	default:
 		return nil, fmt.Errorf("expected to find “(” or “EMPTY”")
 	}
-	t.EatSpace()
-	// Grab the sub points. Need to check to see if there is a (
-	var needRightPren bool
-	var needLeftPren bool
-
-	if t.Peek() == symbol.LeftPren {
-		t.Scan()
-		needRightPren = true
-	}
-
-	pt, err := t.parsePointValue()
-	//TODO: Only supporting standard points and M and ZM.
-	pts = append(pts, [2]float64{pt[0], pt[1]})
-	// First We need to see if there is a '('
-	if err != nil {
-		return nil, err
-	}
-	t.EatSpace()
-	if needRightPren {
-		if t.Peek() != symbol.RightPren {
-			return nil, fmt.Errorf("expected to find “)”")
-		}
-		t.Scan()
-		needRightPren = false
+	for {
 		t.EatSpace()
+		// Grab the sub points. Need to check to see if there is a (
+		var needRightPren bool
+
+		// First We need to see if there is a '('
+		if t.Peek() == symbol.LeftPren {
+			t.Scan()
+			if debug {
+				log.Println("found Left Pren; setting need for right pren")
+			}
+			needRightPren = true
+		}
+
+		pt, err := t.parsePointValue()
+		if err != nil {
+			return nil, err
+		}
+		//TODO: Only supporting standard points and M and ZM.
+		pts = append(pts, [2]float64{pt[0], pt[1]})
+		t.EatSpace()
+		if needRightPren {
+			if t.Peek() != symbol.RightPren {
+				return nil, fmt.Errorf("expected to find “)”")
+			}
+			t.Scan()
+			if debug {
+				log.Println("Found matching right pren.")
+			}
+			needRightPren = false
+			t.EatSpace()
+		}
+		switch t.Peek() {
+		case symbol.RightPren:
+			t.Scan()
+			if debug {
+				log.Println("found right pren. ending.")
+			}
+			// return the single point.
+			return pts, nil
+		default:
+			return nil, fmt.Errorf("expected to find “,” or “)”")
+		case symbol.Comma:
+			t.Scan()
+			if debug {
+				log.Println("found a comma, looking for more values.")
+			}
+			// Let's loop and get more points.
+		}
 	}
-	switch t.Peek() {
-	case symbol.Comma:
-		t.Scan()
-		// Let's loop and get more points.
-	case symbol.RightPren:
-		t.Scan()
-		// return the single point.
-		return pts, nil
-	default:
-		return nil, fmt.Errorf("expected to find “,” or “)”")
+	if debug {
+		log.Println("Returning empty point.")
 	}
 
 	return nil, nil
-	/*
-		var stringStarted bool
-		for !t.AtEnd() {
-			switch t.Peek() {
-			case symbol.Space, symbol.Newline:
-				// Skip any spaces.
-				t.Scan()
-			case symbol.Comment:
-				// Skip any comments
-				t.ParseComment()
-			case symbol.Lncomment:
-				t.ParseLineComment()
-			case symbol.Pren:
-				stringStarted = true
-				t.Scan()
-			case symbol.Cpren:
-				t.Scan()
-				return pts, nil
-			case symbol.Digit, symbol.Dash, symbol.Dot, symbol.Plus:
-				if !stringStarted {
-					return nil, fmt.Errorf("Expected '(', found '%v'", t.NextText())
-				}
-				// Looks like a number, assume we have a point.
-				pt, err := t.ParsePoint()
-				if err != nil {
-					return nil, err
-				}
-				pts = append(pts, pt)
-
-			default:
-				if !stringStarted {
-					return nil, fmt.Errorf("Expected '(', found '%v'", t.NextText())
-				}
-				return nil, fmt.Errorf("Expected point or ')' not '%v'", t.NextText())
-			}
-		}
-		return nil, fmt.Errorf("Expected point or ')' not end of file.")
-	*/
 }
 
 /*

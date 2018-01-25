@@ -205,7 +205,8 @@ func TestBuildRingCol(t *testing.T) {
 	tests.Run(func(idx int, test testcase) {
 		t.Logf("Running %v (%v)", idx, test.desc)
 		//var ys [2][]YEdge
-		col1 := BuildRingCol(context.Background(), test.hm, test.icols[0], test.icols[1], test.pt2my)
+		// TODO: gdey check error
+		col1, _ := BuildRingCol(context.Background(), test.hm, test.icols[0], test.icols[1], test.pt2my)
 
 		if ok, reason := ringDiff(&col1, &test.Col, test.testYs); ok {
 			t.Errorf("For %v (%v) %v", idx, test.desc, reason)
@@ -606,8 +607,8 @@ func TestMerge2AdjecentRings(t *testing.T) {
 	// cases }}}1
 	tests.Run(func(idx int, test testcase) {
 		t.Logf("Running %v (%v)", idx, test.desc)
-		col1 := BuildRingCol(context.Background(), test.hm, test.icols[0][0], test.icols[0][1], test.pt2my[0])
-		col2 := BuildRingCol(context.Background(), test.hm, test.icols[1][0], test.icols[1][1], test.pt2my[1])
+		col1, _ := BuildRingCol(context.Background(), test.hm, test.icols[0][0], test.icols[0][1], test.pt2my[0])
+		col2, _ := BuildRingCol(context.Background(), test.hm, test.icols[1][0], test.icols[1][1], test.pt2my[1])
 
 		mcol := merge2AdjectRC(col1, col2)
 		if ok, reason := ringDiff(&mcol, &test.Col, test.testYs); ok {

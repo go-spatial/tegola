@@ -15,9 +15,10 @@ a bit of complexity to it.
 */
 func TestRotateToLeftMostPoint(t *testing.T) {
 
-	fn := func(idx int, tc [][2]float64) {
+	fn := func(t *testing.T, tc [][2]float64) {
+		t.Parallel()
 		if len(tc) == 0 {
-			panic(fmt.Sprintf("[%v] bad test case Zero or nil.", idx))
+			panic(fmt.Sprintf("bad test case Zero or nil."))
 			return
 		}
 		// First we need to find the smallest point as defined by XYLessPoint.
@@ -28,12 +29,12 @@ func TestRotateToLeftMostPoint(t *testing.T) {
 		copy(ctc, tc)
 		RotateToLeftMostPoint(ctc)
 		if ctc[0][0] != minpt[0] || ctc[0][1] != minpt[1] {
-			t.Errorf("[%v] first point should be the smallest point, Expected %v Got %v", idx, minpt, ctc[0])
+			t.Errorf("first point should be the smallest point, expected %v got %v", minpt, ctc[0])
 		}
 		j := minptidx
 		for i := 0; i < len(ctc); i++ {
 			if ctc[i][0] != tc[j][0] || ctc[i][1] != tc[j][1] {
-				t.Errorf("[%v] points are not in the correct order, Expected %v(%v) Got %v(%v);", idx, i, ctc[i], j, tc[j])
+				t.Errorf("points are not in the correct order, expected %v(%v) got %v(%v)", i, ctc[i], j, tc[j])
 			}
 			j++
 			if j >= len(tc) {
@@ -41,15 +42,19 @@ func TestRotateToLeftMostPoint(t *testing.T) {
 			}
 		}
 	}
+	tests := map[string][][2]float64{
 
-	tbltest.Cases(
-		[][2]float64{{11, 10}, {9, 8}, {7, 6}, {5, 4}},
-		[][2]float64{{0, 10}, {9, 8}, {7, 6}, {5, 4}},
-		[][2]float64{{0, 10}},
-		[][2]float64{{3, 100}, {4, -5}, {6, 90}, {4, 15}},
-		[][2]float64{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
-		[][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
-	).Run(fn)
+		"1": [][2]float64{{11, 10}, {9, 8}, {7, 6}, {5, 4}},
+		"2": [][2]float64{{0, 10}, {9, 8}, {7, 6}, {5, 4}},
+		"3": [][2]float64{{0, 10}},
+		"4": [][2]float64{{3, 100}, {4, -5}, {6, 90}, {4, 15}},
+		"5": [][2]float64{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
+		"6": [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestPoint(t *testing.T) {
@@ -60,7 +65,7 @@ func TestPoint(t *testing.T) {
 	}
 
 	fn := func(idx int, tc tc) {
-		if tc.e != Point(tc.p1, tc.p2) {
+		if tc.e != PointEqual(tc.p1, tc.p2) {
 			t.Errorf("[%v] Points are same, Expected %v Got %v", idx, tc.e, !tc.e)
 		}
 	}
@@ -87,7 +92,7 @@ func TestMultiPoint(t *testing.T) {
 	}
 
 	fn := func(idx int, tc tc) {
-		if tc.e != MultiPoint(tc.l1, tc.l2) {
+		if tc.e != MultiPointEqual(tc.l1, tc.l2) {
 			t.Errorf("[%v] MultiPoint are same, Expected %v Got %v", idx, tc.e, !tc.e)
 		}
 	}
@@ -152,7 +157,7 @@ func TestLineString(t *testing.T) {
 	}
 
 	fn := func(idx int, tc tc) {
-		if tc.e != LineString(tc.l1, tc.l2) {
+		if tc.e != LineStringEqual(tc.l1, tc.l2) {
 			t.Errorf("[%v] LineString are same, Expected %v Got %v", idx, tc.e, !tc.e)
 		}
 	}
@@ -216,7 +221,7 @@ func TestPolygon(t *testing.T) {
 	}
 
 	fn := func(idx int, tc tc) {
-		if tc.e != Polygon(tc.ply1, tc.ply2) {
+		if tc.e != PolygonEqual(tc.ply1, tc.ply2) {
 			t.Errorf("[%v] Polygon are same, Expected %v Got %v", idx, tc.e, !tc.e)
 		}
 	}

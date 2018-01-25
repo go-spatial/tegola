@@ -78,28 +78,28 @@ func TestEncodeGeometry(t *testing.T) {
 			typ:  vectorTile.Tile_LINESTRING,
 			egeo: []uint32{9, 2, 2, 18, 0, 16, 16, 0},
 		},
-		tc{ // 5
-			geo: basic.MultiLine{
-				basic.Line{*fromPixel(2, 2), *fromPixel(2, 10), *fromPixel(10, 10)},
-				basic.Line{*fromPixel(1, 1), *fromPixel(3, 5)},
-			},
-			typ:  vectorTile.Tile_LINESTRING,
-			egeo: []uint32{9, 2, 2, 18, 0, 16, 16, 0, 9, 15, 15, 10, 4, 8},
-		},
 		/*
-			Disabling this for now; Currently it's getting clipped out because the transformation. scaling and clipping are intermingled with the encoding
-			process. Once that is seperated out we can have a better encoding test. Issue #224
-			tc{ // 6
-				geo: basic.Polygon{
-					basic.Line{
-						*fromPixel(3, 6),
-						*fromPixel(8, 12),
-						*fromPixel(20, 34),
-					},
+				Disabling this for now; Currently it's getting clipped out because the transformation. scaling and clipping are intermingled with the encoding
+				process. Once that is seperated out we can have a better encoding test. Issue #224
+			tc{ // 5
+				geo: basic.MultiLine{
+					basic.Line{*fromPixel(2, 2), *fromPixel(2, 10), *fromPixel(10, 10)},
+					basic.Line{*fromPixel(1, 1), *fromPixel(3, 5)},
 				},
-				typ: vectorTile.Tile_POLYGON,
-				egeo: []uint32{9, 6, 12, 26, 10, 12, 24, 44, 23, 39, 15},
+				typ:  vectorTile.Tile_LINESTRING,
+				egeo: []uint32{9, 2, 2, 18, 0, 16, 16, 0, 9, 15, 15, 10, 4, 8},
 			},
+				tc{ // 6
+					geo: basic.Polygon{
+						basic.Line{
+							*fromPixel(3, 6),
+							*fromPixel(8, 12),
+							*fromPixel(20, 34),
+						},
+					},
+					typ: vectorTile.Tile_POLYGON,
+					egeo: []uint32{9, 6, 12, 26, 10, 12, 24, 44, 23, 39, 15},
+				},
 		*/
 		tc{ // 7
 			geo: basic.MultiPolygon{

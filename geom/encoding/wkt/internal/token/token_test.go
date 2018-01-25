@@ -131,31 +131,39 @@ func TestParseMultiPointe(t *testing.T) {
 		exp   geom.MultiPoint
 		err   error
 	}
-	fn := func(idx int, test tcase) {
+
+	var tests map[string]tcase
+
+	fn := func(t *testing.T, test tcase) {
+		t.Parallel()
 		tt := NewT(strings.NewReader(test.input))
 		mpt, err := tt.ParseMultiPoint()
 		if msg, expstr, gotstr, ok := assertError(test.err, err); !ok {
 			if msg != "" {
-				t.Errorf("[%v] %v, Expected %v Got %v", idx, msg, expstr, gotstr)
+				t.Errorf("%v, Expected %v Got %v", msg, expstr, gotstr)
 			}
 			return
 		}
 		if !reflect.DeepEqual(test.exp, mpt) {
-			t.Errorf("[%v] did not get correct multipoint values, Expected %v Got %v", idx, test.exp, mpt)
+			t.Errorf("did not get correct multipoint values, Expected %v Got %v", test.exp, mpt)
 		}
 
 	}
-	tbltest.Cases(
-		tcase{input: "MultiPoint EMPTY"},
-		tcase{
+	tests = map[string]tcase{
+		"empty": tcase{input: "MultiPoint EMPTY"},
+		"without pren": tcase{
 			input: "MULTIPOINT ( 10 10, 12 12 )",
-			exp:   &geom.MultiPoint{{10, 10}, {12, 12}},
+			exp:   geom.MultiPoint{{10, 10}, {12, 12}},
 		},
-		tcase{
+		"with pren": tcase{
 			input: "MULTIPOINT ( (10 10), (12 12) )",
-			exp:   &geom.MultiPoint{{10, 10}, {12, 12}},
+			exp:   geom.MultiPoint{{10, 10}, {12, 12}},
 		},
-	).Run(fn)
+	}
+	for name, test := range tests {
+		test := test // make copy
+		t.Run(name, func(t *testing.T) { fn(t, test) })
+	}
 }
 
 func TestParseFloat64(t *testing.T) {
