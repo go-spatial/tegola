@@ -1,47 +1,35 @@
 package cmp
 
 import (
+	"math"
 	"sort"
 
 	"github.com/terranodo/tegola/geom"
 )
 
-type CmpType int8
+const TOLERANCE = 0.000001
 
-const (
-	Less    CmpType = -1
-	Equal           = 0
-	Greater         = 1
-)
+// Float64 compares two floats to see if they are within the given tolerance.
+func Float64(f1, f2, tolerance float64) bool { return math.Abs(f1-f2) < tolerance }
+
+// Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.
+func Float(f1, f2 float64) bool { return Float64(f1, f2, TOLERANCE) }
 
 // BoundingBox will check to see if the BoundingBox's are the same.
 func BoundingBox(bbox1, bbox2 [2][2]float64) bool {
-	return bbox1[0][0] == bbox2[0][0] && bbox1[0][1] == bbox2[0][1] &&
-		bbox1[1][0] == bbox2[1][0] && bbox1[1][1] == bbox2[1][1]
+
+	return Float(bbox1[0][0], bbox2[0][0]) && Float(bbox1[0][1], bbox2[0][1]) &&
+		Float(bbox1[1][0], bbox2[1][0]) && Float(bbox1[1][1], bbox2[1][1])
 }
 
-func Point(p1, p2 [2]float64) CmpType {
-	// comparing floats suck. We are going to be only accurate up to 2 places.
-	p1x, p1y := int64(p1[0]*100), int64(p1[1]*100)
-	p2x, p2y := int64(p2[0]*100), int64(p2[1]*100)
-	switch {
-	case p1x == p2x:
-		switch {
-		case p1y == p2y:
-			return Equal
-		case p1y < p2y:
-			return Less
-		default:
-			return Greater
-		}
-	case p1x < p2x:
-		return Less
-	default:
-		return Greater
+func PointLess(p1, p2 [2]float64) bool {
+	if p1[0] != p2[0] {
+		return p1[0] < p2[0]
 	}
+	return p1[1] < p2[1]
 }
 
-func PointEqual(p1, p2 [2]float64) bool { return Point(p1, p2) == Equal }
+func PointEqual(p1, p2 [2]float64) bool { return Float(p1[0], p2[0]) && Float(p1[1], p2[1]) }
 
 // MultiPoint will check to see see if the given slices are the same.
 func MultiPointEqual(p1, p2 [][2]float64) bool {
@@ -168,36 +156,35 @@ func CollectionerEqual(col1, col2 geom.Collectioner) bool {
 }
 
 func GeometryEqual(g1, g2 geom.Geometry) bool {
-	var cont, ok bool
 	switch pg1 := g1.(type) {
 	case geom.Pointer:
 		if pg2, ok := g2.(geom.Pointer); ok {
-			cont = PointerEqual(pg1, pg2)
+			return PointerEqual(pg1, pg2)
 		}
 	case geom.MultiPointer:
 		if pg2, ok := g2.(geom.MultiPointer); ok {
-			cont = MultiPointerEqual(pg1, pg2)
+			return MultiPointerEqual(pg1, pg2)
 		}
 	case geom.LineStringer:
 		if pg2, ok := g2.(geom.LineStringer); ok {
-			cont = LineStringerEqual(pg1, pg2)
+			return LineStringerEqual(pg1, pg2)
 		}
 	case geom.MultiLineStringer:
 		if pg2, ok := g2.(geom.MultiLineStringer); ok {
-			cont = MultiLineStringerEqual(pg1, pg2)
+			return MultiLineStringerEqual(pg1, pg2)
 		}
 	case geom.Polygoner:
 		if pg2, ok := g2.(geom.Polygoner); ok {
-			cont = PolygonerEqual(pg1, pg2)
+			return PolygonerEqual(pg1, pg2)
 		}
 	case geom.MultiPolygoner:
 		if pg2, ok := g2.(geom.MultiPolygoner); ok {
-			cont = MultiPolygonerEqual(pg1, pg2)
+			return MultiPolygonerEqual(pg1, pg2)
 		}
 	case geom.Collectioner:
 		if pg2, ok := g2.(geom.Collectioner); ok {
-			cont = CollectionerEqual(pg1, pg2)
+			return CollectionerEqual(pg1, pg2)
 		}
 	}
-	return ok && cont
+	return false
 }

@@ -3,8 +3,6 @@ package cmp
 import (
 	"fmt"
 	"testing"
-
-	"github.com/gdey/tbltest"
 )
 
 /*
@@ -64,24 +62,29 @@ func TestPoint(t *testing.T) {
 		e  bool
 	}
 
-	fn := func(idx int, tc tc) {
+	fn := func(t *testing.T, tc tc) {
 		if tc.e != PointEqual(tc.p1, tc.p2) {
-			t.Errorf("[%v] Points are same, Expected %v Got %v", idx, tc.e, !tc.e)
+			t.Errorf("Points are equal, expected %v got %v", tc.e, !tc.e)
 		}
 	}
 
-	tbltest.Cases(
-		tc{
+	tests := map[string]tc{
+		"0": tc{
 			p1: [2]float64{1, 2},
 			p2: [2]float64{1, 2},
 			e:  true,
 		},
-		tc{
+		"1": tc{
 			p1: [2]float64{1, 1},
 			p2: [2]float64{1, 2},
 			e:  false,
 		},
-	).Run(fn)
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+
 }
 
 func TestMultiPoint(t *testing.T) {
@@ -91,62 +94,67 @@ func TestMultiPoint(t *testing.T) {
 		e  bool
 	}
 
-	fn := func(idx int, tc tc) {
+	fn := func(t *testing.T, tc tc) {
 		if tc.e != MultiPointEqual(tc.l1, tc.l2) {
-			t.Errorf("[%v] MultiPoint are same, Expected %v Got %v", idx, tc.e, !tc.e)
+			t.Errorf("MultiPoint are equal, expected %v got %v", tc.e, !tc.e)
 		}
 	}
 
-	tbltest.Cases(
-		tc{
+	tests := map[string]tc{
+		"0": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		tc{
+		"1": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		tc{
+		"2": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 4}, {1, 5}, {1, 2}, {1, 3}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		tc{
+		"3": tc{
 			// Simple test.
 			l1: [][2]float64{},
 			l2: [][2]float64{},
 			e:  true,
 		},
-		tc{
+		"4": tc{
 			// Simple test.
 			l1: nil,
 			l2: [][2]float64{},
 			e:  true,
 		},
-		tc{
+		"5": tc{
 			// Simple test.
 			l1: nil,
 			l2: nil,
 			e:  true,
 		},
-		tc{
+		"6": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 5}, {1, 2}, {1, 4}, {1, 4}},
 			e:  false,
 		},
-		tc{
+		"7": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}},
 			e:  false,
 		},
-	).Run(fn)
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestLineString(t *testing.T) {
@@ -156,62 +164,66 @@ func TestLineString(t *testing.T) {
 		e  bool
 	}
 
-	fn := func(idx int, tc tc) {
+	fn := func(t *testing.T, tc tc) {
 		if tc.e != LineStringEqual(tc.l1, tc.l2) {
-			t.Errorf("[%v] LineString are same, Expected %v Got %v", idx, tc.e, !tc.e)
+			t.Errorf("LineString equal, expected %v got %v", tc.e, !tc.e)
 		}
 	}
 
-	tbltest.Cases(
-		tc{
+	tests := map[string]tc{
+		"0": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		tc{
+		"1": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		tc{
+		"2": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 4}, {1, 5}, {1, 2}, {1, 3}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		tc{
+		"3": tc{
 			// Simple test.
 			l1: [][2]float64{},
 			l2: [][2]float64{},
 			e:  true,
 		},
-		tc{
+		"4": tc{
 			// Simple test.
 			l1: nil,
 			l2: [][2]float64{},
 			e:  true,
 		},
-		tc{
+		"5": tc{
 			// Simple test.
 			l1: nil,
 			l2: nil,
 			e:  true,
 		},
-		tc{
+		"6": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}},
 			e:  false,
 		},
-		tc{
+		"7": tc{
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 5}, {1, 2}, {1, 4}, {1, 4}},
 			e:  false,
 		},
-	).Run(fn)
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestPolygon(t *testing.T) {
@@ -220,43 +232,47 @@ func TestPolygon(t *testing.T) {
 		e          bool
 	}
 
-	fn := func(idx int, tc tc) {
+	fn := func(t *testing.T, tc tc) {
 		if tc.e != PolygonEqual(tc.ply1, tc.ply2) {
-			t.Errorf("[%v] Polygon are same, Expected %v Got %v", idx, tc.e, !tc.e)
+			t.Errorf("polygons equal, expected %v got %v", tc.e, !tc.e)
 		}
 	}
 
 	/***** TEST CASES ******/
-	tbltest.Cases(
-		tc{
+	tests := map[string]tc{
+		"0": tc{
 			// Simple test.
 			ply1: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			ply2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			e:    true,
 		},
-		tc{
+		"1": tc{
 			// Simple test.
 			ply1: [][][2]float64{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}},
 			ply2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			e:    true,
 		},
-		tc{
+		"2": tc{
 			// Simple test.
 			ply1: [][][2]float64{},
 			ply2: [][][2]float64{},
 			e:    true,
 		},
-		tc{
+		"3": tc{
 			// Simple test.
 			ply1: nil,
 			ply2: [][][2]float64{},
 			e:    true,
 		},
-		tc{
+		"4": tc{
 			// Simple test.
 			ply1: nil,
 			ply2: nil,
 			e:    true,
 		},
-	).Run(fn)
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }

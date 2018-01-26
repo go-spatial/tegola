@@ -27,8 +27,8 @@ func LineString(linestr tegola.LineString, extent *points.Extent) (ls []basic.Li
 					cpts = append(cpts, ipts[0])
 
 				} else {
-					isLess := cmp.Point(line[i-1], line[i]) == cmp.Less
-					isCLess := cmp.Point(ipts[0], ipts[1]) == cmp.Less
+					isLess := cmp.PointLess(line[i-1], line[i])
+					isCLess := cmp.PointLess(ipts[0], ipts[1])
 					idx := 1
 					if isLess == isCLess {
 						idx = 0
@@ -42,8 +42,8 @@ func LineString(linestr tegola.LineString, extent *points.Extent) (ls []basic.Li
 			if ipts, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok && len(ipts) > 1 {
 				// If this is the case return the line
 				// We need to keep the direction.
-				isLess := cmp.Point(line[i-1], line[i]) == cmp.Less
-				isCLess := cmp.Point(ipts[0], ipts[1]) == cmp.Less
+				isLess := cmp.PointLess(line[i-1], line[i])
+				isCLess := cmp.PointLess(ipts[0], ipts[1])
 				f, s := 0, 1
 				if isLess != isCLess {
 					f, s = 1, 0
