@@ -1,21 +1,29 @@
 package cmp
 
 import (
+	"math"
 	"sort"
 
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/util"
 )
 
+const TOLERANCE = 0.000001
+
+// Float64 compares two floats to see if they are within the given tolerance.
+func Float64(f1, f2, tolerance float64) bool { return math.Abs(f1-f2) < tolerance }
+
+// Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.
+func Float(f1, f2 float64) bool { return Float64(f1, f2, TOLERANCE) }
+
 // BoundingBox will check to see if the BoundingBox's are the same.
 func BoundingBox(bbox1, bbox2 [2][2]float64) bool {
-	return bbox1[0][0] == bbox2[0][0] && bbox1[0][1] == bbox2[0][1] &&
-		bbox1[1][0] == bbox2[1][0] && bbox1[1][1] == bbox2[1][1]
+
+	return Float(bbox1[0][0], bbox2[0][0]) && Float(bbox1[0][1], bbox2[0][1]) &&
+		Float(bbox1[1][0], bbox2[1][0]) && Float(bbox1[1][1], bbox2[1][1])
 }
 
-func Point(p1, p2 [2]float64) bool {
-	return p1[0] == p2[0] && p1[1] == p2[1]
-}
+func Point(p1, p2 [2]float64) bool { return Float(p1[0], p2[0]) && Float(p1[1], p2[1]) }
 
 // MultiPoint will check to see see if the given slices are the same.
 func MultiPoint(p1, p2 [][2]float64) bool {
@@ -140,36 +148,35 @@ func Collectioner(col1, col2 geom.Collectioner) bool {
 }
 
 func Geometry(g1, g2 geom.Geometry) bool {
-	var cont, ok bool
 	switch pg1 := g1.(type) {
 	case geom.Pointer:
 		if pg2, ok := g2.(geom.Pointer); ok {
-			cont = Pointer(pg1, pg2)
+			return Pointer(pg1, pg2)
 		}
 	case geom.MultiPointer:
 		if pg2, ok := g2.(geom.MultiPointer); ok {
-			cont = MultiPointer(pg1, pg2)
+			return MultiPointer(pg1, pg2)
 		}
 	case geom.LineStringer:
 		if pg2, ok := g2.(geom.LineStringer); ok {
-			cont = LineStringer(pg1, pg2)
+			return LineStringer(pg1, pg2)
 		}
 	case geom.MultiLineStringer:
 		if pg2, ok := g2.(geom.MultiLineStringer); ok {
-			cont = MultiLineStringer(pg1, pg2)
+			return MultiLineStringer(pg1, pg2)
 		}
 	case geom.Polygoner:
 		if pg2, ok := g2.(geom.Polygoner); ok {
-			cont = Polygoner(pg1, pg2)
+			return Polygoner(pg1, pg2)
 		}
 	case geom.MultiPolygoner:
 		if pg2, ok := g2.(geom.MultiPolygoner); ok {
-			cont = MultiPolygoner(pg1, pg2)
+			return MultiPolygoner(pg1, pg2)
 		}
 	case geom.Collectioner:
 		if pg2, ok := g2.(geom.Collectioner); ok {
-			cont = Collectioner(pg1, pg2)
+			return Collectioner(pg1, pg2)
 		}
 	}
-	return ok && cont
+	return false
 }
