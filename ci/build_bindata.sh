@@ -12,9 +12,10 @@ build_bindata() {
 	#	fetch our bindata tooling
 	go_install github.com/jteeuwen/go-bindata
 	go_install github.com/elazarl/go-bindata-assetfs
+	ls -l $GOPATH/bin
 
 	#	change directory to the location of this script
-	cd "$(dirname "$0")"
+	cd $CI_DIR
 	#	move to our server directory
 	cd ../server
 
