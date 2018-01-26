@@ -25,6 +25,14 @@ func (l Line) AsPts() []maths.Pt {
 	return line
 }
 
+// TODO: gdey remove this function when we have moved over to geomLinestring.
+func (l Line) AsGeomLineString() (ln [][2]float64) {
+	for i := range l {
+		ln = append(ln, [2]float64{l[i].X(), l[i].Y()})
+	}
+	return ln
+}
+
 // Contains tells you weather the given point is contained by the Linestring.
 // This assumes the linestring is a connected linestring.
 func (l Line) Contains(pt Point) bool {

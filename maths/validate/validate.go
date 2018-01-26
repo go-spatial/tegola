@@ -75,16 +75,67 @@ func makePolygonValid(ctx context.Context, hm *hitmap.M, extent *points.Extent, 
 	return mp, err
 }
 
+func scalePolygon(p tegola.Polygon, factor float64) (bp basic.Polygon) {
+	lines := p.Sublines()
+	bp = make(basic.Polygon, len(lines))
+	for i := range lines {
+		pts := lines[i].Subpoints()
+		bp[i] = make(basic.Line, len(pts))
+		for j := range pts {
+			bp[i][j] = basic.Point{pts[j].X() * factor, pts[j].Y() * factor}
+		}
+	}
+	return bp
+}
+func scaleMultiPolygon(p tegola.MultiPolygon, factor float64) (bmp basic.MultiPolygon) {
+	polygons := p.Polygons()
+	bmp = make(basic.MultiPolygon, len(polygons))
+	for i := range polygons {
+		bmp[i] = scalePolygon(polygons[i], factor)
+	}
+	return bmp
+}
+
 func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *points.Extent) (geo tegola.Geometry, err error) {
 	if g == nil {
 		return nil, nil
 	}
-	hm := hitmap.NewFromGeometry(g)
+	var ext *points.Extent
 	switch gg := g.(type) {
 	case tegola.Polygon:
-		return makePolygonValid(ctx, &hm, extent, gg)
+		expp := scalePolygon(gg, 10.0)
+		hm := hitmap.NewFromGeometry(expp)
+
+		if extent != nil {
+			ext = &points.Extent{
+				{extent[0][0] * 10.0, extent[0][1] * 10.0},
+				{extent[1][0] * 10.0, extent[1][1] * 10.0},
+			}
+		}
+		mp, err := makePolygonValid(ctx, &hm, ext, expp)
+		if err != nil {
+			return nil, err
+		}
+		return scaleMultiPolygon(mp, 0.10), nil
+
+		//return makePolygonValid(ctx, &hm, extent, gg)
 	case tegola.MultiPolygon:
-		return makePolygonValid(ctx, &hm, extent, gg.Polygons()...)
+		expp := scaleMultiPolygon(gg, 10.0)
+		hm := hitmap.NewFromGeometry(expp)
+
+		if extent != nil {
+			ext = &points.Extent{
+				{extent[0][0] * 10.0, extent[0][1] * 10.0},
+				{extent[1][0] * 10.0, extent[1][1] * 10.0},
+			}
+		}
+		mp, err := makePolygonValid(ctx, &hm, ext, expp.Polygons()...)
+		if err != nil {
+			return nil, err
+		}
+		return scaleMultiPolygon(mp, 0.10), nil
+		//return makePolygonValid(ctx, &hm, ext, gg.Polygons()...)
+
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		lns := gg.Lines()

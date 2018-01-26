@@ -133,7 +133,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	mimetype for protocol buffers
 	w.Header().Add("Content-Type", "application/x-protobuf")
-
+	w.WriteHeader(http.StatusOK)
 	w.Write(pbyte)
 
 	//	check for tile size warnings

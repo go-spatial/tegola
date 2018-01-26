@@ -2,6 +2,7 @@ package plyg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -15,6 +16,8 @@ import (
 	"github.com/terranodo/tegola/maths/hitmap"
 	"github.com/terranodo/tegola/maths/points"
 )
+
+var ColLenghtErr = errors.New("Col's need to have length of at least 2")
 
 type Ring struct {
 	Points []maths.Pt
@@ -140,11 +143,21 @@ YLoop:
 
 	}
 }
+func hitpoint(pt1, pt2, pt3 maths.Pt) maths.Pt {
+	tri := maths.Triangle{pt1, pt2, pt3}
+	sort.Sort(&tri)
+	if tri[0].X == tri[1].X {
+		return maths.Pt{tri[0].X + 1, float64(int64((tri[0].Y - tri[1].Y) / 2))}
+	}
+	return maths.Pt{tri[1].X - 1, float64(int64((tri[0].Y - tri[1].Y) / 2))}
+
+}
 func (rc *RingCol) addPts(hm hitmap.Interface, b *Builder, pts1, pts2 []maths.Pt) {
 	pts := append(append([]maths.Pt{}, pts1...), pts2...)
 
 	tri := maths.Triangle{pts[0], pts[1], pts[2]}
 	label := hm.LabelFor(tri.Center())
+	// label := hm.LabelFor(hitpoint(pts[0], pts[1], pts[2]))
 	if ring, x1, y1s, x2, y2s, new := b.AddPts(label, pts1, pts2); new {
 		// We have a new ring.
 		ridx := len(rc.Rings)
@@ -396,43 +409,138 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 
 }
 
-func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.Pt, pt2my map[maths.Pt]int64) (col RingCol) {
+type tri [4]int
+
+// getTriangle tries to return a set of triangles in the col1 and col2, it returns the indexs of of the columns where it stopped.
+// Col1idx will be 0 or 1, whereas col2idx could be greater then 1.
+func getTriangles(pt2maxy map[maths.Pt]int64, col1, col2 []maths.Pt) (tris []tri, col1idx int, col2idx int, err error) {
+
+	/*
+		defer func() {
+			log.Println("returning: ", "\ncol1  :", col1, "\ncol2  :", col2, "\nvalues:", tris, col1idx, col2idx, err)
+		}()
+	*/
+	clen1, clen2 := len(col1), len(col2)
+	// Check that we have four points to work with.
+	switch {
+	case clen1 == 0 || clen2 == 0:
+		return nil, 0, 0, ColLenghtErr
+	case clen1 < 2 && clen2 < 2:
+		return nil, 0, 0, ColLenghtErr
+	case clen1 == 1:
+		// col1      col2
+		//          + 0
+		//         /|
+		//        / |
+		//       /  |
+		//      /   |
+		//     /    |
+		//  0 +-----+ 1
+		return []tri{tri{0, 1, 0, 2}}, 0, 1, nil
+	case clen2 == 1:
+		// col1      col2
+		//  0 +
+		//    |\
+		//    | \
+		//    |  \
+		//    |   \
+		//    |    \
+		//  1 +-----+ 0
+		return []tri{tri{0, 2, 0, 1}}, 1, 0, nil
+
+	}
+
+	// try to draw a line from col2[0] to col1[1]:
+	// col1      col2
+	//  0 +-----+ 0
+	//    |    /|
+	//    |   / |
+	//    |  /  |
+	//    | /   |
+	//    |/    |
+	//  1 +-----+ 1
+	maxy, ok := pt2maxy[col1[0]]
+	if !ok || maxy <= int64(col2[0].Y*100) {
+		// We can draw the line, so let's return the simple triangles.
+		tris = append(tris, tri{0, 2, 0, 1})
+		idx := 0
+		// check that col2[1].Y is >= col1[1].Y
+		if int64(col2[1].Y*100) <= int64(col1[1].Y*100) {
+			idx = 1
+			tris = append(tris, tri{1, 1, 0, 2})
+		}
+		return tris, 1, idx, nil
+	}
+	// we can not if there is a line from col1[0] headed below col2[0].Y
+	// 0 +-----+ 0
+	//   |\   /|
+	//   | \/  |
+	// 1 +  x  + 1
+	//   |   \ |
+	//   |    \|
+	// 2 +     + 2
+
+	// First thing we have to do is find a point in col2 that the maxy maps to, or the last point.
+	// As we look for the points, we will generate triangles along the line.
+	// Now we need to locate the point on col2 who's y is greater then the ymax.
+	// We will always add Triangle{col1[0],col2[0],col2[1]}
+	idx := 1
+	for ; idx <= len(col2) && int64(col2[idx].Y*100) < maxy; idx++ {
+		tris = append(tris, tri{0, 1, idx - 1, 2})
+	}
+	// Add the final triangle.
+	tris = append(tris, tri{0, 1, idx - 1, 2}, tri{0, 2, idx, 1})
+	return tris, 1, idx, nil
+}
+
+func _getTrianglesForCol(ctx context.Context, pt2maxy map[maths.Pt]int64, col1, col2 []maths.Pt) (tris []tri, err error) {
+	// Get all the triangles
+	i := 0
+	for j := 0; j < len(col2); {
+		// Context cancelled.
+		if ctx.Err() != nil {
+			return nil, context.Canceled
+		}
+		ttris, col1idx, col2idx, err := getTriangles(pt2maxy, col1[i:], col2[j:])
+		if err != nil {
+			return nil, err
+		}
+		for t := range ttris {
+			tris = append(tris, tri{ttris[t][0] + i, ttris[t][1], ttris[t][2] + j, ttris[t][3]})
+		}
+		i, j = i+col1idx, j+col2idx
+		if i == len(col1)-1 && j == len(col2)-1 {
+			break
+		}
+	}
+	return tris, nil
+}
+
+// TODO: Gdey have this return and error.
+func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.Pt, pt2my map[maths.Pt]int64) (col RingCol, err error) {
 	var len1, len2 = len(col1), len(col2)
+	_, _ = len1, len2
 
 	var b Builder
 
-	i := 0
-	for j := 0; j < len2-1; j++ {
-		for i < len1 {
-			// Context cancelled.
-			if ctx.Err() != nil {
+	// Get all the triangles
+	tris, err := _getTrianglesForCol(ctx, pt2my, col1, col2)
+	if err != nil {
+		return col, err
+	}
+	/*
+		if err != nil {
+			switch err {
+			case context.Canceled:
 				return col
+			default:
+				log.Println("Got error (", err, ") trying to process ", col1, col2, pt2my)
+				panic(err)
 			}
-
-			maxy, ok := pt2my[col1[i]]
-			if (i == len1-1) || (ok && int64(col2[j].Y*100) < maxy) {
-
-				// We can not draw a line to i+1
-				// for one of two reasons
-				// 1. there is no i+1
-				// 2. there is already a line from i to some point beyound j+1 blocking our path.
-				col.addPts(hm, &b, col1[i:i+1], col2[j:j+2])
-				// move to the next j.
-				break
-			}
-
-			col.addPts(hm, &b, col1[i:i+2], col2[j:j+1])
-			i++
 		}
-	}
-	// Context cancelled.
-	if ctx.Err() != nil {
-		return col
-	}
-	for i < len1-1 {
-		// Need to fill out the triangles from the last point in j to the last point in i.
-		col.addPts(hm, &b, col1[i:i+2], []maths.Pt{col2[len2-1]})
-		i++
+	*/
+	for _, t := range tris {
+		col.addPts(hm, &b, col1[t[0]:t[0]+t[1]], col2[t[2]:t[2]+t[3]])
 	}
 
 	// We need to check if there is one last ring in the builder.
@@ -445,7 +553,7 @@ func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.P
 		}
 		sort.Sort(EdgeByY(col.Y1s))
 		sort.Sort(EdgeByY(col.Y2s))
-		return col
+		return col, nil
 	}
 	col.X1 = x1
 	col.X2 = x2
@@ -461,11 +569,11 @@ func BuildRingCol(ctx context.Context, hm hitmap.Interface, col1, col2 []maths.P
 	}
 	// Context cancelled.
 	if ctx.Err() != nil {
-		return col
+		return col, ctx.Err()
 	}
 	sort.Sort(EdgeByY(col.Y1s))
 	sort.Sort(EdgeByY(col.Y2s))
-	return col
+	return col, nil
 }
 
 func slopeCheck(pt1, pt2, pt3 maths.Pt, x1, x2 float64) bool {

@@ -66,7 +66,7 @@ func (pt Pt) Delta(pt2 Pt) (d Pt) {
 }
 
 func (pt Pt) String() string {
-	return fmt.Sprintf("(%v,%v)", pt.X, pt.Y)
+	return fmt.Sprintf("{%v,%v}", pt.X, pt.Y)
 }
 func (pt *Pt) GoString() string {
 	if pt == nil {
