@@ -177,7 +177,7 @@ func DrawGeometries() {
 			return err
 		}
 
-		filename := fmt.Sprintf("geo_%v.svg", gid)
+		filename := fmt.Sprintf("geo_%v_%v.svg", gid, count)
 		path = filepath.Join(path, filename)
 
 		log.Println(path)
@@ -189,7 +189,7 @@ func DrawGeometries() {
 		log.Printf("Creating Geo: %v\tminmax: %v\n", gid, mm)
 		canvas.Init(file, 1440, 900, false)
 		log.Println("\tDrawing original version.")
-		canvas.Commentf("MinMax: %v\n", mm1)
+		canvas.Commentf("MinMax: %v\n", mm)
 		canvas.DrawGeometry(g, fmt.Sprintf("%v_scaled", gid), "fill-rule:evenodd; fill:yellow;opacity:1", "fill:black", false)
 		canvas.DrawRegion(true)
 		log.Println("\tDrawing simplified version.")

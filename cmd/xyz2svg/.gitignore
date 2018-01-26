@@ -1,2 +1,5 @@
 xyz2svg
 *.log
+svg_files/*
+configs
+configs/*

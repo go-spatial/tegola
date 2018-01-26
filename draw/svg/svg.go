@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 
 	svg "github.com/ajstarks/svgo"
 	"github.com/terranodo/tegola"
@@ -191,6 +192,29 @@ func (canvas *Canvas) DrawLine(l tegola.LineString, id string, style string, poi
 		canvas.Gend()
 	}
 	canvas.Gend()
+}
+
+func (canvas *Canvas) DrawMathSegments(ls []maths.Line, s ...string) {
+	log.Printf("Drawing lines(%v) ", len(ls))
+	for _, line := range ls {
+		canvas.Line(
+			int(line[0].X),
+			int(line[0].Y),
+			int(line[1].X),
+			int(line[1].Y),
+			s...,
+		)
+	}
+}
+func (canvas *Canvas) DrawMathPoints(pts []maths.Pt, s ...string) {
+	log.Printf("Drawing Points (%v)", len(pts))
+	prefix := "M"
+	var path string
+	for i := range pts {
+		path += fmt.Sprintf("%v %v %v ", prefix, pts[i].X, pts[i].Y)
+		prefix = "L"
+	}
+	canvas.Path(path, s...)
 }
 
 func (canvas *Canvas) DrawMultiLine(ml tegola.MultiLine, id string, style string, pointStyle string, drawPoints bool) {

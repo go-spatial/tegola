@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "smCl4g79z5GJ9LWTQwe50x+JSyU=",
+			"path": "github.com/Bowery/prompt",
+			"revision": "753711fea478fa77bb2c83f6ec244b814d4a8bad",
+			"revisionTime": "2017-09-01T14:12:32Z"
+		},
+		{
 			"checksumSHA1": "UJTpOZ5IuuyoWFrS42uw/167mn0=",
 			"path": "github.com/BurntSushi/toml",
 			"revision": "f0aeabca5a127c4078abb8c8d64298b147264b55",
@@ -165,6 +171,12 @@
 			"revisionTime": "2017-12-07T22:17:37Z"
 		},
 		{
+			"checksumSHA1": "ULnk7ggN82JFO0ZdBCmSsQH3Vh8=",
+			"path": "github.com/dchest/safefile",
+			"revision": "855e8d98f1852d48dde521e0522408d1fe7e836a",
+			"revisionTime": "2015-10-22T10:31:44Z"
+		},
+		{
 			"checksumSHA1": "67Ufp7gCzJyjLVW3iW3og8uVtkw=",
 			"path": "github.com/dimfeld/httppath",
 			"revision": "c8e499c3ef3c3e272ed8bdcc1ccf39f73c88debc",
@@ -185,6 +197,12 @@
 		{
 			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
 			"path": "github.com/elazarl/go-bindata-assetfs",
+			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
+			"revisionTime": "2017-02-27T21:27:28Z"
+		},
+		{
+			"checksumSHA1": "CaThXbumVxZtNlItiXma5B78PwQ=",
+			"path": "github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs",
 			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
 			"revisionTime": "2017-02-27T21:27:28Z"
 		},
@@ -213,6 +231,12 @@
 			"revisionTime": "2016-06-14T22:31:40Z"
 		},
 		{
+			"checksumSHA1": "e/Kc2UOy1lKAy31xWlK37M1r2e8=",
+			"path": "github.com/google/shlex",
+			"revision": "6f45313302b9c56850fc17f99e40caebce98c716",
+			"revisionTime": "2015-01-27T13:39:51Z"
+		},
+		{
 			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
 			"path": "github.com/inconshreveable/mousetrap",
 			"revision": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
@@ -231,10 +255,34 @@
 			"revisionTime": "2016-08-03T19:07:31Z"
 		},
 		{
+			"checksumSHA1": "MzTCg3kFsi/89bf1wGsGJwIykEM=",
+			"path": "github.com/jteeuwen/go-bindata",
+			"revision": "a0ff2567cfb70903282db057e799fd826784d41d",
+			"revisionTime": "2015-10-23T09:11:02Z"
+		},
+		{
+			"checksumSHA1": "1E4XSPmZqO/s20/WWJKXsyGTfm4=",
+			"path": "github.com/jteeuwen/go-bindata/go-bindata",
+			"revision": "a0ff2567cfb70903282db057e799fd826784d41d",
+			"revisionTime": "2015-10-23T09:11:02Z"
+		},
+		{
+			"checksumSHA1": "+ArBDwAK19OC1iDy1yEbXOC9sgQ=",
+			"path": "github.com/mattn/goveralls",
+			"revision": "b71a1e4855f87991aff01c2c833a75a07059c61c",
+			"revisionTime": "2017-11-14T04:29:57Z"
+		},
+		{
 			"checksumSHA1": "Se195FlZ160eaEk/uVx4KdTPSxU=",
 			"path": "github.com/pborman/uuid",
 			"revision": "e790cca94e6cc75c7064b1332e63811d4aae1a53",
 			"revisionTime": "2017-06-12T15:36:48Z"
+		},
+		{
+			"checksumSHA1": "xCv4GBFyw07vZkVtKF/XrUnkHRk=",
+			"path": "github.com/pkg/errors",
+			"revision": "e881fd58d78e04cf6d0de1217f8707c8cc2249bc",
+			"revisionTime": "2017-12-16T07:03:16Z"
 		},
 		{
 			"checksumSHA1": "C3yiSMdTQxSY3xqKJzMV9T+KnIc=",
@@ -255,10 +303,40 @@
 			"revisionTime": "2017-10-20T11:06:17Z"
 		},
 		{
+			"checksumSHA1": "Q5LjZRE7RBP33Cq5ESd0QsEZZR4=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "03467258950d845cd1877eab69461b98e8c09219",
+			"revisionTime": "2018-01-25T12:54:57Z"
+		},
+		{
+			"checksumSHA1": "i05c1J3Pkn6Ll+YINNnf6nv8z0g=",
+			"path": "golang.org/x/tools/cmd/cover",
+			"revision": "25101aadb97aa42907eee6a238d6d26a6cb3c756",
+			"revisionTime": "2018-01-25T02:48:19Z"
+		},
+		{
+			"checksumSHA1": "w/OExaIcqB7E5IG5097RPHtOlzc=",
+			"path": "golang.org/x/tools/cover",
+			"revision": "25101aadb97aa42907eee6a238d6d26a6cb3c756",
+			"revisionTime": "2018-01-25T02:48:19Z"
+		},
+		{
+			"checksumSHA1": "ULu8vRll6GP40qFH7OrHVcDSUOc=",
+			"path": "golang.org/x/tools/go/vcs",
+			"revision": "25101aadb97aa42907eee6a238d6d26a6cb3c756",
+			"revisionTime": "2018-01-25T02:48:19Z"
+		},
+		{
 			"checksumSHA1": "a9pyC/XvFSy6/wgxMt9qepohioQ=",
 			"path": "gopkg.in/go-playground/colors.v1",
 			"revision": "b53ecfb396233c24c77594af27dd0f5731fafaf1",
 			"revisionTime": "2015-09-24T11:17:26Z"
+		},
+		{
+			"checksumSHA1": "qOmvuDm+F+2nQQecUZBVkZrTn6Y=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "d670f9405373e636a5a2765eea47fac0c9bc91a4",
+			"revisionTime": "2018-01-09T11:43:31Z"
 		}
 	],
 	"rootPath": "github.com/terranodo/tegola"

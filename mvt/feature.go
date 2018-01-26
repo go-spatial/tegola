@@ -394,55 +394,53 @@ func SimplifyGeometry(g tegola.Geometry, tolerance float64, simplify bool) tegol
 	return g
 }
 
-func (c *cursor) scalelinestr(g tegola.LineString, polygon bool) basic.MultiLine {
+func (c *cursor) scalelinestr(g tegola.LineString) (ls basic.Line) {
 
-	var ls basic.Line
-	var lpt basic.Point
-
-	for i, p := range g.Subpoints() {
-		npt := c.scalept(p)
-		if i != 0 { // skip check for the first point.
-			if tegola.IsPointEqual(lpt, npt) {
-				// drop any duplicate points.
-				continue
-			}
+	pts := g.Subpoints()
+	// If the linestring
+	if len(pts) < 3 {
+		// Not enought points to make a line.
+		return nil
+	}
+	ls = make(basic.Line, 0, len(pts))
+	ls = append(ls, c.scalept(pts[0]))
+	lidx := len(ls) - 1
+	for i := 1; i < len(pts); i++ {
+		npt := c.scalept(pts[i])
+		if tegola.IsPointEqual(ls[lidx], npt) {
+			// drop any duplicate points.
+			continue
 		}
 		ls = append(ls, npt)
-		lpt = npt
+		lidx = len(ls) - 1
 	}
-	return basic.MultiLine{ls}
-
+	if len(ls) < 3 {
+		// Not enough points. the zoom must be too far out for this ring.
+		return nil
+	}
+	return ls
 }
 
-func (c *cursor) scalePolygon(g tegola.Polygon) basic.MultiPolygon {
-
-	var mp basic.MultiPolygon
+func (c *cursor) scalePolygon(g tegola.Polygon) (p basic.Polygon) {
 
 	lines := g.Sublines()
+	p = make(basic.Polygon, 0, len(lines))
+
 	if len(lines) == 0 {
-		return basic.MultiPolygon{}
+		return p
 	}
-
-	mainLines := c.scalelinestr(lines[0], true)
-	for i, _ := range mainLines {
-		p := basic.Polygon{mainLines[i]}
-		mp = append(mp, p)
-	}
-
-	for k := 1; k < len(lines); k++ {
-		lns := c.scalelinestr(lines[k], true)
-	nextLine:
-		for i, _ := range lns {
-			for j, _ := range mp {
-				if mp[j][0].ContainsLine(lns[i]) {
-					mp[j] = append(mp[j], lns[i])
-					continue nextLine
-				}
+	for i := range lines {
+		ln := c.scalelinestr(lines[i])
+		if len(ln) < 2 {
+			if debug {
+				// skip lines that have been reduced to less then 2 points.
+				log.Println("Skipping line 2", lines[i], len(ln))
 			}
+			continue
 		}
+		p = append(p, ln)
 	}
-	return mp
-
+	return p
 }
 
 func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
@@ -452,17 +450,33 @@ func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
 	case tegola.Point3:
 		return c.scalept(g)
 	case tegola.MultiPoint:
-		var mp basic.MultiPoint
-		for _, p := range g.Points() {
-			mp = append(mp, c.scalept(p))
+		pts := g.Points()
+		if len(pts) == 0 {
+			return nil
+		}
+		var ptmap = make(map[basic.Point]struct{})
+		var mp = make(basic.MultiPoint, 0, len(pts))
+		mp = append(mp, c.scalept(pts[0]))
+		ptmap[mp[0]] = struct{}{}
+		for i := 1; i < len(pts); i++ {
+			npt := c.scalept(pts[i])
+			if _, ok := ptmap[npt]; ok {
+				// Skip duplicate points.
+				continue
+			}
+			ptmap[npt] = struct{}{}
+			mp = append(mp, npt)
 		}
 		return mp
 	case tegola.LineString:
-		return c.scalelinestr(g, false)
+		return c.scalelinestr(g)
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		for _, l := range g.Lines() {
-			ml = append(ml, c.scalelinestr(l, false)...)
+			nl := c.scalelinestr(l)
+			if len(nl) > 0 {
+				ml = append(ml, nl)
+			}
 		}
 		return ml
 	case tegola.Polygon:
@@ -471,8 +485,10 @@ func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
 	case tegola.MultiPolygon:
 		var mp basic.MultiPolygon
 		for _, p := range g.Polygons() {
-			nmp := c.scalePolygon(p)
-			mp = append(mp, nmp...)
+			np := c.scalePolygon(p)
+			if len(np) > 0 {
+				mp = append(mp, np)
+			}
 		}
 		return mp
 	}

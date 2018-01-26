@@ -66,6 +66,9 @@ func (e Extent) ContainsPoints(pts ...[2]float64) bool {
 func (e Extent) ContainsLine(line [2][2]float64) bool {
 	return e.Contains(line[0]) && e.Contains(line[1])
 }
+func (e Extent) InclusiveContainsLine(line [2][2]float64) bool {
+	return e.Contains(line[0]) || e.Contains(line[1])
+}
 
 // ContainsExtent returns weather the points of the second extent are containted by the first extent.
 func (e Extent) ContainsExtent(ee Extent) bool { return e.Contains(ee[1]) && e.Contains(ee[1]) }
