@@ -7,7 +7,7 @@ go_install(){
 	fi
 	OLDPWD=`pwd`
 	cd $PROJECT_DIR/vendor/"$@"
-	go install
+	go install .
 	cd $OLDPWD 
 }
 
