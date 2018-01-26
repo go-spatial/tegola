@@ -10,8 +10,8 @@ source $CI_DIR/install_go_bin.sh
 #	so they can be compiled into the tegola binary
 build_bindata() {
 	#	fetch our bindata tooling
-	go_install github.com/jteeuwen/go-bindata
-	go_install github.com/elazarl/go-bindata-assetfs
+	go_install github.com/jteeuwen/go-bindata/go-bindata
+	go_install github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	ls -l $GOPATH/bin
 
 	#	change directory to the location of this script
