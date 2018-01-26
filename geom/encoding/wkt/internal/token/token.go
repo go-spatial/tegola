@@ -17,8 +17,6 @@ type T struct {
 }
 
 var UnexpectedEOFErr = fmt.Errorf("unexpected end of file")
-var UnexpectedEmptyErr = fmt.Errorf("found “EMPTY”, was not expecting it.")
-var UnexpectedLPrenErr = fmt.Errorf("found “(”, was not expecting it.")
 
 var InvalidStartMarkerErr = fmt.Errorf("invalid start marker")
 
@@ -143,18 +141,42 @@ func (t *T) parsePointValue() (pt []float64, err error) {
 	return pt, err
 }
 
-func (t *T) _parsePointValue(zm byte) ([]float64, error) {
+func (t *T) ParsePoint() (*geom.Point, error) {
+	// POINT ( xxx yyy )
 	t.EatSpace()
-	if t.Peek() != symbol.LeftPren {
-		return nil, fmt.Errorf("expected to find “(”")
+	// First expect to see POINT
+	if t.Peek() != symbol.Point {
+		return nil, fmt.Errorf("expected to find “POINT”.")
 	}
 	t.Scan()
+
+	var zm byte
+LOOP:
+	t.EatSpace()
+	switch t.Peek() {
+	case symbol.LeftPren:
+		t.Scan()
+	case symbol.Empty:
+		t.Scan()
+		// It's a empty point.
+		return nil, nil
+	case symbol.ZM, symbol.M:
+		if zm != 0 {
+			return nil, fmt.Errorf("”ZM” or ”M” can only appear once")
+		}
+		zm = t.Peek()
+		t.Scan()
+		goto LOOP
+
+	default:
+		return nil, fmt.Errorf("expected to find “(” or “EMPTY”")
+	}
 	pt, err := t.parsePointValue()
+	// First We need to see if there is a '('
 	if err != nil {
 		return nil, err
 	}
 	t.EatSpace()
-	// First We need to see if there is a '('
 	if t.Peek() != symbol.RightPren {
 		return nil, fmt.Errorf("expected to find “)”")
 	}
@@ -179,49 +201,8 @@ func (t *T) _parsePointValue(zm byte) ([]float64, error) {
 			return nil, fmt.Errorf("POINT should only have 2 coordinates")
 		}
 	}
-	return pt, nil
-}
-
-func (t *T) ParsePoint() (*geom.Point, error) {
-	// POINT ( xxx yyy )
-	t.EatSpace()
-	// First expect to see POINT
-	if t.Peek() != symbol.Point {
-		return nil, fmt.Errorf("expected to find “POINT”.")
-	}
-	t.Scan()
-	var zm byte
-FOR_LOOP:
-	for {
-		t.EatSpace()
-		switch t.Peek() {
-		case symbol.LeftPren:
-			log.Println("Found (")
-			break FOR_LOOP
-		case symbol.Empty:
-			t.Scan()
-			// It's a empty point.
-			return nil, nil
-
-		case symbol.ZM, symbol.M:
-			if zm != 0 {
-				return nil, fmt.Errorf("”ZM” or ”M” can only appear once")
-			}
-			zm = t.Peek()
-			t.Scan()
-		default:
-			return nil, fmt.Errorf("expected to find “(” , “ZM”, “M” or “EMPTY”")
-		}
-	}
 
 	//TODO: Later will need to support the POINTM and POINTZ and POINTMZ variants.
-	pt, err := t._parsePointValue(zm)
-	if err != nil {
-		return nil, err
-	}
-	if pt == nil {
-		return nil, nil
-	}
 
 	return &geom.Point{pt[0], pt[1]}, nil
 }
@@ -236,18 +217,17 @@ func (t *T) ParseMultiPoint() (pts geom.MultiPoint, err error) {
 	}
 	t.Scan()
 	t.EatSpace()
-	var zm byte
 	switch t.Peek() {
 	case symbol.LeftPren:
 		t.Scan()
-	case symbol.ZM, symbol.M:
-		if zm != 0 {
-			return nil, fmt.Errorf("”ZM” or ”M” can only appear once")
+		if debug {
+			log.Println("found Left Pren")
 		}
-		zm = t.Peek()
-		t.Scan()
 	case symbol.Empty:
 		t.Scan()
+		if debug {
+			log.Println("found Empty")
+		}
 		// It's a empty point.
 		return nil, nil
 
@@ -256,37 +236,59 @@ func (t *T) ParseMultiPoint() (pts geom.MultiPoint, err error) {
 	}
 	for {
 		t.EatSpace()
-		// Grab the sub points. Need to check to see if there is a (
-		var pt []float64
+		// Grab the sub points. Need to check to see if there is a '('
+		var needRightPren bool
 
+		// First We need to see if there is a '('
 		if t.Peek() == symbol.LeftPren {
-			pt, err = t._parsePointValue(zm)
-		} else {
-			pt, err = t.parsePointValue()
+			t.Scan()
+			if debug {
+				log.Println("found Left Pren; setting need for right pren")
+			}
+			needRightPren = true
 		}
+
+		pt, err := t.parsePointValue()
 		if err != nil {
 			return nil, err
 		}
 		//TODO: Only supporting standard points and M and ZM.
 		pts = append(pts, [2]float64{pt[0], pt[1]})
-
 		t.EatSpace()
-
-		switch t.Peek() {
-		case symbol.Comma:
+		if needRightPren {
+			if t.Peek() != symbol.RightPren {
+				return nil, fmt.Errorf("expected to find “)”")
+			}
 			t.Scan()
-			// Let's loop and get more points.
-			continue
+			if debug {
+				log.Println("Found matching right pren.")
+			}
+			needRightPren = false
+			t.EatSpace()
+		}
+		switch t.Peek() {
 		case symbol.RightPren:
 			t.Scan()
+			if debug {
+				log.Println("found right pren. ending.")
+			}
 			// return the single point.
 			return pts, nil
 		default:
 			return nil, fmt.Errorf("expected to find “,” or “)”")
+		case symbol.Comma:
+			t.Scan()
+			if debug {
+				log.Println("found a comma, looking for more values.")
+			}
+			// Let's loop and get more points.
 		}
-		break
 	}
-	return pts, nil
+	if debug {
+		log.Println("Returning empty point.")
+	}
+
+	return nil, nil
 }
 
 /*

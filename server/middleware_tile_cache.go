@@ -3,10 +3,10 @@ package server
 import (
 	"bytes"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/terranodo/tegola/cache"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 //	TileCacheHandler implements a request cache for tiles on requests when the URLs
@@ -27,7 +27,7 @@ func TileCacheHandler(next http.Handler) http.Handler {
 		//	5 is the value of len("maps/")
 		key, err := cache.ParseKey(r.URL.Path[5:])
 		if err != nil {
-			log.Println("cache middleware: ParseKey err: %v", err)
+			log.Errorf("cache middleware: ParseKey err: %v", err)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -35,10 +35,11 @@ func TileCacheHandler(next http.Handler) http.Handler {
 		//	use the URL path as the key
 		cachedTile, hit, err := cacher.Get(key)
 		if err != nil {
-			log.Printf("cache middleware: error reading from cache: %v", err)
+			log.Errorf("cache middleware: error reading from cache: %v", err)
 			next.ServeHTTP(w, r)
 			return
 		}
+
 		//	cache miss
 		if !hit {
 			//	buffer which will hold a copy of the response for writing to the cache
@@ -60,7 +61,7 @@ func TileCacheHandler(next http.Handler) http.Handler {
 			}
 
 			if err := cacher.Set(key, buff.Bytes()); err != nil {
-				log.Printf("cache response writer err: %v", err)
+				log.Warnf("cache response writer err: %v", err)
 			}
 			return
 		}
@@ -93,7 +94,7 @@ type tileCacheResponseWriter struct {
 }
 
 func (w *tileCacheResponseWriter) Header() http.Header {
-	//	communicate the tegola cache is being used
+	//	communicate the cache is being used
 	w.resp.Header().Set("Tegola-Cache", "MISS")
 
 	return w.resp.Header()
@@ -102,6 +103,7 @@ func (w *tileCacheResponseWriter) Header() http.Header {
 func (w *tileCacheResponseWriter) Write(b []byte) (int, error) {
 	//	only write to the multi writer when http response == StatusOK
 	if w.status == http.StatusOK {
+
 		//	write to our multi writer
 		return w.multi.Write(b)
 	}

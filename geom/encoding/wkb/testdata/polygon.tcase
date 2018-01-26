@@ -57,7 +57,7 @@ bytes:{{
   00 00 00 00 00 00 24 40 // Y5 10
 
 
-  04 00 00 00             // Number of Points in ring 5 
+  04 00 00 00             // Number of Points in ring 4 
   00 00 00 00 00 00 34 40 // X1 20
   00 00 00 00 00 00 3e 40 // Y1 30
 

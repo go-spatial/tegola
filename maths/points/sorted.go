@@ -6,16 +6,27 @@ import (
 	"github.com/terranodo/tegola/maths"
 )
 
-func SortAndUnique(pts []maths.Pt) (spts []maths.Pt) {
+func SortAndUnique(pts []maths.Pt) []maths.Pt {
 	sort.Sort(ByXY(pts))
-	lpt := pts[0]
-	spts = append(spts, lpt)
-	for _, pt := range pts[1:] {
-		if lpt.IsEqual(pt) {
+	lp := 0
+	ptslen := len(pts)
+	for i := 1; i < ptslen; i++ {
+		if pts[i].IsEqual(pts[lp]) {
 			continue
 		}
-		spts = append(spts, pt)
-		lpt = pt
+		lp += 1
+		if lp == i {
+			continue
+		}
+		// found something that is not the same.
+		copy(pts[lp:], pts[i:])
+		// Adjust the length.
+		ptslen -= (i - lp)
+		i = lp
 	}
-	return spts
+	if ptslen > lp+1 {
+		// Need to copy things over, and adjust the ptslen
+		return pts[:lp+1]
+	}
+	return pts[:ptslen]
 }

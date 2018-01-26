@@ -3,16 +3,10 @@ package clip
 import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/geom/cmp"
 	"github.com/terranodo/tegola/maths/lines"
 	"github.com/terranodo/tegola/maths/points"
 )
-
-func linestring2floats(l tegola.LineString) (ls []float64) {
-	for _, p := range l.Subpoints() {
-		ls = append(ls, p.X(), p.Y())
-	}
-	return ls
-}
 
 func LineString(linestr tegola.LineString, extent *points.Extent) (ls []basic.Line, err error) {
 	line := lines.FromTLineString(linestr)
@@ -27,21 +21,50 @@ func LineString(linestr tegola.LineString, extent *points.Extent) (ls []basic.Li
 		cptIsIn := extent.Contains(line[i])
 		switch {
 		case !lptIsIn && cptIsIn: // We are entering the extent region.
-			if ipt, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok && len(ipt) > 0 {
-				cpts = append(cpts, ipt[0])
+			if ipts, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok && len(ipts) > 0 {
+				if len(ipts) == 1 {
+
+					cpts = append(cpts, ipts[0])
+
+				} else {
+					isLess := cmp.PointLess(line[i-1], line[i])
+					isCLess := cmp.PointLess(ipts[0], ipts[1])
+					idx := 1
+					if isLess == isCLess {
+						idx = 0
+					}
+					cpts = append(cpts, ipts[idx])
+				}
+
 			}
 			cpts = append(cpts, line[i])
 		case !lptIsIn && !cptIsIn: // Both points are outside, but it's possible that they could be going straight through the regions.
-			if ipt, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok && len(ipt) > 1 {
-				ls = append(ls, basic.NewLineFrom2Float64(ipt...))
+			if ipts, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok && len(ipts) > 1 {
+				// If this is the case return the line
+				// We need to keep the direction.
+				isLess := cmp.PointLess(line[i-1], line[i])
+				isCLess := cmp.PointLess(ipts[0], ipts[1])
+				f, s := 0, 1
+				if isLess != isCLess {
+					f, s = 1, 0
+				}
+				ls = append(ls, basic.NewLineFrom2Float64(ipts[f], ipts[s]))
+
 			}
 			cpts = cpts[:0]
 		case lptIsIn && cptIsIn: // Both points are in, just add the new point.
 			cpts = append(cpts, line[i])
 		case lptIsIn && !cptIsIn: // We are headed out of the region.
-			if ipt, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok {
-				_ = ipt
-				cpts = append(cpts, ipt...)
+			if ipts, ok := extent.IntersectPt([2][2]float64{line[i-1], line[i]}); ok {
+				_ = ipts
+				// It's is possible that our intersect point is the same as our lpt.
+				// if this is the case we need to ignore it.
+				lpt := cpts[len(cpts)-1]
+				for _, ipt := range ipts {
+					if ipt[0] != lpt[0] || ipt[1] != lpt[1] {
+						cpts = append(cpts, ipt)
+					}
+				}
 			}
 			// Time to add this line to our set of lines, and reset
 			// the new line.

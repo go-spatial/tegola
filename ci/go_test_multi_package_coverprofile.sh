@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh 
 # Generate test coverage statistics for Go packages.
 #
 # Works around the fact that `go test -coverprofile` currently does not work
@@ -14,6 +14,10 @@
 # S.C. - borrowed/adapted from https://github.com/mlafeldt/chef-runner/blob/v0.7.0/script/coverage; see also https://mlafeldt.github.io/blog/test-coverage-in-go/
 
 set -e
+
+CI_DIR=`dirname $0`
+PROJECT_DIR="$CI_DIR/.."
+source $CI_DIR/install_go_bin.sh
 
 workdir=.cover
 coverprofilename=default
@@ -91,13 +95,13 @@ push_to_coveralls() {
 
 # body of script
   # first get go cover tool in case it does not exist locally
-go get golang.org/x/tools/cmd/cover
+go_install golang.org/x/tools/cmd/cover
 generate_cover_data $(go list ./...)
 generate_cover_report func
 if [ "$genhtml" = true ] ; then
     generate_cover_report html
 fi
 if [ "$pushtocoveralls" = true ] ; then
-    go get github.com/mattn/goveralls
+    go_install github.com/mattn/goveralls
     push_to_coveralls
 fi

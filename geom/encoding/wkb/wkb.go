@@ -17,19 +17,19 @@ import (
 	"github.com/terranodo/tegola/geom/encoding/wkb/internal/encode"
 )
 
-type UnknownGeometryError struct {
+type ErrUnknownGeometry struct {
 	Geom geom.Geometry
 }
 
-func (e UnknownGeometryError) Error() string {
+func (e ErrUnknownGeometry) Error() string {
 	return fmt.Sprintf("Unknown Geometry! %v", e.Geom)
 }
 
-type UnknownGeometryTypeError struct {
+type ErrUnknownGeometryType struct {
 	Typ uint32
 }
 
-func (e UnknownGeometryTypeError) Error() string {
+func (e ErrUnknownGeometryType) Error() string {
 	return fmt.Sprintf("Unknown Geometry Type %v", e.Typ)
 }
 
@@ -81,7 +81,7 @@ func Decode(r io.Reader) (geo geom.Geometry, err error) {
 		col, err := decode.Collection(r, bom)
 		return col, err
 	default:
-		return nil, UnknownGeometryTypeError{typ}
+		return nil, ErrUnknownGeometryType{typ}
 	}
 }
 
@@ -108,7 +108,7 @@ func _encode(en *encode.Encoder, g geom.Geometry) error {
 			}
 		}
 	default:
-		return UnknownGeometryError{g}
+		return ErrUnknownGeometry{g}
 	}
 	return en.Err()
 }

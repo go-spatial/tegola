@@ -38,7 +38,7 @@ func TestToTegolaToGeom(t *testing.T) {
 			return
 		}
 
-		if !cmp.Geometry(tc.geom, got) {
+		if !cmp.GeometryEqual(tc.geom, got) {
 			t.Errorf("unequal geometry, expected %v got %v", tc.geom, got)
 		}
 	}
