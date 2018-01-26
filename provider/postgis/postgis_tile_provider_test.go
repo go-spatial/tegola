@@ -2,7 +2,6 @@ package postgis_test
 
 import (
 	"context"
-	"log"
 	"os"
 	"strconv"
 	"testing"
@@ -41,7 +40,7 @@ func TestTileProvider(t *testing.T) {
 					},
 				},
 			},
-			tile:                 slippy.NewTile(1, 1, 1),
+			tile:                 slippy.NewTile(1, 1, 1, 64, 3857),
 			expectedFeatureCount: 4032,
 		},
 		//	scalerank test
@@ -59,7 +58,7 @@ func TestTileProvider(t *testing.T) {
 					},
 				},
 			},
-			tile:                 slippy.NewTile(1, 1, 1),
+			tile:                 slippy.NewTile(1, 1, 1, 64, 3857),
 			expectedFeatureCount: 98,
 		},
 		//	decode numeric(x,x) types
@@ -79,7 +78,7 @@ func TestTileProvider(t *testing.T) {
 					},
 				},
 			},
-			tile:                 slippy.NewTile(16, 11241, 26168),
+			tile:                 slippy.NewTile(16, 11241, 26168, 64, 3857),
 			expectedFeatureCount: 101,
 		},
 	}
@@ -98,7 +97,7 @@ func TestTileProvider(t *testing.T) {
 			var featureCount int
 
 			err := p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
-				log.Printf("%+v", f)
+				//log.Printf("%+v", f)
 				featureCount++
 				return nil
 			})

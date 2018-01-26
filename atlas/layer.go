@@ -2,7 +2,7 @@ package atlas
 
 import (
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/provider"
 )
 
 type Layer struct {
@@ -12,7 +12,7 @@ type Layer struct {
 	MinZoom           int
 	MaxZoom           int
 	//	instantiated provider
-	Provider mvt.Provider
+	Provider provider.Tiler
 	//	default tags to include when encoding the layer. provider tags take precedence
 	DefaultTags map[string]interface{}
 	GeomType    tegola.Geometry

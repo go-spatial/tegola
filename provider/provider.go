@@ -17,10 +17,13 @@ type Feature struct {
 var ErrCanceled = errors.New("provider: canceled")
 
 type Tile interface {
-	Zoom() uint64
-	//	Extent returns the extent of the tile including any
-	//	tile buffer and the SRID the extent values are in
+	Z() uint64
+	X() uint64
+	Y() uint64
+	//	Extent returns the extent of the tile excluding any buffer
 	Extent() (extent [2][2]float64, srid uint64)
+	//	BufferedExtent returns the extent of the tile including any buffer
+	BufferedExtent() (extent [2][2]float64, srid uint64)
 }
 
 type Tiler interface {

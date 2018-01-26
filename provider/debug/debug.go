@@ -9,8 +9,10 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/mvt/provider"
+	newProvider "github.com/terranodo/tegola/provider"
 )
 
 const Name = "debug"
@@ -26,6 +28,11 @@ func init() {
 
 //	NewProvider Setups a debug provider. there are not currently any config params supported
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
+	return &Provider{}, nil
+}
+
+//	NewProvider Setups a debug provider. there are not currently any config params supported
+func NewTileProvider(config map[string]interface{}) (newProvider.Tiler, error) {
 	return &Provider{}, nil
 }
 
@@ -97,6 +104,60 @@ func (p *Provider) MVTLayer(ctx context.Context, layerName string, tile *tegola.
 	}
 
 	return &layer, nil
+}
+
+func (p *Provider) TileFeatures(ctx context.Context, layer string, tile newProvider.Tile, fn func(f *newProvider.Feature) error) error {
+
+	//	get tile bounding box
+	ext, _ := tile.Extent()
+
+	switch layer {
+	case "debug-tile-outline":
+		debugTileOutline := newProvider.Feature{
+			ID: 0,
+			Geometry: geom.Polygon{
+				[][2]float64{
+					[2]float64{ext[0][0], ext[0][1]}, // Minx, Miny
+					[2]float64{ext[1][0], ext[0][1]}, // Maxx, Miny
+					[2]float64{ext[1][0], ext[1][1]}, // Maxx, Maxy
+					[2]float64{ext[0][0], ext[1][1]}, // Minx, Maxy
+				},
+			},
+			SRID: tegola.WebMercator,
+			Tags: map[string]interface{}{
+				"type": "debug_buffer_outline",
+			},
+		}
+
+		if err := fn(&debugTileOutline); err != nil {
+			return err
+		}
+
+	case "debug-tile-center":
+		xlen := ext[1][0] - ext[0][0] // Maxx - Minx
+		ylen := ext[1][1] - ext[0][1] // Maxy - Miny
+
+		debugTileCenter := newProvider.Feature{
+			ID: 1,
+			Geometry: geom.Point{
+				//	Minx
+				ext[0][0] + (xlen / 2),
+				//	Miny
+				ext[0][1] + (ylen / 2),
+			},
+			SRID: tegola.WebMercator,
+			Tags: map[string]interface{}{
+				"type": "debug_text",
+				"zxy":  fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
+			},
+		}
+
+		if err := fn(&debugTileCenter); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Layers returns information about the various layers the provider supports

@@ -6,7 +6,9 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/provider"
 )
 
 type testMVTProvider struct{}
@@ -27,12 +29,41 @@ func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
 	}, nil
 }
 
+type testTileProvider struct{}
+
+func (tp *testTileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, fn func(f *provider.Feature) error) error {
+	//	get tile bounding box
+	ext, _ := t.Extent()
+
+	debugTileOutline := provider.Feature{
+		ID: 0,
+		Geometry: geom.Polygon{
+			[][2]float64{
+				[2]float64{ext[0][0], ext[0][1]}, // Minx, Miny
+				[2]float64{ext[1][0], ext[0][1]}, // Maxx, Miny
+				[2]float64{ext[1][0], ext[1][1]}, // Maxx, Maxy
+				[2]float64{ext[0][0], ext[1][1]}, // Minx, Maxy
+			},
+		},
+		SRID: tegola.WebMercator,
+		Tags: map[string]interface{}{
+			"type": "debug_buffer_outline",
+		},
+	}
+
+	if err := fn(&debugTileOutline); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 var testLayer1 = atlas.Layer{
 	Name:              "test-layer",
 	ProviderLayerName: "test-layer-1",
 	MinZoom:           4,
 	MaxZoom:           9,
-	Provider:          &testMVTProvider{},
+	Provider:          &testTileProvider{},
 	GeomType:          basic.Point{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
@@ -44,7 +75,7 @@ var testLayer2 = atlas.Layer{
 	ProviderLayerName: "test-layer-2-provider-layer-name",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &testMVTProvider{},
+	Provider:          &testTileProvider{},
 	GeomType:          basic.Line{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
@@ -56,7 +87,7 @@ var testLayer3 = atlas.Layer{
 	ProviderLayerName: "test-layer-3",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &testMVTProvider{},
+	Provider:          &testTileProvider{},
 	GeomType:          basic.Point{},
 	DefaultTags:       map[string]interface{}{},
 }

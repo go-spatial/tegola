@@ -111,9 +111,10 @@ func replaceTokens(plyr *Layer, tile *tegola.Tile) (string, error) {
 func replaceTokens2(plyr *Layer, tile provider.Tile) (string, error) {
 
 	//	TODO: make sure the tile returns the buffered bounds
-	textent := tile.Extent()
+	textent, _ := tile.BufferedExtent()
 
 	//	TODO: leverage helper functions for minx / miny to make this easier to follow
+	//	TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
 	minGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent[0][0], textent[0][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)

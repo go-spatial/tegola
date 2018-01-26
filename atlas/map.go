@@ -7,17 +7,18 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/geom/slippy"
 	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/provider"
 	"github.com/terranodo/tegola/provider/debug"
 )
 
 //	NewMap creates a new map with the necessary default values
 func NewWGS84Map(name string) Map {
 	//	setup a debug provider
-	debugProvider, _ := debug.NewProvider(map[string]interface{}{})
+	debugProvider, _ := debug.NewTileProvider(map[string]interface{}{})
 
 	return Map{
 		Name: name,
@@ -44,7 +45,9 @@ func NewWGS84Map(name string) Map {
 				MaxZoom:           MaxZoom,
 			},
 		},
-		SRID: tegola.WGS84,
+		SRID:       tegola.WGS84,
+		TileExtent: 4096,
+		TileBuffer: 64,
 	}
 }
 
@@ -62,7 +65,10 @@ type Map struct {
 	Center [3]float64
 	Layers []Layer
 
-	SRID int
+	SRID uint64
+	//	MVT output values
+	TileExtent uint64
+	TileBuffer uint64
 }
 
 func (m Map) DisableAllLayers() Map {
@@ -165,6 +171,96 @@ func (m Map) EnableLayersByName(names ...string) Map {
 }
 
 //	TODO: support for max zoom
+func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+
+	//	generate a tile
+	var mvtTile mvt.Tile
+	//	wait group for concurrent layer fetching
+	var wg sync.WaitGroup
+
+	//	layer stack
+	mvtLayers := make([]*mvt.Layer, len(m.Layers))
+
+	//	set our waitgroup count
+	wg.Add(len(m.Layers))
+
+	//	iterate our layers
+	for i, layer := range m.Layers {
+		var mvtLayer mvt.Layer
+
+		// check if the label is disabled
+		if layer.Disabled {
+			wg.Done()
+			continue
+		}
+
+		//	go routine for fetching the layer concurrently
+		go func(i int, l Layer) {
+			//	on completion let the wait group know
+			defer wg.Done()
+
+			//	fetch layer from data provider
+			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
+				log.Println(f)
+
+				mvtLayer.AddFeatures(mvt.Feature{
+					ID:       f.ID,
+					Tags:     f.Tags,
+					Geometry: f.Geometry,
+				})
+
+				//	TODO: add default tags
+				return nil
+			})
+			if err != nil {
+				switch err {
+				case mvt.ErrCanceled:
+					//	TODO: add debug logs
+				case context.Canceled:
+					//	TODO: add debug logs
+				default:
+					//	TODO: should we return an error to the response or just log the error?
+					//	we can't just write to the response as the waitgroup is going to write to the response as well
+					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
+				}
+				return
+			}
+
+			//	check if we have a layer name
+			if l.Name != "" {
+				mvtLayer.Name = l.Name
+			}
+
+			//	add the layer to the slice position
+			mvtLayers[i] = mvtLayer
+		}(i, layer)
+	}
+
+	//	wait for the waitgroup to finish
+	wg.Wait()
+
+	//	stop processing if the context has an error. this check is necessary
+	//	otherwise the server continues processing even if the request was canceled
+	//	as the waitgroup was not notified of the cancel
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	//	add layers to our tile
+	mvtTile.AddLayers(mvtLayers...)
+
+	//	generate our tile
+	vtile, err := mvtTile.VTile(ctx, tile)
+	if err != nil {
+		return nil, err
+	}
+
+	//	encode the tile
+	return proto.Marshal(vtile)
+}
+
+/*
+//	TODO: support for max zoom
 func (m Map) Encode(ctx context.Context, tile *tegola.Tile) ([]byte, error) {
 	//	generate a tile
 	var mvtTile mvt.Tile
@@ -238,3 +334,4 @@ func (m Map) Encode(ctx context.Context, tile *tegola.Tile) ([]byte, error) {
 	//	encode the tile
 	return proto.Marshal(vtile)
 }
+*/
