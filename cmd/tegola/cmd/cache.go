@@ -210,7 +210,7 @@ var cacheCmd = &cobra.Command{
 						}
 
 						//	seed the tile
-						if err = atlas.SeedMapTile(m, mt.Tile); err != nil {
+						if err = atlas.SeedMapTile(m, uint64(mt.Tile.Z), uint64(mt.Tile.X), uint64(mt.Tile.Y)); err != nil {
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 						}
 

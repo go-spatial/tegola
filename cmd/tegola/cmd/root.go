@@ -14,8 +14,7 @@ import (
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/config"
-	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/mvt/provider"
+	"github.com/terranodo/tegola/provider"
 	_ "github.com/terranodo/tegola/provider/debug"
 	_ "github.com/terranodo/tegola/provider/postgis"
 )
@@ -111,7 +110,7 @@ func initCache(config map[string]interface{}) (cache.Interface, error) {
 }
 
 //	initMaps registers maps with our server
-func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
+func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 
 	//	iterate our maps
 	for _, m := range maps {
@@ -188,11 +187,11 @@ func initMaps(maps []config.Map, providers map[string]mvt.Provider) error {
 	return nil
 }
 
-func initProviders(providers []map[string]interface{}) (map[string]mvt.Provider, error) {
+func initProviders(providers []map[string]interface{}) (map[string]provider.Tiler, error) {
 	var err error
 
 	//	holder for registered providers
-	registeredProviders := map[string]mvt.Provider{}
+	registeredProviders := map[string]provider.Tiler{}
 
 	//	iterate providers
 	for _, p := range providers {

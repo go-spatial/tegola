@@ -2,7 +2,6 @@ package atlas_test
 
 import (
 	"context"
-	"log"
 	"reflect"
 	"testing"
 
@@ -185,9 +184,10 @@ func TestEncode(t *testing.T) {
 
 		out, err := grid.Encode(context.Background(), tc.tile)
 		if err != nil {
-			log.Println("[%v] err: %v", i, err)
+			t.Errorf("[%v] err: %v", i, err)
+			continue
 		}
 
-		log.Println(out)
+		t.Errorf(string(out))
 	}
 }

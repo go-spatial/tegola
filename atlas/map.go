@@ -7,9 +7,11 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
+
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/slippy"
+	"github.com/terranodo/tegola/internal/convert"
 	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/provider"
 	"github.com/terranodo/tegola/provider/debug"
@@ -30,7 +32,7 @@ func NewWGS84Map(name string) Map {
 				Name:              debug.LayerDebugTileOutline,
 				ProviderLayerName: debug.LayerDebugTileOutline,
 				Provider:          debugProvider,
-				GeomType:          basic.Line{},
+				GeomType:          geom.LineString{},
 				Disabled:          true,
 				MinZoom:           0,
 				MaxZoom:           MaxZoom,
@@ -39,7 +41,7 @@ func NewWGS84Map(name string) Map {
 				Name:              debug.LayerDebugTileCenter,
 				ProviderLayerName: debug.LayerDebugTileCenter,
 				Provider:          debugProvider,
-				GeomType:          basic.Point{},
+				GeomType:          geom.Point{},
 				Disabled:          true,
 				MinZoom:           0,
 				MaxZoom:           MaxZoom,
@@ -201,15 +203,22 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 			//	fetch layer from data provider
 			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
-				log.Println(f)
+				//log.Println(f)
+
+				//	TODO: remove this geom conversion step once the mvt package has adopted the new geom package
+				geo, err := convert.ToTegola(f.Geometry)
+				if err != nil {
+					return err
+				}
 
 				mvtLayer.AddFeatures(mvt.Feature{
-					ID:       f.ID,
+					ID:       &f.ID,
 					Tags:     f.Tags,
-					Geometry: f.Geometry,
+					Geometry: geo,
 				})
 
 				//	TODO: add default tags
+
 				return nil
 			})
 			if err != nil {
@@ -232,7 +241,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 			}
 
 			//	add the layer to the slice position
-			mvtLayers[i] = mvtLayer
+			mvtLayers[i] = &mvtLayer
 		}(i, layer)
 	}
 
@@ -249,8 +258,11 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	//	add layers to our tile
 	mvtTile.AddLayers(mvtLayers...)
 
+	//	TODO: change out the tile type for VTile. tegola.Tile will be deprecated
+	tegolaTile := tegola.NewTile(int(tile.Z()), int(tile.X()), int(tile.Y()))
+
 	//	generate our tile
-	vtile, err := mvtTile.VTile(ctx, tile)
+	vtile, err := mvtTile.VTile(ctx, tegolaTile)
 	if err != nil {
 		return nil, err
 	}

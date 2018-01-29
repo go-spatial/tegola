@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/terranodo/tegola"
+
 	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/mapbox/tilejson"
 )
 
@@ -133,14 +134,15 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		}
 
 		switch m.Layers[i].GeomType.(type) {
-		case tegola.Point, tegola.MultiPoint:
+		case geom.Point, geom.MultiPoint:
 			layer.GeometryType = tilejson.GeomTypePoint
-		case tegola.LineString, tegola.MultiLine:
+		case geom.Line, geom.LineString, geom.MultiLineString:
 			layer.GeometryType = tilejson.GeomTypeLine
-		case tegola.Polygon, tegola.MultiPolygon:
+		case geom.Polygon, geom.MultiPolygon:
 			layer.GeometryType = tilejson.GeomTypePolygon
 		default:
 			layer.GeometryType = tilejson.GeomTypeUnknown
+			//	TODO: debug log
 		}
 
 		//	add our layer to our tile layer response

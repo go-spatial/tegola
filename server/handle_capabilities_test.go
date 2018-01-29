@@ -27,8 +27,7 @@ func TestHandleCapabilities(t *testing.T) {
 		reqMethod  string
 		expected   server.Capabilities
 	}{
-		// With empty hostname and no port specified in config, urls should have host:port matching
-		//	request uri.
+		// 	With empty hostname and no port specified in config, urls should have host:port matching request uri.
 		{
 			handler:    server.HandleCapabilities{},
 			uri:        "http://localhost:8080/capabilities",

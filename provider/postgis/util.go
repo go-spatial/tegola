@@ -131,7 +131,7 @@ func replaceTokens2(plyr *Layer, tile provider.Tile) (string, error) {
 	//	replace query string tokens
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
-		zoomToken, strconv.FormatUint(tile.Zoom(), 10),
+		zoomToken, strconv.FormatUint(tile.Z(), 10),
 	)
 
 	return tokenReplacer.Replace(plyr.sql), nil

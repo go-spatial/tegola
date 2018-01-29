@@ -7,27 +7,8 @@ import (
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/mvt"
 	"github.com/terranodo/tegola/provider"
 )
-
-type testMVTProvider struct{}
-
-func (tp *testMVTProvider) MVTLayer(ctx context.Context, layerName string, tile *tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
-	var layer mvt.Layer
-
-	return &layer, nil
-}
-
-func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
-	return []mvt.LayerInfo{
-		layer{
-			name:     "test-layer",
-			geomType: basic.Polygon{},
-			srid:     tegola.WebMercator,
-		},
-	}, nil
-}
 
 type testTileProvider struct{}
 
@@ -56,6 +37,16 @@ func (tp *testTileProvider) TileFeatures(ctx context.Context, layer string, t pr
 	}
 
 	return nil
+}
+
+func (tp *testTileProvider) Layers() ([]provider.LayerInfo, error) {
+	return []provider.LayerInfo{
+		layer{
+			name:     "test-layer",
+			geomType: geom.Polygon{},
+			srid:     tegola.WebMercator,
+		},
+	}, nil
 }
 
 var testLayer1 = atlas.Layer{
@@ -105,7 +96,7 @@ var testMap = atlas.Map{
 
 type layer struct {
 	name     string
-	geomType tegola.Geometry
+	geomType geom.Geometry
 	srid     int
 }
 
@@ -113,7 +104,7 @@ func (l layer) Name() string {
 	return l.name
 }
 
-func (l layer) GeomType() tegola.Geometry {
+func (l layer) GeomType() geom.Geometry {
 	return l.geomType
 }
 

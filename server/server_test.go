@@ -6,9 +6,9 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/cache"
-	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/provider"
 	"github.com/terranodo/tegola/server"
 )
 
@@ -25,19 +25,19 @@ var (
 	testMapCenter      = [3]float64{1.0, 2.0, 3.0}
 )
 
-type testMVTProvider struct{}
+type testTileProvider struct{}
 
-func (tp *testMVTProvider) MVTLayer(ctx context.Context, layerName string, tile *tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
-	var layer mvt.Layer
+func (tp *testTileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, fn func(f *provider.Feature) error) error {
+	// TODO: return test features
 
-	return &layer, nil
+	return nil
 }
 
-func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
-	return []mvt.LayerInfo{
+func (tp *testTileProvider) Layers() ([]provider.LayerInfo, error) {
+	return []provider.LayerInfo{
 		layer{
 			name:     "test-layer",
-			geomType: basic.Polygon{},
+			geomType: geom.Polygon{},
 			srid:     tegola.WebMercator,
 		},
 	}, nil
@@ -48,8 +48,8 @@ var testLayer1 = atlas.Layer{
 	ProviderLayerName: "test-layer-1",
 	MinZoom:           4,
 	MaxZoom:           9,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Point{},
+	Provider:          &testTileProvider{},
+	GeomType:          geom.Point{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
@@ -60,8 +60,8 @@ var testLayer2 = atlas.Layer{
 	ProviderLayerName: "test-layer-2-provider-layer-name",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Line{},
+	Provider:          &testTileProvider{},
+	GeomType:          geom.Line{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
@@ -72,14 +72,14 @@ var testLayer3 = atlas.Layer{
 	ProviderLayerName: "test-layer-3",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Point{},
+	Provider:          &testTileProvider{},
+	GeomType:          geom.Point{},
 	DefaultTags:       map[string]interface{}{},
 }
 
 type layer struct {
 	name     string
-	geomType tegola.Geometry
+	geomType geom.Geometry
 	srid     int
 }
 
@@ -87,7 +87,7 @@ func (l layer) Name() string {
 	return l.name
 }
 
-func (l layer) GeomType() tegola.Geometry {
+func (l layer) GeomType() geom.Geometry {
 	return l.geomType
 }
 

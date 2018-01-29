@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
 	"gopkg.in/go-playground/colors.v1"
 
-	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/mapbox/style"
 )
 
@@ -108,18 +109,18 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//	chose our paint type based on the geometry type
 		switch l.GeomType.(type) {
-		case tegola.Point, tegola.Point3, tegola.MultiPoint:
+		case geom.Point, geom.MultiPoint:
 			layer.Type = style.LayerTypeCircle
 			layer.Paint = &style.LayerPaint{
 				CircleRadius: 3,
 				CircleColor:  stringToColorHex(l.MVTName()),
 			}
-		case tegola.LineString, tegola.MultiLine:
+		case geom.Line, geom.LineString, geom.MultiLineString:
 			layer.Type = style.LayerTypeLine
 			layer.Paint = &style.LayerPaint{
 				LineColor: stringToColorHex(l.MVTName()),
 			}
-		case tegola.Polygon, tegola.MultiPolygon:
+		case geom.Polygon, geom.MultiPolygon:
 			layer.Type = style.LayerTypeFill
 			hexColor := stringToColorHex(l.MVTName())
 
@@ -138,7 +139,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				FillOutlineColor: hexColor,
 			}
 		default:
-			log.Printf("layer (providerLayerName: %v) has unsupported geometry type (%v)", l.ProviderLayerName, l.GeomType)
+			log.Printf("layer (providerLayerName: %v) has unsupported geometry type (%v)", l.ProviderLayerName, reflect.TypeOf(l.GeomType))
 		}
 
 		//	add our layer to our tile layer response

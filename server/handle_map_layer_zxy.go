@@ -12,7 +12,7 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/geom/slippy"
 )
 
 type HandleMapLayerZXY struct {
@@ -105,13 +105,10 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//	new tile
-	tile := tegola.NewTile(req.z, req.x, req.y)
-	//	set the buffer to our server's configured buffer in case it was set in the config
-	tile.Buffer = TileBuffer
+	tile := slippy.NewTile(uint64(req.z), uint64(req.x), uint64(req.y), TileBuffer, tegola.WebMercator)
 
 	//	filter down the layers we need for this zoom
-	m = m.DisableAllLayers().DisableDebugLayers().EnableLayersByZoom(tile.Z)
+	m = m.DisableAllLayers().DisableDebugLayers().EnableLayersByZoom(int(tile.Z()))
 
 	//	check for the debug query string
 	if !req.debug {
@@ -121,9 +118,6 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pbyte, err := m.Encode(r.Context(), tile)
 	if err != nil {
 		switch err {
-		case mvt.ErrCanceled:
-			//	TODO: add debug logs
-			return
 		case context.Canceled:
 			//	TODO: add debug logs
 			return
@@ -142,14 +136,15 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	check for tile size warnings
 	if len(pbyte) > MaxTileSize {
-		log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, len(pbyte))
+		log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z(), tile.X(), tile.Y(), len(pbyte))
 	}
-
-	//	log the request
-	L.Log(logItem{
-		X:         tile.X,
-		Y:         tile.Y,
-		Z:         tile.Z,
-		RequestIP: r.RemoteAddr,
-	})
+	/*
+		//	log the request
+		L.Log(logItem{
+			X:         tile.X,
+			Y:         tile.Y,
+			Z:         tile.Z,
+			RequestIP: r.RemoteAddr,
+		})
+	*/
 }

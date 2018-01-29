@@ -54,7 +54,7 @@ func (a *Atlas) SeedMapTile(m Map, z, x, y uint64) error {
 		return ErrMissingCache
 	}
 
-	tile := slippy.NewTile(z, x, y, m.TileBuffer, m.SRID)
+	tile := slippy.NewTile(z, x, y, float64(m.TileBuffer), m.SRID)
 
 	//	encode the tile
 	b, err := m.Encode(context.Background(), tile)

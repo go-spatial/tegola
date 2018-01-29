@@ -1,10 +1,10 @@
 package debug
 
-import "github.com/terranodo/tegola"
+import "github.com/terranodo/tegola/geom"
 
 type Layer struct {
 	name     string
-	geomType tegola.Geometry
+	geomType geom.Geometry
 	srid     int
 }
 
@@ -12,7 +12,7 @@ func (l Layer) Name() string {
 	return l.name
 }
 
-func (l Layer) GeomType() tegola.Geometry {
+func (l Layer) GeomType() geom.Geometry {
 	return l.geomType
 }
 

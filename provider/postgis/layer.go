@@ -1,6 +1,6 @@
 package postgis
 
-import "github.com/terranodo/tegola"
+import "github.com/terranodo/tegola/geom"
 
 // layer holds information about a query.
 type Layer struct {
@@ -13,7 +13,7 @@ type Layer struct {
 	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
 	geomField string
 	// GeomType is the the type of geometry returned from the SQL
-	geomType tegola.Geometry
+	geomType geom.Geometry
 	// The SRID that the data in the table is stored in. This will default to WebMercator
 	srid int
 }
@@ -22,7 +22,7 @@ func (l Layer) Name() string {
 	return l.name
 }
 
-func (l Layer) GeomType() tegola.Geometry {
+func (l Layer) GeomType() geom.Geometry {
 	return l.geomType
 }
 

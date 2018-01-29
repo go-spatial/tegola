@@ -11,14 +11,10 @@ import (
 	"context"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
-	wkb2 "github.com/terranodo/tegola/geom/encoding/wkb"
-	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/mvt/provider"
+	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/geom/encoding/wkb"
+	"github.com/terranodo/tegola/provider"
 	"github.com/terranodo/tegola/util/dict"
-	"github.com/terranodo/tegola/wkb"
-
-	newProvider "github.com/terranodo/tegola/provider"
 )
 
 const Name = "postgis"
@@ -65,7 +61,8 @@ const (
 )
 
 func init() {
-	provider.Register(Name, NewProvider)
+	//	provider.Register(Name, NewProvider)
+	provider.Register(Name, NewTileProvider)
 }
 
 //	NewProvider instantiates and returns a new postgis provider or an error.
@@ -94,6 +91,7 @@ func init() {
 //				!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 
 //
+/*
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	// Validate the config to make sure it has the values I care about and the types for those values.
 	c := dict.M(config)
@@ -260,6 +258,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 
 	return p, nil
 }
+*/
 
 //	NewTileProvider instantiates and returns a new postgis provider or an error.
 //	The function will validate that the config object looks good before
@@ -286,7 +285,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 //				!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
 //				!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
-func NewTileProvider(config map[string]interface{}) (newProvider.Tiler, error) {
+func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 	// Validate the config to make sure it has the values I care about and the types for those values.
 	c := dict.M(config)
 
@@ -493,19 +492,19 @@ func (p Provider) layerGeomType(l *Layer) error {
 			case l.geomField, "st_geometrytype":
 				switch v {
 				case "ST_Point":
-					l.geomType = basic.Point{}
+					l.geomType = geom.Point{}
 				case "ST_LineString":
-					l.geomType = basic.Line{}
+					l.geomType = geom.LineString{}
 				case "ST_Polygon":
-					l.geomType = basic.Polygon{}
+					l.geomType = geom.Polygon{}
 				case "ST_MultiPoint":
-					l.geomType = basic.MultiPoint{}
+					l.geomType = geom.MultiPoint{}
 				case "ST_MultiLineString":
-					l.geomType = basic.MultiLine{}
+					l.geomType = geom.MultiLineString{}
 				case "ST_MultiPolygon":
-					l.geomType = basic.MultiPolygon{}
+					l.geomType = geom.MultiPolygon{}
 				case "ST_GeometryCollection":
-					l.geomType = basic.Collection{}
+					l.geomType = geom.Collection{}
 				default:
 					return fmt.Errorf("layer (%v) returned unsupported geometry type (%v)", l.name, v)
 				}
@@ -516,8 +515,8 @@ func (p Provider) layerGeomType(l *Layer) error {
 	return nil
 }
 
-func (p Provider) Layers() ([]mvt.LayerInfo, error) {
-	var ls []mvt.LayerInfo
+func (p Provider) Layers() ([]provider.LayerInfo, error) {
+	var ls []provider.LayerInfo
 
 	for i := range p.layers {
 		ls = append(ls, p.layers[i])
@@ -526,6 +525,7 @@ func (p Provider) Layers() ([]mvt.LayerInfo, error) {
 	return ls, nil
 }
 
+/*
 func (p Provider) MVTLayer(ctx context.Context, layerName string, tile *tegola.Tile, dtags map[string]interface{}) (layer *mvt.Layer, err error) {
 
 	layer = &mvt.Layer{
@@ -564,9 +564,10 @@ func (p Provider) MVTLayer(ctx context.Context, layerName string, tile *tegola.T
 
 	return layer, err
 }
+*/
 
 //	TileFeatures adheres to the provider.Tiler interface
-func (p Provider) TileFeatures(ctx context.Context, layer string, tile newProvider.Tile, fn func(f *newProvider.Feature) error) error {
+func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
 	//	fetch the provider layer
 	plyr, ok := p.Layer(layer)
 	if !ok {
@@ -619,12 +620,12 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile newProvid
 		}
 
 		//	decode our WKB
-		geom, err := wkb2.DecodeBytes(geobytes)
+		geom, err := wkb.DecodeBytes(geobytes)
 		if err != nil {
 			return fmt.Errorf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %v", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
 		}
 
-		feature := newProvider.Feature{
+		feature := provider.Feature{
 			ID:       gid,
 			Geometry: geom,
 			SRID:     plyr.SRID(),

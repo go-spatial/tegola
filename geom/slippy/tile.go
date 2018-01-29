@@ -2,7 +2,7 @@ package slippy
 
 import "math"
 
-func NewTile(z, x, y, buffer, srid uint64) *Tile {
+func NewTile(z, x, y uint64, buffer float64, srid uint64) *Tile {
 	return &Tile{
 		z:      z,
 		x:      x,
@@ -21,7 +21,7 @@ type Tile struct {
 	y uint64
 	//	buffer will add a buffer to the tile bounds. this buffer is expected to use the same units as the SRID
 	//	of the projected tile (i.e. WebMercator = pixels, 3395 = meters)
-	Buffer uint64
+	Buffer float64
 	//	spatial reference id
 	SRID uint64
 }
@@ -65,11 +65,10 @@ func (t *Tile) Extent() (extent [2][2]float64, srid uint64) {
 func (t *Tile) BufferedExtent() (extent [2][2]float64, srid uint64) {
 	extent, _ = t.Extent()
 
-	//	MVT defaults
+	//	TODO: the following value is hard coded for MVT, but this concept needs to be abstracted to support different projections
 	mvtTileWidthHeight := 4096.0
-	mvtBuffer := 64.0
 	//	the bounds / extent
-	mvtTileExtent := [2][2]float64{{0 - mvtBuffer, 0 - mvtBuffer}, {mvtTileWidthHeight + mvtBuffer, mvtTileWidthHeight + mvtBuffer}}
+	mvtTileExtent := [2][2]float64{{0 - t.Buffer, 0 - t.Buffer}, {mvtTileWidthHeight + t.Buffer, mvtTileWidthHeight + t.Buffer}}
 
 	xspan := extent[1][0] - extent[0][0]
 	yspan := extent[1][1] - extent[0][1]
