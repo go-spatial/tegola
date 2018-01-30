@@ -398,7 +398,7 @@ func (c *cursor) scalelinestr(g tegola.LineString) (ls basic.Line) {
 
 	pts := g.Subpoints()
 	// If the linestring
-	if len(pts) < 3 {
+	if len(pts) < 2 {
 		// Not enought points to make a line.
 		return nil
 	}
@@ -414,7 +414,8 @@ func (c *cursor) scalelinestr(g tegola.LineString) (ls basic.Line) {
 		ls = append(ls, npt)
 		lidx = len(ls) - 1
 	}
-	if len(ls) < 3 {
+
+	if len(ls) < 2 {
 		// Not enough points. the zoom must be too far out for this ring.
 		return nil
 	}
