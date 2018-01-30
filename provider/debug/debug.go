@@ -40,7 +40,7 @@ type Provider struct{}
 func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
 
 	//	get tile bounding box
-	ext, _ := tile.Extent()
+	ext, srid := tile.Extent()
 
 	switch layer {
 	case "debug-tile-outline":
@@ -54,7 +54,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 					[2]float64{ext[0][0], ext[1][1]}, // Minx, Maxy
 				},
 			},
-			SRID: tegola.WebMercator,
+			SRID: srid,
 			Tags: map[string]interface{}{
 				"type": "debug_buffer_outline",
 			},
@@ -67,6 +67,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	case "debug-tile-center":
 		xlen := ext[1][0] - ext[0][0] // Maxx - Minx
 		ylen := ext[1][1] - ext[0][1] // Maxy - Miny
+		z, x, y := tile.ZXY()
 
 		debugTileCenter := provider.Feature{
 			ID: 1,
@@ -76,10 +77,10 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 				//	Miny
 				ext[0][1] + (ylen / 2),
 			},
-			SRID: tegola.WebMercator,
+			SRID: srid,
 			Tags: map[string]interface{}{
 				"type": "debug_text",
-				"zxy":  fmt.Sprintf("Z:%v, X:%v, Y:%v", tile.Z, tile.X, tile.Y),
+				"zxy":  fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
 			},
 		}
 

@@ -15,7 +15,7 @@ type Layer struct {
 	// GeomType is the the type of geometry returned from the SQL
 	geomType geom.Geometry
 	// The SRID that the data in the table is stored in. This will default to WebMercator
-	srid int
+	srid uint64
 }
 
 func (l Layer) Name() string {
@@ -26,7 +26,7 @@ func (l Layer) GeomType() geom.Geometry {
 	return l.geomType
 }
 
-func (l Layer) SRID() int {
+func (l Layer) SRID() uint64 {
 	return l.srid
 }
 

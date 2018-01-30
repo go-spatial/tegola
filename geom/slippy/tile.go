@@ -13,61 +13,53 @@ func NewTile(z, x, y uint64, buffer float64, srid uint64) *Tile {
 }
 
 type Tile struct {
-	//	zoom
+	// zoom
 	z uint64
-	//	column
+	// column
 	x uint64
-	//	row
+	// row
 	y uint64
-	//	buffer will add a buffer to the tile bounds. this buffer is expected to use the same units as the SRID
-	//	of the projected tile (i.e. WebMercator = pixels, 3395 = meters)
+	// buffer will add a buffer to the tile bounds. this buffer is expected to use the same units as the SRID
+	// of the projected tile (i.e. WebMercator = pixels, 3395 = meters)
 	Buffer float64
-	//	spatial reference id
+	// spatial reference id
 	SRID uint64
 }
 
-func (t *Tile) Z() uint64 {
-	return t.z
+func (t *Tile) ZXY() (uint64, uint64, uint64) {
+	return t.z, t.x, t.y
 }
 
-func (t *Tile) X() uint64 {
-	return t.x
-}
-
-func (t *Tile) Y() uint64 {
-	return t.y
-}
-
-//	TODO: return geom.Extent once it has been refactored
-//	TODO: support alternative SRIDs. Currently this assumes 3857
-//	Extent will return the tile extent excluding the tile's buffer and the Extent's SRID
+//TODO(arolek): return geom.Extent once it has been refactored
+//TODO(arolek): support alternative SRIDs. Currently this assumes 3857
+// Extent will return the tile extent excluding the tile's buffer and the Extent's SRID
 func (t *Tile) Extent() (extent [2][2]float64, srid uint64) {
 	max := 20037508.34
 
 	//	resolution
-	res := (max * 2) / math.Exp2(float64(t.Z()))
+	res := (max * 2) / math.Exp2(float64(t.z))
 
 	//	unbuffered extent
 	return [2][2]float64{
 		{
-			-max + (float64(t.X()) * res), // MinX
-			max - (float64(t.Y()) * res),  // Miny
+			-max + (float64(t.x) * res), // MinX
+			max - (float64(t.y) * res),  // Miny
 		},
 		{
-			-max + (float64(t.X()) * res) + res, // MaxX
-			max - (float64(t.Y()) * res) - res,  // MaxY
+			-max + (float64(t.x) * res) + res, // MaxX
+			max - (float64(t.y) * res) - res,  // MaxY
 
 		},
 	}, t.SRID
 }
 
-//	BufferedExtent will return the tile extent including the tile's buffer and the Extent's SRID
+// BufferedExtent will return the tile extent including the tile's buffer and the Extent's SRID
 func (t *Tile) BufferedExtent() (extent [2][2]float64, srid uint64) {
 	extent, _ = t.Extent()
 
-	//	TODO: the following value is hard coded for MVT, but this concept needs to be abstracted to support different projections
+	//TODO(arolek): the following value is hard coded for MVT, but this concept needs to be abstracted to support different projections
 	mvtTileWidthHeight := 4096.0
-	//	the bounds / extent
+	// the bounds / extent
 	mvtTileExtent := [2][2]float64{{0 - t.Buffer, 0 - t.Buffer}, {mvtTileWidthHeight + t.Buffer, mvtTileWidthHeight + t.Buffer}}
 
 	xspan := extent[1][0] - extent[0][0]
