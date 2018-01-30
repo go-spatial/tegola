@@ -23,12 +23,6 @@ func init() {
 	provider.Register(Name, NewTileProvider)
 }
 
-/*
-//	NewProvider Setups a debug provider. there are not currently any config params supported
-func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
-	return &Provider{}, nil
-}
-*/
 //	NewProvider Setups a debug provider. there are not currently any config params supported
 func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 	return &Provider{}, nil

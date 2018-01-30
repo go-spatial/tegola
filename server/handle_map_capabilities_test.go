@@ -110,30 +110,6 @@ func TestHandleMapCapabilities(t *testing.T) {
 					{
 						Version:      2,
 						Extent:       4096,
-						ID:           "debug-tile-outline",
-						Name:         "debug-tile-outline",
-						GeometryType: tilejson.GeomTypeLine,
-						MinZoom:      0,
-						MaxZoom:      atlas.MaxZoom,
-						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
-						},
-					},
-					{
-						Version:      2,
-						Extent:       4096,
-						ID:           "debug-tile-center",
-						Name:         "debug-tile-center",
-						GeometryType: tilejson.GeomTypePoint,
-						MinZoom:      0,
-						MaxZoom:      atlas.MaxZoom,
-						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
-						},
-					},
-					{
-						Version:      2,
-						Extent:       4096,
 						ID:           testLayer1.MVTName(),
 						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
@@ -153,6 +129,30 @@ func TestHandleMapCapabilities(t *testing.T) {
 						MaxZoom:      testLayer2.MaxZoom,
 						Tiles: []string{
 							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           "debug-tile-outline",
+						Name:         "debug-tile-outline",
+						GeometryType: tilejson.GeomTypeLine,
+						MinZoom:      0,
+						MaxZoom:      atlas.MaxZoom,
+						Tiles: []string{
+							"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+						},
+					},
+					{
+						Version:      2,
+						Extent:       4096,
+						ID:           "debug-tile-center",
+						Name:         "debug-tile-center",
+						GeometryType: tilejson.GeomTypePoint,
+						MinZoom:      0,
+						MaxZoom:      atlas.MaxZoom,
+						Tiles: []string{
+							"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
 						},
 					},
 				},

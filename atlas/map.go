@@ -19,34 +19,11 @@ import (
 
 //	NewMap creates a new map with the necessary default values
 func NewWGS84Map(name string) Map {
-	//	setup a debug provider
-	debugProvider, _ := debug.NewTileProvider(map[string]interface{}{})
-
 	return Map{
 		Name: name,
 		//	default bounds
-		Bounds: tegola.WGS84Bounds,
-		//	default debug layers
-		Layers: []Layer{
-			{
-				Name:              debug.LayerDebugTileOutline,
-				ProviderLayerName: debug.LayerDebugTileOutline,
-				Provider:          debugProvider,
-				GeomType:          geom.LineString{},
-				Disabled:          true,
-				MinZoom:           0,
-				MaxZoom:           MaxZoom,
-			},
-			{
-				Name:              debug.LayerDebugTileCenter,
-				ProviderLayerName: debug.LayerDebugTileCenter,
-				Provider:          debugProvider,
-				GeomType:          geom.Point{},
-				Disabled:          true,
-				MinZoom:           0,
-				MaxZoom:           MaxZoom,
-			},
-		},
+		Bounds:     tegola.WGS84Bounds,
+		Layers:     []Layer{},
 		SRID:       tegola.WGS84,
 		TileExtent: 4096,
 		TileBuffer: 64,
@@ -73,139 +50,102 @@ type Map struct {
 	TileBuffer uint64
 }
 
-func (m Map) DisableAllLayers() Map {
+// AddDebugLayers returns a copy of a Map with the debug layers appended to the layer list
+func (m Map) AddDebugLayers() Map {
 	//	make an explict copy of the layers
 	layers := make([]Layer, len(m.Layers))
 	copy(layers, m.Layers)
 	m.Layers = layers
 
-	for i := range m.Layers {
-		m.Layers[i].Disabled = true
-	}
+	//	setup a debug provider
+	debugProvider, _ := debug.NewTileProvider(map[string]interface{}{})
+
+	m.Layers = append(layers, []Layer{
+		{
+			Name:              debug.LayerDebugTileOutline,
+			ProviderLayerName: debug.LayerDebugTileOutline,
+			Provider:          debugProvider,
+			GeomType:          geom.LineString{},
+			MinZoom:           0,
+			MaxZoom:           MaxZoom,
+		},
+		{
+			Name:              debug.LayerDebugTileCenter,
+			ProviderLayerName: debug.LayerDebugTileCenter,
+			Provider:          debugProvider,
+			GeomType:          geom.Point{},
+			MinZoom:           0,
+			MaxZoom:           MaxZoom,
+		},
+	}...)
 
 	return m
 }
 
-func (m Map) EnableAllLayers() Map {
-	//	make an explict copy of the layers
-	layers := make([]Layer, len(m.Layers))
-	copy(layers, m.Layers)
-	m.Layers = layers
-
-	for i := range m.Layers {
-		m.Layers[i].Disabled = false
-	}
-
-	return m
-}
-
-func (m Map) EnableDebugLayers() Map {
-	//	make an explict copy of the layers
-	layers := make([]Layer, len(m.Layers))
-	copy(layers, m.Layers)
-	m.Layers = layers
-
-	for i := range m.Layers {
-		if m.Layers[i].Name == debug.LayerDebugTileCenter || m.Layers[i].Name == debug.LayerDebugTileOutline {
-			m.Layers[i].Disabled = false
-		}
-	}
-
-	return m
-}
-
-func (m Map) DisableDebugLayers() Map {
-	//	make an explict copy of the layers
-	layers := make([]Layer, len(m.Layers))
-	copy(layers, m.Layers)
-	m.Layers = layers
-
-	for i := range m.Layers {
-		if m.Layers[i].Name == debug.LayerDebugTileCenter || m.Layers[i].Name == debug.LayerDebugTileOutline {
-			m.Layers[i].Disabled = true
-		}
-	}
-
-	return m
-}
-
-//	EnableLayersByZoom returns layers that that are to be rendered between a min and max zoom
-func (m Map) EnableLayersByZoom(zoom int) Map {
-	//	make an explict copy of the layers
-	layers := make([]Layer, len(m.Layers))
-	copy(layers, m.Layers)
-	m.Layers = layers
+// FilterLayersByZoom returns a copy of a Map with a subset of layers that match the given zoom
+func (m Map) FilterLayersByZoom(zoom int) Map {
+	var layers []Layer
 
 	for i := range m.Layers {
 		if (m.Layers[i].MinZoom <= zoom || m.Layers[i].MinZoom == 0) && (m.Layers[i].MaxZoom >= zoom || m.Layers[i].MaxZoom == 0) {
-			m.Layers[i].Disabled = false
+			layers = append(layers, m.Layers[i])
 			continue
 		}
-
-		m.Layers[i].Disabled = true
 	}
+
+	//	overwrite the Map's layers with our subset
+	m.Layers = layers
 
 	return m
 }
 
-//	EnableLayersByName will enable layers that match the provided layer names
-//	this method will not disable layers
-func (m Map) EnableLayersByName(names ...string) Map {
-
-	//	make an explict copy of the layers
-	layers := make([]Layer, len(m.Layers))
-	copy(layers, m.Layers)
-	m.Layers = layers
+// FilterLayersByName returns a copy of a Map witha subset of layers that match the supplied list of layer names
+func (m Map) FilterLayersByName(names ...string) Map {
+	var layers []Layer
 
 	nameStr := strings.Join(names, ",")
 	for i := range m.Layers {
-		//	if we have a name set, use it for the lookup
+		// if we have a name set, use it for the lookup
 		if m.Layers[i].Name != "" && strings.Contains(nameStr, m.Layers[i].Name) {
-			m.Layers[i].Disabled = false
+			layers = append(layers, m.Layers[i])
 			continue
 		} else if m.Layers[i].ProviderLayerName != "" && strings.Contains(nameStr, m.Layers[i].ProviderLayerName) { //	default to using the ProviderLayerName for the lookup
-			m.Layers[i].Disabled = false
+			layers = append(layers, m.Layers[i])
 			continue
 		}
 	}
 
+	// overwrite the Map's layers with our subset
+	m.Layers = layers
+
 	return m
 }
 
-//	TODO: support for max zoom
+//	TODO (arolek): support for max zoom
 func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
-
-	//	generate a tile
+	// tile container
 	var mvtTile mvt.Tile
-	//	wait group for concurrent layer fetching
+	// wait group for concurrent layer fetching
 	var wg sync.WaitGroup
 
-	//	layer stack
+	// layer stack
 	mvtLayers := make([]*mvt.Layer, len(m.Layers))
 
-	//	set our waitgroup count
+	// set our waitgroup count
 	wg.Add(len(m.Layers))
 
-	//	iterate our layers
+	// iterate our layers
 	for i, layer := range m.Layers {
 		var mvtLayer mvt.Layer
 
-		// check if the label is disabled
-		if layer.Disabled {
-			wg.Done()
-			continue
-		}
-
-		//	go routine for fetching the layer concurrently
+		// go routine for fetching the layer concurrently
 		go func(i int, l Layer) {
-			//	on completion let the wait group know
+			// on completion let the wait group know
 			defer wg.Done()
 
 			//	fetch layer from data provider
 			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
-				//log.Println(f)
-
-				//	TODO: remove this geom conversion step once the mvt package has adopted the new geom package
+				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package
 				geo, err := convert.ToTegola(f.Geometry)
 				if err != nil {
 					return err
@@ -217,40 +157,38 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					Geometry: geo,
 				})
 
-				//	TODO: add default tags
+				// TODO (arolek): add default tags
 
 				return nil
 			})
 			if err != nil {
 				switch err {
-				case mvt.ErrCanceled:
-					//	TODO: add debug logs
 				case context.Canceled:
-					//	TODO: add debug logs
+					// TODO (arolek): add debug logs
 				default:
-					//	TODO: should we return an error to the response or just log the error?
-					//	we can't just write to the response as the waitgroup is going to write to the response as well
+					// TODO (arolek): should we return an error to the response or just log the error?
+					// we can't just write to the response as the waitgroup is going to write to the response as well
 					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
 				}
 				return
 			}
 
-			//	check if we have a layer name
+			// check if we have a layer name
 			if l.Name != "" {
 				mvtLayer.Name = l.Name
 			}
 
-			//	add the layer to the slice position
+			// add the layer to the slice position
 			mvtLayers[i] = &mvtLayer
 		}(i, layer)
 	}
 
-	//	wait for the waitgroup to finish
+	// wait for the waitgroup to finish
 	wg.Wait()
 
-	//	stop processing if the context has an error. this check is necessary
-	//	otherwise the server continues processing even if the request was canceled
-	//	as the waitgroup was not notified of the cancel
+	// stop processing if the context has an error. this check is necessary
+	// otherwise the server continues processing even if the request was canceled
+	// as the waitgroup was not notified of the cancel
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -258,92 +196,15 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	//	add layers to our tile
 	mvtTile.AddLayers(mvtLayers...)
 
-	//	TODO: change out the tile type for VTile. tegola.Tile will be deprecated
+	// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
 	tegolaTile := tegola.NewTile(int(tile.Z()), int(tile.X()), int(tile.Y()))
 
-	//	generate our tile
+	// generate our tile
 	vtile, err := mvtTile.VTile(ctx, tegolaTile)
 	if err != nil {
 		return nil, err
 	}
 
-	//	encode the tile
+	// encode the tile
 	return proto.Marshal(vtile)
 }
-
-/*
-//	TODO: support for max zoom
-func (m Map) Encode(ctx context.Context, tile *tegola.Tile) ([]byte, error) {
-	//	generate a tile
-	var mvtTile mvt.Tile
-	//	wait group for concurrent layer fetching
-	var wg sync.WaitGroup
-
-	//	layer stack
-	mvtLayers := make([]*mvt.Layer, len(m.Layers))
-
-	//	set our waitgroup count
-	wg.Add(len(m.Layers))
-
-	//	iterate our layers
-	for i, layer := range m.Layers {
-		// check if the label is disabled
-		if layer.Disabled {
-			wg.Done()
-			continue
-		}
-
-		//	go routine for fetching the layer concurrently
-		go func(i int, l Layer) {
-			//	on completion let the wait group know
-			defer wg.Done()
-
-			//	fetch layer from data provider
-			mvtLayer, err := l.Provider.MVTLayer(ctx, l.ProviderLayerName, tile, l.DefaultTags)
-			if err != nil {
-				switch err {
-				case mvt.ErrCanceled:
-					//	TODO: add debug logs
-				case context.Canceled:
-					//	TODO: add debug logs
-				default:
-					//	TODO: should we return an error to the response or just log the error?
-					//	we can't just write to the response as the waitgroup is going to write to the response as well
-					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
-				}
-				return
-			}
-
-			//	check if we have a layer name
-			if l.Name != "" {
-				mvtLayer.Name = l.Name
-			}
-
-			//	add the layer to the slice position
-			mvtLayers[i] = mvtLayer
-		}(i, layer)
-	}
-
-	//	wait for the waitgroup to finish
-	wg.Wait()
-
-	//	stop processing if the context has an error. this check is necessary
-	//	otherwise the server continues processing even if the request was canceled
-	//	as the waitgroup was not notified of the cancel
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
-	//	add layers to our tile
-	mvtTile.AddLayers(mvtLayers...)
-
-	//	generate our tile
-	vtile, err := mvtTile.VTile(ctx, tile)
-	if err != nil {
-		return nil, err
-	}
-
-	//	encode the tile
-	return proto.Marshal(vtile)
-}
-*/

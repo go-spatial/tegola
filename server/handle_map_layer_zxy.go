@@ -108,11 +108,11 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tile := slippy.NewTile(uint64(req.z), uint64(req.x), uint64(req.y), TileBuffer, tegola.WebMercator)
 
 	//	filter down the layers we need for this zoom
-	m = m.DisableAllLayers().DisableDebugLayers().EnableLayersByZoom(int(tile.Z()))
+	m = m.FilterLayersByZoom(int(tile.Z())).FilterLayersByName(req.layerName)
 
 	//	check for the debug query string
-	if !req.debug {
-		m = m.DisableDebugLayers()
+	if req.debug {
+		m = m.AddDebugLayers()
 	}
 
 	pbyte, err := m.Encode(r.Context(), tile)

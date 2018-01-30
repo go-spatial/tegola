@@ -58,7 +58,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("debug") == "true" {
 		debugQuery = "?debug=true"
 
-		m = m.EnableDebugLayers()
+		m = m.AddDebugLayers()
 	}
 
 	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), req.mapName, debugQuery)
@@ -79,10 +79,6 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	determing the min and max zoom for this map
 	for _, l := range m.Layers {
-		//	skip disabled layers
-		if l.Disabled {
-			continue
-		}
 		//	check if the layer already exists in our slice. this can happen if the config
 		//	is using the "name" param for a layer to override the providerLayerName
 		var skip bool

@@ -1,7 +1,7 @@
 package atlas
 
 import (
-	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/provider"
 )
 
@@ -15,9 +15,7 @@ type Layer struct {
 	Provider provider.Tiler
 	//	default tags to include when encoding the layer. provider tags take precedence
 	DefaultTags map[string]interface{}
-	GeomType    tegola.Geometry
-	//	if true, ignore the layer when encoding
-	Disabled bool
+	GeomType    geom.Geometry
 }
 
 //	MVTName will return the value that will be encoded in the Name field when the layer is encoded as MVT
