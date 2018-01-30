@@ -12,19 +12,18 @@ import (
 type Feature struct {
 	ID       uint64
 	Geometry geom.Geometry
-	SRID     int
+	SRID     uint64
 	Tags     map[string]interface{}
 }
 
 var ErrCanceled = errors.New("provider: canceled")
 
 type Tile interface {
-	Z() uint64
-	X() uint64
-	Y() uint64
-	//	Extent returns the extent of the tile excluding any buffer
+	// ZXY returns the z,x and y values.
+	ZXY() (uint64, uint64, uint64)
+	// Extent returns the extent of the tile excluding any buffer
 	Extent() (extent [2][2]float64, srid uint64)
-	//	BufferedExtent returns the extent of the tile including any buffer
+	// BufferedExtent returns the extent of the tile including any buffer
 	BufferedExtent() (extent [2][2]float64, srid uint64)
 }
 
@@ -39,7 +38,7 @@ type Tiler interface {
 type LayerInfo interface {
 	Name() string
 	GeomType() geom.Geometry
-	SRID() int
+	SRID() uint64
 }
 
 // InitFunc initilize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
@@ -47,7 +46,7 @@ type InitFunc func(map[string]interface{}) (Tiler, error)
 
 var providers map[string]InitFunc
 
-// Register is called by the init functions of the provider.
+// Register the provider with the system. This call is generally made in the init functions of the provider.
 func Register(name string, init InitFunc) error {
 	if providers == nil {
 		providers = make(map[string]InitFunc)
@@ -62,7 +61,7 @@ func Register(name string, init InitFunc) error {
 	return nil
 }
 
-// Drivers returns a list of drivers that have registered.
+// Drivers returns a list of registered drivers.
 func Drivers() (l []string) {
 	if providers == nil {
 		return l

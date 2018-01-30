@@ -25,7 +25,7 @@ type Provider struct {
 	pool   *pgx.ConnPool
 	// map of layer name and corrosponding sql
 	layers     map[string]Layer
-	srid       int
+	srid       uint64
 	firstlayer string
 }
 
@@ -126,13 +126,13 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	var srid = int64(DefaultSRID)
+	var srid = uint64(DefaultSRID)
 	if srid, err = c.Int64(ConfigKeySRID, &srid); err != nil {
 		return nil, err
 	}
 
 	p := Provider{
-		srid: int(srid),
+		srid: srid,
 		config: pgx.ConnPoolConfig{
 			ConnConfig: pgx.ConnConfig{
 				Host:     host,
@@ -217,7 +217,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			name:      lname,
 			idField:   idfld,
 			geomField: geomfld,
-			srid:      int(lsrid),
+			srid:      lsrid,
 		}
 		if sql != "" {
 			// make sure that the sql has a !BBOX! token
@@ -325,7 +325,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 	}
 
 	p := Provider{
-		srid: int(srid),
+		srid: uint64(srid),
 		config: pgx.ConnPoolConfig{
 			ConnConfig: pgx.ConnConfig{
 				Host:     host,
@@ -410,7 +410,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			name:      lname,
 			idField:   idfld,
 			geomField: geomfld,
-			srid:      int(lsrid),
+			srid:      uint64(lsrid),
 		}
 		if sql != "" {
 			// make sure that the sql has a !BBOX! token

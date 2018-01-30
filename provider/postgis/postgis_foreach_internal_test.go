@@ -8,7 +8,8 @@ import (
 	"testing"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/wkb"
+	"github.com/terranodo/tegola/geom/slippy"
+	"github.com/terranodo/tegola/provider"
 )
 
 func TestForEachFeature(t *testing.T) {
@@ -23,7 +24,7 @@ func TestForEachFeature(t *testing.T) {
 
 	testcases := []struct {
 		config       map[string]interface{}
-		tile         *tegola.Tile
+		tile         *slippy.Tile
 		expectedTags map[string]interface{}
 	}{
 		{
@@ -42,7 +43,7 @@ func TestForEachFeature(t *testing.T) {
 					},
 				},
 			},
-			tile: tegola.NewTile(1, 1, 1),
+			tile: slippy.NewTile(1, 1, 1, 0, tegola.WebMercator),
 			expectedTags: map[string]interface{}{
 				"height": "10",
 			},
@@ -50,33 +51,38 @@ func TestForEachFeature(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		var err error
+		tc := tc
 
-		provider, err := NewProvider(tc.config)
-		if err != nil {
-			t.Errorf("test (%v) failed. Unable to create a new provider. err: %v", i, err)
-			return
-		}
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
 
-		p := provider.(Provider)
-
-		//	iterate our configured layers
-		for _, tcLayer := range tc.config[ConfigKeyLayers].([]map[string]interface{}) {
-			layerName := tcLayer[ConfigKeyLayerName].(string)
-
-			err = p.ForEachFeature(context.Background(), layerName, tc.tile, func(lyr Layer, gid uint64, wgeom wkb.Geometry, ftags map[string]interface{}) error {
-
-				if !reflect.DeepEqual(tc.expectedTags, ftags) {
-					t.Errorf("test (%v) failed. expected tags (%+v) does not match output (%+v)", i, tc.expectedTags, ftags)
-					return nil
-				}
-
-				return nil
-			})
+			tileProvider, err := NewTileProvider(tc.config)
 			if err != nil {
-				t.Errorf("test (%v) failed. err: %v", i, err)
-				continue
+				t.Errorf(" NewTileProvider error, expected nil got %v", err)
+				return
 			}
-		}
+
+			//	iterate our configured layers
+			for _, tcLayer := range tc.config[ConfigKeyLayers].([]map[string]interface{}) {
+				layerName := tcLayer[ConfigKeyLayerName].(string)
+				tileProvider := tileProvider
+				t.Run(layerName, func(t *testing.T) {
+					t.Parallel()
+					if err := tileProvider.TileFeatures(
+						context.Background(),
+						layerName,
+						tc.tile,
+						func(f *provider.Feature) error {
+							if !reflect.DeepEqual(tc.expectedTags, f.Tags) {
+								t.Errorf("[%v] tags failed, expected (%+v) got (%+v)", i, tc.expectedTags, f.Tags)
+							}
+							return nil
+						},
+					); err != nil {
+						t.Errorf("[%v] err failed. expected nil got %v", i, err)
+					}
+				})
+			}
+		})
 	}
 }

@@ -129,9 +129,10 @@ func replaceTokens2(plyr *Layer, tile provider.Tile) (string, error) {
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.srid)
 
 	//	replace query string tokens
+	z, _, _ := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
-		zoomToken, strconv.FormatUint(tile.Z(), 10),
+		zoomToken, strconv.FormatUint(z, 10),
 	)
 
 	return tokenReplacer.Replace(plyr.sql), nil
