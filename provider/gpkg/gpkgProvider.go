@@ -253,11 +253,11 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		}
 	}
 
-	db, err := getGpkgConnection(filepath)
+	db, err := GetGpkgConnection(filepath)
 	if err != nil {
 		return nil, err
 	}
-	defer releaseGpkgConnection(filepath)
+	defer ReleaseGpkgConnection(filepath)
 
 	var qtext string
 	geomFieldname := p.layers[layerName].geomFieldname
@@ -390,12 +390,12 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 	}
 
 	log.Debug("Opening gpkg at: %v", filepath)
-	db, err := getGpkgConnection(filepath)
+	db, err := GetGpkgConnection(filepath)
 	if err != nil {
 		log.Error("Error opening gpkg file: %v", err)
 		return nil, err
 	}
-	defer releaseGpkgConnection(filepath)
+	defer ReleaseGpkgConnection(filepath)
 
 	p := GPKGProvider{FilePath: filepath, layers: make(map[string]GPKGLayer)}
 

@@ -26,7 +26,7 @@ var gpkgFiles []string = []string{
 }
 
 func TestBasicConnectionPoolUse(t *testing.T) {
-	// Checks that getGpkgConnection, releaseGpkgConnection, and signal handling have the
+	// Checks that GetGpkgConnection, ReleaseGpkgConnection, and signal handling have the
 	//	expected effect on open connections.
 
 	// Set close age to 100 milliseconds for testing purposes (closeAge uses nanoseconds)
@@ -34,28 +34,28 @@ func TestBasicConnectionPoolUse(t *testing.T) {
 
 	// --- Check that getting a connection once opens a new connection
 	assert.Equal(t, 0, len(gpkgPoolRegistry))
-	getGpkgConnection(gpkgFiles[0]) // files[0] get #1
+	GetGpkgConnection(gpkgFiles[0]) // files[0] get #1
 	assert.Equal(t, 1, len(gpkgPoolRegistry))
 
 	// --- Check that getting a connection more than once doesn't open a new connection
-	getGpkgConnection(gpkgFiles[0]) // files[0] get #2
+	GetGpkgConnection(gpkgFiles[0]) // files[0] get #2
 	assert.Equal(t, 1, len(gpkgPoolRegistry))
 
 	// --- Check that getting a connection updates it's request timestamp.
 	t1 := gpkgPoolRegistry[gpkgFiles[0]].lastRequested
-	getGpkgConnection(gpkgFiles[0]) // files[0] get #3
+	GetGpkgConnection(gpkgFiles[0]) // files[0] get #3
 	t2 := gpkgPoolRegistry[gpkgFiles[0]].lastRequested
 
 	assert.True(t, t2 > t1)
 
 	// --- Check that getting a different connection opens a new connection
-	getGpkgConnection(gpkgFiles[1]) // files[1] get #1
+	GetGpkgConnection(gpkgFiles[1]) // files[1] get #1
 	assert.Equal(t, 2, len(gpkgPoolRegistry))
 
 	// --- Check that releasing all connections to a database closes it after close age has been reached
-	releaseGpkgConnection(gpkgFiles[0]) // files[0] release #1
-	releaseGpkgConnection(gpkgFiles[0]) // files[0] release #2
-	releaseGpkgConnection(gpkgFiles[0]) // files[0] release #3
+	ReleaseGpkgConnection(gpkgFiles[0]) // files[0] release #1
+	ReleaseGpkgConnection(gpkgFiles[0]) // files[0] release #2
+	ReleaseGpkgConnection(gpkgFiles[0]) // files[0] release #3
 	assert.Equal(t, 0, gpkgPoolRegistry[gpkgFiles[0]].shareCount)
 
 	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[0]].db)
@@ -69,7 +69,7 @@ func TestBasicConnectionPoolUse(t *testing.T) {
 
 	// --- Check that SIGINT results in registry reset.
 	// TODO: Add mock to ensure that db.Close() is called for each connection.
-	getGpkgConnection(gpkgFiles[0])
+	GetGpkgConnection(gpkgFiles[0])
 	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[0]].db)
 	assert.NotNil(t, gpkgPoolRegistry[gpkgFiles[1]].db)
 	// This instructs the connection pool cleanup code not to resend the signal and exit the process

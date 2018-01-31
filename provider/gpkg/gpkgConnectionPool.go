@@ -76,7 +76,7 @@ func NewGpkgConnectionPool() (cp *GpkgConnectionPool) {
 	return cp
 }
 
-func getGpkgConnection(filepath string) (db *sql.DB, err error) {
+func GetGpkgConnection(filepath string) (db *sql.DB, err error) {
 	// Lock registry to create new pool for this filepath if needed
 	gpkgPoolRegistryMutex.Lock()
 	if gpkgPoolRegistry[filepath] == nil {
@@ -108,7 +108,7 @@ func getGpkgConnection(filepath string) (db *sql.DB, err error) {
 	return db, err
 }
 
-func releaseGpkgConnection(filepath string) {
+func ReleaseGpkgConnection(filepath string) {
 	gpkgPoolRegistryMutex.Lock()
 	conn := gpkgPoolRegistry[filepath]
 	gpkgPoolRegistryMutex.Unlock()
