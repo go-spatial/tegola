@@ -108,7 +108,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tile := slippy.NewTile(uint64(req.z), uint64(req.x), uint64(req.y), TileBuffer, tegola.WebMercator)
 
 	//	filter down the layers we need for this zoom
-	m = m.FilterLayersByZoom(int(tile.Z())).FilterLayersByName(req.layerName)
+	m = m.FilterLayersByZoom(req.z).FilterLayersByName(req.layerName)
 
 	//	check for the debug query string
 	if req.debug {
@@ -136,7 +136,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	check for tile size warnings
 	if len(pbyte) > MaxTileSize {
-		log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z(), tile.X(), tile.Y(), len(pbyte))
+		log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", req.z, req.x, req.y, len(pbyte))
 	}
 	/*
 		//	log the request

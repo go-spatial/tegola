@@ -171,10 +171,8 @@ var cacheCmd = &cobra.Command{
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 						}
 
-						//	log.Println("Tile Z", mt.Tile.Z)
-
 						//	filter down the layers we need for this zoom
-						m = m.DisableAllLayers().EnableLayersByZoom(mt.Tile.Z)
+						m = m.FilterLayersByZoom(mt.Tile.Z)
 
 						//	check if overwriting the cache is not ok
 						if !cacheOverwrite {

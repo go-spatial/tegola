@@ -96,7 +96,7 @@ var testMap = atlas.Map{
 type layer struct {
 	name     string
 	geomType geom.Geometry
-	srid     int
+	srid     uint64
 }
 
 func (l layer) Name() string {
@@ -107,6 +107,6 @@ func (l layer) GeomType() geom.Geometry {
 	return l.geomType
 }
 
-func (l layer) SRID() int {
+func (l layer) SRID() uint64 {
 	return l.srid
 }

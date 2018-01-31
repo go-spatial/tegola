@@ -19,7 +19,7 @@ type Feature struct {
 var ErrCanceled = errors.New("provider: canceled")
 
 type Tile interface {
-	// ZXY returns the z,x and y values.
+	// ZXY returns the z, x and y values of the tile
 	ZXY() (uint64, uint64, uint64)
 	// Extent returns the extent of the tile excluding any buffer
 	Extent() (extent [2][2]float64, srid uint64)

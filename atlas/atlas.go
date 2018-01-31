@@ -65,9 +65,9 @@ func (a *Atlas) SeedMapTile(m Map, z, x, y uint64) error {
 	//	cache key
 	key := cache.Key{
 		MapName: m.Name,
-		Z:       int(tile.Z()),
-		X:       int(tile.X()),
-		Y:       int(tile.Y()),
+		Z:       int(z),
+		X:       int(x),
+		Y:       int(y),
 	}
 
 	return a.cacher.Set(&key, b)

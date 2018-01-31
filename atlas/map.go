@@ -166,9 +166,10 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				case context.Canceled:
 					// TODO (arolek): add debug logs
 				default:
+					z, x, y := tile.ZXY()
 					// TODO (arolek): should we return an error to the response or just log the error?
 					// we can't just write to the response as the waitgroup is going to write to the response as well
-					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", tile.Z, tile.X, tile.Y, err)
+					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", z, x, y, err)
 				}
 				return
 			}
@@ -196,8 +197,10 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	//	add layers to our tile
 	mvtTile.AddLayers(mvtLayers...)
 
+	z, x, y := tile.ZXY()
+
 	// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-	tegolaTile := tegola.NewTile(int(tile.Z()), int(tile.X()), int(tile.Y()))
+	tegolaTile := tegola.NewTile(int(z), int(x), int(y))
 
 	// generate our tile
 	vtile, err := mvtTile.VTile(ctx, tegolaTile)

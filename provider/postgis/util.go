@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx"
-	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/provider"
 )
@@ -75,51 +74,18 @@ const (
 //
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
-func replaceTokens(plyr *Layer, tile *tegola.Tile) (string, error) {
+func replaceTokens(plyr *Layer, tile provider.Tile) (string, error) {
 
-	textent, err := tile.BufferedBoundingBox()
-	if err != nil {
-		return "", nil
-	}
-
-	minGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent.Minx, textent.Miny})
-	if err != nil {
-		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
-	}
-	maxGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent.Maxx, textent.Maxy})
-	if err != nil {
-		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
-	}
-
-	minPt, maxPt := minGeo.AsPoint(), maxGeo.AsPoint()
-
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.srid)
-
-	//	replace query string tokens
-	tokenReplacer := strings.NewReplacer(
-		bboxToken, bbox,
-		zoomToken, strconv.Itoa(tile.Z),
-	)
-
-	return tokenReplacer.Replace(plyr.sql), nil
-}
-
-//	replaceTokens replaces tokens in the provided SQL string
-//
-//	!BBOX! - the bounding box of the tile
-//	!ZOOM! - the tile Z value
-func replaceTokens2(plyr *Layer, tile provider.Tile) (string, error) {
-
-	//	TODO: make sure the tile returns the buffered bounds
-	textent, _ := tile.BufferedExtent()
+	bufferedExtent, _ := tile.BufferedExtent()
 
 	//	TODO: leverage helper functions for minx / miny to make this easier to follow
 	//	TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
-	minGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent[0][0], textent[0][1]})
+	minGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
-	maxGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent[1][0], textent[1][1]})
+
+	maxGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
