@@ -136,10 +136,12 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 	// iterate our layers
 	for i, layer := range m.Layers {
-		var mvtLayer mvt.Layer
 
 		// go routine for fetching the layer concurrently
 		go func(i int, l Layer) {
+			var mvtLayer mvt.Layer
+			mvtLayer.Name = l.MVTName()
+
 			// on completion let the wait group know
 			defer wg.Done()
 
@@ -172,11 +174,6 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", z, x, y, err)
 				}
 				return
-			}
-
-			// check if we have a layer name
-			if l.Name != "" {
-				mvtLayer.Name = l.Name
 			}
 
 			// add the layer to the slice position
