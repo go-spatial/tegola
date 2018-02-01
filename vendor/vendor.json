@@ -21,6 +21,12 @@
 			"revisionTime": "2017-05-07T10:33:33Z"
 		},
 		{
+			"checksumSHA1": "c0Z6y+J24+VKgSGO/E4Y+bsHi1g=",
+			"path": "github.com/arolek/p",
+			"revision": "1bc76936aa157179538f1cd815ce99ca3af80ff0",
+			"revisionTime": "2016-11-23T23:30:59Z"
+		},
+		{
 			"checksumSHA1": "nv58S9hV7km2wMcP28T3Fla/7wo=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "00379a7e831f5692265194c84459ac0a0c1a9b58",

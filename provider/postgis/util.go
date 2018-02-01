@@ -74,25 +74,25 @@ const (
 //
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
-func replaceTokens(plyr *Layer, tile provider.Tile) (string, error) {
+func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
 	bufferedExtent, _ := tile.BufferedExtent()
 
 	//	TODO: leverage helper functions for minx / miny to make this easier to follow
 	//	TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
-	minGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
+	minGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
-	maxGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
+	maxGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
 	minPt, maxPt := minGeo.AsPoint(), maxGeo.AsPoint()
 
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.srid)
+	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
 	//	replace query string tokens
 	z, _, _ := tile.ZXY()
@@ -101,7 +101,7 @@ func replaceTokens(plyr *Layer, tile provider.Tile) (string, error) {
 		zoomToken, strconv.FormatUint(z, 10),
 	)
 
-	return tokenReplacer.Replace(plyr.sql), nil
+	return tokenReplacer.Replace(sql), nil
 }
 
 func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {

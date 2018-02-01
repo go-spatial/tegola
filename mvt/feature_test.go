@@ -2,6 +2,7 @@ package mvt
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"context"
@@ -11,6 +12,51 @@ import (
 	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/mvt/vector_tile"
 )
+
+func TestScaleLinestring(t *testing.T) {
+
+	tile := tegola.NewTile(20, 0, 0)
+	cursor := NewCursor(tile)
+	newLine := func(ptpairs ...float64) (ln basic.Line) {
+		for i, j := 0, 1; j < len(ptpairs); i, j = i+2, j+2 {
+			pt, err := tile.FromPixel(tegola.WebMercator, [2]float64{ptpairs[i], ptpairs[j]})
+			if err != nil {
+				panic(fmt.Sprintf("error trying to convert %v,%v to WebMercator. %v", ptpairs[i], ptpairs[j], err))
+			}
+			ln = append(ln, basic.Point(pt))
+
+		}
+		return ln
+	}
+
+	type tcase struct {
+		g tegola.LineString
+		e basic.Line
+	}
+	fn := func(t *testing.T, tc tcase) {
+		got := cursor.scalelinestr(tc.g)
+		if !reflect.DeepEqual(tc.e, got) {
+			t.Errorf("scale line, expected %t got %t", tc.e, got)
+		}
+	}
+	tests := map[string]tcase{
+		"duplicate pt simple line": tcase{
+			g: basic.NewLine(9.0, 9.0, 9.0, 9.0),
+		},
+		"simple line": tcase{
+			g: newLine(10.0, 10.0, 11.0, 11.0),
+			e: basic.NewLine(9.0, 9.0, 11.0, 11.0),
+		},
+		"simple line 3pt": tcase{
+			g: newLine(10.0, 10.0, 11.0, 10.0, 11.0, 15.0),
+			e: basic.NewLine(9.0, 9.0, 11.0, 9.0, 11.0, 14.0),
+		},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
 
 func TestEncodeGeometry(t *testing.T) {
 	type tc struct {

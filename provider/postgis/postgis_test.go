@@ -52,7 +52,7 @@ func TestNewTileProvider(t *testing.T) {
 	}
 }
 
-func TestMVTLayer(t *testing.T) {
+func TestTileFeatures(t *testing.T) {
 	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
 		return
 	}

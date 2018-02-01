@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -262,20 +263,30 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 func (p Provider) layerGeomType(l *Layer) error {
 	var err error
 
-	//	we need a tile to run our sql through the replacer
-	tile := slippy.NewTile(0, 0, 0, 64, tegola.WebMercator)
-
-	sql, err := replaceTokens(l, tile)
-	if err != nil {
-		return err
-	}
-
-	//	we want to know the geom type instead of returning the geom data so we modify the SQL
-	//	TODO: this strategy wont work if remove the requirement of wrapping ST_AsBinary(geom) in the SQL statements.
-	sql = strings.Replace(strings.ToLower(sql), "st_asbinary", "st_geometrytype", 1)
+	// we want to know the geom type instead of returning the geom data so we modify the SQL
+	// TODO (arolek): this strategy wont work if remove the requirement of wrapping ST_AsBinary(geom) in the SQL statements.
+	//
+	// https://github.com/terranodo/tegola/issues/180
+	//
+	// case insensitive search
+	re := regexp.MustCompile(`(?i)ST_AsBinary`)
+	sql := re.ReplaceAllString(l.sql, "ST_GeometryType")
 
 	//	we only need a single result set to sniff out the geometry type
 	sql = fmt.Sprintf("%v LIMIT 1", sql)
+
+	// if a !ZOOM! token exists, all features could be filtered out so we don't have a geometry to inspect it's type.
+	// address this by replacing the !ZOOM! token with an ANY statement which includes all zooms
+	sql = strings.Replace(sql, "!ZOOM!", "ANY('{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,25}')", 1)
+
+	//	we need a tile to run our sql through the replacer
+	tile := slippy.NewTile(0, 0, 0, 64, tegola.WebMercator)
+
+	//	normal replacer
+	sql, err = replaceTokens(sql, l.srid, tile)
+	if err != nil {
+		return err
+	}
 
 	rows, err := p.pool.Query(sql)
 	if err != nil {
@@ -351,7 +362,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		return ErrLayerNotFound{layer}
 	}
 
-	sql, err := replaceTokens(&plyr, tile)
+	sql, err := replaceTokens(plyr.sql, plyr.srid, tile)
 	if err != nil {
 		return fmt.Errorf("error replacing layer tokens for layer (%v) SQL (%v): %v", layer, sql, err)
 	}
