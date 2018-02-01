@@ -270,8 +270,10 @@ func (p Provider) layerGeomType(l *Layer) error {
 		return err
 	}
 
-	//	we want to know the geom type instead of returning the geom data so we modify the SQL
-	//	TODO: this strategy wont work if remove the requirement of wrapping ST_AsBinary(geom) in the SQL statements.
+	// we want to know the geom type instead of returning the geom data so we modify the SQL
+	// TODO (arolek): this strategy wont work if remove the requirement of wrapping ST_AsBinary(geom) in the SQL statements.
+	//
+	// https://github.com/terranodo/tegola/issues/180
 	sql = strings.Replace(strings.ToLower(sql), "st_asbinary", "st_geometrytype", 1)
 
 	//	we only need a single result set to sniff out the geometry type

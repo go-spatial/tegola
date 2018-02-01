@@ -153,13 +153,19 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					return err
 				}
 
+				// add default tags, but don't overwrite a tag that already exists
+				for k, v := range l.DefaultTags {
+					_, ok := f.Tags[k]
+					if !ok {
+						f.Tags[k] = v
+					}
+				}
+
 				mvtLayer.AddFeatures(mvt.Feature{
 					ID:       &f.ID,
 					Tags:     f.Tags,
 					Geometry: geo,
 				})
-
-				// TODO (arolek): add default tags
 
 				return nil
 			})
