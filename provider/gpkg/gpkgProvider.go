@@ -100,7 +100,7 @@ func replaceTokens(qtext string) (ttext string, tokensPresent map[string]bool) {
 // Reads arbitrary schema for a single row of a GeoPackage query, prepared for an id, a geometry,
 // possibly some utility columns (min_x, ...) to ignore, and the remaining columns to be
 // used as tags.
-func ReadFeatureRow(cols []string, rows *sql.Rows, idFieldname string, geomFieldname string) (id uint64, geom tegola.Geometry, ftags map[string]interface{}, err error) {
+func ReadFeatureRow(cols []string, rows *sql.Rows, idFieldname string, geomFieldname string) (id uint64, geomHeader *GeoPackageBinaryHeader, wkbGeom []byte, ftags map[string]interface{}, err error) {
 	ftags = make(map[string]interface{})
 	vals := make([]interface{}, len(cols))
 	valPtrs := make([]interface{}, len(cols))
@@ -112,7 +112,7 @@ func ReadFeatureRow(cols []string, rows *sql.Rows, idFieldname string, geomField
 
 	if err != nil {
 		log.Errorf("Problem reading row values: %v", err)
-		return 0, nil, nil, err
+		return 0, nil, nil, nil, err
 	}
 
 	for i := 0; i < len(cols); i++ {
@@ -124,35 +124,12 @@ func ReadFeatureRow(cols []string, rows *sql.Rows, idFieldname string, geomField
 		case idFieldname:
 			id = uint64(vals[i].(int64))
 		case geomFieldname:
-			log.Debug("Doing gpkg geometry extraction...", vals[i])
-			var h GeoPackageBinaryHeader
+			log.Debug("Extracting geopackage geometry header.", vals[i])
 			geomData := vals[i].([]byte)
-			h.Init(geomData)
+			geomHeader = new(GeoPackageBinaryHeader)
+			geomHeader.Init(geomData)
 
-			reader := bytes.NewReader(geomData[h.Size():])
-			geom, err = wkb.Decode(reader)
-
-			if err != nil {
-				log.Error("Error decoding geometry: %v", err)
-			}
-
-			if h.SRSId() != DefaultSRID {
-				log.Debug("SRID %v != %v, trying to convert...", h.SRSId(), DefaultSRID)
-				// We need to convert our points to Webmercator.
-				g, err := basic.ToWebMercator(int(h.SRSId()), geom)
-				if err != nil {
-					log.Error(
-						"Was unable to transform geometry to webmercator from "+
-							"SRID (%v) for feature %v due to error: %v",
-						h.SRSId(), id, err)
-					return 0, nil, nil, err
-				} else {
-					log.Debug("...conversion ok")
-				}
-				geom = g.Geometry
-			} else {
-				log.Info("SRID already default (%v), no conversion necessary", DefaultSRID)
-			}
+			wkbGeom = geomData[geomHeader.Size():]
 		case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
 			// Skip these columns used for bounding box and zoom filtering
 			continue
@@ -175,7 +152,7 @@ func ReadFeatureRow(cols []string, rows *sql.Rows, idFieldname string, geomField
 			}
 		}
 	}
-	return id, geom, ftags, nil
+	return id, geomHeader, wkbGeom, ftags, nil
 }
 
 func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[string]interface{}) (
@@ -204,12 +181,38 @@ func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowC
 		*rowCount++
 
 		var fid uint64
-		geom = nil
+		var wkbGeom []byte
+		var geomHeader *GeoPackageBinaryHeader
 		var ftags map[string]interface{}
-		fid, geom, ftags, err = ReadFeatureRow(cols, rows, idFieldname, geomFieldname)
+		fid, geomHeader, wkbGeom, ftags, err = ReadFeatureRow(cols, rows, idFieldname, geomFieldname)
 		if err != nil {
 			log.Errorf("Problem reading feature row: %v", err)
 			continue
+		}
+
+		reader := bytes.NewReader(wkbGeom)
+		geom, err = wkb.Decode(reader)
+
+		if err != nil {
+			log.Error("Error decoding geometry: %v", err)
+		}
+
+		if geomHeader.SRSId() != DefaultSRID {
+			log.Debug("SRID %v != %v, trying to convert...", geomHeader.SRSId(), DefaultSRID)
+			// We need to convert our points to Webmercator.
+			g, err := basic.ToWebMercator(int(geomHeader.SRSId()), geom)
+			if err != nil {
+				log.Error(
+					"Was unable to transform geometry to webmercator from "+
+						"SRID (%v) for feature %v due to error: %v",
+					geomHeader.SRSId(), fid, err)
+				return nil, err
+			} else {
+				log.Debug("...conversion ok")
+			}
+			geom = g.Geometry
+		} else {
+			log.Info("SRID already default (%v), no conversion necessary", DefaultSRID)
 		}
 
 		// Copy default tags to augment this feature's tags
