@@ -9,11 +9,12 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/geom/encoding/wkt"
+	"github.com/terranodo/tegola/internal/convert"
 	"github.com/terranodo/tegola/maths"
 	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/maths/validate"
 	"github.com/terranodo/tegola/mvt/vector_tile"
-	"github.com/terranodo/tegola/wkb"
 )
 
 // errors
@@ -41,8 +42,22 @@ type Feature struct {
 	Unsimplifed *bool
 }
 
+func wktEncode(g tegola.Geometry) string {
+	gg, err := convert.ToGeom(g)
+	if err != nil {
+		return fmt.Sprintf("error converting tegola geom to geom geom, %v", err)
+	}
+
+	s, err := wkt.Encode(gg)
+	if err != nil {
+		return fmt.Sprintf("Encoding error for geom geom, %v", err)
+	}
+	return s
+
+}
+
 func (f Feature) String() string {
-	g := wkb.WKT(f.Geometry)
+	g := wktEncode(f.Geometry)
 	if f.ID != nil {
 		return fmt.Sprintf("{Feature: %v, GEO: %v, Tags: %+v}", *f.ID, g, f.Tags)
 	}
@@ -634,7 +649,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, tile *tegola.Tile
 		return g, vectorTile.Tile_POLYGON, nil
 
 	default:
-		log.Printf("Geo: %v : %T", wkb.WKT(geo), geo)
+		log.Printf("Geo: %v : %T", wktEncode(geo), geo)
 		return nil, vectorTile.Tile_UNKNOWN, ErrUnknownGeometryType
 	}
 }

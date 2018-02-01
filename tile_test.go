@@ -103,7 +103,10 @@ func TestTileZRes(t *testing.T) {
 	}{
 		{
 			tile: *tegola.NewTile(2, 1, 1),
-			zres: 39135.75848201026,
+			// this is for 4096x4096
+			zres: 2445.984905125641,
+			// this is for 256x256
+			// zres: 39135.75848201026,
 		},
 	}
 
