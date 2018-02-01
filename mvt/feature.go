@@ -294,13 +294,9 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64, simplify bool) basic.P
 		return nil
 	}
 
-	//sqTolerance := tolerance
-
-	// First lets look the first line, then we will simplify the other lines.
-
 	var poly basic.Polygon
 	sqTolerance := tolerance * tolerance
-	//	poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
+	// First lets look the first line, then we will simplify the other lines.
 	for i := range lines {
 		area := maths.AreaOfPolygonLineString(lines[i])
 		l := basic.CloneLine(lines[i])
@@ -331,9 +327,7 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64, simplify bool) basic.P
 			continue
 		}
 
-		//log.Println("Simplifying Polygon subline Point count:", len(pts))
 		pts = maths.DouglasPeucker(pts, sqTolerance, simplify)
-		//log.Println("\t After Pointcount:", len(pts))
 		if len(pts) <= 2 {
 			if i == 0 {
 				return nil
@@ -353,10 +347,7 @@ func simplifyPolygon(g tegola.Polygon, tolerance float64, simplify bool) basic.P
 }
 
 func SimplifyGeometry(g tegola.Geometry, tolerance float64, simplify bool) tegola.Geometry {
-	if g == nil {
-		return nil
-	}
-	if !simplify {
+	if !simplify || g == nil {
 		return g
 	}
 	switch gg := g.(type) {

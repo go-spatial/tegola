@@ -21,21 +21,21 @@ import (
 
 var (
 	configFile string
-	//	set at build time via the CI
+	// set at build time via the CI
 	Version = "version not set"
-	//	parsed config
+	// parsed config
 	conf config.Config
 )
 
 func init() {
-	//	root
+	// root
 	RootCmd.PersistentFlags().StringVar(&configFile, "config", "config.toml", "path to config file")
 
-	//	server
+	// server
 	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
 	RootCmd.AddCommand(serverCmd)
 
-	//	cache seed / purge
+	// cache seed / purge
 	cacheCmd.Flags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
 	cacheCmd.Flags().StringVarP(&cacheZXY, "zxy", "", "", "tile in z/x/y format")
 	cacheCmd.Flags().UintVarP(&cacheMinZoom, "minzoom", "", 0, "min zoom to seed cache from")
@@ -46,7 +46,7 @@ func init() {
 
 	RootCmd.AddCommand(cacheCmd)
 
-	//	version
+	// version
 	RootCmd.AddCommand(versionCmd)
 }
 

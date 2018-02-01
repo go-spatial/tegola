@@ -240,10 +240,14 @@ func (t *Tile) PixelBufferedBounds() (bounds [2][2]float64, err error) {
 //ZRes takes a web mercator zoom level and returns the pixel resolution for that
 //	scale, assuming 256x256 pixel tiles. Non-integer zoom levels are accepted.
 //	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
-// TODO: gdey — I'm pretty sure we should be using the extent instead of 256 here. But I don't know what the magic number 40075016.6855785 is used for.
+// TODO(gdey):  I'm pretty sure we should be using the extent instead of 256 here. But I don't know what the magic number 40075016.6855785 is used for.
 // 40075016.6855785 is close to 2*webmercator.MaxXExtent or 2*webmercator.MaxYExtent
+// 40075016.6855785 is the equator in meters for WGS84 at z=0
+// 256 is the tile width and height.
 func (t *Tile) ZRes() float64 {
-	return 40075016.6855785 / (256 * math.Exp2(float64(t.Z)))
+
+	//return 40075016.6855785 / (256 * math.Exp2(float64(t.Z)))
+	return 40075016.6855785 / (t.Extent * math.Exp2(float64(t.Z)))
 }
 
 // This is from Leafty

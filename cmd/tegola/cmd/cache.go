@@ -278,13 +278,13 @@ type MapTile struct {
 	Tile    *tegola.Tile
 }
 
-//	parseTileString converts a Z/X/Y formatted string into a tegola tile
+//parseTileString converts a Z/X/Y formatted string into a tegola tile
 func parseTileString(str string) (*tegola.Tile, error) {
 	var tile *tegola.Tile
 
-	parts := strings.Split(cacheZXY, "/")
+	parts := strings.Split(str, "/")
 	if len(parts) != 3 {
-		return tile, fmt.Errorf("invalid zxy value (%v). expecting the format z/x/y", cacheZXY)
+		return tile, fmt.Errorf("invalid zxy value (%v). expecting the format z/x/y", str)
 	}
 
 	z, err := strconv.Atoi(parts[0])
