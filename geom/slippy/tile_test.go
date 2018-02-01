@@ -3,7 +3,7 @@ package slippy_test
 import (
 	"testing"
 
-	"github.com/gdey/tegola"
+	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/geom/slippy"
 )
 
