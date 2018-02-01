@@ -6,6 +6,7 @@ import (
 	goLog "log"
 	"os"
 	"runtime"
+	"time"
 )
 
 var standard Standard
@@ -16,34 +17,35 @@ func (_ Standard) SetOutput(w io.Writer) {
 	goLog.SetOutput(w)
 }
 
-func Output(level string, format string, args ...interface{}) {
-	logMsg := fmt.Sprintf(format, args...)
+func Output(level string, args ...interface{}) {
 	_, file, line, _ := runtime.Caller(4)
-	// timestamp will be provided by goLog
-	goLog.Printf("•%v•%v•%v•%v", level, file, line, logMsg)
+	logMsg := fmt.Sprint(args...)
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	// "\r" Eliminates the default message prefix so we can format as we like.
+	goLog.Printf("\r%v•%v•%v•%v•%v", timestamp, level, file, line, logMsg)
 }
 
-func (_ Standard) Fatal(format string, args ...interface{}) {
-	Output("FATAL", format, args...)
+func (_ Standard) Fatal(args ...interface{}) {
+	Output("FATAL", args...)
 	os.Exit(1)
 }
 
-func (_ Standard) Error(format string, args ...interface{}) {
-	Output("ERROR", format, args...)
+func (_ Standard) Error(args ...interface{}) {
+	Output("ERROR", args...)
 }
 
-func (_ Standard) Warn(format string, args ...interface{}) {
-	Output("WARN", format, args...)
+func (_ Standard) Warn(args ...interface{}) {
+	Output("WARN", args...)
 }
 
-func (_ Standard) Info(format string, args ...interface{}) {
-	Output("INFO", format, args...)
+func (_ Standard) Info(args ...interface{}) {
+	Output("INFO", args...)
 }
 
-func (_ Standard) Debug(format string, args ...interface{}) {
-	Output("DEBUG", format, args...)
+func (_ Standard) Debug(args ...interface{}) {
+	Output("DEBUG", args...)
 }
 
-func (_ Standard) Trace(format string, args ...interface{}) {
-	Output("TRACE", format, args...)
+func (_ Standard) Trace(args ...interface{}) {
+	Output("TRACE", args...)
 }

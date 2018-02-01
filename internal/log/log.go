@@ -1,18 +1,21 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"sync"
 )
 
+var TimestampRegex string = `\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}` // Ex: "2006-01-02 15:04:05"
+
 type Interface interface {
 	// These all take args the same as calls to fmt.Printf()
-	Fatal(string, ...interface{})
-	Error(string, ...interface{})
-	Warn(string, ...interface{})
-	Info(string, ...interface{})
-	Debug(string, ...interface{})
-	Trace(string, ...interface{})
+	Fatal(...interface{})
+	Error(...interface{})
+	Warn(...interface{})
+	Info(...interface{})
+	Debug(...interface{})
+	Trace(...interface{})
 	SetOutput(io.Writer)
 }
 
@@ -81,83 +84,86 @@ func SetLogLevel(lvl Level) {
 }
 
 // Output format should be: "timestamp•LOG_LEVEL•filename.go•linenumber•output"
-func Fatal(msg interface{}, args ...interface{}) {
-	var msgString string
-	switch m := msg.(type) {
-	case string:
-		msgString = m
-	case error:
-		msgString = m.Error()
-	}
-	logger.Fatal(msgString, args...)
+func Fatalf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	logger.Fatal(msg)
 }
 
-func Error(msg interface{}, args ...interface{}) {
+func Errorf(format string, args ...interface{}) {
 	if !IsError {
 		return
 	}
-	var msgString string
-	switch m := msg.(type) {
-	case string:
-		msgString = m
-	case error:
-		msgString = m.Error()
-	}
-	logger.Error(msgString, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Error(msg)
 }
 
-func Warn(msg interface{}, args ...interface{}) {
+func Warnf(format string, args ...interface{}) {
 	if !IsWarn {
 		return
 	}
-	var msgString string
-	switch m := msg.(type) {
-	case string:
-		msgString = m
-	case error:
-		msgString = m.Error()
-	}
-	logger.Warn(msgString, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Warn(msg)
 }
 
-func Info(msg interface{}, args ...interface{}) {
+func Infof(format string, args ...interface{}) {
 	if !IsInfo {
 		return
 	}
-	var msgString string
-	switch m := msg.(type) {
-	case string:
-		msgString = m
-	case error:
-		msgString = m.Error()
-	}
-	logger.Info(msgString, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Info(msg)
 }
 
-func Debug(msg interface{}, args ...interface{}) {
+func Debugf(format string, args ...interface{}) {
 	if !IsDebug {
 		return
 	}
-	var msgString string
-	switch m := msg.(type) {
-	case string:
-		msgString = m
-	case error:
-		msgString = m.Error()
-	}
-	logger.Debug(msgString, args...)
+	msg := fmt.Sprintf(format, args...)
+	logger.Debug(msg)
 }
 
-func Trace(msg interface{}, args ...interface{}) {
+func Tracef(format string, args ...interface{}) {
 	if !IsTrace {
 		return
 	}
-	var msgString string
-	switch m := msg.(type) {
-	case string:
-		msgString = m
-	case error:
-		msgString = m.Error()
+	msg := fmt.Sprintf(format, args...)
+	logger.Trace(msg)
+}
+
+func Fatal(args ...interface{}) {
+	logger.Fatal(args...)
+}
+
+func Error(args ...interface{}) {
+	if !IsError {
+		return
 	}
-	logger.Trace(msgString, args...)
+	logger.Error(args...)
+}
+
+func Warn(args ...interface{}) {
+	if !IsWarn {
+		return
+	}
+	logger.Warn(args...)
+}
+
+func Info(args ...interface{}) {
+	if !IsInfo {
+		return
+	}
+	logger.Info(args...)
+}
+
+func Debug(args ...interface{}) {
+	if !IsDebug {
+		return
+	}
+	logger.Debug(args...)
+}
+
+func Trace(args ...interface{}) {
+	if !IsTrace {
+		return
+	}
+	logger.Trace(args...)
 }
