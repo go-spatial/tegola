@@ -97,6 +97,87 @@ func replaceTokens(qtext string) (ttext string, tokensPresent map[string]bool) {
 	return ttext, tokensPresent
 }
 
+// Reads arbitrary schema for a single row of a GeoPackage query, prepared for an id, a geometry,
+// possibly some utility columns (min_x, ...) to ignore, and the remaining columns to be
+// used as tags.
+func ReadFeatureRow(cols []string, rows *sql.Rows, idFieldname string, geomFieldname string) (id uint64, geom tegola.Geometry, ftags map[string]interface{}, err error) {
+	ftags = make(map[string]interface{})
+	vals := make([]interface{}, len(cols))
+	valPtrs := make([]interface{}, len(cols))
+	for i := 0; i < len(cols); i++ {
+		valPtrs[i] = &vals[i]
+	}
+
+	err = rows.Scan(valPtrs...)
+
+	if err != nil {
+		log.Errorf("Problem reading row values: %v", err)
+		return 0, nil, nil, err
+	}
+
+	for i := 0; i < len(cols); i++ {
+		if vals[i] == nil {
+			continue
+		}
+
+		switch cols[i] {
+		case idFieldname:
+			id = uint64(vals[i].(int64))
+		case geomFieldname:
+			log.Debug("Doing gpkg geometry extraction...", vals[i])
+			var h GeoPackageBinaryHeader
+			geomData := vals[i].([]byte)
+			h.Init(geomData)
+
+			reader := bytes.NewReader(geomData[h.Size():])
+			geom, err = wkb.Decode(reader)
+
+			if err != nil {
+				log.Error("Error decoding geometry: %v", err)
+			}
+
+			if h.SRSId() != DefaultSRID {
+				log.Debug("SRID %v != %v, trying to convert...", h.SRSId(), DefaultSRID)
+				// We need to convert our points to Webmercator.
+				g, err := basic.ToWebMercator(int(h.SRSId()), geom)
+				if err != nil {
+					log.Error(
+						"Was unable to transform geometry to webmercator from "+
+							"SRID (%v) for feature %v due to error: %v",
+						h.SRSId(), id, err)
+					return 0, nil, nil, err
+				} else {
+					log.Debug("...conversion ok")
+				}
+				geom = g.Geometry
+			} else {
+				log.Info("SRID already default (%v), no conversion necessary", DefaultSRID)
+			}
+		case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
+			// Skip these columns used for bounding box and zoom filtering
+			continue
+		default:
+			// Grab any non-nil, non-id, non-bounding box, & non-geometry column as a tag
+			switch v := vals[i].(type) {
+			case []uint8:
+				asBytes := make([]byte, len(v))
+				for j := 0; j < len(v); j++ {
+					asBytes[j] = v[j]
+				}
+
+				asString := string(asBytes)
+				ftags[cols[i]] = asString
+			case int64:
+				ftags[cols[i]] = v
+			default:
+				err := fmt.Errorf("Unexpected type for sqlite column data: %v: %T\n", cols[i], v)
+				log.Error(err)
+			}
+		}
+	}
+	return id, geom, ftags, nil
+}
+
 func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowCount *int, dtags map[string]interface{}) (
 	layer *mvt.Layer, err error) {
 
@@ -113,12 +194,6 @@ func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowC
 		return nil, err
 	}
 
-	vals := make([]interface{}, len(cols))
-	valPtrs := make([]interface{}, len(cols))
-	for i := 0; i < len(cols); i++ {
-		valPtrs[i] = &vals[i]
-	}
-
 	// Populates the "features" property of "layer"
 	for rows.Next() {
 		// Check if the context cancelled or timed out.
@@ -127,79 +202,23 @@ func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowC
 		}
 
 		*rowCount++
-		// Copy default tags to kick off this feature's tags
-		ftags := make(map[string]interface{})
-		for k, v := range dtags {
-			ftags[k] = v
-		}
 
+		var fid uint64
 		geom = nil
-		err := rows.Scan(valPtrs...)
+		var ftags map[string]interface{}
+		fid, geom, ftags, err = ReadFeatureRow(cols, rows, idFieldname, geomFieldname)
 		if err != nil {
-			log.Error(err)
+			log.Errorf("Problem reading feature row: %v", err)
 			continue
 		}
-		var fid uint64
 
-		for i := 0; i < len(cols); i++ {
-			if vals[i] == nil {
+		// Copy default tags to augment this feature's tags
+		for k, v := range dtags {
+			// If the tag with this key is already present, ignore the default
+			if _, ok := ftags[k]; ok {
 				continue
 			}
-
-			switch cols[i] {
-			case idFieldname:
-				fid = uint64(vals[i].(int64))
-			case geomFieldname:
-				log.Debug("Doing gpkg geometry extraction...", vals[i])
-				var h GeoPackageBinaryHeader
-				geomData := vals[i].([]byte)
-				h.Init(geomData)
-
-				reader := bytes.NewReader(geomData[h.Size():])
-				geom, err = wkb.Decode(reader)
-
-				if err != nil {
-					log.Error("Error decoding geometry: %v", err)
-				}
-
-				if h.SRSId() != DefaultSRID {
-					log.Debug("SRID %v != %v, trying to convert...", pLayer.srid, DefaultSRID)
-					// We need to convert our points to Webmercator.
-					g, err := basic.ToWebMercator(pLayer.srid, geom)
-					if err != nil {
-						log.Error(
-							"Was unable to transform geometry to webmercator from "+
-								"SRID (%v) for layer (%v) due to error: %v",
-							pLayer.srid, layer.Name, err)
-						return nil, err
-					} else {
-						log.Debug("...conversion ok")
-					}
-					geom = g.Geometry
-				} else {
-					log.Info("SRID already default (%v), no conversion necessary", DefaultSRID)
-				}
-			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
-				// Skip these columns used for bounding box and zoom filtering
-				continue
-			default:
-				// Grab any non-nil, non-id, non-bounding box, & non-geometry column as a tag
-				switch v := vals[i].(type) {
-				case []uint8:
-					asBytes := make([]byte, len(v))
-					for j := 0; j < len(v); j++ {
-						asBytes[j] = v[j]
-					}
-
-					asString := string(asBytes)
-					ftags[cols[i]] = asString
-				case int64:
-					ftags[cols[i]] = v
-				default:
-					err := fmt.Errorf("Unexpected type for sqlite column data: %v: %T\n", cols[i], v)
-					log.Error(err)
-				}
-			}
+			ftags[k] = v
 		}
 
 		if geom == nil {
@@ -344,7 +363,7 @@ func gpkgGeomNameToTegolaGeometry(geomName string) (tegola.Geometry, error) {
 }
 
 func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
-	log.Info("GPKGProvider NewProvider() called with config: %v\n", config)
+	log.Infof("GPKGProvider NewProvider() called with config: %v\n", config)
 	m := dict.M(config)
 	filepath, err := m.String("FilePath", nil)
 
