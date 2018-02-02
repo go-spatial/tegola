@@ -227,9 +227,68 @@ func TestEncode(t *testing.T) {
 			continue
 		}
 
-		if !reflect.DeepEqual(tc.expected, tile) {
-			t.Errorf("[%v] expected %v got %v", i, tc.expected, tile)
-			continue
+		for j, tileLayer := range tile.Layers {
+			expectedLayer := tc.expected.Layers[j]
+
+			if *tileLayer.Version != *expectedLayer.Version {
+				t.Errorf("[%v] expected %v got %v", i, *tileLayer.Version, *expectedLayer.Version)
+				continue
+			}
+
+			if *tileLayer.Name != *expectedLayer.Name {
+				t.Errorf("[%v] expected %v got %v", i, *tileLayer.Name, *expectedLayer.Name)
+				continue
+			}
+
+			//	features check
+			for k, tileLayerFeature := range tileLayer.Features {
+				expectedTileLayerFeature := expectedLayer.Features[k]
+
+				if *tileLayerFeature.Id != *expectedTileLayerFeature.Id {
+					t.Errorf("[%v] expected %v got %v", i, *tileLayerFeature.Id, *expectedTileLayerFeature.Id)
+					continue
+				}
+
+				/*
+					//	the vector tile layer tags output is not always consistent since it's generated from a map.
+					//	because of that we're going to check everything but the tags values
+
+					if !reflect.DeepEqual(tileLayerFeature.Tags, expectedTileLayerFeature.Tags) {
+						t.Errorf("[%v] expected %v got %v", i, tileLayerFeature.Tags, expectedTileLayerFeature.Tags)
+						continue
+					}
+				*/
+
+				if *tileLayerFeature.Type != *expectedTileLayerFeature.Type {
+					t.Errorf("[%v] expected %v got %v", i, *tileLayerFeature.Type, *expectedTileLayerFeature.Type)
+					continue
+				}
+
+				if !reflect.DeepEqual(tileLayerFeature.Geometry, expectedTileLayerFeature.Geometry) {
+					t.Errorf("[%v] expected %v got %v", i, tileLayerFeature.Geometry, expectedTileLayerFeature.Geometry)
+					continue
+				}
+			}
+
+			if !reflect.DeepEqual(tileLayer.Keys, expectedLayer.Keys) {
+				t.Errorf("[%v] expected %v got %v", i, tileLayer.Keys, expectedLayer.Keys)
+				continue
+			}
+
+			if *tileLayer.Extent != *expectedLayer.Extent {
+				t.Errorf("[%v] expected %v got %v", i, *tileLayer.Extent, *expectedLayer.Extent)
+				continue
+			}
+
+			for l, tileLayerValues := range tileLayer.Values {
+				expectedTileLayerValues := expectedLayer.Values[l]
+
+				// TODO (arolek): add additional value checks
+				if *tileLayerValues.StringValue != *expectedTileLayerValues.StringValue {
+					t.Errorf("[%v] expected %v got %v", i, *tileLayerValues.StringValue, *expectedTileLayerValues.StringValue)
+					continue
+				}
+			}
 		}
 	}
 }
