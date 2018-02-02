@@ -6,8 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/geom"
 )
 
 func TestLayerGeomType(t *testing.T) {
@@ -23,7 +22,7 @@ func TestLayerGeomType(t *testing.T) {
 	testcases := []struct {
 		config    map[string]interface{}
 		layerName string
-		geom      tegola.Geometry
+		geom      geom.Geometry
 	}{
 		{
 			config: map[string]interface{}{
@@ -40,12 +39,12 @@ func TestLayerGeomType(t *testing.T) {
 				},
 			},
 			layerName: "land",
-			geom:      basic.MultiPolygon{},
+			geom:      geom.MultiPolygon{},
 		},
 	}
 
 	for i, tc := range testcases {
-		provider, err := NewProvider(tc.config)
+		provider, err := NewTileProvider(tc.config)
 		if err != nil {
 			t.Errorf("testcase (%v) failed on NewProvider. err: %v", i, err)
 			continue

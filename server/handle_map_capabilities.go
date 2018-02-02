@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/terranodo/tegola"
+
 	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/mapbox/tilejson"
 )
 
@@ -71,15 +72,10 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		debugQuery = "?debug=true"
 
 		//	update our map to include the debug layers
-		m = m.EnableDebugLayers()
+		m = m.AddDebugLayers()
 	}
 
 	for i := range m.Layers {
-		//	skip disabled layers
-		if m.Layers[i].Disabled {
-			continue
-		}
-
 		//	check if the layer already exists in our slice. this can happen if the config
 		//	is using the "name" param for a layer to override the providerLayerName
 		var skip bool
@@ -133,14 +129,15 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		}
 
 		switch m.Layers[i].GeomType.(type) {
-		case tegola.Point, tegola.MultiPoint:
+		case geom.Point, geom.MultiPoint:
 			layer.GeometryType = tilejson.GeomTypePoint
-		case tegola.LineString, tegola.MultiLine:
+		case geom.Line, geom.LineString, geom.MultiLineString:
 			layer.GeometryType = tilejson.GeomTypeLine
-		case tegola.Polygon, tegola.MultiPolygon:
+		case geom.Polygon, geom.MultiPolygon:
 			layer.GeometryType = tilejson.GeomTypePolygon
 		default:
 			layer.GeometryType = tilejson.GeomTypeUnknown
+			//	TODO: debug log
 		}
 
 		//	add our layer to our tile layer response

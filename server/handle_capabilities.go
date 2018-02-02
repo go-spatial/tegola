@@ -50,7 +50,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			debugQuery = "?debug=true"
 
 			//	update our map to include the debug layers
-			m = m.EnableDebugLayers()
+			m = m.AddDebugLayers()
 		}
 
 		//	build the map details
@@ -66,11 +66,6 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 
 		for i := range m.Layers {
-			//	skip disabled layers
-			if m.Layers[i].Disabled {
-				continue
-			}
-
 			//	check if the layer already exists in our slice. this can happen if the config
 			//	is using the "name" param for a layer to override the providerLayerName
 			var skip bool

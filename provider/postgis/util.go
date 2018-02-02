@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx"
-	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/provider"
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
@@ -74,33 +74,34 @@ const (
 //
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
-func replaceTokens(plyr *Layer, tile *tegola.Tile) (string, error) {
+func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
-	textent, err := tile.BufferedBoundingBox()
-	if err != nil {
-		return "", nil
-	}
+	bufferedExtent, _ := tile.BufferedExtent()
 
-	minGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent.Minx, textent.Miny})
+	//	TODO: leverage helper functions for minx / miny to make this easier to follow
+	//	TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
+	minGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
-	maxGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent.Maxx, textent.Maxy})
+
+	maxGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
 	minPt, maxPt := minGeo.AsPoint(), maxGeo.AsPoint()
 
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.srid)
+	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
 	//	replace query string tokens
+	z, _, _ := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
-		zoomToken, strconv.Itoa(tile.Z),
+		zoomToken, strconv.FormatUint(z, 10),
 	)
 
-	return tokenReplacer.Replace(plyr.sql), nil
+	return tokenReplacer.Replace(sql), nil
 }
 
 func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {

@@ -1,39 +1,18 @@
 package atlas_test
 
 import (
-	"context"
-
-	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/provider/test_provider"
 )
-
-type testMVTProvider struct{}
-
-func (tp *testMVTProvider) MVTLayer(ctx context.Context, layerName string, tile *tegola.Tile, tags map[string]interface{}) (*mvt.Layer, error) {
-	var layer mvt.Layer
-
-	return &layer, nil
-}
-
-func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
-	return []mvt.LayerInfo{
-		layer{
-			name:     "test-layer",
-			geomType: basic.Polygon{},
-			srid:     tegola.WebMercator,
-		},
-	}, nil
-}
 
 var testLayer1 = atlas.Layer{
 	Name:              "test-layer",
 	ProviderLayerName: "test-layer-1",
 	MinZoom:           4,
 	MaxZoom:           9,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Point{},
+	Provider:          &test_provider.TestTileProvider{},
+	GeomType:          geom.Point{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
@@ -44,8 +23,8 @@ var testLayer2 = atlas.Layer{
 	ProviderLayerName: "test-layer-2-provider-layer-name",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Line{},
+	Provider:          &test_provider.TestTileProvider{},
+	GeomType:          geom.LineString{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
@@ -56,8 +35,8 @@ var testLayer3 = atlas.Layer{
 	ProviderLayerName: "test-layer-3",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Point{},
+	Provider:          &test_provider.TestTileProvider{},
+	GeomType:          geom.Point{},
 	DefaultTags:       map[string]interface{}{},
 }
 
@@ -70,22 +49,4 @@ var testMap = atlas.Map{
 		testLayer2,
 		testLayer3,
 	},
-}
-
-type layer struct {
-	name     string
-	geomType tegola.Geometry
-	srid     int
-}
-
-func (l layer) Name() string {
-	return l.name
-}
-
-func (l layer) GeomType() tegola.Geometry {
-	return l.geomType
-}
-
-func (l layer) SRID() int {
-	return l.srid
 }

@@ -8,10 +8,12 @@ import (
 	"context"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/geom/slippy"
+	"github.com/terranodo/tegola/provider"
 	"github.com/terranodo/tegola/provider/postgis"
 )
 
-func TestNewProvider(t *testing.T) {
+func TestNewTileProvider(t *testing.T) {
 	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
 		return
 	}
@@ -42,7 +44,7 @@ func TestNewProvider(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		_, err := postgis.NewProvider(tc.config)
+		_, err := postgis.NewTileProvider(tc.config)
 		if err != nil {
 			t.Errorf("Failed test %v. Unable to create a new provider. err: %v", i, err)
 			return
@@ -50,7 +52,7 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
-func TestMVTLayer(t *testing.T) {
+func TestTileFeatures(t *testing.T) {
 	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
 		return
 	}
@@ -62,7 +64,7 @@ func TestMVTLayer(t *testing.T) {
 
 	testcases := []struct {
 		config               map[string]interface{}
-		tile                 *tegola.Tile
+		tile                 *slippy.Tile
 		expectedFeatureCount int
 	}{
 		{
@@ -79,7 +81,7 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile:                 tegola.NewTile(1, 1, 1),
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 4032,
 		},
 		//	scalerank test
@@ -97,7 +99,7 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile:                 tegola.NewTile(1, 1, 1),
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 98,
 		},
 		//	decode numeric(x,x) types
@@ -117,13 +119,13 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile:                 tegola.NewTile(16, 11241, 26168),
+			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 101,
 		},
 	}
 
 	for i, tc := range testcases {
-		p, err := postgis.NewProvider(tc.config)
+		p, err := postgis.NewTileProvider(tc.config)
 		if err != nil {
 			t.Errorf("[%v] unexpected error; unable to create a new provider, Expected: nil Got %v", i, err)
 			continue
@@ -133,14 +135,19 @@ func TestMVTLayer(t *testing.T) {
 		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
 			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
 
-			l, err := p.MVTLayer(context.Background(), layerName, tc.tile, map[string]interface{}{})
+			var featureCount int
+			err := p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
+				featureCount++
+
+				return nil
+			})
 			if err != nil {
 				t.Errorf("[%v] unexpected error; failed to create mvt layer, Expected nil Got %v", i, err)
 				continue
 			}
 
-			if len(l.Features()) != tc.expectedFeatureCount {
-				t.Errorf("[%v] feature count, Expected %v Got %v", i, tc.expectedFeatureCount, len(l.Features()))
+			if featureCount != tc.expectedFeatureCount {
+				t.Errorf("[%v] feature count, Expected %v Got %v", i, tc.expectedFeatureCount, featureCount)
 			}
 		}
 	}

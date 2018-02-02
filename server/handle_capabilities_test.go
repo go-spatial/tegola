@@ -27,8 +27,7 @@ func TestHandleCapabilities(t *testing.T) {
 		reqMethod  string
 		expected   server.Capabilities
 	}{
-		// With empty hostname and no port specified in config, urls should have host:port matching
-		//	request uri.
+		// 	With empty hostname and no port specified in config, urls should have host:port matching request uri.
 		{
 			handler:    server.HandleCapabilities{},
 			uri:        "http://localhost:8080/capabilities",
@@ -91,22 +90,6 @@ func TestHandleCapabilities(t *testing.T) {
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
-								Name: "debug-tile-outline",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: atlas.MaxZoom,
-							},
-							{
-								Name: "debug-tile-center",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: atlas.MaxZoom,
-							},
-							{
 								Name: testLayer1.MVTName(),
 								Tiles: []string{
 									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
@@ -121,6 +104,22 @@ func TestHandleCapabilities(t *testing.T) {
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
+							},
+							{
+								Name: "debug-tile-outline",
+								Tiles: []string{
+									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 0,
+								MaxZoom: atlas.MaxZoom,
+							},
+							{
+								Name: "debug-tile-center",
+								Tiles: []string{
+									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 0,
+								MaxZoom: atlas.MaxZoom,
 							},
 						},
 					},
@@ -189,22 +188,6 @@ func TestHandleCapabilities(t *testing.T) {
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
-								Name: "debug-tile-outline",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: atlas.MaxZoom,
-							},
-							{
-								Name: "debug-tile-center",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: atlas.MaxZoom,
-							},
-							{
 								Name: testLayer1.MVTName(),
 								Tiles: []string{
 									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
@@ -219,6 +202,22 @@ func TestHandleCapabilities(t *testing.T) {
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
+							},
+							{
+								Name: "debug-tile-outline",
+								Tiles: []string{
+									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 0,
+								MaxZoom: atlas.MaxZoom,
+							},
+							{
+								Name: "debug-tile-center",
+								Tiles: []string{
+									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 0,
+								MaxZoom: atlas.MaxZoom,
 							},
 						},
 					},
@@ -247,22 +246,6 @@ func TestHandleCapabilities(t *testing.T) {
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
-								Name: "debug-tile-outline",
-								Tiles: []string{
-									"http://cdn.tegola.io:8080/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: atlas.MaxZoom,
-							},
-							{
-								Name: "debug-tile-center",
-								Tiles: []string{
-									"http://cdn.tegola.io:8080/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: atlas.MaxZoom,
-							},
-							{
 								Name: testLayer1.MVTName(),
 								Tiles: []string{
 									fmt.Sprintf("http://cdn.tegola.io:8080/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
@@ -277,6 +260,22 @@ func TestHandleCapabilities(t *testing.T) {
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
+							},
+							{
+								Name: "debug-tile-outline",
+								Tiles: []string{
+									"http://cdn.tegola.io:8080/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 0,
+								MaxZoom: atlas.MaxZoom,
+							},
+							{
+								Name: "debug-tile-center",
+								Tiles: []string{
+									"http://cdn.tegola.io:8080/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+								},
+								MinZoom: 0,
+								MaxZoom: atlas.MaxZoom,
 							},
 						},
 					},

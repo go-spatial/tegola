@@ -171,10 +171,8 @@ var cacheCmd = &cobra.Command{
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 						}
 
-						//	log.Println("Tile Z", mt.Tile.Z)
-
 						//	filter down the layers we need for this zoom
-						m = m.DisableAllLayers().EnableLayersByZoom(mt.Tile.Z)
+						m = m.FilterLayersByZoom(mt.Tile.Z)
 
 						//	check if overwriting the cache is not ok
 						if !cacheOverwrite {
@@ -210,7 +208,7 @@ var cacheCmd = &cobra.Command{
 						}
 
 						//	seed the tile
-						if err = atlas.SeedMapTile(m, mt.Tile); err != nil {
+						if err = atlas.SeedMapTile(m, uint64(mt.Tile.Z), uint64(mt.Tile.X), uint64(mt.Tile.Y)); err != nil {
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 						}
 
@@ -280,13 +278,13 @@ type MapTile struct {
 	Tile    *tegola.Tile
 }
 
-//	parseTileString converts a Z/X/Y formatted string into a tegola tile
+//parseTileString converts a Z/X/Y formatted string into a tegola tile
 func parseTileString(str string) (*tegola.Tile, error) {
 	var tile *tegola.Tile
 
-	parts := strings.Split(cacheZXY, "/")
+	parts := strings.Split(str, "/")
 	if len(parts) != 3 {
-		return tile, fmt.Errorf("invalid zxy value (%v). expecting the format z/x/y", cacheZXY)
+		return tile, fmt.Errorf("invalid zxy value (%v). expecting the format z/x/y", str)
 	}
 
 	z, err := strconv.Atoi(parts[0])

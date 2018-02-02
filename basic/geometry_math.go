@@ -150,7 +150,7 @@ func CloneGeometry(geometry tegola.Geometry) (G, error) {
 }
 
 // ToWebMercator takes a SRID and a geometry encode using that srid, and returns a geometry encoded as a WebMercator.
-func ToWebMercator(SRID int, geometry tegola.Geometry) (G, error) {
+func ToWebMercator(SRID uint64, geometry tegola.Geometry) (G, error) {
 	switch SRID {
 	default:
 		return G{}, fmt.Errorf("Don't know how to convert from %v to %v.", tegola.WebMercator, SRID)
@@ -167,7 +167,7 @@ func ToWebMercator(SRID int, geometry tegola.Geometry) (G, error) {
 }
 
 // FromWebMercator takes a geometry encoded with WebMercator, and returns a Geometry encodes to the given srid.
-func FromWebMercator(SRID int, geometry tegola.Geometry) (G, error) {
+func FromWebMercator(SRID uint64, geometry tegola.Geometry) (G, error) {
 	switch SRID {
 	default:
 		return G{}, fmt.Errorf("Don't know how to convert from %v to %v.", SRID, tegola.WebMercator)

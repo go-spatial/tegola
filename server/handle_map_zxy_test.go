@@ -37,7 +37,7 @@ func TestHandleMapZXY(t *testing.T) {
 			uriPattern:     "/maps/:map_name/:z/:x/:y",
 			reqMethod:      "GET",
 			expectedCode:   http.StatusOK,
-			expectedLayers: []string{"debug-tile-outline", "debug-tile-center", "test-layer-2-name", "test-layer"},
+			expectedLayers: []string{"test-layer-2-name", "test-layer", "debug-tile-outline", "debug-tile-center"},
 		},
 		{ // issue-163
 			uri:          "/maps/test-map/-1/0/0.pbf",

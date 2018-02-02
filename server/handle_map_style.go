@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
 	"gopkg.in/go-playground/colors.v1"
 
-	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/mapbox/style"
 )
 
@@ -57,7 +58,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("debug") == "true" {
 		debugQuery = "?debug=true"
 
-		m = m.EnableDebugLayers()
+		m = m.AddDebugLayers()
 	}
 
 	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), req.mapName, debugQuery)
@@ -78,10 +79,6 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	determing the min and max zoom for this map
 	for _, l := range m.Layers {
-		//	skip disabled layers
-		if l.Disabled {
-			continue
-		}
 		//	check if the layer already exists in our slice. this can happen if the config
 		//	is using the "name" param for a layer to override the providerLayerName
 		var skip bool
@@ -108,18 +105,18 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//	chose our paint type based on the geometry type
 		switch l.GeomType.(type) {
-		case tegola.Point, tegola.Point3, tegola.MultiPoint:
+		case geom.Point, geom.MultiPoint:
 			layer.Type = style.LayerTypeCircle
 			layer.Paint = &style.LayerPaint{
 				CircleRadius: 3,
 				CircleColor:  stringToColorHex(l.MVTName()),
 			}
-		case tegola.LineString, tegola.MultiLine:
+		case geom.Line, geom.LineString, geom.MultiLineString:
 			layer.Type = style.LayerTypeLine
 			layer.Paint = &style.LayerPaint{
 				LineColor: stringToColorHex(l.MVTName()),
 			}
-		case tegola.Polygon, tegola.MultiPolygon:
+		case geom.Polygon, geom.MultiPolygon:
 			layer.Type = style.LayerTypeFill
 			hexColor := stringToColorHex(l.MVTName())
 
@@ -138,7 +135,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				FillOutlineColor: hexColor,
 			}
 		default:
-			log.Printf("layer (providerLayerName: %v) has unsupported geometry type (%v)", l.ProviderLayerName, l.GeomType)
+			log.Printf("layer (providerLayerName: %v) has unsupported geometry type (%v)", l.ProviderLayerName, reflect.TypeOf(l.GeomType))
 		}
 
 		//	add our layer to our tile layer response

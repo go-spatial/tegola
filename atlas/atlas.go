@@ -8,6 +8,7 @@ import (
 	"github.com/terranodo/tegola/cache"
 	_ "github.com/terranodo/tegola/cache/filecache"
 	_ "github.com/terranodo/tegola/cache/s3cache"
+	"github.com/terranodo/tegola/geom/slippy"
 )
 
 //	DefaultAtlas is instanitated for convenience
@@ -47,15 +48,13 @@ func (a *Atlas) AllMaps() []Map {
 
 //	SeedMapTile will generate a tile and persist it to the
 //	configured cache backend
-func (a *Atlas) SeedMapTile(m Map, tile *tegola.Tile) error {
-	// 	confirm we have a tile
-	if tile == nil {
-		return ErrMissingTile
-	}
+func (a *Atlas) SeedMapTile(m Map, z, x, y uint64) error {
 	//	confirm we have a cache backend
 	if a.cacher == nil {
 		return ErrMissingCache
 	}
+
+	tile := slippy.NewTile(z, x, y, float64(m.TileBuffer), m.SRID)
 
 	//	encode the tile
 	b, err := m.Encode(context.Background(), tile)
@@ -66,9 +65,9 @@ func (a *Atlas) SeedMapTile(m Map, tile *tegola.Tile) error {
 	//	cache key
 	key := cache.Key{
 		MapName: m.Name,
-		Z:       tile.Z,
-		X:       tile.X,
-		Y:       tile.Y,
+		Z:       int(z),
+		X:       int(x),
+		Y:       int(y),
 	}
 
 	return a.cacher.Set(&key, b)
@@ -160,8 +159,8 @@ func SetCache(c cache.Interface) {
 
 //	SeedMapTile will generate a tile and persist it to the
 //	configured cache backend for the DefaultAtlas
-func SeedMapTile(m Map, tile *tegola.Tile) error {
-	return DefaultAtlas.SeedMapTile(m, tile)
+func SeedMapTile(m Map, z, x, y uint64) error {
+	return DefaultAtlas.SeedMapTile(m, z, x, y)
 }
 
 //	PurgeMapTile will purge a map tile from the configured cache backend

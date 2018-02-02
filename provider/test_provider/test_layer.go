@@ -1,21 +1,21 @@
-package debug
+package test_provider
 
 import "github.com/terranodo/tegola/geom"
 
-type Layer struct {
+type layer struct {
 	name     string
 	geomType geom.Geometry
 	srid     uint64
 }
 
-func (l Layer) Name() string {
+func (l layer) Name() string {
 	return l.name
 }
 
-func (l Layer) GeomType() geom.Geometry {
+func (l layer) GeomType() geom.Geometry {
 	return l.geomType
 }
 
-func (l Layer) SRID() uint64 {
+func (l layer) SRID() uint64 {
 	return l.srid
 }

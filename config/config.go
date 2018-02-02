@@ -206,3 +206,12 @@ func Load(location string) (conf Config, err error) {
 
 	return Parse(reader, location)
 }
+
+func LoadAndValidate(filename string) (cfg Config, err error) {
+	cfg, err = Load(filename)
+	if err != nil {
+		return cfg, err
+	}
+	// validate our config
+	return cfg, cfg.Validate()
+}

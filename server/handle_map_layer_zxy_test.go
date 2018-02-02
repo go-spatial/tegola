@@ -22,7 +22,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 		uriPattern     string
 		reqMethod      string
 		expectedCode   int
-		expected       []byte
+		expectedBody   []byte
 		expectedLayers []string
 	}{
 		{
@@ -33,32 +33,32 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			expectedLayers: []string{"test-layer"},
 		},
 		{
-			uri:            "/maps/test-map/test-layer/4/2/3.pbf?debug=true",
+			uri:            "/maps/test-map/test-layer/10/2/3.pbf?debug=true",
 			uriPattern:     "/maps/:map_name/:layer_name/:z/:x/:y",
 			reqMethod:      "GET",
 			expectedCode:   http.StatusOK,
-			expectedLayers: []string{"debug-tile-outline", "debug-tile-center", "test-layer"},
+			expectedLayers: []string{"test-layer", "debug-tile-outline", "debug-tile-center"},
 		},
 		{ // Negative row (y) not allowed (issue-229)
 			uri:          "/maps/test-map/test-layer/1/2/-1.pbf",
 			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
-			expected:     []byte("invalid Y value (-1.pbf)"),
+			expectedBody: []byte("invalid Y value (-1.pbf)"),
 		},
 		{ // Negative column (x) not allowed
 			uri:          "/maps/test-map/test-layer/1/-1/3.pbf",
 			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
-			expected:     []byte("invalid X value (-1)"),
+			expectedBody: []byte("invalid X value (-1)"),
 		},
 		{ // issue-163
 			uri:          "/maps/test-map/test-layer/-1/0/0.pbf",
 			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
-			expected:     []byte("invalid Z value (-1)"),
+			expectedBody: []byte("invalid Z value (-1)"),
 		},
 	}
 
@@ -86,11 +86,11 @@ func TestHandleMapLayerZXY(t *testing.T) {
 		}
 
 		// error checking
-		if len(test.expected) > 0 && test.expectedCode >= 400 {
+		if len(test.expectedBody) > 0 && test.expectedCode >= 400 {
 			wbody := strings.TrimSpace(w.Body.String())
 
-			if string(test.expected) != wbody {
-				t.Errorf("[%v] handler returned wrong body: got (%v) expected (%v)", i, wbody, string(test.expected))
+			if string(test.expectedBody) != wbody {
+				t.Errorf("[%v] handler returned wrong body: got (%v) expected (%v)", i, wbody, string(test.expectedBody))
 				continue
 			}
 			continue
