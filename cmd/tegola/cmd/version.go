@@ -6,11 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	//	set at build time via the CI
-	Version = "version not set"
-)
-
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of tegola",
