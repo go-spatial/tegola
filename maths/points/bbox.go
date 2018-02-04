@@ -103,7 +103,7 @@ func (bb BoundingBox) ConvertSrid(fromId int, toId int) BoundingBox {
 		newBb := bb
 		return newBb
 	} else {
-		log.Fatal("Converting from srid %v -> %v is currently unsupported\n", fromId, toId)
+		log.Fatalf("Converting from srid %v -> %v is currently unsupported\n", fromId, toId)
 	}
 
 	// Lower left & top right points

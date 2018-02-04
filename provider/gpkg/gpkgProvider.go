@@ -71,7 +71,7 @@ func (p *GPKGProvider) Layers() ([]mvt.LayerInfo, error) {
 		i++
 	}
 
-	log.Debug("Ok, returning mvt.LayerInfo array: %v", ls)
+	log.Debugf("Ok, returning mvt.LayerInfo array: %v", ls)
 	return ls, nil
 }
 
@@ -194,11 +194,11 @@ func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowC
 		geom, err = wkb.Decode(reader)
 
 		if err != nil {
-			log.Error("Error decoding geometry: %v", err)
+			log.Errorf("Error decoding geometry: %v", err)
 		}
 
 		if geomHeader.SRSId() != DefaultSRID {
-			log.Debug("SRID %v != %v, trying to convert...", geomHeader.SRSId(), DefaultSRID)
+			log.Debugf("SRID %v != %v, trying to convert...", geomHeader.SRSId(), DefaultSRID)
 			// We need to convert our points to Webmercator.
 			g, err := basic.ToWebMercator(int(geomHeader.SRSId()), geom)
 			if err != nil {
@@ -212,7 +212,7 @@ func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowC
 			}
 			geom = g.Geometry
 		} else {
-			log.Info("SRID already default (%v), no conversion necessary", DefaultSRID)
+			log.Infof("SRID already default (%v), no conversion necessary", DefaultSRID)
 		}
 
 		// Copy default tags to augment this feature's tags
@@ -240,7 +240,7 @@ func layerFromQuery(ctx context.Context, pLayer *GPKGLayer, rows *sql.Rows, rowC
 }
 
 func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.TegolaTile, dtags map[string]interface{}) (*mvt.Layer, error) {
-	log.Debug("GPKGProvider MVTLayer() called for %v", layerName)
+	log.Debugf("GPKGProvider MVTLayer() called for %v", layerName)
 	filepath := p.FilePath
 
 	// In DefaultSRID (web mercator - 3857)
@@ -309,10 +309,10 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 		// Add the zoom level, once for comparison to min, once for max.
 		qparams = append(qparams, tile.ZLevel(), tile.ZLevel())
 	}
-	log.Debug("qtext: %v\nqparams: %v\n", qtext, qparams)
+	log.Debugf("qtext: %v\nqparams: %v\n", qtext, qparams)
 	rows, err := db.Query(qtext, qparams...)
 	if err != nil {
-		log.Error("Error during query: %v (%v)- %v", qtext, qparams, err)
+		log.Errorf("Error during query: %v (%v)- %v", qtext, qparams, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -321,12 +321,12 @@ func (p *GPKGProvider) MVTLayer(ctx context.Context, layerName string, tile tego
 	rowCount := 0
 	newLayer, err := layerFromQuery(ctx, &pLayer, rows, &rowCount, dtags)
 	if err != nil {
-		log.Error("Problem in layerFromQuery(): %v", err)
+		log.Errorf("Problem in layerFromQuery(): %v", err)
 		return nil, err
 	}
 
 	if rowCount != len(newLayer.Features()) {
-		log.Error("newLayer feature count doesn't match table row count (%v != %v)\n",
+		log.Errorf("newLayer feature count doesn't match table row count (%v != %v)\n",
 			len(newLayer.Features()), rowCount)
 	}
 
@@ -411,10 +411,10 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		return nil, err
 	}
 
-	log.Debug("Opening gpkg at: %v", filepath)
+	log.Debugf("Opening gpkg at: %v", filepath)
 	db, err := GetGpkgConnection(filepath)
 	if err != nil {
-		log.Error("Error opening gpkg file: %v", err)
+		log.Errorf("Error opening gpkg file: %v", err)
 		return nil, err
 	}
 	defer ReleaseGpkgConnection(filepath)
@@ -427,7 +427,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		"WHERE c.data_type = 'features';"
 	rows, err := db.Query(qtext)
 	if err != nil {
-		log.Error("Error during query: %v - %v", qtext, err)
+		log.Errorf("Error during query: %v - %v", qtext, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -443,7 +443,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 		// Get layer geometry as tegola geometry instance corresponding to dataType text for table
 		tg, err := gpkgGeomNameToTegolaGeometry(geomTypeName)
 		if err != nil {
-			log.Error(
+			log.Errorf(
 				"Problem getting geometry type %v as tegola.Geometry: %v", geomTypeName, err)
 			return nil, err
 		}
@@ -503,14 +503,14 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 				// min_zoom will always be less than 100, and max_zoom will always be greater than 0.
 				qparams = append(qparams, 100, 0)
 			}
-			log.Debug("qtext: %v, params: %v", qtext, qparams)
+			log.Debugf("qtext: %v, params: %v", qtext, qparams)
 			row := db.QueryRow(qtext, qparams...)
 			err = row.Scan(&geomData)
 			if err == sql.ErrNoRows {
-				log.Warn("Layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSql)
+				log.Warnf("Layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSql)
 				continue
 			} else if err != nil {
-				log.Error("Layer '%v' problem executing custom SQL, skipping: %v",
+				log.Errorf("Layer '%v' problem executing custom SQL, skipping: %v",
 					layerName, err)
 				continue
 			}
@@ -519,7 +519,7 @@ func NewProvider(config map[string]interface{}) (mvt.Provider, error) {
 			reader := bytes.NewReader(geomData[h.Size():])
 			geom, err := wkb.Decode(reader)
 			if err != nil {
-				log.Error("Problem extracting gpkg geometry: %v", err)
+				log.Errorf("Problem extracting gpkg geometry: %v", err)
 			}
 
 			l = GPKGLayer{

@@ -45,18 +45,18 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	z := params["z"]
 	req.z, err = strconv.Atoi(z)
 	if err != nil {
-		log.Error("invalid Z value (%v)", z)
+		log.Errorf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
 	if req.z < 0 {
-		log.Error("invalid Z value (%v)", req.z)
+		log.Errorf("invalid Z value (%v)", req.z)
 		return fmt.Errorf("negative zoom levels are not allowed")
 	}
 
 	x := params["x"]
 	req.x, err = strconv.Atoi(x)
 	if err != nil {
-		log.Error("invalid X value (%v)", x)
+		log.Errorf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
 
@@ -65,7 +65,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	yParts := strings.Split(y, ".")
 	req.y, err = strconv.Atoi(yParts[0])
 	if err != nil {
-		log.Error("invalid Y value (%v)", y)
+		log.Errorf("invalid Y value (%v)", y)
 		return fmt.Errorf("invalid Y value (%v)", y)
 	}
 
@@ -91,7 +91,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 //		x - row
 //		y - column
 func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Info("Handling %v request: %v", r.Method, r.URL)
+	log.Infof("Handling %v request: %v", r.Method, r.URL)
 	//	check http verb
 	switch r.Method {
 	//	preflight check for CORS request
@@ -116,13 +116,13 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//	lookup our Map
 		m, ok := maps[req.mapName]
 		if !ok {
-			log.Error("map (%v) not configured. check your config file", req.mapName)
+			log.Errorf("map (%v) not configured. check your config file", req.mapName)
 			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
 			return
 		}
 
 		//	new tile
-		log.Debug("Tile Request (x,y,z): (%v,%v,%v)", req.x, req.y, req.z)
+		log.Debugf("Tile Request (x,y,z): (%v,%v,%v)", req.x, req.y, req.z)
 		tile := tegola.Tile{
 			Z: req.z,
 			X: req.x,
@@ -161,7 +161,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						//	TODO: should we return an error to the response or just log the error?
 						//	we can't just write to the response as the waitgroup is going to write to the response as well
-						log.Error("Error Getting MVTLayer '%v' for tile Z: %v, X: %v, Y: %v: %v",
+						log.Errorf("Error Getting MVTLayer '%v' for tile Z: %v, X: %v, Y: %v: %v",
 							l.ProviderLayerName, tile.Z, tile.X, tile.Y, err)
 						return
 					}
@@ -201,7 +201,6 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
 		if err != nil {
-			//	log.Error("Error Getting VTile: %v", err)
 			http.Error(w, fmt.Sprintf("error Getting VTile: %v", err.Error()), http.StatusBadRequest)
 			return
 		}
@@ -210,7 +209,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var pbyte []byte
 		pbyte, err = proto.Marshal(vtile)
 		if err != nil {
-			log.Error("Error marshalling tile: %v", err)
+			log.Errorf("Error marshalling tile: %v", err)
 			http.Error(w, "Error marshalling tile", http.StatusInternalServerError)
 			return
 		}
@@ -226,7 +225,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//	check for tile size warnings
 		if len(pbyte) > MaxTileSize {
-			log.Warn("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, humanize.Bytes(uint64(len(pbyte))))
+			log.Warnf("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, humanize.Bytes(uint64(len(pbyte))))
 		}
 
 		//	log the request

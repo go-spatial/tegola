@@ -83,11 +83,11 @@ func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interf
 
 	geo, gtype, err := encodeGeometry(ctx, f.Geometry, extent, layerExtent, simplify)
 	if err != nil {
-		log.Error("Error encoding geometry: %v\n", err)
+		log.Errorf("Error encoding geometry: %v\n", err)
 		return tf, err
 	}
 
-	log.Debug("Geometry %T encoded for Mapbox as: %v", f.Geometry, geo)
+	log.Debugf("Geometry %T encoded for Mapbox as: %v", f.Geometry, geo)
 
 	if len(geo) == 0 {
 		return nil, nil
@@ -520,12 +520,12 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	filename := fmt.Sprintf("/tmp/testcase_%v_%p.json", fln, geo)
 	bgeo, err := basic.CloneGeometry(geo)
 	if err != nil {
-		log.Error("Failed to clone geo for test case. %v", err)
+		log.Errorf("Failed to clone geo for test case. %v", err)
 		return
 	}
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Error("Failed to create test file %v : %v.\n", filename, err)
+		log.Errorf("Failed to create test file %v : %v.\n", filename, err)
 		return
 	}
 	defer f.Close()
@@ -536,7 +536,7 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	}
 	enc := json.NewEncoder(f)
 	enc.Encode(geodebug)
-	log.Info("Created file: %v", filename)
+	log.Infof("Created file: %v", filename)
 }
 
 func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
@@ -588,7 +588,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 	geom, err = validate.CleanGeometry(ctx, sg, c.extent)
 
 	if err != nil {
-		log.Error("encodeGeometry() error in validate.CleanGeometry(): %v\n", err)
+		log.Errorf("encodeGeometry() error in validate.CleanGeometry(): %v\n", err)
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
 	if geom == nil {
@@ -655,7 +655,7 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, extent tegola.Bou
 		return g, vectorTile.Tile_POLYGON, nil
 
 	default:
-		log.Error("Geo: %v : %T", wkb.WKT(geo), geo)
+		log.Errorf("Geo: %v : %T", wkb.WKT(geo), geo)
 		return nil, vectorTile.Tile_UNKNOWN, ErrUnknownGeometryType
 	}
 }
@@ -903,7 +903,7 @@ func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []
 		}
 
 		if kidx == -1 {
-			log.Error("Did not find key (%v) in keymap.", key)
+			log.Errorf("Did not find key (%v) in keymap.", key)
 			return tags, fmt.Errorf("Did not find key (%v) in keymap.", key)
 		}
 

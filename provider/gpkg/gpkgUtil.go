@@ -148,20 +148,20 @@ func (h *GeoPackageBinaryHeader) Init(geom []byte) {
 		h.envelope[6] = bytesToFloat64(geom[56:64], headerByteOrder)
 		h.envelope[7] = bytesToFloat64(geom[64:72], headerByteOrder)
 	default:
-		log.Error("Invalid envelope type: %v", eType)
+		log.Errorf("Invalid envelope type: %v", eType)
 		h.envelope = make([]float64, 0)
 	}
 
 	h.headerSize = hSize
 
-	log.Debug("GeoPackageBinaryHeader.Init() header size: %v, geom blob size: %v", hSize, len(geom))
+	log.Debugf("GeoPackageBinaryHeader.Init() header size: %v, geom blob size: %v", hSize, len(geom))
 
 	h.initialized = true
 }
 
 func (h *GeoPackageBinaryHeader) isInitialized(caller string) bool {
 	if !h.initialized {
-		log.Error("%v: GeoPackageBinaryHeader not initialized", caller)
+		log.Errorf("%v: GeoPackageBinaryHeader not initialized", caller)
 		return false
 	} else {
 		return true

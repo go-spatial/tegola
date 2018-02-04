@@ -37,14 +37,14 @@ func init() {
 	go func() {
 		// Block until a signal is received.
 		s := <-sigs
-		log.Info("Signal received: %v", s)
+		log.Infof("Signal received: %v", s)
 
 		// Program is exiting, close db connections regardless of wait group status & reset registry.
 		gpkgPoolRegistryMutex.Lock()
 		for filepath, conn := range gpkgPoolRegistry {
 			conn.mutex.Lock()
 			if conn.db != nil {
-				log.Info("Closing gpkg db at: %v", conn.filepath)
+				log.Infof("Closing gpkg db at: %v", conn.filepath)
 				conn.db.Close()
 				delete(gpkgPoolRegistry, filepath)
 			}
@@ -90,7 +90,7 @@ func GetGpkgConnection(filepath string) (db *sql.DB, err error) {
 	conn.mutex.Lock()
 	if conn.db == nil {
 		// Open the database and stash the connection
-		log.Info("Opening gpkg at: %v", filepath)
+		log.Infof("Opening gpkg at: %v", filepath)
 		db, err = sql.Open("sqlite3", filepath)
 		conn.db = db
 		if err == nil {
@@ -145,10 +145,10 @@ func closeConnection(conn *GpkgConnectionPool) {
 	if conn.db != nil {
 		if conn.shareCount < 1 {
 			if conn.shareCount < 0 {
-				log.Warn("Invalid GpkgConnectionPool.shareCount for %v: %v",
+				log.Warnf("Invalid GpkgConnectionPool.shareCount for %v: %v",
 					conn.filepath, conn.shareCount)
 			}
-			log.Info("Closing GPKG unused in %f nanoseconds: %v", float32(closeAge)/1000000000.0, conn.filepath)
+			log.Infof("Closing GPKG unused in %f nanoseconds: %v", float32(closeAge)/1000000000.0, conn.filepath)
 			conn.db.Close()
 			conn.db = nil
 		}
