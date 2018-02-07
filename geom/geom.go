@@ -37,6 +37,7 @@ type MultiLineStringer interface {
 // Polygoner is a geometry consisting of multiple Linear Rings.
 // There must be only one exterior LineString with a clockwise winding order.
 // There may be one or more interior LineStrings with a counterclockwise winding orders.
+// It is assumed that the last point is connected to the first point, and the first point is NOT duplicated at the end.
 type Polygoner interface {
 	Geometry
 	LinearRings() [][][2]float64
