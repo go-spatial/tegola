@@ -14,7 +14,7 @@ func init() {
 
 func genNil(withNil bool) bool { return withNil && rand.Intn(100) < 2 }
 
-// GenRandPoint will generate a random point point. It is possible that the point may be nil.
+// GenRandPoint will generate a random point. It is possible that the point may be nil.
 func GenRandPoint() *geom.Point {
 	if genNil(true) {
 		return (*geom.Point)(nil)
