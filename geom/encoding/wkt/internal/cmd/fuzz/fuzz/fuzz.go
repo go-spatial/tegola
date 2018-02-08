@@ -1,3 +1,4 @@
+// Package fuzz provides primitives to generate random geom geometry types.
 package fuzz
 
 import (
@@ -13,6 +14,7 @@ func init() {
 
 func genNil(withNil bool) bool { return withNil && rand.Intn(100) < 2 }
 
+// GenRandPoint will generate a random point point. It is possible that the point may be nil.
 func GenRandPoint() *geom.Point {
 	if genNil(true) {
 		return (*geom.Point)(nil)
@@ -27,6 +29,7 @@ func genRandSlicePoint(size int) (pts [][2]float64) {
 	return pts
 }
 
+// GenRandMultiPoint will generate a MultiPoint that may be nil, and will have a random number of points. There is no guarantee that all points are unique.
 func GenRandMultiPoint() *geom.MultiPoint {
 	if genNil(true) {
 		return (*geom.MultiPoint)(nil)
@@ -35,6 +38,7 @@ func GenRandMultiPoint() *geom.MultiPoint {
 	return &mp
 }
 
+// GenRandLineString will generate a random LineString (that may be nil depending on withNil), and a randome number of points. There is no guarantee that the line string is simple.
 func GenRandLineString(withNil bool) *geom.LineString {
 	if genNil(withNil) {
 		return (*geom.LineString)(nil)
@@ -43,6 +47,7 @@ func GenRandLineString(withNil bool) *geom.LineString {
 	return &ls
 }
 
+// GenRandMultiLineString will generate a random MultiLineString (that may be nil depending on withNil), and a random number of linestrings. There is no gaurantee that the line strings are simple.
 func GenRandMultiLineString(withNil bool) *geom.MultiLineString {
 	if genNil(withNil) {
 		return (*geom.MultiLineString)(nil)
@@ -56,6 +61,7 @@ func GenRandMultiLineString(withNil bool) *geom.MultiLineString {
 	return &ml
 }
 
+// GenRandPolygon will generate a random Polygon (that may be nil depending on withNil). The Polygon may not be valid or simple.
 func GenRandPolygon(withNil bool) *geom.Polygon {
 	if genNil(withNil) {
 		return (*geom.Polygon)(nil)
@@ -69,6 +75,7 @@ func GenRandPolygon(withNil bool) *geom.Polygon {
 	return &p
 }
 
+// GenRandMultiPolygon will generate a random MultiPolygon (that may be nil depending on withNil). The Polygons may not be valid or simple.
 func GenRandMultiPolygon(withNil bool) *geom.MultiPolygon {
 	if genNil(withNil) {
 		return (*geom.MultiPolygon)(nil)
@@ -82,6 +89,7 @@ func GenRandMultiPolygon(withNil bool) *geom.MultiPolygon {
 	return &mp
 }
 
+// GenRandCollection will generate a random Collection (that may be nil depending on withNil).
 func GenRandCollection(withNil bool) *geom.Collection {
 	if genNil(withNil) {
 		return (*geom.Collection)(nil)
@@ -94,6 +102,7 @@ func GenRandCollection(withNil bool) *geom.Collection {
 	return &col
 }
 
+// GenGenometry will generate a random Geometry. The geometry may be nil.
 func GenGeometry() geom.Geometry {
 	switch rand.Intn(22) {
 	default:
