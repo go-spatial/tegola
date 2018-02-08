@@ -189,6 +189,10 @@ func TestLineString(t *testing.T) {
 				basic.NewLine(144.397830, 4096, 0, 3901.712895),
 			},
 		},
+		"empty line": tcase{
+			extent:  &testExtents[11],
+			linestr: basic.Line{},
+		},
 	}
 	for name, tc := range tests {
 		tc := tc
