@@ -10,6 +10,9 @@ import (
 
 func LineString(linestr tegola.LineString, extent *points.Extent) (ls []basic.Line, err error) {
 	line := lines.FromTLineString(linestr)
+	if len(line) == 0 {
+		return ls, nil
+	}
 
 	var cpts [][2]float64
 	lptIsIn := extent.Contains(line[0])

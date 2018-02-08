@@ -177,7 +177,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					z, x, y := tile.ZXY()
 					// TODO (arolek): should we return an error to the response or just log the error?
 					// we can't just write to the response as the waitgroup is going to write to the response as well
-					log.Printf("Error Getting MVTLayer for tile Z: %v, X: %v, Y: %v: %v", z, x, y, err)
+					log.Printf("err fetching tile (z: %v, x: %v, y: %v) features: %v", z, x, y, err)
 				}
 				return
 			}
