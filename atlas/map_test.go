@@ -270,6 +270,27 @@ func TestEncode(t *testing.T) {
 				}
 			}
 
+			if len(tileLayer.Keys) != len(expectedLayer.Keys) {
+				t.Errorf("[%v] layer keys length, expected %v got %v", i, len(expectedLayer.Keys), len(tileLayer.Keys))
+				continue
+			}
+			{
+				var keysmaps = make(map[string]struct{})
+				for _, k := range expectedLayer.Keys {
+					keysmaps[k] = struct{}{}
+				}
+				var ferr bool
+				for _, k := range tileLayer.Keys {
+					if _, ok := keysmaps[k]; !ok {
+						t.Errorf("[%v] did not find key, expected %v got nil", i, k)
+						ferr = true
+					}
+				}
+				if ferr {
+					continue
+				}
+			}
+
 			if !reflect.DeepEqual(tileLayer.Keys, expectedLayer.Keys) {
 				t.Errorf("[%v] expected %v got %v", i, tileLayer.Keys, expectedLayer.Keys)
 				continue
