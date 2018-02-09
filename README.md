@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/terranodo/tegola.svg?branch=master)](https://travis-ci.org/terranodo/tegola)
 [![Report Card](https://goreportcard.com/badge/github.com/terranodo/tegola)](https://goreportcard.com/badge/github.com/terranodo/tegola)
+[![Coverage Status](https://coveralls.io/repos/github/terranodo/tegola/badge.svg?branch=v0.6.0)](https://coveralls.io/github/terranodo/tegola?branch=v0.6.0)
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/terranodo/tegola)
 [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/terranodo/tegola/blob/master/LICENSE.md)
 
@@ -9,19 +10,41 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 
 ## Features
 - Native geometry processing (simplification, clipping, make valid, intersection, contains, scaling, translation)
-- [Mapbox Vector Tile v2 specification](https://github.com/mapbox/vector-tile-spec) compliant .
+- [Mapbox Vector Tile v2 specification](https://github.com/mapbox/vector-tile-spec) compliant.
 - Embedded viewer with auto generated style for quick data visualization and inspection.
 - Support for PostGIS as a data provider. Extensible to support additional data providers.
 - Local filesystem caching. Extensible design to support additional cache backends.
+- Cache seeding to fill the cache prior to web requests.
 - Parallelized tile serving and geometry processing.
 - Support for Web Mercator (3857) and WGS84 (4326) projections.
 
-## Running Tegola
+## Usage
+```
+tegola is a vector tile server
+Version: v0.5.0
+
+Usage:
+  tegola [command]
+
+Available Commands:
+  cache       Manipulate the tile cache
+  help        Help about any command
+  serve       Use tegola as a tile server
+  version     Print the version number of tegola
+
+Flags:
+      --config string   path to config file (default "config.toml")
+  -h, --help            help for tegola
+
+Use "tegola [command] --help" for more information about a command.
+```
+
+## Running tegola as a vector tile server
 1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/terranodo/tegola/releases).
 2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
-./tegola -config=/path/to/config.toml
+./tegola serve --config=/path/to/config.toml
 ```
 
 ## Server Endpoints
@@ -30,7 +53,7 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 /
 ```
 
-The server root will display a built in viewer with an auto generated style. For example: 
+The server root will display a built in viewer with an auto generated style. For example:
 
 ![tegola built in viewer](https://raw.githubusercontent.com/terranodo/tegola/v0.4.0/docs/screenshots/built-in-viewer.png "tegola built in viewer")
 
@@ -74,14 +97,12 @@ Return [TileJSON](https://github.com/mapbox/tilejson-spec) details about the map
 
 Return an auto generated [Mapbox GL Style](https://www.mapbox.com/mapbox-gl-js/style-spec/) for the configured map.
 
-
 ## Configuration
 The tegola config file uses the [TOML](https://github.com/toml-lang/toml) format. The following example shows how to configure a PostGIS data provider with two layers. The first layer includes a `tablename`, `geometry_field` and an `id_field`. The second layer uses a custom `sql` statement instead of the `tablename` property.
 
 Under the `maps` section, map layers are associated with data provider layers and their `min_zoom` and `max_zoom` values are defined. Optionally, `default_tags` can be setup which will be encoded into the layer. If the same tags are returned from a data provider, the data provider's values will take precedence.
 
 ```toml
-
 [webserver]
 port = ":9090"              # port to bind the web server to. defaults ":8080"
 
@@ -99,7 +120,7 @@ database = "tegola"         # postgis database name (required)
 user = "tegola"             # postgis database user (required)
 password = ""               # postgis database password (required)
 srid = 3857                 # The default srid for this provider. Defaults to WebMercator (3857) (optional)
-max_connections = "50"      # The max connections to maintain in the connection pool. Default is 100. (optional)
+max_connections = 50        # The max connections to maintain in the connection pool. Default is 100. (optional)
 
 	[[providers.layers]]
 	name = "landuse"                    # will be encoded as the layer name in the tile
@@ -116,31 +137,23 @@ max_connections = "50"      # The max connections to maintain in the connection 
 	fields = [ "class", "name" ]        # Additional fields to include in the select statement.
 
 	[[providers.layers]]
-	name = "rivers" 					# will be encoded as the layer name in the tile
+	name = "rivers"                     # will be encoded as the layer name in the tile
 	geometry_fieldname = "geom"         # geom field. default is geom
-	id_fieldname = "gid"              # geom id field. default is gid
+	id_fieldname = "gid"                # geom id field. default is gid
 	# Custom sql to be used for this layer. Note: that the geometery field is wraped
-	# in a ST_AsBinary, as tegola only understand wkb.
-	sql = """
-        SELECT
-            gid,
-            ST_AsBinary(geom) AS geom
-        FROM
-            gis.rivers
-        WHERE
-            geom && !BBOX!
-	"""
+	# in a ST_AsBinary() and the use of the !BBOX! token
+	sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
 
 # maps are made up of layers
 [[maps]]
 name = "zoning"                              # used in the URL to reference this map (/maps/:map_name)
 
 	[[maps.layers]]
-	provider_layer = "test_postgis.landuse"	 # must match a data provider layer
+	provider_layer = "test_postgis.landuse"  # must match a data provider layer
 	min_zoom = 12                            # minimum zoom level to include this layer
 	max_zoom = 16                            # maximum zoom level to include this layer
 
-		[maps.layers.default_tags]		     # table of default tags to encode in the tile. SQL statements will override
+		[maps.layers.default_tags]           # table of default tags to encode in the tile. SQL statements will override
 		class = "park"
 
 	[[maps.layers]]
@@ -155,22 +168,7 @@ The following tokens are supported in custom SQL queries for the PostGIS data pr
 - `!BBOX!` - [required] Will convert the z/x/y values into a bounding box to query the feature table with.
 - `!ZOOM!` - [optional] Pass in the zoom value for the request. Useful for filtering feature results by zoom.
 
-## Command line flags
-Tegola supports the following command flags:
-
-- `config` - Location of config file in TOML format. Can be absolute, relative or remote over http(s).
-- `port` - Port for the webserver to bind to. i.e. :8080
-- `log-file` - Path to write webserver tile request logs
-- `log-format` - The format that the logger will log with. Available fields:
-  - `{{.Time}}` : The current Date Time in RFC 2822 format.
-  - `{{.RequestIP}}` : The IP address of the the requester.
-  - `{{.Z}}` : The Zoom level.
-  - `{{.X}}` : The X Coordinate.
-  - `{{.Y}}` : The Y Coordinate.
-
-## Debugging
-
-### Environment Variables
+## Environment Variables
 The following environment variables can be used for debugging:
 
 `SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
@@ -184,7 +182,15 @@ The following environment variables can be used for debugging:
 $ SQL_DEBUG=LAYER_SQL tegola -config=/path/to/conf.toml
 ```
 
-### Client side
+The following environment variables can be use to control various runtime options:
+
+`TEGOLA_OPTIONS` specify a set of options comma (or space) seperated options.
+
+- `DontSimplifyGeo` to turn off simplification for all layers.
+- `SimplifyMaxZoom={{int}}` to set the max zoom that simplification will apply to. (14 is default)
+
+
+## Client side debugging
 When debugging client side, it's often helpful to to see an outline of a tile along with it's Z/X/Y values. To encode a debug layer into every tile add the query string variable `debug=true` to the URL template being used to request tiles. For example:
 
 ```

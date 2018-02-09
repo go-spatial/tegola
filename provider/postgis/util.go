@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx"
-	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/provider"
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
@@ -74,31 +74,34 @@ const (
 //
 //	!BBOX! - the bounding box of the tile
 //	!ZOOM! - the tile Z value
-func replaceTokens(plyr *Layer, tile tegola.TegolaTile) (string, error) {
+func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
-	textent := tile.BoundingBox()
+	bufferedExtent, _ := tile.BufferedExtent()
 
-	minGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent.Minx, textent.Miny})
+	//	TODO: leverage helper functions for minx / miny to make this easier to follow
+	//	TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
+	minGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
-	maxGeo, err := basic.FromWebMercator(plyr.srid, basic.Point{textent.Maxx, textent.Maxy})
+
+	maxGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
 	minPt, maxPt := minGeo.AsPoint(), maxGeo.AsPoint()
 
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), plyr.srid)
+	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
 	//	replace query string tokens
-	t := tile.(*tegola.Tile)
+	z, _, _ := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
-		zoomToken, strconv.Itoa(t.Z),
+		zoomToken, strconv.FormatUint(z, 10),
 	)
 
-	return tokenReplacer.Replace(plyr.sql), nil
+	return tokenReplacer.Replace(sql), nil
 }
 
 func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
@@ -150,8 +153,8 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 
 	for i, v := range values {
 		// Do a quick check
-		if ctx.Err() != nil {
-			return 0, nil, nil, ctx.Err()
+		if err := ctx.Err(); err != nil {
+			return 0, nil, nil, err
 		}
 		// Skip nil values.
 		if values[i] == nil {

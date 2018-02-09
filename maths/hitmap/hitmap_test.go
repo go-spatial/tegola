@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/maths"
 )
 
@@ -133,4 +134,66 @@ func TestSegmentLinesContains(t *testing.T) {
 		}
 	})
 
+}
+
+func TestNewFromPolygon(t *testing.T) {
+	// This just test to see if the new function panics for any reason.
+	var tests map[string]basic.Polygon
+	fn := func(t *testing.T, test basic.Polygon) {
+		t.Parallel()
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("panic, expected nil got %v", r)
+			}
+		}()
+		// Don't want it to optimized away.
+		hm := NewFromPolygon(test)
+		_ = hm
+	}
+	tests = map[string]basic.Polygon{
+		"Nil Polygon":   nil,
+		"Basic Polygon": basic.Polygon{},
+		"With One empty Line": basic.Polygon{
+			basic.Line{},
+		},
+		"With one non-empty line": basic.Polygon{
+			basic.Line{{10, 10}, {20, 10}, {20, 20}, {10, 20}},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) { fn(t, test) })
+	}
+}
+
+func TestNewFromMultiPolygon(t *testing.T) {
+	// This just test to see if the new function panics for any reason.
+	var tests map[string]basic.MultiPolygon
+	fn := func(t *testing.T, test basic.MultiPolygon) {
+		t.Parallel()
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("panic, expected nil got %v", r)
+			}
+		}()
+		// Don't want it to optimized away.
+		hm := NewFromMultiPolygon(test)
+		_ = hm
+	}
+	tests = map[string]basic.MultiPolygon{
+		"Nil Polygon":   nil,
+		"Basic Polygon": basic.MultiPolygon{},
+		"With One empty Line": basic.MultiPolygon{
+			basic.Polygon{
+				basic.Line{},
+			},
+		},
+		"With one non-empty line": basic.MultiPolygon{
+			basic.Polygon{
+				basic.Line{{10, 10}, {20, 10}, {20, 20}, {10, 20}},
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) { fn(t, test) })
+	}
 }

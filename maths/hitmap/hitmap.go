@@ -60,9 +60,9 @@ func (bb *bbox) Coords() [4]float64 {
 
 type segEvent struct {
 	x1         float64
-	y1         int64 // float65
+	y1         int64
 	x2         float64
-	y2         int64 // float64
+	y2         int64
 	m          float64
 	b          float64
 	isMDefined bool
@@ -230,11 +230,8 @@ func NewSegmentFromRing(label maths.Label, ring []maths.Pt) (seg Segment) {
 	return seg
 }
 func NewSegmentFromLines(label maths.Label, lines []maths.Line) (seg Segment) {
-
 	seg.label = label
-
 	seg.events = make(segEvents, 0, len(lines))
-
 	for i := range lines {
 		seg.bbox.Add(lines[i][:]...)
 		seg.events.Add(lines[i])
@@ -255,21 +252,17 @@ func (hm *M) AppendSegment(seg ...Segment) *M {
 }
 
 func (hm *M) LabelFor(pt maths.Pt) maths.Label {
-
 	if hm == nil {
 		return maths.Outside
 	}
-
 	if hm.DoClip {
 		if !hm.Clip.Contains(pt) {
 			return maths.Outside
 		}
 	}
-
 	if len(hm.s) == 0 {
 		return maths.Outside
 	}
-
 	for i := len(hm.s) - 1; i >= 0; i-- {
 		if hm.s[i].Contains(pt) {
 			return hm.s[i].label
@@ -280,6 +273,9 @@ func (hm *M) LabelFor(pt maths.Pt) maths.Label {
 
 func NewFromPolygon(p tegola.Polygon) (hm M) {
 	sl := p.Sublines()
+	if len(sl) == 0 {
+		return hm
+	}
 	hm.s = make([]Segment, len(sl))
 	hm.s[0] = NewSegment(maths.Inside, sl[0])
 	for i := range sl[1:] {
@@ -290,7 +286,6 @@ func NewFromPolygon(p tegola.Polygon) (hm M) {
 
 func NewFromMultiPolygon(mp tegola.MultiPolygon) (hm M) {
 	plgs := mp.Polygons()
-
 	for i := range plgs {
 		hm.s = append(hm.s, NewFromPolygon(plgs[i]).s...)
 	}
@@ -300,10 +295,13 @@ func NewFromMultiPolygon(mp tegola.MultiPolygon) (hm M) {
 func NewFromGeometry(g tegola.Geometry) (hm M) {
 	switch gg := g.(type) {
 	case tegola.Polygon:
+		//log.Printf("returning hitmap: hitmap.NewFromPolygon(\n%#v\n)", gg)
 		return NewFromPolygon(gg)
 	case tegola.MultiPolygon:
+		//log.Printf("returning hitmap: hitmap.NewFromMultiPolygon(\n%#v\n)", gg)
 		return NewFromMultiPolygon(gg)
 	default:
+		//log.Println("Returning default hm")
 		return hm
 	}
 }

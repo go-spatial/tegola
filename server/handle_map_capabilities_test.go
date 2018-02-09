@@ -3,6 +3,7 @@ package server_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -10,8 +11,9 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 
+	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/mapbox/tilejson"
 	"github.com/terranodo/tegola/server"
-	"github.com/terranodo/tegola/tilejson"
 )
 
 func TestHandleMapCapabilities(t *testing.T) {
@@ -32,13 +34,13 @@ func TestHandleMapCapabilities(t *testing.T) {
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
 			expected: tilejson.TileJSON{
-				Attribution: &testMap.Attribution,
-				Bounds:      [4]float64{0, 0, 0, 0},
-				Center:      testMap.Center,
+				Attribution: &testMapAttribution,
+				Bounds:      [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+				Center:      testMapCenter,
 				Format:      "pbf",
 				MinZoom:     4,
-				MaxZoom:     20,
-				Name:        &testMap.Name,
+				MaxZoom:     testLayer3.MaxZoom, //	the max zoom for the test group is in layer 3
+				Name:        &testMapName,
 				Description: nil,
 				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
@@ -86,13 +88,13 @@ func TestHandleMapCapabilities(t *testing.T) {
 			uriPattern: "/capabilities/:map_name",
 			reqMethod:  "GET",
 			expected: tilejson.TileJSON{
-				Attribution: &testMap.Attribution,
-				Bounds:      [4]float64{0, 0, 0, 0},
-				Center:      testMap.Center,
+				Attribution: &testMapAttribution,
+				Bounds:      [4]float64{-180.0, -85.0511, 180.0, 85.0511},
+				Center:      testMapCenter,
 				Format:      "pbf",
-				MinZoom:     4,
-				MaxZoom:     20,
-				Name:        &testMap.Name,
+				MinZoom:     0,
+				MaxZoom:     atlas.MaxZoom,
+				Name:        &testMapName,
 				Description: nil,
 				Scheme:      tilejson.SchemeXYZ,
 				TileJSON:    tilejson.Version,
@@ -136,7 +138,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Name:         "debug-tile-outline",
 						GeometryType: tilejson.GeomTypeLine,
 						MinZoom:      0,
-						MaxZoom:      server.MaxZoom,
+						MaxZoom:      atlas.MaxZoom,
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
 						},
@@ -148,7 +150,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Name:         "debug-tile-center",
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      0,
-						MaxZoom:      server.MaxZoom,
+						MaxZoom:      atlas.MaxZoom,
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
 						},
@@ -174,23 +176,33 @@ func TestHandleMapCapabilities(t *testing.T) {
 		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
 		if err != nil {
 			t.Fatal(err)
+			continue
 		}
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, r)
 
 		if w.Code != http.StatusOK {
-			t.Errorf("Failed test %v. handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			t.Errorf("[%v] handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			continue
+		}
+
+		bytes, err := ioutil.ReadAll(w.Body)
+		if err != nil {
+			t.Errorf("[%v] err reading response body: %v", i, err)
+			continue
 		}
 
 		var tileJSON tilejson.TileJSON
-		//	read the respons body
-		if err := json.NewDecoder(w.Body).Decode(&tileJSON); err != nil {
-			t.Errorf("Failed test %v. Unable to decode JSON response body", i)
+		//	read the response body
+		if err := json.Unmarshal(bytes, &tileJSON); err != nil {
+			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
+			continue
 		}
 
 		if !reflect.DeepEqual(test.expected, tileJSON) {
-			t.Errorf("Failed test %v. Response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
+			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
+			continue
 		}
 	}
 }

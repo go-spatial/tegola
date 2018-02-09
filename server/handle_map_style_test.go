@@ -3,6 +3,7 @@ package server_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -29,25 +30,24 @@ func TestHandleMapStyle(t *testing.T) {
 	}{
 		{
 			handler:    server.HandleMapStyle{},
-			hostName:   "tegola.io",
-			uri:        fmt.Sprintf("/maps/%v/style.json", testMap.Name),
+			uri:        fmt.Sprintf("/maps/%v/style.json", testMapName),
 			uriPattern: "/maps/:map_name/style.json",
 			reqMethod:  "GET",
 			expected: style.Root{
-				Name:    testMap.Name,
+				Name:    testMapName,
 				Version: style.Version,
-				Center:  [2]float64{testMap.Center[0], testMap.Center[1]},
-				Zoom:    testMap.Center[2],
+				Center:  [2]float64{testMapCenter[0], testMapCenter[1]},
+				Zoom:    testMapCenter[2],
 				Sources: map[string]style.Source{
-					testMap.Name: style.Source{
+					testMapName: style.Source{
 						Type: style.SourceTypeVector,
-						URL:  fmt.Sprintf("http://%v/capabilities/%v.json", serverHostName, testMap.Name),
+						URL:  fmt.Sprintf("http://%v/capabilities/%v.json", serverHostName, testMapName),
 					},
 				},
 				Layers: []style.Layer{
 					{
 						ID:          testLayer1.MVTName(),
-						Source:      testMap.Name,
+						Source:      testMapName,
 						SourceLayer: testLayer1.MVTName(),
 						Type:        style.LayerTypeCircle,
 						Layout: &style.LayerLayout{
@@ -60,7 +60,7 @@ func TestHandleMapStyle(t *testing.T) {
 					},
 					{
 						ID:          testLayer2.MVTName(),
-						Source:      testMap.Name,
+						Source:      testMapName,
 						SourceLayer: testLayer2.MVTName(),
 						Type:        style.LayerTypeLine,
 						Layout: &style.LayerLayout{
@@ -89,7 +89,7 @@ func TestHandleMapStyle(t *testing.T) {
 
 		r, err := http.NewRequest(tc.reqMethod, tc.uri, nil)
 		if err != nil {
-			t.Errorf("test case (%v) failed: %v", i, err)
+			t.Errorf("[%v] failed: %v", i, err)
 			continue
 		}
 
@@ -97,17 +97,26 @@ func TestHandleMapStyle(t *testing.T) {
 		router.ServeHTTP(w, r)
 
 		if w.Code != http.StatusOK {
-			t.Errorf("test case (%v). handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			t.Errorf("[%v] handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
+			continue
+		}
+
+		bytes, err := ioutil.ReadAll(w.Body)
+		if err != nil {
+			t.Errorf("[%v] err reading response body: %v", i, err)
+			continue
 		}
 
 		var output style.Root
-		if err = json.NewDecoder(w.Body).Decode(&output); err != nil {
-			t.Errorf("test case (%v) failed: %v", i, err)
+		//	read the response body
+		if err := json.Unmarshal(bytes, &output); err != nil {
+			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
 			continue
 		}
 
 		if !reflect.DeepEqual(output, tc.expected) {
-			t.Errorf("test case (%v) failed. output \n\n %+v \n\n does not match expected \n\n %+v", i, output, tc.expected)
+			t.Errorf("[%v] failed. output \n\n %+v \n\n does not match expected \n\n %+v", i, output, tc.expected)
+			continue
 		}
 	}
 }

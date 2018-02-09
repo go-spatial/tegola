@@ -3,57 +3,47 @@ package server
 import (
 	"crypto/tls"
 	"net/http"
+	"net/url"
 	"testing"
 )
 
 func TestHostName(t *testing.T) {
 	testcases := []struct {
-		request  http.Request // request passed to server.hostName()
-		hostName string       // config file hostname
-		port     string       // config file port
+		url      string
+		hostName string
+		port     string
 		expected string
 	}{
 		// With no host or port set in config, the hostname should match that used in request uri
 		{
-			request: http.Request{
-				Host: "localhost",
-			},
-			hostName: "",
-			expected: "localhost",
+			// With hostname & port unset in config, expect host:port matching URL
+			url:      "http://localhost:8080/capabilities",
+			expected: "localhost:8080",
 		},
 		// With a hostname set in config, that's what the resulting hostname should equal
 		{
-			request:  http.Request{},
-			hostName: "cdn.tegola.io",
-			expected: "cdn.tegola.io",
-		},
-		// With a hostname set in config and port set to "none", resulting hostname should match
-		//	config hostname.
-		{
-			request: http.Request{
-				Host: "localhost:8080",
-			},
+			// With hostname set and port set to "none" in config, expect "cdn.tegola.io"
+			url:      "http://localhost:8080/capabilities",
 			hostName: "cdn.tegola.io",
 			port:     "none",
 			expected: "cdn.tegola.io",
 		},
-		// With a hostname set in config, no port set in config, and an alternative port set
-		//	in request uri, the resulting hostname should be <configHostName>:<requestPort>
 		{
-			request: http.Request{
-				Host: "localhost:8080",
-			},
+			// Hostname set, no port in config, but port in url.  Expect <config_host>:<url_port>.
+			url:      "http://localhost:8080/capabilities",
 			hostName: "cdn.tegola.io",
 			expected: "cdn.tegola.io:8080",
 		},
-		// With hostname and port set in config, the result should be <configHostName>:<configPort>
 		{
-			request: http.Request{
-				Host: "localhost:8080",
-			},
+			// Hostname set, no port in config or url, expect hostname to match config.
+			url:      "http://localhost/capabilities",
 			hostName: "cdn.tegola.io",
-			port:     "877",
-			expected: "cdn.tegola.io:877",
+			expected: "cdn.tegola.io",
+		},
+		{
+			// Hostname unset, no port in config or url, expect hostname to match url host.
+			url:      "http://localhost/capabilities",
+			expected: "localhost",
 		},
 	}
 
@@ -62,7 +52,14 @@ func TestHostName(t *testing.T) {
 		HostName = tc.hostName
 		Port = tc.port
 
-		output := hostName(&tc.request)
+		url, err := url.Parse(tc.url)
+		if err != nil {
+			t.Errorf("testcase (%v) failed. could not create url.URL from (%v): %v", i, tc.url, err)
+		}
+
+		req := http.Request{URL: url, Host: url.Host}
+
+		output := hostName(&req)
 		if output != tc.expected {
 			t.Errorf("testcase (%v) failed. expected (%v) does not match result (%v)", i, tc.expected, output)
 		}

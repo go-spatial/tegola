@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
 	"gopkg.in/go-playground/colors.v1"
 
-	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/mapbox/style"
 )
 
@@ -45,19 +47,21 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//	lookup our Map
-	m, ok := maps[req.mapName]
-	if !ok {
+	m, err := atlas.GetMap(req.mapName)
+	if err != nil {
 		log.Printf("map (%v) not configured. check your config file", req.mapName)
 		http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusNotFound)
 		return
 	}
 
-	debug := r.URL.Query().Get("debug")
+	var debugQuery string
+	if r.URL.Query().Get("debug") == "true" {
+		debugQuery = "?debug=true"
 
-	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json", scheme(r), hostName(r), req.mapName)
-	if debug == "true" {
-		sourceURL += "?debug=true"
+		m = m.AddDebugLayers()
 	}
+
+	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), req.mapName, debugQuery)
 
 	mapboxStyle := style.Root{
 		Name:    m.Name,
@@ -71,39 +75,6 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		Layers: []style.Layer{},
-	}
-	//	if we have a debug param create a layer style
-	if debug == "true" {
-		debugTileOutline := style.Layer{
-			ID:          "debug-tile-outline",
-			Source:      req.mapName,
-			SourceLayer: "debug-tile-outline",
-			Layout: &style.LayerLayout{
-				Visibility: style.LayoutVisible,
-			},
-			Type: style.LayerTypeLine,
-			Paint: &style.LayerPaint{
-				LineColor: stringToColorHex("debug"),
-			},
-		}
-
-		mapboxStyle.Layers = append(mapboxStyle.Layers, debugTileOutline)
-
-		debugTileCenter := style.Layer{
-			ID:          "debug-tile-center",
-			Source:      req.mapName,
-			SourceLayer: "debug-tile-center",
-			Layout: &style.LayerLayout{
-				Visibility: style.LayoutVisible,
-			},
-			Type: style.LayerTypeCircle,
-			Paint: &style.LayerPaint{
-				CircleRadius: 3,
-				CircleColor:  stringToColorHex("debug"),
-			},
-		}
-
-		mapboxStyle.Layers = append(mapboxStyle.Layers, debugTileCenter)
 	}
 
 	//	determing the min and max zoom for this map
@@ -134,18 +105,18 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//	chose our paint type based on the geometry type
 		switch l.GeomType.(type) {
-		case tegola.Point, tegola.Point3, tegola.MultiPoint:
+		case geom.Point, geom.MultiPoint:
 			layer.Type = style.LayerTypeCircle
 			layer.Paint = &style.LayerPaint{
 				CircleRadius: 3,
 				CircleColor:  stringToColorHex(l.MVTName()),
 			}
-		case tegola.LineString, tegola.MultiLine:
+		case geom.Line, geom.LineString, geom.MultiLineString:
 			layer.Type = style.LayerTypeLine
 			layer.Paint = &style.LayerPaint{
 				LineColor: stringToColorHex(l.MVTName()),
 			}
-		case tegola.Polygon, tegola.MultiPolygon:
+		case geom.Polygon, geom.MultiPolygon:
 			layer.Type = style.LayerTypeFill
 			hexColor := stringToColorHex(l.MVTName())
 
@@ -164,19 +135,20 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				FillOutlineColor: hexColor,
 			}
 		default:
-			log.Printf("layer (providerLayerName: %v) has unsupported geometry type (%v)", l.ProviderLayerName, l.GeomType)
+			log.Printf("layer (providerLayerName: %v) has unsupported geometry type (%v)", l.ProviderLayerName, reflect.TypeOf(l.GeomType))
 		}
 
 		//	add our layer to our tile layer response
 		mapboxStyle.Layers = append(mapboxStyle.Layers, layer)
 	}
 
-	//	TODO: how configurable do we want the CORS policy to be?
-	//	set CORS header
-	w.Header().Add("Access-Control-Allow-Origin", "*")
-
 	//	mimetype for protocol buffers
 	w.Header().Add("Content-Type", "application/json")
+
+	//	cache control headers (no-cache)
+	w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Add("Pragma", "no-cache")
+	w.Header().Add("Expires", "0")
 
 	if err = json.NewEncoder(w).Encode(mapboxStyle); err != nil {
 		log.Printf("error encoding tileJSON for map (%v)", req.mapName)

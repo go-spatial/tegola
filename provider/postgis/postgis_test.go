@@ -2,17 +2,25 @@ package postgis_test
 
 import (
 	"os"
+	"strconv"
 	"testing"
 
 	"context"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/geom/slippy"
+	"github.com/terranodo/tegola/provider"
 	"github.com/terranodo/tegola/provider/postgis"
 )
 
-func TestNewProvider(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TEST") != "yes" {
+func TestNewTileProvider(t *testing.T) {
+	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
 		return
+	}
+
+	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
+	if err != nil {
+		t.Fatalf("err parsing PGPORT: %v", err)
 	}
 
 	testcases := []struct {
@@ -20,11 +28,11 @@ func TestNewProvider(t *testing.T) {
 	}{
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     "localhost",
-				postgis.ConfigKeyPort:     int64(5432),
-				postgis.ConfigKeyDB:       "tegola",
-				postgis.ConfigKeyUser:     "postgres",
-				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -36,7 +44,7 @@ func TestNewProvider(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		_, err := postgis.NewProvider(tc.config)
+		_, err := postgis.NewTileProvider(tc.config)
 		if err != nil {
 			t.Errorf("Failed test %v. Unable to create a new provider. err: %v", i, err)
 			return
@@ -44,23 +52,28 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
-func TestMVTLayer(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TEST") != "yes" {
+func TestTileFeatures(t *testing.T) {
+	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
 		return
+	}
+
+	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
+	if err != nil {
+		t.Fatalf("err parsing PGPORT: %v", err)
 	}
 
 	testcases := []struct {
 		config               map[string]interface{}
-		tile                 tegola.Tile
+		tile                 *slippy.Tile
 		expectedFeatureCount int
 	}{
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     "localhost",
-				postgis.ConfigKeyPort:     int64(5432),
-				postgis.ConfigKeyDB:       "tegola",
-				postgis.ConfigKeyUser:     "postgres",
-				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -68,21 +81,17 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile: tegola.Tile{
-				Z: 1,
-				X: 1,
-				Y: 1,
-			},
-			expectedFeatureCount: 614,
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 4032,
 		},
 		//	scalerank test
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     "localhost",
-				postgis.ConfigKeyPort:     int64(5432),
-				postgis.ConfigKeyDB:       "tegola",
-				postgis.ConfigKeyUser:     "postgres",
-				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -90,21 +99,17 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile: tegola.Tile{
-				Z: 1,
-				X: 1,
-				Y: 1,
-			},
-			expectedFeatureCount: 23,
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 98,
 		},
 		//	decode numeric(x,x) types
 		{
 			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     "localhost",
-				postgis.ConfigKeyPort:     int64(5432),
-				postgis.ConfigKeyDB:       "tegola",
-				postgis.ConfigKeyUser:     "postgres",
-				postgis.ConfigKeyPassword: "",
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName:   "buildings",
@@ -114,35 +119,35 @@ func TestMVTLayer(t *testing.T) {
 					},
 				},
 			},
-			tile: tegola.Tile{
-				Z: 16,
-				X: 11241,
-				Y: 26168,
-			},
+			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 101,
 		},
 	}
 
 	for i, tc := range testcases {
-		p, err := postgis.NewProvider(tc.config)
+		p, err := postgis.NewTileProvider(tc.config)
 		if err != nil {
-			t.Errorf("test (%v) failed. Unable to create a new provider. err: %v", i, err)
-			return
+			t.Errorf("[%v] unexpected error; unable to create a new provider, Expected: nil Got %v", i, err)
+			continue
 		}
 
 		//	iterate our configured layers
 		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
 			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
 
-			l, err := p.MVTLayer(context.Background(), layerName, &tc.tile, map[string]interface{}{})
+			var featureCount int
+			err := p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
+				featureCount++
+
+				return nil
+			})
 			if err != nil {
-				t.Errorf("test (%v) failed to create mvt layer err: %v", i, err)
-				return
+				t.Errorf("[%v] unexpected error; failed to create mvt layer, Expected nil Got %v", i, err)
+				continue
 			}
 
-			if len(l.Features()) != tc.expectedFeatureCount {
-				t.Errorf("test (%v) failed.. expected feature count (%v), got (%v)", i, tc.expectedFeatureCount, len(l.Features()))
-				return
+			if featureCount != tc.expectedFeatureCount {
+				t.Errorf("[%v] feature count, Expected %v Got %v", i, tc.expectedFeatureCount, featureCount)
 			}
 		}
 	}

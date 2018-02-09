@@ -66,6 +66,73 @@ func (bb BoundingBox) Area() float64 {
 	return math.Abs((bb[2] - bb[0]) * (bb[3] - bb[1]))
 }
 
+func BBoxFloat64(pts ...[2]float64) (bb [2][2]float64, err error) {
+	if len(pts) == 0 {
+		return bb, fmt.Errorf("No points given.")
+	}
+	bb = [2][2]float64{
+		{pts[0][0], pts[0][1]},
+		{pts[0][0], pts[0][1]},
+	}
+	for i := 1; i < len(pts); i++ {
+		if pts[i][0] < bb[0][0] {
+			bb[0][0] = pts[i][0]
+		}
+		if pts[i][1] < bb[0][1] {
+			bb[0][1] = pts[i][1]
+		}
+		if pts[i][0] > bb[1][0] {
+			bb[1][0] = pts[i][0]
+		}
+		if pts[i][1] > bb[1][1] {
+			bb[1][1] = pts[i][1]
+		}
+	}
+	return bb, nil
+}
+
+func (bb BoundingBox) ConvertSRID(fromID, toID uint64) BoundingBox {
+	var convFunc func(uint64, tegola.Geometry) (basic.G, error)
+	var convSRID uint64
+
+	if fromID == tegola.WebMercator {
+		convFunc = basic.FromWebMercator
+		convSRID = toID
+	} else if toID == tegola.WebMercator {
+		convFunc = basic.ToWebMercator
+		convSRID = fromID
+	} else if fromID == toID {
+		newBb := bb
+		return newBb
+	} else {
+		log.Fatal("Converting from srid %v -> %v is currently unsupported\n", fromID, toID)
+	}
+
+	// Lower left & top right points
+	ll := basic.Point{bb[0], bb[1]}
+	tr := basic.Point{bb[2], bb[3]}
+
+	// Same points converted
+	llC, err1 := convFunc(convSRID, ll)
+	trC, err2 := convFunc(convSRID, tr)
+
+	if err1 != nil || err2 != nil {
+		newBB := bb
+		msg := "Problem converting BoundingBox geometry from %v -> %v: %v"
+		log.Errorf(msg, fromID, toID, bb)
+		if err1 != nil {
+			log.Errorf(msg, fromID, toID, err1)
+		} else {
+			log.Errorf(msg, fromID, toID, err2)
+		}
+		return newBB
+	}
+
+	newBB := BoundingBox{llC.AsPoint().X(), llC.AsPoint().Y(), trC.AsPoint().X(), trC.AsPoint().Y()}
+
+	return newBB
+}
+
 // TODO:gdey — should we return an error?
 func BBox(pts []maths.Pt) (bb [4]float64) {
 	if len(pts) == 0 {
@@ -87,48 +154,6 @@ func BBox(pts []maths.Pt) (bb [4]float64) {
 		}
 	}
 	return bb
-}
-
-func (bb BoundingBox) ConvertSrid(fromId int, toId int) BoundingBox {
-	var convFunc func(int, tegola.Geometry) (basic.G, error)
-	var convSrid int
-
-	if fromId == tegola.WebMercator {
-		convFunc = basic.FromWebMercator
-		convSrid = toId
-	} else if toId == tegola.WebMercator {
-		convFunc = basic.ToWebMercator
-		convSrid = fromId
-	} else if fromId == toId {
-		newBb := bb
-		return newBb
-	} else {
-		log.Fatal("Converting from srid %v -> %v is currently unsupported\n", fromId, toId)
-	}
-
-	// Lower left & top right points
-	ll := basic.Point{bb[0], bb[1]}
-	tr := basic.Point{bb[2], bb[3]}
-
-	// Same points converted
-	llC, err1 := convFunc(convSrid, ll)
-	trC, err2 := convFunc(convSrid, tr)
-
-	if err1 != nil || err2 != nil {
-		newBB := bb
-		msg := "Problem converting BoundingBox geometry from %v -> %v: %v"
-		log.Error(msg, fromId, toId, bb)
-		if err1 != nil {
-			log.Error(msg, fromId, toId, err1)
-		} else {
-			log.Error(msg, fromId, toId, err2)
-		}
-		return newBB
-	}
-
-	newBB := BoundingBox{llC.AsPoint().X(), llC.AsPoint().Y(), trC.AsPoint().X(), trC.AsPoint().Y()}
-
-	return newBB
 }
 
 func (bb BoundingBox) AsGeoJSON() string {

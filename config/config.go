@@ -6,45 +6,25 @@ package config
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
 )
 
-type ErrMapNotFound struct {
-	MapName string
-}
-
-func (e ErrMapNotFound) Error() string {
-	return fmt.Sprintf("config: map (%v) not found", e.MapName)
-}
-
-type ErrInvalidProviderLayerName struct {
-	ProviderLayerName string
-}
-
-func (e ErrInvalidProviderLayerName) Error() string {
-	return fmt.Sprintf("config: invalid provider layer name (%v)", e.ProviderLayerName)
-}
-
-type ErrOverlappingLayerZooms struct {
-	ProviderLayer1 string
-	ProviderLayer2 string
-}
-
-func (e ErrOverlappingLayerZooms) Error() string {
-	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
-}
-
-// A Config represents the a Tegola Config file.
+// Config represents a tegola config file.
 type Config struct {
+	//	the tile buffer to use
+	TileBuffer int64 `toml:"tile_buffer"`
 	// LocationName is the file name or http server that the config was read from.
-	// If this is "", it means that the location was unknown. This is the case if
-	// the Prase() function is used directly.
+	// If this is an empty string, it means that the location was unknown. This is the case if
+	// the Parse() function is used directly.
 	LocationName string
 	Webserver    Webserver              `toml:"webserver"`
 	Cache        map[string]interface{} `toml:"cache"`
@@ -54,10 +34,11 @@ type Config struct {
 }
 
 type Webserver struct {
-	HostName  string `toml:"hostname"`
-	Port      string `toml:"port"`
-	LogFile   string `toml:"log_file"`
-	LogFormat string `toml:"log_format"`
+	HostName          string `toml:"hostname"`
+	Port              string `toml:"port"`
+	LogFile           string `toml:"log_file"`
+	LogFormat         string `toml:"log_format"`
+	CORSAllowedOrigin string `toml:"cors_allowed_origin"`
 }
 
 // A Map represents a map in the Tegola Config file.
@@ -136,6 +117,53 @@ func Parse(reader io.Reader, location string) (conf Config, err error) {
 	return conf, err
 }
 
+// replaceEnvVars replaces environment variable placeholders in reader stream with values
+// i.e. "val = $VAR" -> "val = 3"
+func replaceEnvVars(reader io.Reader) (io.Reader, error) {
+	// Variable definition follows IEEE Std 1003.1-2001
+	//   A dollar sign ($) followed by an upper-case letter, followed by
+	//   zero or more upper-case letters, digits, or underscores (_).
+	varNameRegexStr := `[A-Z]+[A-Z1-9_]*`
+	// Var prepended by dollar sign ($)
+	// Ex: $MY_VAR7
+	regexStrDS := fmt.Sprintf(`\$%v`, varNameRegexStr)
+	// Additionally, match a variable surrounded by curly braces with leading dollar sign.
+	// Ex: ${MY_VAR7}
+	regexStrBraces := fmt.Sprintf(`\$\{%v\}`, varNameRegexStr)
+
+	// Regex to capture either syntax
+	regexStr := fmt.Sprintf("(%v|%v)", regexStrDS, regexStrBraces)
+	varFinder := regexp.MustCompile(regexStr)
+
+	configBytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	configStr := string(configBytes)
+
+	// Grab the regular & braced placeholders
+	varPlaceHolders := varFinder.FindAllString(configStr, -1)
+
+	varNameFinder := regexp.MustCompile(varNameRegexStr)
+
+	for _, ph := range varPlaceHolders {
+		// Get the environment variable value (drop the leading dollar sign ($) and surrounding braces ({}))
+		varName := varNameFinder.FindString(ph)
+		envVal, found := syscall.Getenv(varName)
+		if !found {
+			return nil, ErrMissingEnvVar{
+				EnvVar: varName,
+			}
+		}
+
+		// Explicit string replacement, no need for regex funny business any longer.
+		configStr = strings.Replace(configStr, ph, envVal, -1)
+	}
+
+	return strings.NewReader(configStr), nil
+}
+
 // Load will load and parse the config file from the given location.
 func Load(location string) (conf Config, err error) {
 	var reader io.Reader
@@ -171,24 +199,19 @@ func Load(location string) (conf Config, err error) {
 		}
 	}
 
+	reader, err = replaceEnvVars(reader)
+	if err != nil {
+		return conf, err
+	}
+
 	return Parse(reader, location)
 }
 
-// FindMap will find the map with the provided name. If "" is used for the name, it will return the first
-// Map in the config, if one is defined.
-// If a map with the name is not found it will return ErrMapNotFound error.
-func (cfg *Config) FindMap(name string) (Map, error) {
-	if name == "" && len(cfg.Maps) > 0 {
-		return cfg.Maps[0], nil
+func LoadAndValidate(filename string) (cfg Config, err error) {
+	cfg, err = Load(filename)
+	if err != nil {
+		return cfg, err
 	}
-
-	for _, m := range cfg.Maps {
-		if m.Name == name {
-			return m, nil
-		}
-	}
-
-	return Map{}, ErrMapNotFound{
-		MapName: name,
-	}
+	// validate our config
+	return cfg, cfg.Validate()
 }

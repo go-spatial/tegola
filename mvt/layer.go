@@ -66,7 +66,7 @@ func valMapToVTileValue(valMap []interface{}) (vt []*vectorTile.Tile_Value) {
 }
 
 // VTileLayer returns a vectorTile Tile_Layer object that represents this layer.
-func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vectorTile.Tile_Layer, error) {
+func (l *Layer) VTileLayer(ctx context.Context, tile *tegola.Tile) (*vectorTile.Tile_Layer, error) {
 	kmap, vmap, err := keyvalMapsFromFeatures(l.features)
 	if err != nil {
 		return nil, err
@@ -74,25 +74,30 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 	valmap := valMapToVTileValue(vmap)
 	var features = make([]*vectorTile.Tile_Feature, 0, len(l.features))
 	for _, f := range l.features {
-		if ctx.Err() != nil {
-			return nil, context.Canceled
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
 		simplify := simplifyGeometries && !l.DontSimplify
 		if l.MaxSimplificationZoom == 0 {
 			l.MaxSimplificationZoom = uint(simplificationMaxZoom)
 		}
 
-		simplify = simplify && extent.Z < int(l.MaxSimplificationZoom)
+		simplify = simplify && tile.Z < int(l.MaxSimplificationZoom)
 
-		vtf, err := f.VTileFeature(ctx, kmap, vmap, extent, l.Extent(), simplify)
+		vtf, err := f.VTileFeature(ctx, kmap, vmap, tile, simplify)
 		if err != nil {
-			return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
+			switch err {
+			case context.Canceled:
+				return nil, err
+			default:
+				return nil, fmt.Errorf("Error getting VTileFeature: %v", err)
+			}
 		}
 		if vtf != nil {
 			features = append(features, vtf)
 		}
 	}
-	ext := uint32(l.Extent())
+	ext := uint32(tile.Extent)
 	version := uint32(l.Version())
 	vtl := new(vectorTile.Tile_Layer)
 	vtl.Version = &version
@@ -106,9 +111,7 @@ func (l *Layer) VTileLayer(ctx context.Context, extent tegola.BoundingBox) (*vec
 }
 
 //Version is the version of tile spec this layer is from.
-func (*Layer) Version() int {
-	return 2
-}
+func (*Layer) Version() int { return 2 }
 
 // Extent defaults to 4096
 func (l *Layer) Extent() int {
@@ -151,7 +154,7 @@ FEATURES_LOOP:
 			continue
 		}
 		for _, cf := range l.features {
-			if cf.ID != nil {
+			if cf.ID == nil {
 				continue
 			}
 			// We matched, we skip

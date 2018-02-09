@@ -9,19 +9,28 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/geom/encoding/wkb"
+	"github.com/terranodo/tegola/internal/convert"
 	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/wkb"
 )
 
-// TileExample is a quick example of how to use the interface to marshal a tile.
+// TileExample is a quick example of how to use the interface to marshall a tile.
 func TileExample() {
 	// We have our point in wkb format.
 	var point = []byte{0, 0, 0, 0, 1, 70, 129, 246, 35, 46, 74, 93, 192, 3, 70, 27, 60, 175, 91, 64, 64}
 	pointReader := bytes.NewReader(point)
-	geo, err := wkb.Decode(pointReader)
+	ggeo, err := wkb.Decode(pointReader)
 	if err != nil {
 		panic(err)
 	}
+
+	// Need to convert to a tegola type for now. (This is teomporary till we convert over to
+	// geom types)
+	geo, err := convert.ToTegola(ggeo)
+	if err != nil {
+		panic(err)
+	}
+
 	// Now we need to crate a feature. The way Tiles work, is that each tiles is
 	// made up of a set of layers. Each layer contains more or more features, which
 	// are geometeries with some meta data. So, first we must construct the feature
@@ -69,11 +78,8 @@ func TileExample() {
 
 	// VTile is the protobuff representation of the tile. This is what you can
 	// send to the protobuff Marshal functions.
-	bbox := tegola.BoundingBox{
-		Maxx: 4096,
-		Maxy: 4096,
-	}
-	vtile, err := tile.VTile(context.Background(), bbox)
+	ttile := tegola.NewTile(0, 0, 0)
+	vtile, err := tile.VTile(context.Background(), ttile)
 	if err != nil {
 		panic(err)
 	}

@@ -1,19 +1,19 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/dustin/go-humanize"
-	"github.com/golang/protobuf/proto"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/internal/log"
-	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/geom/slippy"
 )
 
 type HandleMapZXY struct {
@@ -44,19 +44,15 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	//	parse our URL vals to ints
 	z := params["z"]
 	req.z, err = strconv.Atoi(z)
-	if err != nil {
-		log.Error("invalid Z value (%v)", z)
+	if err != nil || req.z < 0 {
+		log.Printf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
-	}
-	if req.z < 0 {
-		log.Error("invalid Z value (%v)", req.z)
-		return fmt.Errorf("negative zoom levels are not allowed")
 	}
 
 	x := params["x"]
 	req.x, err = strconv.Atoi(x)
-	if err != nil {
-		log.Error("invalid X value (%v)", x)
+	if err != nil || req.x < 0 {
+		log.Printf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
 
@@ -64,8 +60,8 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	y := params["y"]
 	yParts := strings.Split(y, ".")
 	req.y, err = strconv.Atoi(yParts[0])
-	if err != nil {
-		log.Error("invalid Y value (%v)", y)
+	if err != nil || req.y < 0 {
+		log.Printf("invalid Y value (%v)", y)
 		return fmt.Errorf("invalid Y value (%v)", y)
 	}
 
@@ -91,144 +87,54 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 //		x - row
 //		y - column
 func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Info("Handling %v request: %v", r.Method, r.URL)
-	//	check http verb
-	switch r.Method {
-	//	preflight check for CORS request
-	case "OPTIONS":
-		//	TODO: how configurable do we want the CORS policy to be?
-		//	set CORS header
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-		w.WriteHeader(http.StatusNoContent)
-
-		//	options call does not have a body
-		w.Write(nil)
+	//	parse our URI
+	if err := req.parseURI(r); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	//	tile request
-	case "GET":
+	}
 
-		//	parse our URI
-		if err := req.parseURI(r); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+	//	lookup our Map
+	m, err := atlas.GetMap(req.mapName)
+	if err != nil {
+		log.Printf("map (%v) not configured. check your config file", req.mapName)
+		http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
+		return
+	}
+
+	tile := slippy.NewTile(uint64(req.z), uint64(req.x), uint64(req.y), TileBuffer, tegola.WebMercator)
+
+	//	filter down the layers we need for this zoom
+	m = m.FilterLayersByZoom(req.z)
+
+	//	check for the debug query string
+	if req.debug {
+		m = m.AddDebugLayers()
+	}
+
+	pbyte, err := m.Encode(r.Context(), tile)
+	if err != nil {
+		switch err {
+		case context.Canceled:
+			//	TODO: add debug logs
+			return
+		default:
+			errMsg := fmt.Sprintf("Error marshalling tile: %v", err)
+			log.Printf(errMsg)
+			http.Error(w, errMsg, http.StatusInternalServerError)
 			return
 		}
+	}
 
-		//	lookup our Map
-		m, ok := maps[req.mapName]
-		if !ok {
-			log.Error("map (%v) not configured. check your config file", req.mapName)
-			http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
-			return
-		}
+	//	mimetype for protocol buffers
+	w.Header().Add("Content-Type", "application/x-protobuf")
+	w.WriteHeader(http.StatusOK)
+	w.Write(pbyte)
 
-		//	new tile
-		log.Debug("Tile Request (x,y,z): (%v,%v,%v)", req.x, req.y, req.z)
-		tile := tegola.Tile{
-			Z: req.z,
-			X: req.x,
-			Y: req.y,
-		}
-
-		//	generate a tile
-		var mvtTile mvt.Tile
-
-		//	check that our request is below max zoom and we have layers to render
-		if tile.Z <= MaxZoom && len(m.Layers) != 0 {
-
-			//	wait group for concurrent layer fetching
-			var wg sync.WaitGroup
-			//	filter down the layers we need for this zoom
-			ls := m.FilterLayersByZoom(tile.Z)
-
-			//	layer stack
-			mvtLayers := make([]*mvt.Layer, len(ls))
-
-			//	set our waitgroup count
-			wg.Add(len(ls))
-
-			//	iterate our layers
-			for i, layer := range ls {
-				//	go routine for fetching the layer concurrently
-				go func(i int, l Layer) {
-					//	on completion let the wait group know
-					defer wg.Done()
-
-					//	fetch layer from data provider
-					mvtLayer, err := l.Provider.MVTLayer(r.Context(), l.ProviderLayerName, &tile, l.DefaultTags)
-					if err == mvt.ErrCanceled {
-						return
-					}
-					if err != nil {
-						//	TODO: should we return an error to the response or just log the error?
-						//	we can't just write to the response as the waitgroup is going to write to the response as well
-						log.Error("Error Getting MVTLayer '%v' for tile Z: %v, X: %v, Y: %v: %v",
-							l.ProviderLayerName, tile.Z, tile.X, tile.Y, err)
-						return
-					}
-
-					//	check if we have a layer name
-					if l.Name != "" {
-						mvtLayer.Name = l.Name
-					}
-
-					//	add the layer to the slice position
-					mvtLayers[i] = mvtLayer
-				}(i, layer)
-			}
-
-			//	wait for the waitgroup to finish
-			wg.Wait()
-
-			//	stop processing if the context has an error. this check is necessary
-			//	otherwise the server continues processing even if the request was canceled
-			//	as the waitgroup was not notified of the cancel
-			if r.Context().Err() != nil {
-				return
-			}
-
-			//	add layers to our tile
-			mvtTile.AddLayers(mvtLayers...)
-		}
-
-		//	check for the debug query string
-		if req.debug {
-			//	add debug layer
-			debugLayers := debugLayer(tile)
-			mvtTile.AddLayers(debugLayers...)
-		}
-
-		//	generate our vector tile
-
-		vtile, err := mvtTile.VTile(r.Context(), tile.BoundingBox())
-		if err != nil {
-			//	log.Error("Error Getting VTile: %v", err)
-			http.Error(w, fmt.Sprintf("error Getting VTile: %v", err.Error()), http.StatusBadRequest)
-			return
-		}
-
-		//	marshal our tile into a protocol buffer
-		var pbyte []byte
-		pbyte, err = proto.Marshal(vtile)
-		if err != nil {
-			log.Error("Error marshalling tile: %v", err)
-			http.Error(w, "Error marshalling tile", http.StatusInternalServerError)
-			return
-		}
-
-		//	TODO: how configurable do we want the CORS policy to be?
-		//	set CORS header
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-
-		//	mimetype for protocol buffers
-		w.Header().Add("Content-Type", "application/x-protobuf")
-
-		w.Write(pbyte)
-
-		//	check for tile size warnings
-		if len(pbyte) > MaxTileSize {
-			log.Warn("tile z:%v, x:%v, y:%v is rather large - %v", tile.Z, tile.X, tile.Y, humanize.Bytes(uint64(len(pbyte))))
-		}
-
+	//	check for tile size warnings
+	if len(pbyte) > MaxTileSize {
+		log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", req.z, req.x, req.y, humanize.Bytes(uint64(len(pbyte))))
+	}
+	/*
 		//	log the request
 		L.Log(logItem{
 			X:         tile.X,
@@ -236,9 +142,5 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Z:         tile.Z,
 			RequestIP: r.RemoteAddr,
 		})
-
-	default:
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	*/
 }

@@ -1,13 +1,10 @@
 package server_test
 
 import (
-	"log"
-
-	"context"
-
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/mvt"
+	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/cache/memorycache"
+	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/provider/test_provider"
 	"github.com/terranodo/tegola/server"
 )
 
@@ -18,93 +15,64 @@ const (
 	serverHostName = "tegola.io"
 )
 
-type testMVTProvider struct{}
+var (
+	testMapName        = "test-map"
+	testMapAttribution = "test attribution"
+	testMapCenter      = [3]float64{1.0, 2.0, 3.0}
+)
 
-func (tp *testMVTProvider) MVTLayer(ctx context.Context, layerName string, tile tegola.TegolaTile, tags map[string]interface{}) (*mvt.Layer, error) {
-	var layer mvt.Layer
-
-	return &layer, nil
-}
-
-func (tp *testMVTProvider) Layers() ([]mvt.LayerInfo, error) {
-	return []mvt.LayerInfo{
-		layer{
-			name:     "test-layer",
-			geomType: basic.Polygon{},
-			srid:     tegola.WebMercator,
-		},
-	}, nil
-}
-
-var testLayer1 = server.Layer{
+var testLayer1 = atlas.Layer{
 	Name:              "test-layer",
 	ProviderLayerName: "test-layer-1",
 	MinZoom:           4,
 	MaxZoom:           9,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Point{},
+	Provider:          &test_provider.TestTileProvider{},
+	GeomType:          geom.Point{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
 }
 
-var testLayer2 = server.Layer{
+var testLayer2 = atlas.Layer{
 	Name:              "test-layer-2-name",
 	ProviderLayerName: "test-layer-2-provider-layer-name",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Line{},
+	Provider:          &test_provider.TestTileProvider{},
+	GeomType:          geom.Line{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
 	},
 }
 
-var testLayer3 = server.Layer{
+var testLayer3 = atlas.Layer{
 	Name:              "test-layer",
 	ProviderLayerName: "test-layer-3",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &testMVTProvider{},
-	GeomType:          basic.Point{},
+	Provider:          &test_provider.TestTileProvider{},
+	GeomType:          geom.Point{},
 	DefaultTags:       map[string]interface{}{},
 }
 
-var testMap = server.Map{
-	Name:        "test-map",
-	Attribution: "test attribution",
-	Center:      [3]float64{1.0, 2.0, 3.0},
-	Layers: []server.Layer{
-		testLayer1,
-		testLayer2,
-		testLayer3,
-	},
-}
-
-type layer struct {
-	name     string
-	geomType tegola.Geometry
-	srid     int
-}
-
-func (l layer) Name() string {
-	return l.name
-}
-
-func (l layer) GeomType() tegola.Geometry {
-	return l.geomType
-}
-
-func (l layer) SRID() int {
-	return l.srid
-}
-
+//	pre test setup phase
 func init() {
 	server.Version = serverVersion
 	server.HostName = serverHostName
 
-	//	register a map with layers
-	if err := server.RegisterMap(testMap); err != nil {
-		log.Fatal("Failed to register test map")
-	}
+	testMap := atlas.NewWGS84Map(testMapName)
+	testMap.Attribution = testMapAttribution
+	testMap.Center = testMapCenter
+	testMap.Layers = append(testMap.Layers, []atlas.Layer{
+		testLayer1,
+		testLayer2,
+		testLayer3,
+	}...)
+
+	atlas.SetCache(memorycache.New())
+
+	//	register a map with atlas
+	atlas.AddMap(testMap)
+
+	server.Atlas = atlas.DefaultAtlas
 }

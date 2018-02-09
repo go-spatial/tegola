@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 
 	svg "github.com/ajstarks/svgo"
 	"github.com/terranodo/tegola"
@@ -76,19 +77,12 @@ func (canvas *Canvas) DrawGrid(n int, label bool, style string) {
 func (canvas *Canvas) DrawRegion(withGrid bool) {
 
 	canvas.Group(`id="region"`, `style="opacity:0.2"`)
-	//	recColor := canvas.RGBA(10, 10, 10, 0.3)
-	//canvas.Rect(5, 5, 90, 90, "fill:"+recColor+";stroke:"+recColor)
 	canvas.Rect(int(canvas.Region.MinX), int(canvas.Region.MinY), int(canvas.Region.Width()), int(canvas.Region.Height()), "stroke-dasharray:5,5;fill:red;opacity:0.3;"+fmt.Sprintf(";stroke:rgb(%v,%v,%v)", 0, 200, 0))
 
 	if withGrid {
 		drawGrid(canvas, &canvas.Region, 10, false, "region_10", "stroke:red;opacity:0.2", "text-anchor:middle;font-size:8;fill:white;stroke:red", "stroke:red")
 		drawGrid(canvas, &canvas.Region, 100, true, "region_100", "stroke:red;opacity:0.3", "text-anchor:middle;font-size:8;fill:white;stroke:red", "stroke:red")
 	}
-	/*
-		for _, pt := range canvas.Region.SentinalPts() {
-			canvas.DrawPoint(int(pt[0]), int(pt[1]), recColor)
-		}
-	*/
 	canvas.Gend()
 }
 
@@ -127,23 +121,6 @@ func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, poi
 	canvas.Commentf("Point Count: %v", pointCount)
 	canvas.Path(path, fmt.Sprintf(`id="%v_%v"`, id, pointCount), style)
 	canvas.Gend()
-	/*
-		if pointStyle == "" {
-			pointStyle = "fill:black"
-		}
-		if drawPoints {
-			canvas.Gid("Points")
-			for _, pt := range points {
-				x, y := int(pt.X), int(pt.Y)
-
-				canvas.Circle(x, y, 1, pointStyle)
-				//canvas.Group(fmt.Sprintf(`id="pt%v_%v" style="text-anchor:middle;font-size:8;fill:white;stroke:black;opacity:0"`, x, y))
-				//canvas.Text(x, y+5, fmt.Sprintf("(%v %v)", x, y))
-				//canvas.Gend()
-			}
-			canvas.Gend()
-		}
-	*/
 	canvas.Gend()
 	return pointCount
 }
@@ -191,6 +168,29 @@ func (canvas *Canvas) DrawLine(l tegola.LineString, id string, style string, poi
 		canvas.Gend()
 	}
 	canvas.Gend()
+}
+
+func (canvas *Canvas) DrawMathSegments(ls []maths.Line, s ...string) {
+	log.Printf("Drawing lines(%v) ", len(ls))
+	for _, line := range ls {
+		canvas.Line(
+			int(line[0].X),
+			int(line[0].Y),
+			int(line[1].X),
+			int(line[1].Y),
+			s...,
+		)
+	}
+}
+func (canvas *Canvas) DrawMathPoints(pts []maths.Pt, s ...string) {
+	log.Printf("Drawing Points (%v)", len(pts))
+	prefix := "M"
+	var path string
+	for i := range pts {
+		path += fmt.Sprintf("%v %v %v ", prefix, pts[i].X, pts[i].Y)
+		prefix = "L"
+	}
+	canvas.Path(path, s...)
 }
 
 func (canvas *Canvas) DrawMultiLine(ml tegola.MultiLine, id string, style string, pointStyle string, drawPoints bool) {
