@@ -83,48 +83,48 @@ func TestDisjointBB(t *testing.T) {
 	}
 }
 
-func TestConvertSrid(t *testing.T) {
+func TestConvertSRID(t *testing.T) {
 	type TestCase struct {
 		bbox         BoundingBox
-		fromSrid     int
-		toSrid       int
+		fromSRID     uint64
+		toSRID       uint64
 		expectedBbox BoundingBox
 	}
 
 	testCases := [...]TestCase{
 		TestCase{
 			bbox:     BoundingBox{26.0, 32.0, 27.0, 33.0},
-			fromSrid: tegola.WebMercator,
-			toSrid:   tegola.WGS84,
+			fromSRID: tegola.WebMercator,
+			toSRID:   tegola.WGS84,
 			expectedBbox: BoundingBox{0.00023356197387107555, 0.0002874608909118022,
 				0.0002425451267122708, 0.00029644404375279597},
 		},
 		TestCase{
 			bbox: BoundingBox{0.00023356197387107555, 0.0002874608909118022,
 				0.0002425451267122708, 0.00029644404375279597},
-			fromSrid:     tegola.WGS84,
-			toSrid:       tegola.WebMercator,
+			fromSRID:     tegola.WGS84,
+			toSRID:       tegola.WebMercator,
 			expectedBbox: BoundingBox{26.0, 32.0, 27.0, 33.0},
 		},
 		TestCase{
 			bbox: BoundingBox{0.00023356197387107555, 0.0002874608909118022,
 				0.0002425451267122708, 0.00029644404375279597},
-			fromSrid: tegola.WebMercator,
-			toSrid:   tegola.WebMercator,
+			fromSRID: tegola.WebMercator,
+			toSRID:   tegola.WebMercator,
 			expectedBbox: BoundingBox{0.00023356197387107555, 0.0002874608909118022,
 				0.0002425451267122708, 0.00029644404375279597},
 		},
 		TestCase{
 			bbox:         BoundingBox{26.0, 32.0, 27.0, 33.0},
-			fromSrid:     tegola.WGS84,
-			toSrid:       tegola.WGS84,
+			fromSRID:     tegola.WGS84,
+			toSRID:       tegola.WGS84,
 			expectedBbox: BoundingBox{26.0, 32.0, 27.0, 33.0},
 		},
 	}
 
 	floatDelta := 0.00000001
 	for i, tc := range testCases {
-		convertedBBox := tc.bbox.ConvertSrid(tc.fromSrid, tc.toSrid)
+		convertedBBox := tc.bbox.ConvertSRID(tc.fromSRID, tc.toSRID)
 		failMsg := fmt.Sprintf("TestCase[%v]: %v != %v", i, convertedBBox, tc.expectedBbox)
 		for j := 0; j < 4; j++ {
 			if math.Abs(tc.expectedBbox[j]-convertedBBox[j]) > floatDelta {

@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/geom/slippy"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 type HandleMapZXY struct {
@@ -45,14 +45,14 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	z := params["z"]
 	req.z, err = strconv.Atoi(z)
 	if err != nil || req.z < 0 {
-		log.Printf("invalid Z value (%v)", z)
+		log.Warnf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
 
 	x := params["x"]
 	req.x, err = strconv.Atoi(x)
 	if err != nil || req.x < 0 {
-		log.Printf("invalid X value (%v)", x)
+		log.Warnf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
 
@@ -61,7 +61,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	yParts := strings.Split(y, ".")
 	req.y, err = strconv.Atoi(yParts[0])
 	if err != nil || req.y < 0 {
-		log.Printf("invalid Y value (%v)", y)
+		log.Warnf("invalid Y value (%v)", y)
 		return fmt.Errorf("invalid Y value (%v)", y)
 	}
 
@@ -96,7 +96,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	lookup our Map
 	m, err := atlas.GetMap(req.mapName)
 	if err != nil {
-		log.Printf("map (%v) not configured. check your config file", req.mapName)
+		log.Errorf("map (%v) not configured. check your config file", req.mapName)
 		http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
 		return
 	}
@@ -119,7 +119,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		default:
 			errMsg := fmt.Sprintf("Error marshalling tile: %v", err)
-			log.Printf(errMsg)
+			log.Errorf(errMsg)
 			http.Error(w, errMsg, http.StatusInternalServerError)
 			return
 		}
@@ -132,7 +132,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	check for tile size warnings
 	if len(pbyte) > MaxTileSize {
-		log.Printf("tile z:%v, x:%v, y:%v is rather large - %v", req.z, req.x, req.y, humanize.Bytes(uint64(len(pbyte))))
+		log.Infof("tile z:%v, x:%v, y:%v is rather large - %v", req.z, req.x, req.y, humanize.Bytes(uint64(len(pbyte))))
 	}
 	/*
 		//	log the request

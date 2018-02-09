@@ -115,7 +115,7 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 
 	//	iterate our maps
 	for _, m := range maps {
-		newMap := atlas.NewWGS84Map(m.Name)
+		newMap := atlas.NewWebMercatorMap(m.Name)
 		newMap.Attribution = html.EscapeString(m.Attribution)
 		newMap.Center = m.Center
 

@@ -90,13 +90,8 @@ func (t *MockTile) ZXY() (uint64, uint64, uint64) {
 }
 
 func TestTileFeatures(t *testing.T) {
-	// The literal coordinates are in WSG:4326 which is what the test gpkg uses,
-	//	convert to WebMercator, as that's what is expected in a tile bounding box
-	// Y-values are swapped (origin at top left, so miny is larger than maxy,
-	//	@see https://github.com/terranodo/tegola/issues/189
-	// TODO: Swap them back when that's fixed.
-	//  bboxLeftOfLayer := points.BoundingBox{20.0, 37.9431, 23.6, 37.85}
-	//  bboxContainsLayer := points.BoundingBox{23.6, 38.0, 23.8, 37.8}
+	// IMPORTANT: Y-values are swapped (origin at top left, so miny is larger than maxy) for ALL extents,
+	// this needs to be fixed: https://github.com/terranodo/tegola/issues/189
 
 	type tcase struct {
 		config               map[string]interface{}
@@ -141,8 +136,8 @@ func TestTileFeatures(t *testing.T) {
 			tile: MockTile{
 				srid: tegola.WGS84,
 				bufferedExtent: [2][2]float64{
-					{20.0, 37.9431},
-					{23.6, 37.85},
+					{20.0, 37.85},
+					{23.6, 37.9431},
 				},
 			},
 			expectedFeatureCount: 0,
@@ -159,8 +154,8 @@ func TestTileFeatures(t *testing.T) {
 			tile: MockTile{
 				srid: tegola.WGS84,
 				bufferedExtent: [2][2]float64{
-					{23.6, 37.8},
-					{23.8, 38.0},
+					{23.6, 38.0},
+					{23.8, 37.8},
 				},
 			},
 			expectedFeatureCount: 187,
@@ -186,8 +181,8 @@ func TestTileFeatures(t *testing.T) {
 				Z:    1,
 				srid: tegola.WebMercator,
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
+					{-20026376.39, 20048966.10},
+					{20026376.39, -20048966.10},
 				},
 			},
 			expectedFeatureCount: 101,
@@ -213,8 +208,8 @@ func TestTileFeatures(t *testing.T) {
 				Z:    0,
 				srid: tegola.WebMercator,
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
+					{-20026376.39, 20048966.10},
+					{20026376.39, -20048966.10},
 				},
 			},
 			expectedFeatureCount: 44,
@@ -229,6 +224,9 @@ func TestTileFeatures(t *testing.T) {
 }
 
 func TestConfigs(t *testing.T) {
+	// IMPORTANT: Y-values are swapped (origin at top left, so miny is larger than maxy) for ALL extents,
+	// this needs to be fixed: https://github.com/terranodo/tegola/issues/189
+
 	type tcase struct {
 		config       map[string]interface{}
 		tile         MockTile
@@ -279,8 +277,8 @@ func TestConfigs(t *testing.T) {
 			},
 			tile: MockTile{
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 				srid: tegola.WebMercator,
 			},
@@ -311,8 +309,8 @@ func TestConfigs(t *testing.T) {
 			},
 			tile: MockTile{
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 				srid: tegola.WebMercator,
 			},
@@ -333,8 +331,8 @@ func TestConfigs(t *testing.T) {
 			},
 			tile: MockTile{
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 				srid: tegola.WebMercator,
 			},
@@ -379,8 +377,8 @@ func TestConfigs(t *testing.T) {
 			},
 			tile: MockTile{
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 				srid: tegola.WebMercator,
 			},

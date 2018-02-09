@@ -18,7 +18,6 @@ func TestHandleMapStyle(t *testing.T) {
 	//	config params this test relies on
 	server.HostName = serverHostName
 
-	//	setup a new provider
 	testcases := []struct {
 		handler    http.Handler
 		hostName   string
@@ -76,9 +75,6 @@ func TestHandleMapStyle(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		server.HostName = tc.hostName
-		server.Port = tc.port
-
 		var err error
 
 		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)

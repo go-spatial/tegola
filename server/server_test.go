@@ -60,7 +60,7 @@ func init() {
 	server.Version = serverVersion
 	server.HostName = serverHostName
 
-	testMap := atlas.NewWGS84Map(testMapName)
+	testMap := atlas.NewWebMercatorMap(testMapName)
 	testMap.Attribution = testMapAttribution
 	testMap.Center = testMapCenter
 	testMap.Layers = append(testMap.Layers, []atlas.Layer{

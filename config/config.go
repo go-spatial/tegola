@@ -1,5 +1,5 @@
 /*
-Config loads and understand the tegola config format.
+	config loads and understands the tegola config format.
 */
 package config
 
@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -16,6 +15,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/terranodo/tegola/internal/log"
 )
 
 // Config represents a tegola config file.
@@ -170,7 +171,7 @@ func Load(location string) (conf Config, err error) {
 
 	//	check for http prefix
 	if strings.HasPrefix(location, "http") {
-		log.Printf("Loading remote config (%v)", location)
+		log.Infof("loading remote config (%v)", location)
 
 		//	setup http client with a timeout
 		var httpClient = &http.Client{
@@ -186,7 +187,7 @@ func Load(location string) (conf Config, err error) {
 		//	set the reader to the response body
 		reader = res.Body
 	} else {
-		log.Printf("Loading local config (%v)", location)
+		log.Infof("loading local config (%v)", location)
 
 		//	check the conf file exists
 		if _, err := os.Stat(location); os.IsNotExist(err) {

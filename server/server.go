@@ -2,13 +2,14 @@
 package server
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 const (
@@ -38,7 +39,7 @@ func Start(port string) {
 	Atlas = atlas.DefaultAtlas
 
 	//	notify the user the server is starting
-	log.Printf("Starting tegola server on port %v", port)
+	log.Infof("Starting tegola server on port %v", port)
 
 	r := httptreemux.New()
 	group := r.NewGroup("/")
@@ -72,7 +73,9 @@ func Start(port string) {
 func hostName(r *http.Request) string {
 	var requestHostname string
 	var requestPort string
+
 	substrs := strings.Split(r.Host, ":")
+
 	switch len(substrs) {
 	case 1:
 		requestHostname = substrs[0]
@@ -80,7 +83,7 @@ func hostName(r *http.Request) string {
 		requestHostname = substrs[0]
 		requestPort = substrs[1]
 	default:
-		log.Printf("multiple colons (':') in host string: %v", r.Host)
+		log.Warnf("multiple colons (':') in host string: %v", r.Host)
 	}
 
 	retHost := HostName
