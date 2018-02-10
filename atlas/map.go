@@ -158,7 +158,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// check if the feature SRID and map SRID are different. If they are then reporject
 				if f.SRID != m.SRID {
 					// TODO(arolek): support for additional projections
-					g, err := basic.ToWebMercator(int(f.SRID), geo)
+					g, err := basic.ToWebMercator(f.SRID, geo)
 					if err != nil {
 						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %v", f.SRID, f.ID, err)
 					}
