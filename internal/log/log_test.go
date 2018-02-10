@@ -68,13 +68,13 @@ func TestLoggingF(t *testing.T) {
 		expected    string // regex pattern
 	}
 
-	var testCases []TestCase = []TestCase{
+	testCases := []TestCase{
 		// These test cases use ".*" to avoid specifics of timestamp, file location, and line number.
 		{
 			loggerLevel: INFO,
 			msgLevel:    INFO,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v•INFO•.*log_test.go•.*•Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[INFO].*log_test.go:.*Hello", TimestampRegex),
 		},
 		// Logging with logger's level set higher than message should result in no output.
 		{
@@ -87,31 +87,31 @@ func TestLoggingF(t *testing.T) {
 			loggerLevel: TRACE,
 			msgLevel:    TRACE,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v•TRACE•.*log_test.go•.*•Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[TRACE].*log_test.go:.*Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    DEBUG,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v•DEBUG•.*log_test.go•.*•Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[DEBUG].*log_test.go:.*Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    INFO,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v•INFO•.*log_test.go•.*•Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[INFO].*log_test.go.*Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    WARN,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v•WARN•.*log_test.go•.*•Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[WARN].*log_test.go.*Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    ERROR,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v•ERROR•.*log_test.go•.*•Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[ERROR].*log_test.go.*Hello", TimestampRegex),
 		},
 		// Check use of formatting args.
 		{
@@ -119,7 +119,7 @@ func TestLoggingF(t *testing.T) {
 			msgLevel:    ERROR,
 			msg:         "Hello #%v %v",
 			msgArgs:     []interface{}{1, "Joe"},
-			expected:    fmt.Sprintf("%v•ERROR•.*log_test.go•.*•Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[ERROR].*log_test.go.*Hello", TimestampRegex),
 		},
 	}
 
@@ -136,13 +136,15 @@ func TestLoggingF(t *testing.T) {
 		testOut := bytes.NewBufferString("")
 		SetOutput(testOut)
 		SetLogLevel(tc.loggerLevel)
+
 		loggerCalls[tc.msgLevel](tc.msg, tc.msgArgs...)
 
 		resultMsg := testOut.String()
+
 		matched, err := regexp.MatchString(tc.expected, resultMsg)
 		if err != nil || !matched {
-			fmt.Printf("TestCase[%v] failed, \n'%v'\ndoesn't match\n'%v'\n", i, tc.expected, resultMsg)
-			t.Fail()
+			t.Errorf("TestCase[%v] failed, expected:\n %v \ngot\n %v\n", i, tc.expected, resultMsg)
+			continue
 		}
 	}
 }
@@ -162,31 +164,31 @@ func TestLogging(t *testing.T) {
 			loggerLevel: TRACE,
 			msgLevel:    ERROR,
 			msgArgs:     []interface{}{"Hello"},
-			expected:    fmt.Sprintf("%v•ERROR•.*log_test.go•.*•Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[ERROR].*log_test.go.*Hello", TimestampRegex),
 		},
 		{ // Check numbers as args
 			loggerLevel: INFO,
 			msgLevel:    INFO,
 			msgArgs:     []interface{}{1, 2, 3.3, "joe"},
-			expected:    fmt.Sprintf("%v•INFO•.*log_test.go•.*•1 2 3.3", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[INFO].*log_test.go.*1 2 3.3", TimestampRegex),
 		},
 		{ // Check error as arg
 			loggerLevel: INFO,
 			msgLevel:    INFO,
 			msgArgs:     []interface{}{errors.New("Test error message")},
-			expected:    fmt.Sprintf("%v•INFO•.*log_test.go•.*•Test error message", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[INFO].*log_test.go.*Test error message", TimestampRegex),
 		},
 		{ // Check mix of numbers, errors, and strings as args
 			loggerLevel: TRACE,
 			msgLevel:    TRACE,
 			msgArgs:     []interface{}{1.1, errors.New("Test error message"), 42, " is the answer"},
-			expected:    fmt.Sprintf("%v•TRACE•.*log_test.go•.*•1.1 Test error message 42 is the answer", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[TRACE].*log_test.go.*1.1 Test error message 42 is the answer", TimestampRegex),
 		},
 		{ // Check that a format string gets interpretted literally
 			loggerLevel: TRACE,
 			msgLevel:    TRACE,
 			msgArgs:     []interface{}{"This %v could be a %v format string"},
-			expected:    fmt.Sprintf("%v•TRACE•.*log_test.go•.*•This %%v could be a %%v format string", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[TRACE].*log_test.go.*This %%v could be a %%v format string", TimestampRegex),
 		},
 	}
 
