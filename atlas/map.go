@@ -7,10 +7,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gdey/tegola/basic"
 	"github.com/golang/protobuf/proto"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/slippy"
 	"github.com/terranodo/tegola/internal/convert"
