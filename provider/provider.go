@@ -17,6 +17,7 @@ type Feature struct {
 }
 
 var ErrCanceled = errors.New("provider: canceled")
+var ErrUnsupported = errors.New("provider: unsupported")
 
 type Tile interface {
 	// ZXY returns the z, x and y values of the tile

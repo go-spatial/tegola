@@ -167,8 +167,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 				// add default tags, but don't overwrite a tag that already exists
 				for k, v := range l.DefaultTags {
-					_, ok := f.Tags[k]
-					if !ok {
+					if _, ok := f.Tags[k]; !ok {
 						f.Tags[k] = v
 					}
 				}

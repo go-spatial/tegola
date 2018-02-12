@@ -1,13 +1,11 @@
+// +build cgo
+
 package gpkg
 
 import (
-	"bytes"
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-
-	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/geom"
@@ -15,7 +13,6 @@ import (
 	"github.com/terranodo/tegola/internal/log"
 	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/provider"
-	"github.com/terranodo/tegola/util/dict"
 )
 
 const (
@@ -36,192 +33,18 @@ const (
 	ConfigKeyFields      = "fields"
 )
 
-func init() {
-	provider.Register(ProviderName, NewTileProvider)
-}
-
-func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
-	//	parse our config
-	m := dict.M(config)
-
-	filepath, err := m.String(ConfigKeyFilePath, nil)
+func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
+	h, err := NewBinaryHeader(bytes)
 	if err != nil {
-		return nil, err
+		log.Error("gpkg: error decoding geometry header: %v", err)
+		return h, nil, err
 	}
-	if filepath == "" {
-		return nil, ErrInvalidFilePath{filepath}
-	}
-
-	db, err := GetConnection(filepath)
+	geo, err := wkb.DecodeBytes(bytes[h.Size():])
 	if err != nil {
-		log.Error("gpkg: error opening gpkg file: %v", err)
-		return nil, err
+		log.Error("gpkg: error decoding geometry: %v", err)
+		return h, nil, err
 	}
-	defer ReleaseConnection(filepath)
-
-	p := Provider{
-		Filepath: filepath,
-		layers:   make(map[string]Layer),
-	}
-
-	//	this query is used to read the metadata from the gpkg_contents table for tables that have geometry fields
-	qtext := `
-		SELECT
-			c.table_name, c.min_x, c.min_y, c.max_x, c.max_y, c.srs_id, gc.column_name, gc.geometry_type_name
-		FROM
-			gpkg_contents c JOIN gpkg_geometry_columns gc ON c.table_name == gc.table_name
-		WHERE
-			c.data_type = 'features';`
-
-	rows, err := db.Query(qtext)
-	if err != nil {
-		log.Errorf("gpgk: error during query: %v - %v", qtext, err)
-		return nil, err
-	}
-	defer rows.Close()
-
-	//	container for tracking metadata for each table with a geometry
-	geomTableDetails := make(map[string]GeomTableDetails)
-
-	//	iterate each row extracting meta data about each table
-	for rows.Next() {
-		var tablename, geomCol, geomType sql.NullString
-		var minX, minY, maxX, maxY sql.NullFloat64
-		var srid sql.NullInt64
-
-		if err = rows.Scan(&tablename, &minX, &minY, &maxX, &maxY, &srid, &geomCol, &geomType); err != nil {
-			return nil, err
-		}
-
-		// map the returned geom type to a tegola geom type
-		tg, err := geomNameToGeom(geomType.String)
-		if err != nil {
-			log.Error("gpkg: error mapping geom type (%v): %v", geomType, err)
-			return nil, err
-		}
-
-		geomTableDetails[tablename.String] = GeomTableDetails{
-			geomFieldname: geomCol.String,
-			geomType:      tg,
-			srid:          uint64(srid.Int64),
-			//	the extent of the layer's features
-			bbox: points.BoundingBox{minX.Float64, minY.Float64, maxX.Float64, maxY.Float64},
-		}
-	}
-
-	layers, ok := config[ConfigKeyLayers].([]map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("gpkg: expected %v to be a []map[string]interface{}", ConfigKeyLayers)
-	}
-
-	// TODO(arolek): check for layers configured multiple times
-	// lyrsSeen := make(map[string]int)
-	for i, v := range layers {
-
-		layerConf := dict.M(v)
-
-		layerName, err := layerConf.String(ConfigKeyLayerName, nil)
-		if err != nil {
-			return nil, fmt.Errorf("gpkg: for layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
-		}
-		if layerName == "" {
-			return nil, ErrMissingLayerName
-		}
-
-		if layerConf[ConfigKeyTableName] == nil && layerConf[ConfigKeySQL] == nil {
-			return nil, errors.New("gokg: 'tablename' or 'sql' is required for a feature's config")
-		}
-
-		if layerConf[ConfigKeyTableName] != nil && layerConf[ConfigKeySQL] != nil {
-			return nil, errors.New("gokg: 'tablename' or 'sql' is required for a feature's config. you have both")
-		}
-
-		idFieldname := DEFAULT_ID_FIELDNAME
-		idFieldname, err = layerConf.String(ConfigKeyGeomIDField, &idFieldname)
-		if err != nil {
-			return nil, fmt.Errorf("gpkg: for layer (%v) %v : %v", i, layerName, err)
-		}
-
-		tagFieldnames, err := layerConf.StringSlice(ConfigKeyFields)
-		if err != nil {
-			return nil, fmt.Errorf("gpkg: for layer (%v) %v %v field had the following error: %v", i, layerName, ConfigKeyFields, err)
-		}
-
-		//	layer container. will be added to the provider after it's configured
-		layer := Layer{
-			name: layerName,
-		}
-
-		if layerConf[ConfigKeyTableName] != nil {
-			tablename, err := layerConf.String(ConfigKeyTableName, &idFieldname)
-			if err != nil {
-				return nil, fmt.Errorf("gpkg: for layer (%v) %v : %v", i, layerName, err)
-			}
-
-			layer.tablename = tablename
-			layer.tagFieldnames = tagFieldnames
-			layer.geomFieldname = geomTableDetails[tablename].geomFieldname
-			layer.geomType = geomTableDetails[tablename].geomType
-			layer.idFieldname = idFieldname
-			layer.srid = geomTableDetails[tablename].srid
-			layer.bbox = geomTableDetails[tablename].bbox
-
-		} else {
-			var customSQL string
-			customSQL, err = layerConf.String(ConfigKeySQL, &customSQL)
-			if err != nil {
-				return nil, fmt.Errorf("gpkg: for %v layer(%v) %v has an error: %v", i, layerName, ConfigKeySQL, err)
-			}
-			layer.sql = customSQL
-
-			customSQL, tokensPresent := replaceTokens(customSQL)
-
-			// Get geometry type & srid from geometry of first row.
-			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
-
-			// Set bounds & zoom params to include all layers
-			// Bounds checks need params: maxx, minx, maxy, miny
-			// TODO(arolek): this assumes WGS84. should be more flexible
-			qparams := []interface{}{float64(180.0), float64(-180.0), float64(85.0511), float64(-85.0511)}
-
-			if tokensPresent["ZOOM"] {
-				// min_zoom will always be less than 100, and max_zoom will always be greater than 0.
-				qparams = append(qparams, 100, 0)
-			}
-			log.Debugf("gpgk: qtext: %v, params: %v", qtext, qparams)
-
-			row := db.QueryRow(qtext, qparams...)
-
-			var geomData []byte
-			err = row.Scan(&geomData)
-			if err == sql.ErrNoRows {
-				log.Warnf("gpkg: layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSQL)
-				continue
-			} else if err != nil {
-				// TODO(arolek): why are we not returning here?
-				log.Errorf("gpkg: layer '%v' problem executing custom SQL, skipping: %v", layerName, err)
-				continue
-			}
-
-			var h BinaryHeader
-			h.Init(geomData)
-
-			reader := bytes.NewReader(geomData[h.Size():])
-
-			layer.geomType, err = wkb.Decode(reader)
-			if err != nil {
-				return nil, fmt.Errorf("gpkg: error extracting geometry: %v", err)
-			}
-
-			layer.srid = uint64(h.SRSId())
-			layer.geomFieldname = DEFAULT_GEOM_FIELDNAME
-			layer.idFieldname = DEFAULT_ID_FIELDNAME
-		}
-
-		p.layers[layer.name] = layer
-	}
-
-	return &p, err
+	return h, geo, nil
 }
 
 type Provider struct {
@@ -336,7 +159,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			return ctx.Err()
 		}
 
-		// TODO(aroke): there has to be a cleaner way to do this but rows.Scan() does not like []interface{} at run time and throws the error
+		// TODO(arolek): there has to be a cleaner way to do this but rows.Scan() does not like []interface{} at run time and throws the error
 		// "Scan error on column index 0: destination not a pointer"
 		vals := make([]interface{}, len(cols))
 		valPtrs := make([]interface{}, len(cols))
@@ -353,6 +176,10 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			Tags: map[string]interface{}{},
 		}
 		for i := range cols {
+			// check if the context cancelled or timed out
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			if vals[i] == nil {
 				continue
 			}
@@ -364,22 +191,23 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			case pLayer.geomFieldname:
 				log.Debugf("gpkg: extracting geopackage geometry header.", vals[i])
 
-				// TODO(arolek): check for error? assertions are dangerous unless we're 100% sure it will always be this type
-				geomData := vals[i].([]byte)
-				geomHeader := new(BinaryHeader)
-				geomHeader.Init(geomData)
-
-				feature.SRID = uint64(geomHeader.SRSId())
-
-				feature.Geometry, err = wkb.DecodeBytes(geomData[geomHeader.Size():])
+				geomData, ok := vals[i].([]byte)
+				if !ok {
+					log.Errorf("unexpected column type for geom field. got %t", vals[i])
+					return errors.New("unexpected column type for geom field. expected blob")
+				}
+				h, geo, err := decodeGeometry(geomData)
 				if err != nil {
-					log.Error("gpkg: error decoding geometry: %v", err)
 					return err
 				}
+				feature.SRID = uint64(h.SRSId())
+				feature.Geometry = geo
+
 			// TODO(arolek): this seems like a bad idea. these could be configured by the user for other purposes
 			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
 				// Skip these columns used for bounding box and zoom filtering
 				continue
+
 			default:
 				// Grab any non-nil, non-id, non-bounding box, & non-geometry column as a tag
 				switch v := vals[i].(type) {

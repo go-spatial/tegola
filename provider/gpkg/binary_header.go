@@ -2,230 +2,215 @@ package gpkg
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
-
-	"github.com/terranodo/tegola/internal/log"
 )
 
-// Byte ordering flags
-const wkbXDR = 0 // Big Endian
-const wkbNDR = 1 // Little Endian
+type envelopeType uint8
 
-type BinaryHeader struct {
-	// See: http://www.geopackage.org/spec/
-	initialized bool
-	magic       uint16 // should be 0x4750 (18256)
-	version     uint8
-	flags       uint8
-	flagsReady  bool
-	srs_id      int32
-	envelope    []float64
-	headerSize  int // total bytes in header
-}
+// Magic is the magic number encode in the header. It should be 0x4750
+var Magic = [2]byte{0x47, 0x50}
 
-func bytesToFloat64(bytes []byte, byteOrder uint8) float64 {
-	if len(bytes) != 8 {
-		//TODO(arolek): seems like we should return an error rather than kill the program
-		err := fmt.Errorf("bytesToFloat64(): Need 8 bytes, received %v", len(bytes))
-		log.Fatal(err)
-	}
+const (
+	EnvelopeTypeNone    = envelopeType(0)
+	EnvelopeTypeXY      = envelopeType(1)
+	EnvelopeTypeXYZ     = envelopeType(2)
+	EnvelopeTypeXYM     = envelopeType(3)
+	EnvelopeTypeXYZM    = envelopeType(4)
+	EnvelopeTypeInvalid = envelopeType(5)
+)
 
-	var bitConversion binary.ByteOrder
-	if byteOrder == wkbXDR {
-		bitConversion = binary.BigEndian
-	} else if byteOrder == wkbNDR {
-		bitConversion = binary.LittleEndian
-	} else {
-		//TODO(arolek): seems like we should return an error rather than kill the program
-		err := fmt.Errorf("Invalid byte order flag leading WKBGeometry: %v", byteOrder)
-		log.Fatal(err)
-	}
-
-	bits := bitConversion.Uint64(bytes[:])
-	value := math.Float64frombits(bits)
-
-	return value
-}
-
-func bytesToInt32(bytes []byte, byteOrder uint8) int32 {
-	if len(bytes) != 4 {
-		//TODO(arolek): seems like we should return an error rather than kill the program
-		err := fmt.Errorf("expecting 4 bytes, got %v", len(bytes))
-		log.Error(err)
+// NumberOfElements that the particular Evnelope Type will have.
+func (et envelopeType) NumberOfElements() int {
+	switch et {
+	case EnvelopeTypeNone:
+		return 0
+	case EnvelopeTypeXY:
+		return 4
+	case EnvelopeTypeXYZ:
+		return 6
+	case EnvelopeTypeXYM:
+		return 6
+	case EnvelopeTypeXYZM:
+		return 8
+	default:
 		return -1
 	}
-
-	valueLittleEndian := int32(bytes[3])
-	valueLittleEndian <<= 8
-	valueLittleEndian |= int32(bytes[2])
-	valueLittleEndian <<= 8
-	valueLittleEndian |= int32(bytes[1])
-	valueLittleEndian <<= 8
-	valueLittleEndian |= int32(bytes[0])
-
-	valueBigEndian := int32(bytes[0])
-	valueBigEndian <<= 8
-	valueBigEndian |= int32(bytes[1])
-	valueBigEndian <<= 8
-	valueBigEndian |= int32(bytes[2])
-	valueBigEndian <<= 8
-	valueBigEndian |= int32(bytes[3])
-
-	var value int32
-	if byteOrder == wkbNDR {
-		value = valueLittleEndian
-	} else if byteOrder == wkbXDR {
-		value = valueBigEndian
-	}
-
-	return value
 }
 
-func (h *BinaryHeader) Init(geom []byte) {
-	const littleEndian = 1
-	const bigEndian = 0
-
-	h.flags = geom[3]
-	h.flagsReady = true
-
-	headerByteOrder := h.flags & 0x01
-
-	var magic uint16
-
-	if headerByteOrder == littleEndian {
-		magic = uint16(geom[0])
-		magic <<= 8
-		magic |= uint16(geom[1])
-	} else {
-		magic = uint16(geom[1])
-		magic <<= 8
-		magic |= uint16(geom[0])
-	}
-	h.magic = magic
-
-	h.version = geom[2]
-
-	h.srs_id = bytesToInt32(geom[4:8], wkbNDR)
-
-	eType := h.EnvelopeType()
-	hSize := 8
-	float64size := 8
-	switch eType {
-	case 0:
-		h.envelope = make([]float64, 0)
-	case 1:
-		h.envelope = make([]float64, 4)
-		hSize += 4 * float64size
-		h.envelope[0] = bytesToFloat64(geom[8:16], headerByteOrder)
-		h.envelope[1] = bytesToFloat64(geom[16:24], headerByteOrder)
-		h.envelope[2] = bytesToFloat64(geom[24:32], headerByteOrder)
-		h.envelope[3] = bytesToFloat64(geom[32:40], headerByteOrder)
-	case 2:
-		h.envelope = make([]float64, 6)
-		hSize += 6 * float64size
-		h.envelope[0] = bytesToFloat64(geom[8:16], headerByteOrder)
-		h.envelope[1] = bytesToFloat64(geom[16:24], headerByteOrder)
-		h.envelope[2] = bytesToFloat64(geom[24:32], headerByteOrder)
-		h.envelope[3] = bytesToFloat64(geom[32:40], headerByteOrder)
-		h.envelope[4] = bytesToFloat64(geom[40:48], headerByteOrder)
-		h.envelope[5] = bytesToFloat64(geom[48:56], headerByteOrder)
-	case 3:
-		h.envelope = make([]float64, 6)
-		hSize += 6 * float64size
-		h.envelope[0] = bytesToFloat64(geom[8:16], headerByteOrder)
-		h.envelope[1] = bytesToFloat64(geom[16:24], headerByteOrder)
-		h.envelope[2] = bytesToFloat64(geom[24:32], headerByteOrder)
-		h.envelope[3] = bytesToFloat64(geom[32:40], headerByteOrder)
-		h.envelope[4] = bytesToFloat64(geom[40:48], headerByteOrder)
-		h.envelope[5] = bytesToFloat64(geom[48:56], headerByteOrder)
-	case 4:
-		h.envelope = make([]float64, 8)
-		hSize += 8 * float64size
-		h.envelope[0] = bytesToFloat64(geom[8:16], headerByteOrder)
-		h.envelope[1] = bytesToFloat64(geom[16:24], headerByteOrder)
-		h.envelope[2] = bytesToFloat64(geom[24:32], headerByteOrder)
-		h.envelope[3] = bytesToFloat64(geom[32:40], headerByteOrder)
-		h.envelope[4] = bytesToFloat64(geom[40:48], headerByteOrder)
-		h.envelope[5] = bytesToFloat64(geom[48:56], headerByteOrder)
-		h.envelope[6] = bytesToFloat64(geom[56:64], headerByteOrder)
-		h.envelope[7] = bytesToFloat64(geom[64:72], headerByteOrder)
+func (et envelopeType) String() string {
+	str := "NONEXYZMXYMINVALID"
+	switch et {
+	case EnvelopeTypeNone:
+		return str[0:4]
+	case EnvelopeTypeXY:
+		return str[4 : 4+2]
+	case EnvelopeTypeXYZ:
+		return str[4 : 4+3]
+	case EnvelopeTypeXYM:
+		return str[8 : 8+3]
+	case EnvelopeTypeXYZM:
+		return str[4 : 4+4]
 	default:
-		log.Errorf("invalid envelope type: %v", eType)
-		h.envelope = make([]float64, 0)
+		return str[11:]
 	}
-
-	h.headerSize = hSize
-
-	log.Debugf("BinaryHeader.Init() header size: %v, geom blob size: %v", hSize, len(geom))
-
-	h.initialized = true
 }
 
-func (h *BinaryHeader) isInitialized(caller string) bool {
-	if !h.initialized {
-		log.Errorf("%v: BinaryHeader not initialized", caller)
-		return false
-	}
+// HEADER FLAG LAYOUT
+// 7 6 5 4 3 2 1 0
+// R R X Y E E E B
+// R Reserved for future use. (should be set to 0)
+// X GeoPackageBinary type
+// Y empty geometry
+// E Envelope type
+// B ByteOrder
+const (
+	flagByteOrder        = 1 << 0
+	flagEnvelopeType     = 1<<3 | 1<<2 | 1<<1
+	flagEmptyGeometry    = 1 << 4
+	flagGeoPackageBinary = 1 << 5
+)
 
-	return true
+type headerFlag byte
+
+func (hf headerFlag) String() string { return fmt.Sprintf("0x%02x", uint8(hf)) }
+
+// Endian will return the encoded Endianess
+func (hf headerFlag) Endian() binary.ByteOrder {
+	if hf&flagByteOrder == 0 {
+		return binary.BigEndian
+	}
+	return binary.LittleEndian
 }
 
-func (h *BinaryHeader) Magic() uint16 {
-	if h.isInitialized("Magic()") {
-		return h.magic
+// EnvelopeType returns the type of the envelope.
+func (hf headerFlag) Envelope() envelopeType {
+	et := uint8((hf & flagEnvelopeType) >> 1)
+	if et >= uint8(EnvelopeTypeInvalid) {
+		return EnvelopeTypeInvalid
 	}
-
-	return uint16(0)
+	return envelopeType(et)
 }
 
+// IsEmpty returns weather or not the geometry is empty.
+func (hf headerFlag) IsEmpty() bool { return ((hf & flagEmptyGeometry) >> 4) == 1 }
+
+// IsStandard returns weather or not the geometry is not a user-defined geometry type.
+func (hf headerFlag) IsStandard() bool { return ((hf & flagGeoPackageBinary) >> 5) == 0 }
+
+// BinaryHeader is the gpkg header that accompainies every feature.
+type BinaryHeader struct {
+	// See: http://www.geopackage.org/spec/
+	magic      [2]byte // should be 0x47 0x50  (GP in ASCII)
+	version    uint8
+	flags      headerFlag
+	srsid      int32
+	envelope   []float64
+	headerSize int // total bytes in header
+}
+
+// NewBinaryHeader decodes the data into the BinaryHeader
+func NewBinaryHeader(data []byte) (*BinaryHeader, error) {
+	if len(data) < 8 {
+		return nil, errors.New("not enough bytes to decode header")
+	}
+
+	var bh BinaryHeader
+	bh.magic[0] = data[0]
+	bh.magic[1] = data[1]
+	bh.version = data[2]
+	bh.flags = headerFlag(data[3])
+	en := bh.flags.Endian()
+	bh.srsid = int32(en.Uint32(data[4 : 4+4]))
+
+	bytes := data[8:]
+	et := bh.flags.Envelope()
+	if et == EnvelopeTypeInvalid {
+		return nil, errors.New("invalid envelope type")
+	}
+	if et == EnvelopeTypeNone {
+		return &bh, nil
+	}
+	num := et.NumberOfElements()
+	// there are 8 bytes per float64 value and we need num of them.
+	if len(bytes) < (num * 8) {
+		return nil, errors.New("not enough bytes to decode header")
+	}
+
+	bh.envelope = make([]float64, 0, num)
+	for i := 0; i < num; i++ {
+		bits := en.Uint64(bytes[i*8 : (i*8)+8])
+		bh.envelope = append(bh.envelope, math.Float64frombits(bits))
+	}
+	if bh.magic[0] != Magic[0] || bh.magic[1] != Magic[1] {
+		return &bh, errors.New("invalid magic number")
+	}
+	return &bh, nil
+
+}
+
+// Magic is the magic number encode in the header. It should be 0x4750
+func (h *BinaryHeader) Magic() [2]byte {
+	if h == nil {
+		return Magic
+	}
+	return h.magic
+}
+
+// Version is the version number encode in the header.
 func (h *BinaryHeader) Version() uint8 {
-	if h.isInitialized("Version()") {
-		return h.version
+	if h == nil {
+		return 0
 	}
-
-	return 0
+	return h.version
 }
 
-func (h *BinaryHeader) EnvelopeType() uint8 {
-	/*  0: no envelope (space saving slower indexing option), 0 bytes
-	    1: envelope is [minx, maxx, miny, maxy], 32 bytes
-	    2: envelope is [minx, maxx, miny, maxy, minz, maxz], 48 bytes
-	    3: envelope is [minx, maxx, miny, maxy, minm, maxm], 48 bytes
-	    4: envelope is [minx, maxx, miny, maxy, minz, maxz, minm, maxm], 64 bytes
-	    5-7: invalid
-	*/
-	var envelope uint8
-	if h.flagsReady {
-		envelope = (h.flags & 0xE) >> 1
-	} else {
-		log.Error("BinaryHeader.flags must be ready before calling this function")
-		envelope = 0
+// EnvelopeType is the type of the envelope that is provided.
+func (h *BinaryHeader) EnvelopeType() envelopeType {
+	if h == nil {
+		return EnvelopeTypeInvalid
 	}
-
-	return envelope
+	return h.flags.Envelope()
 }
 
+// SRSId is the SRS id of the feature.
 func (h *BinaryHeader) SRSId() int32 {
-	if h.isInitialized("SRSId()") {
-		return h.srs_id
+	if h == nil {
+		return 0
 	}
-
-	return -1
+	return h.srsid
 }
 
+// Envelope is the bounding box of the feature, used for searching. If the EnvelopeType is EvelopeTypeNone, then there isn't a envelope encoded
+// and a search without an index will need to be preformed. This is to save space.
 func (h *BinaryHeader) Envelope() []float64 {
-	if h.isInitialized("Envelope()") {
-		return h.envelope
+	if h == nil {
+		return nil
 	}
-
-	return nil
+	return h.envelope
 }
 
-func (h *BinaryHeader) Size() int {
-	if h.isInitialized("Size()") {
-		return h.headerSize
+// IsGeometryEmpty tells us if the geometry should be considered empty.
+func (h *BinaryHeader) IsGeometryEmpty() bool {
+	if h == nil {
+		return true
 	}
+	return h.flags.IsEmpty()
+}
 
-	return -1
+// IsStandardGeometery is the geometry a core/extended geometry type, or a user defined geometry type.
+func (h *BinaryHeader) IsStandardGeometry() bool {
+	if h == nil {
+		return true
+	}
+	return h.flags.IsStandard()
+}
+
+// Size is the size of the header in bytes.
+func (h *BinaryHeader) Size() int {
+	if h == nil {
+		return 0
+	}
+	return (len(h.envelope) * 8) + 8
 }
