@@ -291,9 +291,22 @@ func TestEncode(t *testing.T) {
 				}
 			}
 
-			if !reflect.DeepEqual(tileLayer.Keys, expectedLayer.Keys) {
-				t.Errorf("[%v] expected %v got %v", i, tileLayer.Keys, expectedLayer.Keys)
+			if len(tileLayer.Keys) != len(expectedLayer.Keys) {
+				t.Errorf("[%v] key len expected %v got %v", i, len(expectedLayer.Keys), len(tileLayer.Keys))
 				continue
+
+			}
+			{
+				var kmap = make(map[string]struct{})
+				for _, k := range tileLayer.Keys {
+					kmap[k] = struct{}{}
+				}
+				for _, k := range expectedLayer.Keys {
+					if _, ok := kmap[k]; !ok {
+						t.Errorf("[%v] missing key expected %v got nil", i, k)
+
+					}
+				}
 			}
 
 			if *tileLayer.Extent != *expectedLayer.Extent {
