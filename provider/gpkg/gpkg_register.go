@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	provider.Register(ProviderName, NewTileProvider)
+	provider.Register(Name, NewTileProvider, Cleanup)
 }
 
 func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {

@@ -12,7 +12,7 @@ import (
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/geom/slippy"
 	"github.com/terranodo/tegola/mvt/vector_tile"
-	"github.com/terranodo/tegola/provider/test_provider"
+	"github.com/terranodo/tegola/provider/test"
 )
 
 func TestMapFilterLayersByZoom(t *testing.T) {
@@ -151,7 +151,7 @@ func TestEncode(t *testing.T) {
 						Name:     "layer1",
 						MinZoom:  0,
 						MaxZoom:  2,
-						Provider: &test_provider.TestTileProvider{},
+						Provider: &test.TileProvider{},
 						DefaultTags: map[string]interface{}{
 							"foo": "bar",
 						},
@@ -160,7 +160,7 @@ func TestEncode(t *testing.T) {
 						Name:     "layer2",
 						MinZoom:  1,
 						MaxZoom:  5,
-						Provider: &test_provider.TestTileProvider{},
+						Provider: &test.TileProvider{},
 					},
 				},
 			},

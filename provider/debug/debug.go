@@ -20,10 +20,10 @@ const (
 )
 
 func init() {
-	provider.Register(Name, NewTileProvider)
+	provider.Register(Name, NewTileProvider, nil)
 }
 
-//	NewProvider Setups a debug provider. there are not currently any config params supported
+// NewProvider Setups a debug provider. there are not currently any config params supported
 func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 	return &Provider{}, nil
 }
@@ -33,7 +33,7 @@ type Provider struct{}
 
 func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
 
-	//	get tile bounding box
+	// get tile bounding box
 	ext, srid := tile.Extent()
 
 	switch layer {
