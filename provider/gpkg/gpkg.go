@@ -1,7 +1,6 @@
 package gpkg
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -203,16 +202,11 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 				continue
 			}
 
-			var h BinaryHeader
-			h.Init(geomData)
-
-			reader := bytes.NewReader(geomData[h.Size():])
-
-			layer.geomType, err = wkb.Decode(reader)
+			h, geo, err := decodeGeometry(geomData)
 			if err != nil {
-				return nil, fmt.Errorf("gpkg: error extracting geometry: %v", err)
+				return nil, err
 			}
-
+			layer.geomType = geo
 			layer.srid = uint64(h.SRSId())
 			layer.geomFieldname = DEFAULT_GEOM_FIELDNAME
 			layer.idFieldname = DEFAULT_ID_FIELDNAME
@@ -222,6 +216,20 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 	}
 
 	return &p, err
+}
+
+func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
+	h, err := NewBinaryHeader(bytes)
+	if err != nil {
+		log.Error("gpkg: error decoding geometry header: %v", err)
+		return h, nil, err
+	}
+	geo, err := wkb.DecodeBytes(bytes[h.Size():])
+	if err != nil {
+		log.Error("gpkg: error decoding geometry: %v", err)
+		return h, nil, err
+	}
+	return h, geo, nil
 }
 
 type Provider struct {
@@ -336,7 +344,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			return ctx.Err()
 		}
 
-		// TODO(aroke): there has to be a cleaner way to do this but rows.Scan() does not like []interface{} at run time and throws the error
+		// TODO(arolek): there has to be a cleaner way to do this but rows.Scan() does not like []interface{} at run time and throws the error
 		// "Scan error on column index 0: destination not a pointer"
 		vals := make([]interface{}, len(cols))
 		valPtrs := make([]interface{}, len(cols))
@@ -365,17 +373,18 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 				log.Debugf("gpkg: extracting geopackage geometry header.", vals[i])
 
 				// TODO(arolek): check for error? assertions are dangerous unless we're 100% sure it will always be this type
-				geomData := vals[i].([]byte)
-				geomHeader := new(BinaryHeader)
-				geomHeader.Init(geomData)
-
-				feature.SRID = uint64(geomHeader.SRSId())
-
-				feature.Geometry, err = wkb.DecodeBytes(geomData[geomHeader.Size():])
+				geomData, ok := vals[i].([]byte)
+				if !ok {
+					log.Errorf("unexpected column type for geom field. got %t", vals[i])
+					return errors.New("unexpected column type for geom field. expected blob")
+				}
+				h, geo, err := decodeGeometry(geomData)
 				if err != nil {
-					log.Error("gpkg: error decoding geometry: %v", err)
 					return err
 				}
+				feature.SRID = uint64(h.SRSId())
+				feature.Geometry = geo
+
 			// TODO(arolek): this seems like a bad idea. these could be configured by the user for other purposes
 			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
 				// Skip these columns used for bounding box and zoom filtering
