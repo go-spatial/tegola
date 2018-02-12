@@ -7,7 +7,11 @@ go:
   - 1.8.x
   - 1.7.x
 
+git:
+  depth: 3
+
 env:
+
   global:
     # Secure DOCKER_USER & DOCKER_PASSWORD for user w/ permission to push to repo gospatial/tegola.
     - secure: "dTdHWSn36tBKls7rM9ayUV7+IBijprmvPqPDWrbjc4XjRAPEW6wZkZ7Ln3qd2GNxe6GTlkAYKogMbqm475aT+s9/d2SqRp0nWlGI7FrAbM7W/v9HEWwjfgdsa1ksChN4zwbmLAeQ4owGnNyQiiE3fe3BzUuWbk6FrKpvhfRjdDAbCiPlt4/YG3rvvs3ePlJsAifCEBJj54ziwg9OThH7Z4TSM/SwhimJLMT60OO7Cqf2jqV7sDnEtttV5i8lSsjk8EACsnfvGtx+SKA7QQMk7OgrW1oNI61jKI3xYALW0JHGdnafIlmizj4NUqKcC9PQbD3pJX6+2b13YWBxNqA9SDk8/0Jwt23XeFvvmxrfYx523VU2XYpq3D/mOgXvWx+LgbjDjQOUwdFoNZ/UGJCPQbD/3uYSDKXIAM8HI3Lzoi2Ej9Xr1wuaPbWPCgQQXoV8KuamJRlkWFLFTUkQ+F2h9aZYHwaZgYmRhDjE3s/QrftLu5fx8uSUULx9Azu4Tj/LB4F3gti7ZXQwlSI0j5BGV7oAMUJq6NAdgOV4Wnz7BQM/oBkfy8ZtOwqUeJUhCwnjnPE6G3Wgo4/9/iCdEg9dRHbuP2/TSxdA0YyLEdXuE8MyE1SqkFoFECNBYWrV2JZV1BN1sGVudxKUeNKfM2FcD0xkx9xPol2x0/hYl3S+Xn8="
@@ -20,6 +24,21 @@ env:
     - DOCKERHUB_REPO="tegola"
     # "COVERALLS_TOKEN" nvp encrypted using travis CLI - contains api key used to post test coverage results to coveralls.io account repo associated w/ github repo
     - secure: UtUTE+1Qhw2xal+Tcrsiag7H8bOjanksc0h/dmYE0NwC/nXIgmJPkA5zvowaP631Orw2iNeYM7mqOJqiNZ1fV30V4fbELogkDcpJEK9oYxl0xYpPMrd+EMrkm+aRZAnh31pvtxHNzf3lTpg2L3TAREEsDTU5tunxRBysgGjf89hmCWQ7GzN1+qSIIgCCZrX5tdAwUMDztrGc8aQJxhDPJZ+rHeEZ5qASTI7VdJxJ8wez+PmDQRPYp1glqXDU8JCDxhmBrD+8n3YZs/O0P7qEX41Dn670+ZLtZBp/EqbGGN8zOCOH3LrxnnmX/zopyvD0L6i8zkWIYDb0O9wwtahNT4ibT700h0v86B/ii9mvVjo3eSpBIiqfmqfaNuLaIQZl5q/UM9NMhdhYswmhjaBmLf2JEAtH+r7iQc9npR4hwxm7Fc04me3jkgBySE2uQfghAMpIgOwsGN9ip6ktJrvO047rnyMd7Zp95Z2MqoOOr21FS+7dqTTzfNWBf4eWa8sQALsQ54G9JC9CmO4poijcZmXPHcPtWHNvmjMbPHm5u0kYeZyi3XmvANC9N/bSmsMvhWT77ck7yQsiXiaLPNRftQj3YclGeCOz0QXc+vC7ECu9HCazri9NvymwHQ6uFFJMgzrIKDBrOA20cCj8sQwIhysIiwS6PFNEU8gQYApuJUY=
+
+matrix:
+  include:
+  - go: 1.9.x
+    env: CGO_ENABLED=1
+  - go: 1.8.x
+    env: CGO_ENABLED=1
+  - go: 1.7.x
+    env: CGO_ENABLED=1
+  - go: 1.9.x
+    env: CGO_ENABLED=0
+  - go: 1.8.x
+    env: CGO_ENABLED=0
+  - go: 1.7.x
+    env: CGO_ENABLED=0
 
 services:
   - postgresql
