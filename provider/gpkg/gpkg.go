@@ -4,6 +4,7 @@ package gpkg
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -16,10 +17,10 @@ import (
 )
 
 const (
-	ProviderName           = "gpkg"
-	DefaultSRID            = tegola.WebMercator
-	DEFAULT_ID_FIELDNAME   = "fid"
-	DEFAULT_GEOM_FIELDNAME = "geom"
+	ProviderName         = "gpkg"
+	DefaultSRID          = tegola.WebMercator
+	DefaultIDFieldName   = "fid"
+	DefaultGeomFieldName = "geom"
 )
 
 //	config keys
@@ -36,12 +37,12 @@ const (
 func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
 	h, err := NewBinaryHeader(bytes)
 	if err != nil {
-		log.Error("gpkg: error decoding geometry header: %v", err)
+		log.Error("error decoding geometry header: %v", err)
 		return h, nil, err
 	}
 	geo, err := wkb.DecodeBytes(bytes[h.Size():])
 	if err != nil {
-		log.Error("gpkg: error decoding geometry: %v", err)
+		log.Error("error decoding geometry: %v", err)
 		return h, nil, err
 	}
 	return h, geo, nil
@@ -52,10 +53,12 @@ type Provider struct {
 	Filepath string
 	// map of layer name and corrosponding sql
 	layers map[string]Layer
+	// reference to the database connection
+	db *sql.DB
 }
 
 func (p *Provider) Layers() ([]provider.LayerInfo, error) {
-	log.Debug("gpkg: attempting gpkg.Layers()")
+	log.Debug("attempting gpkg.Layers()")
 
 	ls := make([]provider.LayerInfo, len(p.layers))
 
@@ -65,13 +68,13 @@ func (p *Provider) Layers() ([]provider.LayerInfo, error) {
 		i++
 	}
 
-	log.Debugf("gpkg: returning LayerInfo array: %v", ls)
+	log.Debugf("returning LayerInfo array: %v", ls)
 
 	return ls, nil
 }
 
 func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
-	log.Debugf("gpkg: fetching layer %v", layer)
+	log.Debugf("fetching layer %v", layer)
 
 	pLayer := p.layers[layer]
 
@@ -97,16 +100,10 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	if pLayer.tablename != "" {
 		// Check that layer is within bounding box
 		if pLayer.bbox.DisjointBB(tileBBox) {
-			log.Debugf("gpkg: layer '%v' bounding box %v is outside tile bounding box %v, will not load any features", layer, pLayer.bbox, tileBBox)
+			log.Debugf("layer '%v' bounding box %v is outside tile bounding box %v, will not load any features", layer, pLayer.bbox, tileBBox)
 			return nil
 		}
 	}
-
-	db, err := GetConnection(p.Filepath)
-	if err != nil {
-		return err
-	}
-	defer ReleaseConnection(p.Filepath)
 
 	var qtext string
 	var tokensPresent map[string]bool
@@ -141,9 +138,9 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	log.Debugf("qtext: %v\nqparams: %v\n", qtext, qparams)
 
-	rows, err := db.Query(qtext, qparams...)
+	rows, err := p.db.Query(qtext, qparams...)
 	if err != nil {
-		log.Errorf("gpkg: err during query: %v (%v) - %v", qtext, qparams, err)
+		log.Errorf("err during query: %v (%v) - %v", qtext, qparams, err)
 		return err
 	}
 	defer rows.Close()
@@ -159,8 +156,6 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			return ctx.Err()
 		}
 
-		// TODO(arolek): there has to be a cleaner way to do this but rows.Scan() does not like []interface{} at run time and throws the error
-		// "Scan error on column index 0: destination not a pointer"
 		vals := make([]interface{}, len(cols))
 		valPtrs := make([]interface{}, len(cols))
 		for i := 0; i < len(cols); i++ {
@@ -168,7 +163,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		}
 
 		if err = rows.Scan(valPtrs...); err != nil {
-			log.Errorf("gpkg: err reading row values: %v", err)
+			log.Errorf("err reading row values: %v", err)
 			return err
 		}
 
@@ -186,10 +181,13 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 			switch cols[i] {
 			case pLayer.idFieldname:
-				// TODO(arolek): check for error? assertions are dangerous unless we're 100% sure it will always be this type
-				feature.ID = uint64(vals[i].(int64))
+				feature.ID, err = provider.ConvertFeatureID(vals[i])
+				if err != nil {
+					return err
+				}
+
 			case pLayer.geomFieldname:
-				log.Debugf("gpkg: extracting geopackage geometry header.", vals[i])
+				log.Debugf("extracting geopackage geometry header.", vals[i])
 
 				geomData, ok := vals[i].([]byte)
 				if !ok {
@@ -222,7 +220,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 					feature.Tags[cols[i]] = v
 				default:
 					// TODO(arolek): return this error?
-					log.Errorf("gpkg: unexpected type for sqlite column data: %v: %T\n", cols[i], v)
+					log.Errorf("unexpected type for sqlite column data: %v: %T", cols[i], v)
 				}
 			}
 		}
@@ -236,6 +234,11 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	return nil
 }
 
+// Close will close the Provider's database connection
+func (p *Provider) Close() error {
+	return p.db.Close()
+}
+
 type GeomTableDetails struct {
 	geomFieldname string
 	geomType      geom.Geometry
@@ -244,10 +247,10 @@ type GeomTableDetails struct {
 }
 
 type GeomColumn struct {
-	name           string
-	geometryType   string
-	tegolaGeometry geom.Geometry // to populate Layer.geomType
-	srsId          int
+	name         string
+	geometryType string
+	geom         geom.Geometry // to populate Layer.geomType
+	srsId        int
 }
 
 func geomNameToGeom(name string) (geom.Geometry, error) {
@@ -266,5 +269,5 @@ func geomNameToGeom(name string) (geom.Geometry, error) {
 		return geom.MultiPolygon{}, nil
 	}
 
-	return nil, fmt.Errorf("gpkg: unsupported geometry type: %v", name)
+	return nil, fmt.Errorf("unsupported geometry type: %v", name)
 }

@@ -31,16 +31,15 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		return nil, ErrInvalidFilePath{filepath}
 	}
 
-	db, err := GetConnection(filepath)
+	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
-		log.Error("gpkg: error opening gpkg file: %v", err)
 		return nil, err
 	}
-	defer ReleaseConnection(filepath)
 
 	p := Provider{
 		Filepath: filepath,
 		layers:   make(map[string]Layer),
+		db:       db,
 	}
 
 	//	this query is used to read the metadata from the gpkg_contents table for tables that have geometry fields
@@ -54,7 +53,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 
 	rows, err := db.Query(qtext)
 	if err != nil {
-		log.Errorf("gpgk: error during query: %v - %v", qtext, err)
+		log.Errorf("error during query: %v - %v", qtext, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -75,7 +74,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		// map the returned geom type to a tegola geom type
 		tg, err := geomNameToGeom(geomType.String)
 		if err != nil {
-			log.Error("gpkg: error mapping geom type (%v): %v", geomType, err)
+			log.Error("error mapping geom type (%v): %v", geomType, err)
 			return nil, err
 		}
 
@@ -90,7 +89,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 
 	layers, ok := config[ConfigKeyLayers].([]map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("gpkg: expected %v to be a []map[string]interface{}", ConfigKeyLayers)
+		return nil, fmt.Errorf("expected %v to be a []map[string]interface{}", ConfigKeyLayers)
 	}
 
 	// TODO(arolek): check for layers configured multiple times
@@ -101,7 +100,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 
 		layerName, err := layerConf.String(ConfigKeyLayerName, nil)
 		if err != nil {
-			return nil, fmt.Errorf("gpkg: for layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
+			return nil, fmt.Errorf("for layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
 		}
 		if layerName == "" {
 			return nil, ErrMissingLayerName
@@ -115,15 +114,15 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			return nil, errors.New("gokg: 'tablename' or 'sql' is required for a feature's config. you have both")
 		}
 
-		idFieldname := DEFAULT_ID_FIELDNAME
+		idFieldname := DefaultIDFieldName
 		idFieldname, err = layerConf.String(ConfigKeyGeomIDField, &idFieldname)
 		if err != nil {
-			return nil, fmt.Errorf("gpkg: for layer (%v) %v : %v", i, layerName, err)
+			return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
 		}
 
 		tagFieldnames, err := layerConf.StringSlice(ConfigKeyFields)
 		if err != nil {
-			return nil, fmt.Errorf("gpkg: for layer (%v) %v %v field had the following error: %v", i, layerName, ConfigKeyFields, err)
+			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, layerName, ConfigKeyFields, err)
 		}
 
 		//	layer container. will be added to the provider after it's configured
@@ -134,7 +133,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		if layerConf[ConfigKeyTableName] != nil {
 			tablename, err := layerConf.String(ConfigKeyTableName, &idFieldname)
 			if err != nil {
-				return nil, fmt.Errorf("gpkg: for layer (%v) %v : %v", i, layerName, err)
+				return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
 			}
 
 			layer.tablename = tablename
@@ -149,7 +148,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			var customSQL string
 			customSQL, err = layerConf.String(ConfigKeySQL, &customSQL)
 			if err != nil {
-				return nil, fmt.Errorf("gpkg: for %v layer(%v) %v has an error: %v", i, layerName, ConfigKeySQL, err)
+				return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, layerName, ConfigKeySQL, err)
 			}
 			layer.sql = customSQL
 
@@ -167,19 +166,17 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 				// min_zoom will always be less than 100, and max_zoom will always be greater than 0.
 				qparams = append(qparams, 100, 0)
 			}
-			log.Debugf("gpgk: qtext: %v, params: %v", qtext, qparams)
+			log.Debugf("qtext: %v, params: %v", qtext, qparams)
 
 			row := db.QueryRow(qtext, qparams...)
 
 			var geomData []byte
 			err = row.Scan(&geomData)
 			if err == sql.ErrNoRows {
-				log.Warnf("gpkg: layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSQL)
+				log.Warnf("layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSQL)
 				continue
 			} else if err != nil {
-				// TODO(arolek): why are we not returning here?
-				log.Errorf("gpkg: layer '%v' problem executing custom SQL, skipping: %v", layerName, err)
-				continue
+				return nil, fmt.Errorf("layer '%v' problem executing custom SQL, skipping: %v", layerName, err)
 			}
 
 			h, geo, err := decodeGeometry(geomData)
@@ -188,12 +185,29 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			}
 			layer.geomType = geo
 			layer.srid = uint64(h.SRSId())
-			layer.geomFieldname = DEFAULT_GEOM_FIELDNAME
-			layer.idFieldname = DEFAULT_ID_FIELDNAME
+			layer.geomFieldname = DefaultGeomFieldName
+			layer.idFieldname = DefaultIDFieldName
 		}
 
 		p.layers[layer.name] = layer
 	}
 
+	// track the provider so we can clean it up later
+	providers = append(providers, p)
+
 	return &p, err
+}
+
+// reference to all instantiated proivders
+var providers []Provider
+
+// Cleanup will close all database connections and destory all previously instantiated Provider instances
+func Cleanup() {
+	for i := range providers {
+		if err := providers[i].Close(); err != nil {
+			log.Errorf("err closing connection: %v", err)
+		}
+	}
+
+	providers = make([]Provider, 0)
 }

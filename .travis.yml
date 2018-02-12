@@ -2,11 +2,6 @@ language: go
 # Does nothing when building on terranodo/tegola, but makes builds work cleanly on forks.
 go_import_path: github.com/terranodo/tegola
 
-go:
-  - 1.9.x
-  - 1.8.x
-  - 1.7.x
-
 git:
   depth: 3
 

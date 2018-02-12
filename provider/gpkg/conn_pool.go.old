@@ -93,7 +93,7 @@ func GetConnection(filepath string) (db *sql.DB, err error) {
 	conn.mutex.Lock()
 	if conn.db == nil {
 		// Open the database and stash the connection
-		log.Infof("Opening gpkg at: %v", filepath)
+		log.Infof("gpkg: ppening gpkg at: %v", filepath)
 
 		db, err = sql.Open("sqlite3", filepath)
 		conn.db = db
@@ -151,10 +151,11 @@ func closeConnection(conn *ConnectionPool) {
 	if conn.db != nil {
 		if conn.shareCount < 1 {
 			if conn.shareCount < 0 {
-				log.Warnf("Invalid ConnectionPool.shareCount for %v: %v",
-					conn.filepath, conn.shareCount)
+				log.Warnf("gpkg: invalid ConnectionPool.shareCount for %v: %v", conn.filepath, conn.shareCount)
 			}
-			log.Infof("Closing GPKG unused in %f nanoseconds: %v", float32(closeAge)/1000000000.0, conn.filepath)
+
+			log.Infof("gpkg: closing connection unused in %f nanoseconds: %v", float32(closeAge)/1000000000.0, conn.filepath)
+
 			conn.db.Close()
 			conn.db = nil
 		}

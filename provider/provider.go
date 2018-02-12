@@ -2,22 +2,11 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/terranodo/tegola/geom"
 )
-
-type Feature struct {
-	ID       uint64
-	Geometry geom.Geometry
-	SRID     uint64
-	Tags     map[string]interface{}
-}
-
-var ErrCanceled = errors.New("provider: canceled")
-var ErrUnsupported = errors.New("provider: unsupported")
 
 type Tile interface {
 	// ZXY returns the z, x and y values of the tile
