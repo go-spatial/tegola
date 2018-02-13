@@ -291,38 +291,29 @@ func TestEncode(t *testing.T) {
 				}
 			}
 
-			if len(tileLayer.Keys) != len(expectedLayer.Keys) {
-				t.Errorf("[%v] key len expected %v got %v", i, len(expectedLayer.Keys), len(tileLayer.Keys))
-				continue
-
-			}
-			{
-				var kmap = make(map[string]struct{})
-				for _, k := range tileLayer.Keys {
-					kmap[k] = struct{}{}
-				}
-				for _, k := range expectedLayer.Keys {
-					if _, ok := kmap[k]; !ok {
-						t.Errorf("[%v] missing key expected %v got nil", i, k)
-
-					}
-				}
-			}
-
 			if *tileLayer.Extent != *expectedLayer.Extent {
 				t.Errorf("[%v] expected %v got %v", i, *tileLayer.Extent, *expectedLayer.Extent)
 				continue
 			}
 
-			for l, tileLayerValues := range tileLayer.Values {
-				expectedTileLayerValues := expectedLayer.Values[l]
+			if len(expectedLayer.Keys) != len(tileLayer.Keys) {
+				t.Errorf("[%v] key len expected %v got %v", i, len(expectedLayer.Keys), len(tileLayer.Keys))
+				continue
 
-				// TODO (arolek): add additional value checks
-				if *tileLayerValues.StringValue != *expectedTileLayerValues.StringValue {
-					t.Errorf("[%v] expected %v got %v", i, *tileLayerValues.StringValue, *expectedTileLayerValues.StringValue)
-					continue
-				}
 			}
+
+			var gotmap = make(map[string]interface{})
+			var expmap = make(map[string]interface{})
+			for i, k := range tileLayer.Keys {
+				gotmap[k] = tileLayer.Values[i]
+			}
+			for i, k := range expectedLayer.Keys {
+				expmap[k] = expectedLayer.Values[i]
+			}
+			if !reflect.DeepEqual(expmap, gotmap) {
+				t.Errorf("[%v] constructed map expected %v got %v", i, expmap, gotmap)
+			}
+
 		}
 	}
 }
