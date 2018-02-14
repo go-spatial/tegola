@@ -8,6 +8,83 @@ type BoundingBoxer interface {
 // BoundingBox represents X1, Y1, X2, Y2 (LL, UR) of a geometry
 type BoundingBox [2][2]float64
 
+/* ========================= ATTRIBUTES ========================= */
+
+// TopLeft point of the bounding box.
+func (bb BoundingBox) TopLeft() [2]float64 { return bb[0] }
+
+// TopRight point of the bounding box.
+func (bb BoundingBox) TopRight() [2]float64 { return [2]float64{bb[1][0], bb[0][1]} }
+
+// BottomLeft point of the bounding box.
+func (bb BoundingBox) BottomLeft() [2]float64 { return [2]float64{bb[0][0], bb[1][1]} }
+
+// BottomRight point of the bounding box.
+func (bb BoundingBox) BottomRight() [2]float64 { return bb[1] }
+
+// Verticies return the verticies of the Bounding Box.
+func (bb BoundingBox) Verticies() [][2]float64 {
+	return [][2]float64{
+		bb.TopLeft(),
+		bb.TopRight(),
+		bb.BottomRight(),
+		bb.BottomLeft(),
+	}
+}
+
+// Edges returns the clockwise order of the edges that make up the extent.
+func (bb BoundingBox) Edges() [][2][2]float64 {
+	return [][2][2]float64{
+		{bb.TopLeft(), bb.TopRight()},
+		{bb.TopRight(), bb.BottomRight()},
+		{bb.BottomRight(), bb.BottomLeft()},
+		{bb.BottomLeft(), bb.TopLeft()},
+	}
+}
+
+// LREdges are the edges starting witht he left most edge to the lower right edge.
+func (bb BoundingBox) LREdges() [][2][2]float64 {
+	return [][2][2]float64{
+		{bb.TopLeft(), bb.TopRight()},
+		{bb.TopLeft(), bb.BottomLeft()},
+		{bb.BottomLeft(), bb.BottomRight()},
+		{bb.TopRight(), bb.BottomRight()},
+	}
+}
+
+// MaxX is the larger of the x values.
+func (bb BoundingBox) MaxX() float64 {
+	if bb[0][0] >= bb[1][0] {
+		return bb[0][0]
+	}
+	return bb[1][0]
+}
+
+// MinX  is the smaller of the x values.
+func (bb BoundingBox) MinX() float64 {
+	if bb[0][0] <= bb[1][0] {
+		return bb[0][0]
+	}
+	return bb[1][0]
+}
+
+// MaxY is the larger of the y values.
+func (bb BoundingBox) MaxY() float64 {
+	if bb[0][1] >= bb[1][1] {
+		return bb[0][1]
+	}
+	return bb[1][1]
+}
+
+// MinY is the smaller of the y values.
+func (bb BoundingBox) MinY() float64 {
+	if bb[0][1] <= bb[1][1] {
+		return bb[0][1]
+	}
+	return bb[1][1]
+}
+
+/* ========================= EXPANDING BOUNDING BOX ========================= */
 // Add will expand the boundong box to contain the given bounding box.
 func (bb *BoundingBox) Add(bbox BoundingBox) {
 	if bb == nil {
