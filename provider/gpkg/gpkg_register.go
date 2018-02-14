@@ -10,8 +10,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/internal/log"
-	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/provider"
 	"github.com/terranodo/tegola/util/dict"
 )
@@ -84,7 +84,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			geomType:      tg,
 			srid:          uint64(srid.Int64),
 			//	the extent of the layer's features
-			bbox: points.BoundingBox{minX.Float64, minY.Float64, maxX.Float64, maxY.Float64},
+			bbox: geom.BoundingBox{{minX.Float64, minY.Float64}, {maxX.Float64, maxY.Float64}},
 		}
 	}
 
@@ -93,8 +93,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		return nil, fmt.Errorf("expected %v to be a []map[string]interface{}", ConfigKeyLayers)
 	}
 
-	// TODO(arolek): check for layers configured multiple times
-	// lyrsSeen := make(map[string]int)
+	lyrsSeen := make(map[string]int)
 	for i, v := range layers {
 
 		layerConf := dict.M(v)
@@ -107,12 +106,18 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			return nil, ErrMissingLayerName
 		}
 
+		//	check if we have already seen this layer
+		if j, ok := lyrsSeen[layerName]; ok {
+			return nil, fmt.Errorf("layer name (%v) is duplicated in both layer %v and layer %v", layerName, i, j)
+		}
+		lyrsSeen[layerName] = i
+
 		if layerConf[ConfigKeyTableName] == nil && layerConf[ConfigKeySQL] == nil {
-			return nil, errors.New("gokg: 'tablename' or 'sql' is required for a feature's config")
+			return nil, errors.New("'tablename' or 'sql' is required for a feature's config")
 		}
 
 		if layerConf[ConfigKeyTableName] != nil && layerConf[ConfigKeySQL] != nil {
-			return nil, errors.New("gokg: 'tablename' or 'sql' is required for a feature's config. you have both")
+			return nil, errors.New("'tablename' or 'sql' is required for a feature's config. you have both")
 		}
 
 		idFieldname := DefaultIDFieldName
@@ -181,25 +186,12 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			//qparams := []interface{}{float64(180.0), float64(-180.0), float64(85.0511), float64(-85.0511)}
-
-			// Set bounds & zoom params to include all layers
-			// Bounds checks need params: maxx, minx, maxy, miny
-			// TODO(arolek): this assumes WGS84. should be more flexible
-			customSQL = replaceTokens(customSQL, 0, points.BoundingBox{180.0, -180.0, 85.0511, -85.0511})
+			customSQL = replaceTokens(customSQL, 0, geom.BoundingBox{{180.0, 85.0511}, {-180.0, -85.0511}})
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
 
-			/*
-				if tokensPresent["ZOOM"] {
-					// min_zoom will always be less than 100, and max_zoom will always be greater than 0.
-					qparams = append(qparams, 100, 0)
-				}
-			*/
 			log.Debugf("qtext: %v", qtext)
-
-			//fmt.Printf("qtext: %v", qtext)
 
 			var geomData []byte
 			err = db.QueryRow(qtext).Scan(&geomData)

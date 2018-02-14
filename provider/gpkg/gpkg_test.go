@@ -4,6 +4,7 @@ package gpkg_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -26,6 +27,7 @@ func TestNewTileProvider(t *testing.T) {
 	type tcase struct {
 		config             map[string]interface{}
 		expectedLayerCount int
+		expectedErr        error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -33,7 +35,9 @@ func TestNewTileProvider(t *testing.T) {
 
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			t.Errorf("error createing NewTileProvider: %v", err)
+			if err.Error() != tc.expectedErr.Error() {
+				t.Errorf("expectedErr %v got %v", tc.expectedErr, err)
+			}
 			return
 		}
 
@@ -50,6 +54,16 @@ func TestNewTileProvider(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
+		"duplicate layer name": tcase{
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "a_points", "tablename": "amenities_points"},
+					{"name": "a_points", "tablename": "amenities_points"},
+				},
+			},
+			expectedErr: errors.New("layer name (a_points) is duplicated in both layer 1 and layer 0"),
+		},
 		"3 layers": tcase{
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
@@ -94,9 +108,6 @@ func (t *MockTile) ZXY() (uint64, uint64, uint64) {
 }
 
 func TestTileFeatures(t *testing.T) {
-	// IMPORTANT: Y-values are swapped (origin at top left, so miny is larger than maxy) for ALL extents,
-	// this needs to be fixed: https://github.com/terranodo/tegola/issues/189
-
 	type tcase struct {
 		config               map[string]interface{}
 		layerName            string
@@ -187,8 +198,8 @@ func TestTileFeatures(t *testing.T) {
 				Z:    1,
 				srid: tegola.WebMercator,
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 			},
 			expectedFeatureCount: 101,
@@ -214,8 +225,8 @@ func TestTileFeatures(t *testing.T) {
 				Z:    0,
 				srid: tegola.WebMercator,
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 			},
 			expectedFeatureCount: 44,
@@ -230,9 +241,6 @@ func TestTileFeatures(t *testing.T) {
 }
 
 func TestConfigs(t *testing.T) {
-	// IMPORTANT: Y-values are swapped (origin at top left, so miny is larger than maxy) for ALL extents,
-	// this needs to be fixed: https://github.com/terranodo/tegola/issues/189
-
 	type tcase struct {
 		config       map[string]interface{}
 		tile         MockTile
@@ -248,6 +256,11 @@ func TestConfigs(t *testing.T) {
 		}
 
 		err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+			// check if the feature is part of the test
+			if _, ok := tc.expectedTags[f.ID]; !ok {
+				return nil
+			}
+
 			expectedTagCount := len(tc.expectedTags[f.ID])
 			actualTagCount := len(f.Tags)
 
@@ -362,7 +375,6 @@ func TestConfigs(t *testing.T) {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
-					// Currently only one BBOX token is supported per query, so we need to use a subquery here
 					{
 						"name": "a_p_points",
 						"sql": `
@@ -383,8 +395,8 @@ func TestConfigs(t *testing.T) {
 			},
 			tile: MockTile{
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 				srid: tegola.WebMercator,
 			},
@@ -404,18 +416,3 @@ func TestConfigs(t *testing.T) {
 		})
 	}
 }
-
-/*
-SELECT * FROM (
-	SELECT
-		fid, geom, NULL AS place, NULL AS is_in, amenity, religion, tourism, shop, si.minx, si.miny, si.maxx, si.maxy
-	FROM
-		amenities_points ap JOIN rtree_amenities_points_geom si ON ap.fid = si.id
-	UNION
-		SELECT
-			fid, geom, place, is_in, NULL, NULL, NULL, NULL, si.minx, si.miny, si.maxx, si.maxy
-		FROM
-			places_points pp JOIN rtree_places_points_geom si ON pp.fid = si.id
-)
-WHERE minx <= 85.0511 AND maxx >= -85.0511 AND miny <= 180.0 AND maxy >= -180.0;
-*/

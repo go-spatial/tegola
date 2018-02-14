@@ -3,7 +3,7 @@ package gpkg
 import (
 	"testing"
 
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/terranodo/tegola/geom"
 )
 
 func TestReplaceTokens(t *testing.T) {
@@ -11,7 +11,7 @@ func TestReplaceTokens(t *testing.T) {
 		qtext string
 		zoom  uint64
 		// TODO: replace with geom.Extent once it's ready
-		extent   points.BoundingBox
+		extent   geom.BoundingBox
 		expected string
 	}
 
@@ -50,14 +50,17 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX!`,
-			extent: points.BoundingBox{180, 85.0511, -180, -85.0511},
+			extent: geom.BoundingBox{
+				{180, 85.0511},
+				{-180, -85.0511},
+			},
 			expected: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
 				FROM
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
-					minx <= -180 AND maxx >= 180 AND miny <= -85.0511 AND maxy >= 85.0511`,
+					minx <= 180 AND maxx >= -180 AND miny <= 85.0511 AND maxy >= -85.0511`,
 		},
 		"bbox zoom": tcase{
 			qtext: `
@@ -67,15 +70,18 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX! AND min_zoom = !ZOOM!`,
-			extent: points.BoundingBox{180, 85.0511, -180, -85.0511},
-			zoom:   3,
+			extent: geom.BoundingBox{
+				{180, 85.0511},
+				{-180, -85.0511},
+			},
+			zoom: 3,
 			expected: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
 				FROM
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
-					minx <= -180 AND maxx >= 180 AND miny <= -85.0511 AND maxy >= 85.0511 AND min_zoom = 3`,
+					minx <= 180 AND maxx >= -180 AND miny <= 85.0511 AND maxy >= -85.0511 AND min_zoom = 3`,
 		},
 	}
 

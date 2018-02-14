@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/terranodo/tegola/geom"
 )
 
 const (
@@ -13,8 +13,7 @@ const (
 	zoomToken = "!ZOOM!"
 )
 
-// TODO(arolek): replace points.BoundingBox with geom.Extent
-func replaceTokens(qtext string, zoom uint64, extent points.BoundingBox) string {
+func replaceTokens(qtext string, zoom uint64, extent geom.BoundingBox) string {
 	// --- Convert tokens provided to SQL
 	// The ZOOM token requires two parameters, both filled with the current zoom level.
 	//	Until support for named parameters, the ZOOM token must follow the BBOX token.
@@ -35,7 +34,7 @@ func replaceTokens(qtext string, zoom uint64, extent points.BoundingBox) string 
 	tokenReplacer := strings.NewReplacer(
 		// The BBOX token requires parameters ordered as [maxx, minx, maxy, miny] and checks for overlap.
 		// 	Until support for named parameters, we'll only support one BBOX token per query.
-		bboxToken, fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent[2], extent[0], extent[3], extent[1]),
+		bboxToken, fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY()),
 		zoomToken, strconv.FormatUint(zoom, 10),
 	)
 

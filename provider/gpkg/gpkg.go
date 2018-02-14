@@ -8,11 +8,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/arolek/tegola/basic"
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/encoding/wkb"
 	"github.com/terranodo/tegola/internal/log"
-	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/provider"
 )
 
@@ -80,36 +80,35 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	pLayer := p.layers[layer]
 
-	// In DefaultSRID (web mercator - 3857)
-	// TODO (arolek): support converting the extent to support projections besides web mercator
-	extent, tileSRID := tile.BufferedExtent()
+	//	read the tile extent
+	bufferedExtent, tileSRID := tile.BufferedExtent()
 
-	// TODO: There's some confusion between pixel coordinates & WebMercator positions in the tile
-	// bounding box, making the smallest y-value tileBBoxStruct.Maxy and the largest Miny.
-	// Hacking here to ensure a correct bounding box.
-	// At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
-
-	tileBBox := points.BoundingBox{
-		extent[0][0], extent[1][1], //minx, maxy
-		extent[1][0], extent[0][1], //maxx, miny
+	// TODO: leverage minx/y maxx/y methods once the BufferedExtent returns a geom.Extent type
+	tileBBox := geom.BoundingBox{
+		{bufferedExtent[0][0], bufferedExtent[0][1]}, //minx, miny
+		{bufferedExtent[1][0], bufferedExtent[1][1]}, //maxx, maxy
 	}
 
+	// TODO(arolek): reimplement once the geom package has reprojection
 	// check if the SRID of the layer differes from that of the tile. tileSRID is assumed to always be WebMercator
 	if pLayer.srid != tileSRID {
-		tileBBox = tileBBox.ConvertSRID(tileSRID, pLayer.srid)
-	}
+		minGeo, err := basic.FromWebMercator(int(pLayer.srid), basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
+		if err != nil {
+			return fmt.Errorf("error converting point: %v ", err)
+		}
 
-	// GPKG tables have a bounding box not available to custom queries.
-	if pLayer.tablename != "" {
-		// Check that layer is within bounding box
-		if pLayer.bbox.DisjointBB(tileBBox) {
-			log.Debugf("layer '%v' bounding box %v is outside tile bounding box %v, will not load any features", layer, pLayer.bbox, tileBBox)
-			return nil
+		maxGeo, err := basic.FromWebMercator(int(pLayer.srid), basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
+		if err != nil {
+			return fmt.Errorf("error converting point: %v ", err)
+		}
+
+		tileBBox = geom.BoundingBox{
+			{minGeo.AsPoint().X(), minGeo.AsPoint().Y()},
+			{maxGeo.AsPoint().X(), maxGeo.AsPoint().Y()},
 		}
 	}
 
 	var qtext string
-	//var tokensPresent map[string]bool
 
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
@@ -132,16 +131,6 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		qtext = replaceTokens(pLayer.sql, z, tileBBox)
 	}
 
-	// TODO(arolek): implement extent and use MinX/Y MaxX/Y methods
-	/*
-		qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
-
-			if tokensPresent["ZOOM"] {
-				// Add the zoom level, once for comparison to min, once for max.
-				z, _, _ := tile.ZXY()
-				qparams = append(qparams, z, z)
-			}
-	*/
 	log.Debugf("qtext: %v", qtext)
 
 	rows, err := p.db.Query(qtext)
@@ -201,10 +190,12 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 					log.Errorf("unexpected column type for geom field. got %t", vals[i])
 					return errors.New("unexpected column type for geom field. expected blob")
 				}
+
 				h, geo, err := decodeGeometry(geomData)
 				if err != nil {
 					return err
 				}
+
 				feature.SRID = uint64(h.SRSId())
 				feature.Geometry = geo
 
@@ -249,7 +240,7 @@ type GeomTableDetails struct {
 	geomFieldname string
 	geomType      geom.Geometry
 	srid          uint64
-	bbox          points.BoundingBox
+	bbox          geom.BoundingBox
 }
 
 type GeomColumn struct {
