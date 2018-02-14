@@ -92,12 +92,12 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	// TODO(arolek): reimplement once the geom package has reprojection
 	// check if the SRID of the layer differes from that of the tile. tileSRID is assumed to always be WebMercator
 	if pLayer.srid != tileSRID {
-		minGeo, err := basic.FromWebMercator(int(pLayer.srid), basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
+		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		maxGeo, err := basic.FromWebMercator(int(pLayer.srid), basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
+		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
