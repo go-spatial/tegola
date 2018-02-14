@@ -16,7 +16,7 @@ func TestCleanup(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		_, err := NewTileProvider(tc.config)
 		if err != nil {
-			t.Fatal("err creating NewTileProvider: %v", err)
+			t.Fatalf("err creating NewTileProvider: %v", err)
 			return
 		}
 

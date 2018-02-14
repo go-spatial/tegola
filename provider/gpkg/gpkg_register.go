@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -51,7 +52,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		WHERE
 			c.data_type = 'features';`
 
-	rows, err := db.Query(qtext)
+	rows, err := p.db.Query(qtext)
 	if err != nil {
 		log.Errorf("error during query: %v - %v", qtext, err)
 		return nil, err
@@ -74,7 +75,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		// map the returned geom type to a tegola geom type
 		tg, err := geomNameToGeom(geomType.String)
 		if err != nil {
-			log.Error("error mapping geom type (%v): %v", geomType, err)
+			log.Errorf("error mapping geom type (%v): %v", geomType, err)
 			return nil, err
 		}
 
@@ -152,37 +153,67 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			}
 			layer.sql = customSQL
 
-			customSQL, tokensPresent := replaceTokens(customSQL)
+			// if a !ZOOM! token exists, all features could be filtered out so we don't have a geometry to inspect it's type.
+			// TODO(arolek): implement an SQL parser or figure out a different approach. this is brittle but I can't figure out a better
+			// solution without using an SQL parser on custom SQL statements
+			allZoomsSQL := "IN (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)"
+			tokenReplacer := strings.NewReplacer(
+				">= "+zoomToken, allZoomsSQL,
+				">="+zoomToken, allZoomsSQL,
+				"=> "+zoomToken, allZoomsSQL,
+				"=>"+zoomToken, allZoomsSQL,
+				"=< "+zoomToken, allZoomsSQL,
+				"=<"+zoomToken, allZoomsSQL,
+				"<= "+zoomToken, allZoomsSQL,
+				"<="+zoomToken, allZoomsSQL,
+				"!= "+zoomToken, allZoomsSQL,
+				"!="+zoomToken, allZoomsSQL,
+				"= "+zoomToken, allZoomsSQL,
+				"="+zoomToken, allZoomsSQL,
+				"> "+zoomToken, allZoomsSQL,
+				">"+zoomToken, allZoomsSQL,
+				"< "+zoomToken, allZoomsSQL,
+				"<"+zoomToken, allZoomsSQL,
+			)
 
-			// Get geometry type & srid from geometry of first row.
-			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
+			customSQL = tokenReplacer.Replace(customSQL)
 
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			qparams := []interface{}{float64(180.0), float64(-180.0), float64(85.0511), float64(-85.0511)}
+			//qparams := []interface{}{float64(180.0), float64(-180.0), float64(85.0511), float64(-85.0511)}
 
-			if tokensPresent["ZOOM"] {
-				// min_zoom will always be less than 100, and max_zoom will always be greater than 0.
-				qparams = append(qparams, 100, 0)
-			}
-			log.Debugf("qtext: %v, params: %v", qtext, qparams)
+			// Set bounds & zoom params to include all layers
+			// Bounds checks need params: maxx, minx, maxy, miny
+			// TODO(arolek): this assumes WGS84. should be more flexible
+			customSQL = replaceTokens(customSQL, 0, points.BoundingBox{180.0, -180.0, 85.0511, -85.0511})
 
-			row := db.QueryRow(qtext, qparams...)
+			// Get geometry type & srid from geometry of first row.
+			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
+
+			/*
+				if tokensPresent["ZOOM"] {
+					// min_zoom will always be less than 100, and max_zoom will always be greater than 0.
+					qparams = append(qparams, 100, 0)
+				}
+			*/
+			log.Debugf("qtext: %v", qtext)
+
+			//fmt.Printf("qtext: %v", qtext)
 
 			var geomData []byte
-			err = row.Scan(&geomData)
+			err = db.QueryRow(qtext).Scan(&geomData)
 			if err == sql.ErrNoRows {
-				log.Warnf("layer '%v' with custom SQL has 0 rows, skipping: %v", layerName, customSQL)
-				continue
+				return nil, fmt.Errorf("layer '%v' with custom SQL has 0 rows: %v", layerName, customSQL)
 			} else if err != nil {
-				return nil, fmt.Errorf("layer '%v' problem executing custom SQL, skipping: %v", layerName, err)
+				return nil, fmt.Errorf("layer '%v' problem executing custom SQL: %v", layerName, err)
 			}
 
 			h, geo, err := decodeGeometry(geomData)
 			if err != nil {
 				return nil, err
 			}
+
 			layer.geomType = geo
 			layer.srid = uint64(h.SRSId())
 			layer.geomFieldname = DefaultGeomFieldName

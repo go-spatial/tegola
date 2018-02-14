@@ -1,27 +1,25 @@
 package gpkg
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/terranodo/tegola/maths/points"
 )
 
 func TestReplaceTokens(t *testing.T) {
 	type tcase struct {
-		qtext          string
-		expected       string
-		expectedTokens map[string]bool
+		qtext string
+		zoom  uint64
+		// TODO: replace with geom.Extent once it's ready
+		extent   points.BoundingBox
+		expected string
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		output, tokens := replaceTokens(tc.qtext)
+		output := replaceTokens(tc.qtext, tc.zoom, tc.extent)
 
 		if tc.expected != output {
-			t.Errorf("expected %v got %v", tc.expected, output)
-			return
-		}
-
-		if !reflect.DeepEqual(tc.expectedTokens, tokens) {
-			t.Errorf("expected %v got %v", tc.expectedTokens, tokens)
+			t.Errorf("expected %v\n got\n %v", tc.expected, output)
 			return
 		}
 	}
@@ -34,17 +32,15 @@ func TestReplaceTokens(t *testing.T) {
 				FROM
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
-					!ZOOM!`,
+					min_zoom <= !ZOOM! AND max_zoom >= !ZOOM!`,
+			zoom: 9,
 			expected: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
 				FROM
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
-					min_zoom <= ? AND max_zoom >= ?`,
-			expectedTokens: map[string]bool{
-				"ZOOM": true,
-			},
+					min_zoom <= 9 AND max_zoom >= 9`,
 		},
 		"bbox": tcase{
 			qtext: `
@@ -54,16 +50,14 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX!`,
+			extent: points.BoundingBox{180, 85.0511, -180, -85.0511},
 			expected: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
 				FROM
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
-					minx <= ? AND maxx >= ? AND miny <= ? AND maxy >= ?`,
-			expectedTokens: map[string]bool{
-				"BBOX": true,
-			},
+					minx <= -180 AND maxx >= 180 AND miny <= -85.0511 AND maxy >= 85.0511`,
 		},
 		"bbox zoom": tcase{
 			qtext: `
@@ -72,18 +66,16 @@ func TestReplaceTokens(t *testing.T) {
 				FROM
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
-					!BBOX! AND !ZOOM!`,
+					!BBOX! AND min_zoom = !ZOOM!`,
+			extent: points.BoundingBox{180, 85.0511, -180, -85.0511},
+			zoom:   3,
 			expected: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
 				FROM
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
-					minx <= ? AND maxx >= ? AND miny <= ? AND maxy >= ? AND min_zoom <= ? AND max_zoom >= ?`,
-			expectedTokens: map[string]bool{
-				"ZOOM": true,
-				"BBOX": true,
-			},
+					minx <= -180 AND maxx >= 180 AND miny <= -85.0511 AND maxy >= 85.0511 AND min_zoom = 3`,
 		},
 	}
 

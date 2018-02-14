@@ -19,7 +19,7 @@ const (
 )
 
 func init() {
-	//	log.SetLogLevel(log.DEBUG)
+	//log.SetLogLevel(log.DEBUG)
 }
 
 func TestNewTileProvider(t *testing.T) {
@@ -29,6 +29,8 @@ func TestNewTileProvider(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
 			t.Errorf("error createing NewTileProvider: %v", err)
@@ -103,9 +105,11 @@ func TestTileFeatures(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			t.Fatal("err creating NewTileProvider: %v", err)
+			t.Fatalf("err creating NewTileProvider: %v", err)
 			return
 		}
 
@@ -174,7 +178,7 @@ func TestTileFeatures(t *testing.T) {
 							FROM
 								ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 							WHERE
-								!BBOX! AND !ZOOM!`,
+								!BBOX! AND min_zoom <= !ZOOM!`,
 					},
 				},
 			},
@@ -201,7 +205,7 @@ func TestTileFeatures(t *testing.T) {
 							FROM
 								ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 							WHERE
-								!BBOX! AND !ZOOM!`,
+								!BBOX! AND min_zoom <= !ZOOM! AND max_zoom >= !ZOOM!`,
 					},
 				},
 			},
@@ -239,7 +243,7 @@ func TestConfigs(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			t.Fatal("err creating NewTileProvider: %v", err)
+			t.Fatalf("err creating NewTileProvider: %v", err)
 			return
 		}
 
@@ -379,8 +383,8 @@ func TestConfigs(t *testing.T) {
 			},
 			tile: MockTile{
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
+					{-20026376.39, 20048966.10},
+					{20026376.39, -20048966.10},
 				},
 				srid: tegola.WebMercator,
 			},
@@ -400,3 +404,18 @@ func TestConfigs(t *testing.T) {
 		})
 	}
 }
+
+/*
+SELECT * FROM (
+	SELECT
+		fid, geom, NULL AS place, NULL AS is_in, amenity, religion, tourism, shop, si.minx, si.miny, si.maxx, si.maxy
+	FROM
+		amenities_points ap JOIN rtree_amenities_points_geom si ON ap.fid = si.id
+	UNION
+		SELECT
+			fid, geom, place, is_in, NULL, NULL, NULL, NULL, si.minx, si.miny, si.maxx, si.maxy
+		FROM
+			places_points pp JOIN rtree_places_points_geom si ON pp.fid = si.id
+)
+WHERE minx <= 85.0511 AND maxx >= -85.0511 AND miny <= 180.0 AND maxy >= -180.0;
+*/

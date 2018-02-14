@@ -40,11 +40,13 @@ func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
 		log.Error("error decoding geometry header: %v", err)
 		return h, nil, err
 	}
+
 	geo, err := wkb.DecodeBytes(bytes[h.Size():])
 	if err != nil {
 		log.Error("error decoding geometry: %v", err)
 		return h, nil, err
 	}
+
 	return h, geo, nil
 }
 
@@ -86,6 +88,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	// bounding box, making the smallest y-value tileBBoxStruct.Maxy and the largest Miny.
 	// Hacking here to ensure a correct bounding box.
 	// At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
+
 	tileBBox := points.BoundingBox{
 		extent[0][0], extent[1][1], //minx, maxy
 		extent[1][0], extent[0][1], //maxx, miny
@@ -106,7 +109,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	}
 
 	var qtext string
-	var tokensPresent map[string]bool
+	//var tokensPresent map[string]bool
 
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
@@ -121,26 +124,29 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		// l - layer table, si - spatial index
 		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX!", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname)
 
-		qtext, tokensPresent = replaceTokens(qtext)
+		z, _, _ := tile.ZXY()
+		qtext = replaceTokens(qtext, z, tileBBox)
 	} else {
 		// If layer was specified via "sql" in config, collect it
-		qtext, tokensPresent = replaceTokens(pLayer.sql)
+		z, _, _ := tile.ZXY()
+		qtext = replaceTokens(pLayer.sql, z, tileBBox)
 	}
 
 	// TODO(arolek): implement extent and use MinX/Y MaxX/Y methods
-	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
+	/*
+		qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
 
-	if tokensPresent["ZOOM"] {
-		// Add the zoom level, once for comparison to min, once for max.
-		z, _, _ := tile.ZXY()
-		qparams = append(qparams, z, z)
-	}
+			if tokensPresent["ZOOM"] {
+				// Add the zoom level, once for comparison to min, once for max.
+				z, _, _ := tile.ZXY()
+				qparams = append(qparams, z, z)
+			}
+	*/
+	log.Debugf("qtext: %v", qtext)
 
-	log.Debugf("qtext: %v\nqparams: %v\n", qtext, qparams)
-
-	rows, err := p.db.Query(qtext, qparams...)
+	rows, err := p.db.Query(qtext)
 	if err != nil {
-		log.Errorf("err during query: %v (%v) - %v", qtext, qparams, err)
+		log.Errorf("err during query: %v - %v", qtext, err)
 		return err
 	}
 	defer rows.Close()
@@ -170,6 +176,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		feature := provider.Feature{
 			Tags: map[string]interface{}{},
 		}
+
 		for i := range cols {
 			// check if the context cancelled or timed out
 			if ctx.Err() != nil {
@@ -201,7 +208,6 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 				feature.SRID = uint64(h.SRSId())
 				feature.Geometry = geo
 
-			// TODO(arolek): this seems like a bad idea. these could be configured by the user for other purposes
 			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
 				// Skip these columns used for bounding box and zoom filtering
 				continue
