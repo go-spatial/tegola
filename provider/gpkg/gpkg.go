@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ProviderName         = "gpkg"
+	Name                 = "gpkg"
 	DefaultSRID          = tegola.WebMercator
 	DefaultIDFieldName   = "fid"
 	DefaultGeomFieldName = "geom"

@@ -34,19 +34,31 @@ type LayerInfo interface {
 // InitFunc initilize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
 type InitFunc func(map[string]interface{}) (Tiler, error)
 
-var providers map[string]InitFunc
+// CleanupFunc is called to when the system is shuting down, this allows the provider to cleanup.
+type CleanupFunc func()
+
+type pfns struct {
+	init    InitFunc
+	cleanup CleanupFunc
+}
+
+var providers map[string]pfns
 
 // Register the provider with the system. This call is generally made in the init functions of the provider.
-func Register(name string, init InitFunc) error {
+// 	the clean up function will be called during shutdown of the provider to allow the provider to do any cleanup.
+func Register(name string, init InitFunc, cleanup CleanupFunc) error {
 	if providers == nil {
-		providers = make(map[string]InitFunc)
+		providers = make(map[string]pfns)
 	}
 
 	if _, ok := providers[name]; ok {
 		return fmt.Errorf("Provider %v already exists", name)
 	}
 
-	providers[name] = init
+	providers[name] = pfns{
+		init:    init,
+		cleanup: cleanup,
+	}
 
 	return nil
 }
@@ -75,5 +87,13 @@ func For(name string, config map[string]interface{}) (Tiler, error) {
 		return nil, fmt.Errorf("No providers registered by the name: %v, known providers(%v)", name, strings.Join(Drivers(), ","))
 	}
 
-	return p(config)
+	return p.init(config)
+}
+
+func Cleanup() {
+	for _, p := range providers {
+		if p.cleanup != nil {
+			p.cleanup()
+		}
+	}
 }

@@ -63,7 +63,7 @@ const (
 )
 
 func init() {
-	provider.Register(Name, NewTileProvider)
+	provider.Register(Name, NewTileProvider, nil)
 }
 
 //	NewTileProvider instantiates and returns a new postgis provider or an error.

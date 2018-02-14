@@ -1,4 +1,4 @@
-package test_provider
+package test
 
 import "github.com/terranodo/tegola/geom"
 

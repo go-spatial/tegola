@@ -12,7 +12,7 @@ import (
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/geom/slippy"
 	"github.com/terranodo/tegola/mvt/vector_tile"
-	"github.com/terranodo/tegola/provider/test_provider"
+	"github.com/terranodo/tegola/provider/test"
 )
 
 func TestMapFilterLayersByZoom(t *testing.T) {
@@ -151,7 +151,7 @@ func TestEncode(t *testing.T) {
 						Name:     "layer1",
 						MinZoom:  0,
 						MaxZoom:  2,
-						Provider: &test_provider.TestTileProvider{},
+						Provider: &test.TileProvider{},
 						DefaultTags: map[string]interface{}{
 							"foo": "bar",
 						},
@@ -160,7 +160,7 @@ func TestEncode(t *testing.T) {
 						Name:     "layer2",
 						MinZoom:  1,
 						MaxZoom:  5,
-						Provider: &test_provider.TestTileProvider{},
+						Provider: &test.TileProvider{},
 					},
 				},
 			},
@@ -291,25 +291,29 @@ func TestEncode(t *testing.T) {
 				}
 			}
 
-			if !reflect.DeepEqual(tileLayer.Keys, expectedLayer.Keys) {
-				t.Errorf("[%v] expected %v got %v", i, tileLayer.Keys, expectedLayer.Keys)
-				continue
-			}
-
 			if *tileLayer.Extent != *expectedLayer.Extent {
 				t.Errorf("[%v] expected %v got %v", i, *tileLayer.Extent, *expectedLayer.Extent)
 				continue
 			}
 
-			for l, tileLayerValues := range tileLayer.Values {
-				expectedTileLayerValues := expectedLayer.Values[l]
+			if len(expectedLayer.Keys) != len(tileLayer.Keys) {
+				t.Errorf("[%v] key len expected %v got %v", i, len(expectedLayer.Keys), len(tileLayer.Keys))
+				continue
 
-				// TODO (arolek): add additional value checks
-				if *tileLayerValues.StringValue != *expectedTileLayerValues.StringValue {
-					t.Errorf("[%v] expected %v got %v", i, *tileLayerValues.StringValue, *expectedTileLayerValues.StringValue)
-					continue
-				}
 			}
+
+			var gotmap = make(map[string]interface{})
+			var expmap = make(map[string]interface{})
+			for i, k := range tileLayer.Keys {
+				gotmap[k] = tileLayer.Values[i]
+			}
+			for i, k := range expectedLayer.Keys {
+				expmap[k] = expectedLayer.Values[i]
+			}
+			if !reflect.DeepEqual(expmap, gotmap) {
+				t.Errorf("[%v] constructed map expected %v got %v", i, expmap, gotmap)
+			}
+
 		}
 	}
 }

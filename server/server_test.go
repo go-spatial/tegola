@@ -4,7 +4,7 @@ import (
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/cache/memorycache"
 	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/provider/test_provider"
+	"github.com/terranodo/tegola/provider/test"
 	"github.com/terranodo/tegola/server"
 )
 
@@ -26,7 +26,7 @@ var testLayer1 = atlas.Layer{
 	ProviderLayerName: "test-layer-1",
 	MinZoom:           4,
 	MaxZoom:           9,
-	Provider:          &test_provider.TestTileProvider{},
+	Provider:          &test.TileProvider{},
 	GeomType:          geom.Point{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
@@ -38,7 +38,7 @@ var testLayer2 = atlas.Layer{
 	ProviderLayerName: "test-layer-2-provider-layer-name",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &test_provider.TestTileProvider{},
+	Provider:          &test.TileProvider{},
 	GeomType:          geom.Line{},
 	DefaultTags: map[string]interface{}{
 		"foo": "bar",
@@ -50,7 +50,7 @@ var testLayer3 = atlas.Layer{
 	ProviderLayerName: "test-layer-3",
 	MinZoom:           10,
 	MaxZoom:           20,
-	Provider:          &test_provider.TestTileProvider{},
+	Provider:          &test.TileProvider{},
 	GeomType:          geom.Point{},
 	DefaultTags:       map[string]interface{}{},
 }

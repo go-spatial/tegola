@@ -1,4 +1,4 @@
-package test_provider
+package test
 
 import (
 	"context"
@@ -8,9 +8,26 @@ import (
 	"github.com/terranodo/tegola/provider"
 )
 
-type TestTileProvider struct{}
+const Name = "test"
 
-func (tp *TestTileProvider) Layers() ([]provider.LayerInfo, error) {
+var Count int
+
+func init() {
+	provider.Register(Name, NewTileProvider, Cleanup)
+}
+
+// NewProvider setups a test provider. there are not currently any config params supported
+func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
+	Count++
+	return &TileProvider{}, nil
+}
+
+// Cleanup cleans up all the test providers.
+func Cleanup() { Count = 0 }
+
+type TileProvider struct{}
+
+func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 	return []provider.LayerInfo{
 		layer{
 			name:     "test-layer",
@@ -21,7 +38,7 @@ func (tp *TestTileProvider) Layers() ([]provider.LayerInfo, error) {
 }
 
 //	TilFeatures always returns a feature with a polygon outlining the tile's Extent (not Buffered Extent)
-func (tp *TestTileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, fn func(f *provider.Feature) error) error {
+func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, fn func(f *provider.Feature) error) error {
 	//	get tile bounding box
 	ext, srid := t.Extent()
 

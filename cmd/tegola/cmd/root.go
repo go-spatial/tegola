@@ -66,24 +66,27 @@ func initConfig() {
 		log.Fatal(err)
 	}
 
-	//	validate our config
+	// validate our config
 	if err = conf.Validate(); err != nil {
 		log.Fatal(err)
 	}
 
-	//	init our providers
+	// setup provider tear down.
+	setupTrap()
+
+	// init our providers
 	providers, err := initProviders(conf.Providers)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//	init our maps
+	// init our maps
 	if err = initMaps(conf.Maps, providers); err != nil {
 		log.Fatal(err)
 	}
 
 	if len(conf.Cache) != 0 {
-		//	init cache backends
+		// init cache backends
 		cache, err := initCache(conf.Cache)
 		if err != nil {
 			log.Fatal(err)
