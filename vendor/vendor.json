@@ -3,12 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "smCl4g79z5GJ9LWTQwe50x+JSyU=",
-			"path": "github.com/Bowery/prompt",
-			"revision": "753711fea478fa77bb2c83f6ec244b814d4a8bad",
-			"revisionTime": "2017-09-01T14:12:32Z"
-		},
-		{
 			"checksumSHA1": "UJTpOZ5IuuyoWFrS42uw/167mn0=",
 			"path": "github.com/BurntSushi/toml",
 			"revision": "f0aeabca5a127c4078abb8c8d64298b147264b55",
@@ -313,12 +307,6 @@
 			"path": "github.com/spf13/pflag",
 			"revision": "97afa5e7ca8a08a383cb259e06636b5e2cc7897f",
 			"revisionTime": "2017-10-20T11:06:17Z"
-		},
-		{
-			"checksumSHA1": "Q5LjZRE7RBP33Cq5ESd0QsEZZR4=",
-			"path": "golang.org/x/sys/unix",
-			"revision": "03467258950d845cd1877eab69461b98e8c09219",
-			"revisionTime": "2018-01-25T12:54:57Z"
 		},
 		{
 			"checksumSHA1": "i05c1J3Pkn6Ll+YINNnf6nv8z0g=",

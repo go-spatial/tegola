@@ -4,6 +4,7 @@ package gpkg_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -19,19 +20,24 @@ const (
 )
 
 func init() {
-	//	log.SetLogLevel(log.DEBUG)
+	//log.SetLogLevel(log.DEBUG)
 }
 
 func TestNewTileProvider(t *testing.T) {
 	type tcase struct {
 		config             map[string]interface{}
 		expectedLayerCount int
+		expectedErr        error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			t.Errorf("error createing NewTileProvider: %v", err)
+			if err.Error() != tc.expectedErr.Error() {
+				t.Errorf("expectedErr %v got %v", tc.expectedErr, err)
+			}
 			return
 		}
 
@@ -48,6 +54,16 @@ func TestNewTileProvider(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
+		"duplicate layer name": tcase{
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "a_points", "tablename": "amenities_points"},
+					{"name": "a_points", "tablename": "amenities_points"},
+				},
+			},
+			expectedErr: errors.New("layer name (a_points) is duplicated in both layer 1 and layer 0"),
+		},
 		"3 layers": tcase{
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
@@ -92,9 +108,6 @@ func (t *MockTile) ZXY() (uint64, uint64, uint64) {
 }
 
 func TestTileFeatures(t *testing.T) {
-	// IMPORTANT: Y-values are swapped (origin at top left, so miny is larger than maxy) for ALL extents,
-	// this needs to be fixed: https://github.com/terranodo/tegola/issues/189
-
 	type tcase struct {
 		config               map[string]interface{}
 		layerName            string
@@ -103,9 +116,11 @@ func TestTileFeatures(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			t.Fatal("err creating NewTileProvider: %v", err)
+			t.Fatalf("err creating NewTileProvider: %v", err)
 			return
 		}
 
@@ -174,7 +189,7 @@ func TestTileFeatures(t *testing.T) {
 							FROM
 								ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 							WHERE
-								!BBOX! AND !ZOOM!`,
+								!BBOX! AND min_zoom <= !ZOOM!`,
 					},
 				},
 			},
@@ -183,8 +198,8 @@ func TestTileFeatures(t *testing.T) {
 				Z:    1,
 				srid: tegola.WebMercator,
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 			},
 			expectedFeatureCount: 101,
@@ -201,7 +216,7 @@ func TestTileFeatures(t *testing.T) {
 							FROM
 								ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 							WHERE
-								!BBOX! AND !ZOOM!`,
+								!BBOX! AND min_zoom <= !ZOOM! AND max_zoom >= !ZOOM!`,
 					},
 				},
 			},
@@ -210,8 +225,8 @@ func TestTileFeatures(t *testing.T) {
 				Z:    0,
 				srid: tegola.WebMercator,
 				bufferedExtent: [2][2]float64{
-					{-20026376.39, 20048966.10},
-					{20026376.39, -20048966.10},
+					{-20026376.39, -20048966.10},
+					{20026376.39, 20048966.10},
 				},
 			},
 			expectedFeatureCount: 44,
@@ -226,9 +241,6 @@ func TestTileFeatures(t *testing.T) {
 }
 
 func TestConfigs(t *testing.T) {
-	// IMPORTANT: Y-values are swapped (origin at top left, so miny is larger than maxy) for ALL extents,
-	// this needs to be fixed: https://github.com/terranodo/tegola/issues/189
-
 	type tcase struct {
 		config       map[string]interface{}
 		tile         MockTile
@@ -239,11 +251,16 @@ func TestConfigs(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			t.Fatal("err creating NewTileProvider: %v", err)
+			t.Fatalf("err creating NewTileProvider: %v", err)
 			return
 		}
 
 		err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+			// check if the feature is part of the test
+			if _, ok := tc.expectedTags[f.ID]; !ok {
+				return nil
+			}
+
 			expectedTagCount := len(tc.expectedTags[f.ID])
 			actualTagCount := len(f.Tags)
 
@@ -358,7 +375,6 @@ func TestConfigs(t *testing.T) {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
-					// Currently only one BBOX token is supported per query, so we need to use a subquery here
 					{
 						"name": "a_p_points",
 						"sql": `

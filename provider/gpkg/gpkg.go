@@ -9,10 +9,10 @@ import (
 	"fmt"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/encoding/wkb"
 	"github.com/terranodo/tegola/internal/log"
-	"github.com/terranodo/tegola/maths/points"
 	"github.com/terranodo/tegola/provider"
 )
 
@@ -40,11 +40,13 @@ func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
 		log.Error("error decoding geometry header: %v", err)
 		return h, nil, err
 	}
+
 	geo, err := wkb.DecodeBytes(bytes[h.Size():])
 	if err != nil {
 		log.Error("error decoding geometry: %v", err)
 		return h, nil, err
 	}
+
 	return h, geo, nil
 }
 
@@ -78,35 +80,35 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	pLayer := p.layers[layer]
 
-	// In DefaultSRID (web mercator - 3857)
-	// TODO (arolek): support converting the extent to support projections besides web mercator
-	extent, tileSRID := tile.BufferedExtent()
+	//	read the tile extent
+	bufferedExtent, tileSRID := tile.BufferedExtent()
 
-	// TODO: There's some confusion between pixel coordinates & WebMercator positions in the tile
-	// bounding box, making the smallest y-value tileBBoxStruct.Maxy and the largest Miny.
-	// Hacking here to ensure a correct bounding box.
-	// At some point, clean up this problem: https://github.com/terranodo/tegola/issues/189
-	tileBBox := points.BoundingBox{
-		extent[0][0], extent[1][1], //minx, maxy
-		extent[1][0], extent[0][1], //maxx, miny
+	// TODO: leverage minx/y maxx/y methods once the BufferedExtent returns a geom.Extent type
+	tileBBox := geom.BoundingBox{
+		{bufferedExtent[0][0], bufferedExtent[0][1]}, //minx, miny
+		{bufferedExtent[1][0], bufferedExtent[1][1]}, //maxx, maxy
 	}
 
+	// TODO(arolek): reimplement once the geom package has reprojection
 	// check if the SRID of the layer differes from that of the tile. tileSRID is assumed to always be WebMercator
 	if pLayer.srid != tileSRID {
-		tileBBox = tileBBox.ConvertSRID(tileSRID, pLayer.srid)
-	}
+		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
+		if err != nil {
+			return fmt.Errorf("error converting point: %v ", err)
+		}
 
-	// GPKG tables have a bounding box not available to custom queries.
-	if pLayer.tablename != "" {
-		// Check that layer is within bounding box
-		if pLayer.bbox.DisjointBB(tileBBox) {
-			log.Debugf("layer '%v' bounding box %v is outside tile bounding box %v, will not load any features", layer, pLayer.bbox, tileBBox)
-			return nil
+		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
+		if err != nil {
+			return fmt.Errorf("error converting point: %v ", err)
+		}
+
+		tileBBox = geom.BoundingBox{
+			{minGeo.AsPoint().X(), minGeo.AsPoint().Y()},
+			{maxGeo.AsPoint().X(), maxGeo.AsPoint().Y()},
 		}
 	}
 
 	var qtext string
-	var tokensPresent map[string]bool
 
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
@@ -121,26 +123,19 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		// l - layer table, si - spatial index
 		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX!", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname)
 
-		qtext, tokensPresent = replaceTokens(qtext)
+		z, _, _ := tile.ZXY()
+		qtext = replaceTokens(qtext, z, tileBBox)
 	} else {
 		// If layer was specified via "sql" in config, collect it
-		qtext, tokensPresent = replaceTokens(pLayer.sql)
-	}
-
-	// TODO(arolek): implement extent and use MinX/Y MaxX/Y methods
-	qparams := []interface{}{tileBBox[2], tileBBox[0], tileBBox[3], tileBBox[1]}
-
-	if tokensPresent["ZOOM"] {
-		// Add the zoom level, once for comparison to min, once for max.
 		z, _, _ := tile.ZXY()
-		qparams = append(qparams, z, z)
+		qtext = replaceTokens(pLayer.sql, z, tileBBox)
 	}
 
-	log.Debugf("qtext: %v\nqparams: %v\n", qtext, qparams)
+	log.Debugf("qtext: %v", qtext)
 
-	rows, err := p.db.Query(qtext, qparams...)
+	rows, err := p.db.Query(qtext)
 	if err != nil {
-		log.Errorf("err during query: %v (%v) - %v", qtext, qparams, err)
+		log.Errorf("err during query: %v - %v", qtext, err)
 		return err
 	}
 	defer rows.Close()
@@ -170,6 +165,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		feature := provider.Feature{
 			Tags: map[string]interface{}{},
 		}
+
 		for i := range cols {
 			// check if the context cancelled or timed out
 			if ctx.Err() != nil {
@@ -194,14 +190,15 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 					log.Errorf("unexpected column type for geom field. got %t", vals[i])
 					return errors.New("unexpected column type for geom field. expected blob")
 				}
+
 				h, geo, err := decodeGeometry(geomData)
 				if err != nil {
 					return err
 				}
+
 				feature.SRID = uint64(h.SRSId())
 				feature.Geometry = geo
 
-			// TODO(arolek): this seems like a bad idea. these could be configured by the user for other purposes
 			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
 				// Skip these columns used for bounding box and zoom filtering
 				continue
@@ -243,7 +240,7 @@ type GeomTableDetails struct {
 	geomFieldname string
 	geomType      geom.Geometry
 	srid          uint64
-	bbox          points.BoundingBox
+	bbox          geom.BoundingBox
 }
 
 type GeomColumn struct {
