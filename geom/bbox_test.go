@@ -142,3 +142,65 @@ func TestBBoxContains(t *testing.T) {
 		t.Run(name, func(t *testing.T) { fn(t, tc) })
 	}
 }
+
+func TestBBoxAttributes(t *testing.T) {
+	bblncmp := func(pt [2]float64, x, y float64) bool { return pt[0] == x && pt[1] == y }
+
+	fn := func(t *testing.T, bb geom.BoundingBox) {
+
+		t.Parallel()
+
+		if !bblncmp(bb.TopLeft(), bb[0][0], bb[0][1]) {
+			t.Errorf("top left, expected %v, got %v", bb[0], bb.TopLeft())
+		}
+		if !bblncmp(bb.BottomRight(), bb[1][0], bb[1][1]) {
+			t.Errorf("bottom right, expected %v, got %v", bb[1], bb.BottomRight())
+		}
+		if !bblncmp(bb.TopRight(), bb[1][0], bb[0][1]) {
+			t.Errorf("top right, expected %v, got %v", [2]float64{bb[1][0], bb[0][1]}, bb.TopRight())
+		}
+		if !bblncmp(bb.BottomLeft(), bb[0][0], bb[1][1]) {
+			t.Errorf("bottom left, expected %v, got %v", [2]float64{bb[0][0], bb[1][1]}, bb.BottomLeft())
+		}
+
+		minx, miny, maxx, maxy := bb[0][0], bb[0][1], bb[1][0], bb[1][1]
+		if minx > maxx {
+			minx, maxx = maxx, minx
+		}
+		if miny > maxy {
+			miny, maxy = maxy, miny
+		}
+
+		if maxx != bb.MaxX() {
+			t.Errorf("maxx, expected %v, got %v", maxx, bb.MaxX())
+		}
+		if minx != bb.MinX() {
+			t.Errorf("minx, expected %v, got %v", minx, bb.MinX())
+		}
+		if maxy != bb.MaxY() {
+			t.Errorf("maxy, expected %v, got %v", maxy, bb.MaxY())
+		}
+		if miny != bb.MinY() {
+			t.Errorf("miny, expected %v, got %v", miny, bb.MinY())
+		}
+
+	}
+	tests := map[string]geom.BoundingBox{
+		"std": geom.BoundingBox{
+			[2]float64{0.0, 0.0},
+			[2]float64{10.0, 10.0},
+		},
+		"inverted-y": geom.BoundingBox{
+			[2]float64{0.0, 10.0},
+			[2]float64{10.0, 0.0},
+		},
+		"inverted-x": geom.BoundingBox{
+			[2]float64{10.0, 0.0},
+			[2]float64{0.0, 10.0},
+		},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
