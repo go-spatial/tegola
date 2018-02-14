@@ -35,7 +35,7 @@ var (
 )
 
 //	Start starts the tile server binding to the provided port
-func Start(port string) {
+func Start(port string) *http.Server {
 	Atlas = atlas.DefaultAtlas
 
 	//	notify the user the server is starting
@@ -64,7 +64,9 @@ func Start(port string) {
 	group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
 
 	//	start our server
-	log.Fatal(http.ListenAndServe(port, r))
+	srv := &http.Server{Addr: port, Handler: r}
+	go func() { log.Error(srv.ListenAndServe()) }()
+	return srv
 }
 
 //	determines the hostname:port to return based on the following hierarchy

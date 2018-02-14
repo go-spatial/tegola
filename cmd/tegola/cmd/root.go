@@ -71,9 +71,6 @@ func initConfig() {
 		log.Fatal(err)
 	}
 
-	// setup provider tear down.
-	setupTrap()
-
 	// init our providers
 	providers, err := initProviders(conf.Providers)
 	if err != nil {

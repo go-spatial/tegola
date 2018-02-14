@@ -1,8 +1,8 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"runtime"
 	"strconv"
 	"strings"
@@ -11,10 +11,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	gdcmd "github.com/gdey/cmd"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/cache"
+	"github.com/terranodo/tegola/internal/log"
 	"github.com/terranodo/tegola/maths/webmercator"
+	"github.com/terranodo/tegola/provider"
 )
 
 var (
@@ -56,6 +60,8 @@ var cacheCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		defer gdcmd.New().Complete()
+		gdcmd.OnComplete(provider.Cleanup)
 		var err error
 		var maps []atlas.Map
 
@@ -157,8 +163,16 @@ var cacheCmd = &cobra.Command{
 		for i := 0; i < cacheConcurrency; i++ {
 			//	spin off a worker listening on a channel
 			go func(tiler chan MapTile) {
+				ctx, cancel := context.WithCancel(context.Background())
+				go func() {
+					<-gdcmd.Cancelled()
+					cancel()
+				}()
 				//	range our channel to listen for jobs
 				for mt := range tiler {
+					if gdcmd.IsCancelled() {
+						continue
+					}
 					//	we will only have a single command arg so we can switch on index 0
 					switch args[0] {
 					case "seed":
@@ -197,7 +211,7 @@ var cacheCmd = &cobra.Command{
 							}
 							//	if we have a cache hit, then skip processing this tile
 							if hit {
-								log.Printf("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+								log.Infof("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
 								continue
 							}
 						}
@@ -208,18 +222,19 @@ var cacheCmd = &cobra.Command{
 						}
 
 						//	seed the tile
-						if err = atlas.SeedMapTile(m, uint64(mt.Tile.Z), uint64(mt.Tile.X), uint64(mt.Tile.Y)); err != nil {
-							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
+						if err = atlas.SeedMapTile(ctx, m, uint64(mt.Tile.Z), uint64(mt.Tile.X), uint64(mt.Tile.Y)); err != nil {
+							log.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
+							break
 						}
 
 						//	TODO: this is a hack to get around large arrays not being garbage collected
 						//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
 						runtime.GC()
 
-						log.Printf("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y, time.Now().Sub(t))
+						log.Infof("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y, time.Now().Sub(t))
 
 					case "purge":
-						log.Printf("purging map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+						log.Infof("purging map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
 
 						//	lookup the Map
 						m, err := atlas.GetMap(mt.MapName)
@@ -229,7 +244,8 @@ var cacheCmd = &cobra.Command{
 
 						//	purge the tile
 						if err = atlas.PurgeMapTile(m, mt.Tile); err != nil {
-							log.Fatalf("error purging tile (%+v): %v", mt.Tile, err)
+							log.Errorf("error purging tile (%+v): %v", mt.Tile, err)
+							break
 						}
 					}
 				}
@@ -238,8 +254,8 @@ var cacheCmd = &cobra.Command{
 				wg.Done()
 			}(tiler)
 		}
-
 		//	iterate our zoom range
+	ZoomLoop:
 		for i := range zooms {
 
 			topLeft := *tegola.NewTileLatLong(zooms[i], bounds[1], bounds[0])
@@ -258,8 +274,13 @@ var cacheCmd = &cobra.Command{
 							MapName: maps[m].Name,
 							Tile:    tegola.NewTile(zooms[i], x, y),
 						}
+						select {
+						case tiler <- mapTile:
+						case <-gdcmd.Cancelled():
+							log.Info("cancel recieved; cleaning up…")
+							break ZoomLoop
+						}
 
-						tiler <- mapTile
 					}
 				}
 			}

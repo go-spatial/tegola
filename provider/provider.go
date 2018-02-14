@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 type Tile interface {
@@ -91,6 +92,7 @@ func For(name string, config map[string]interface{}) (Tiler, error) {
 }
 
 func Cleanup() {
+	log.Info("cleaning up providers")
 	for _, p := range providers {
 		if p.cleanup != nil {
 			p.cleanup()

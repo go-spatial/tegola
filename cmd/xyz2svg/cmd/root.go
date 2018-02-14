@@ -48,7 +48,6 @@ func init() {
 func initProviders(providers []map[string]interface{}) (prvs map[string]provider.Tiler, err error) {
 
 	prvs = make(map[string]provider.Tiler)
-	setupTrap()
 
 	// iterate providers
 	for _, p := range providers {

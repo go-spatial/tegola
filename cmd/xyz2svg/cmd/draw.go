@@ -131,6 +131,7 @@ func drawCommand(cmd *cobra.Command, args []string) {
 			panic(err)
 		}
 	}
+	provider.Cleanup()
 }
 
 func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, dfn *drawFilename) error {
