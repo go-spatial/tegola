@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/arolek/tegola/basic"
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/encoding/wkb"
 	"github.com/terranodo/tegola/internal/log"
