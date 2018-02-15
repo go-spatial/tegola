@@ -3,18 +3,8 @@
 package cmd
 
 import (
-	"context"
 	"net/http"
-	"time"
-
-	gdcmd "github.com/gdey/cmd"
 )
 
-func shutdown(srv *http.Server) {
-	gdcmd.OnComplete(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		defer cancel() // releases resources if slowOperation completes before timeout elapses
-		srv.Close()
-	})
-
-}
+// On anything before 1.8; we just shutdown the program, and graceful shutdown.
+func shutdown(srv *http.Server) {}
