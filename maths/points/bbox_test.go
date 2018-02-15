@@ -3,10 +3,10 @@ package points
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/internal/assert"
 )
 
 func TestDisjointBB(t *testing.T) {
@@ -79,7 +79,9 @@ func TestDisjointBB(t *testing.T) {
 
 	for i, tc := range testCases {
 		disjoint := tc.bbox1.DisjointBB(tc.bbox2)
-		assert.Equal(t, tc.disjoint, disjoint, fmt.Sprintf("TestCase[%v] failed", i))
+		if !reflect.DeepEqual(tc.disjoint, disjoint) {
+			t.Errorf(" [%v] disjoint, expected %v got %v", i, tc.disjoint, disjoint)
+		}
 	}
 }
 
@@ -179,7 +181,8 @@ func TestAsGeoJSON(t *testing.T) {
 
 	for i, tc := range testCases {
 		geoJson := tc.bbox.AsGeoJSON()
-		msg := fmt.Sprintf("TestCase[%v] - GeoJSON doesn't match expected", i)
-		assert.Equal(t, tc.expectedGeoJson, geoJson, msg)
+		if !reflect.DeepEqual(tc.expectedGeoJson, geoJson) {
+			t.Errorf("[%v] geojson, expected %v got %v", i, tc.expectedGeoJson, geoJson)
+		}
 	}
 }
