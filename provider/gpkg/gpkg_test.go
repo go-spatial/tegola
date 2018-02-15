@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	GPKGAthensFilePath       = "test_data/athens-osm-20170921.gpkg"
-	GPKGNaturalEarthFilePath = "test_data/natural_earth_minimal.gpkg"
-	GPKGPuertoMontFilePath   = "test_data/puerto_mont-osm-20170922.gpkg"
+	GPKGAthensFilePath       = "testdata/athens-osm-20170921.gpkg"
+	GPKGNaturalEarthFilePath = "testdata/natural_earth_minimal.gpkg"
+	GPKGPuertoMontFilePath   = "testdata/puerto_mont-osm-20170922.gpkg"
 )
 
 func init() {
