@@ -3,6 +3,8 @@ tegola
 static/debug
 static/landuse2
 *.log
+*.zip
 configs
 osm_tools
+log.txt
 

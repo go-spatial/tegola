@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"context"
-	"time"
-
 	gdcmd "github.com/gdey/cmd"
 	"github.com/spf13/cobra"
 	"github.com/terranodo/tegola/provider"
@@ -46,11 +43,7 @@ var serverCmd = &cobra.Command{
 
 		//	start our webserver
 		srv := server.Start(serverPort)
-		gdcmd.OnComplete(func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-			defer cancel() // releases resources if slowOperation completes before timeout elapses
-			srv.Shutdown(ctx)
-		})
+		shutdown(srv)
 		<-gdcmd.Cancelled()
 		gdcmd.Complete()
 
