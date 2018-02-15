@@ -50,7 +50,7 @@ func wktEncode(g tegola.Geometry) string {
 
 	s, err := wkt.Encode(gg)
 	if err != nil {
-		return fmt.Sprintf("Encoding error for geom geom, %v", err)
+		return fmt.Sprintf("encoding error for geom geom, %v", err)
 	}
 	return s
 
@@ -134,13 +134,13 @@ func (c Command) Count() int {
 func (c Command) String() string {
 	switch c.ID() {
 	case cmdMoveTo:
-		return fmt.Sprintf("Move Command with count %v", c.Count())
+		return fmt.Sprintf("move Command with count %v", c.Count())
 	case cmdLineTo:
-		return fmt.Sprintf("Line To command with count %v", c.Count())
+		return fmt.Sprintf("line To command with count %v", c.Count())
 	case cmdClosePath:
-		return fmt.Sprintf("Close path command with count %v", c.Count())
+		return fmt.Sprintf("close path command with count %v", c.Count())
 	default:
-		return fmt.Sprintf("Unknown command (%v) with count %v", c.ID(), c.Count())
+		return fmt.Sprintf("unknown command (%v) with count %v", c.ID(), c.Count())
 	}
 }
 
@@ -445,7 +445,7 @@ func (c *cursor) scalePolygon(g tegola.Polygon) (p basic.Polygon) {
 		if len(ln) < 2 {
 			if debug {
 				// skip lines that have been reduced to less then 2 points.
-				log.Debug("Skipping line 2", lines[i], len(ln))
+				log.Debug("skipping line 2", lines[i], len(ln))
 			}
 			continue
 		}
@@ -520,12 +520,12 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	filename := fmt.Sprintf("/tmp/testcase_%v_%p.json", fln, geo)
 	bgeo, err := basic.CloneGeometry(geo)
 	if err != nil {
-		log.Error("Failed to clone geo for test case. %v", err)
+		log.Errorf("failed to clone geo for test case. %v", err)
 		return
 	}
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Error("Failed to create test file %v : %v.\n", filename, err)
+		log.Errorf("failed to create test file %v : %v.\n", filename, err)
 		return
 	}
 	defer f.Close()
@@ -536,7 +536,7 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	}
 	enc := json.NewEncoder(f)
 	enc.Encode(geodebug)
-	log.Info("Created file: %v", filename)
+	log.Infof("created file: %v", filename)
 }
 
 func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
@@ -683,7 +683,7 @@ func keyvalMapsFromFeatures(features []Feature) (keyMap []string, valMap []inter
 					// ignore nil types
 					continue
 				}
-				return keyMap, valMap, fmt.Errorf("Unsupported type for value(%v) with key(%v) in tags for feature %v.", vt, k, f)
+				return keyMap, valMap, fmt.Errorf("unsupported type for value(%v) with key(%v) in tags for feature %v.", vt, k, f)
 
 			case string:
 				for _, mv := range valMap {
@@ -900,8 +900,8 @@ func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []
 		}
 
 		if kidx == -1 {
-			log.Error("Did not find key (%v) in keymap.", key)
-			return tags, fmt.Errorf("Did not find key (%v) in keymap.", key)
+			log.Errorf("did not find key (%v) in keymap.", key)
+			return tags, fmt.Errorf("did not find key (%v) in keymap.", key)
 		}
 
 		// if val is nil we skip it for now
@@ -913,7 +913,7 @@ func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []
 		for i, v := range valueMap {
 			switch tv := val.(type) {
 			default:
-				return tags, fmt.Errorf("Value (%[1]v) of type (%[1]T) for key (%[2]v) is not supported.", tv, key)
+				return tags, fmt.Errorf("value (%[1]v) of type (%[1]T) for key (%[2]v) is not supported.", tv, key)
 			case string:
 				vmt, ok := v.(string) // Make sure the type of the Value map matches the type of the Tag's value
 				if !ok || vmt != tv { // and that the values match
@@ -997,7 +997,7 @@ func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []
 		} // range on value
 
 		if vidx == -1 { // None of the values matched.
-			return tags, fmt.Errorf("Did not find a value: %v in valuemap.", val)
+			return tags, fmt.Errorf("did not find a value: %v in valuemap.", val)
 		}
 		tags = append(tags, uint32(kidx), uint32(vidx))
 	} // Move to the next tag key and value.

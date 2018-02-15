@@ -86,6 +86,7 @@ func TestReplaceTokens(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		tc := tc
 		t.Run(name, func(t *testing.T) {
 			fn(t, tc)
 		})
