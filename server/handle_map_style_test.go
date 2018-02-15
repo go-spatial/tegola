@@ -18,9 +18,10 @@ func TestHandleMapStyle(t *testing.T) {
 	//	config params this test relies on
 	server.HostName = serverHostName
 
-	//	setup a new provider
 	testcases := []struct {
 		handler    http.Handler
+		hostName   string
+		port       string
 		uri        string
 		uriPattern string
 		reqMethod  string

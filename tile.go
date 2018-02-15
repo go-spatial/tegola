@@ -237,6 +237,11 @@ func (t *Tile) PixelBufferedBounds() (bounds [2][2]float64, err error) {
 	return t.bufpext, nil
 }
 
+// Returns web mercator zoom level
+func (t *Tile) ZLevel() int {
+	return t.Z
+}
+
 //ZRes takes a web mercator zoom level and returns the pixel resolution for that
 //	scale, assuming 256x256 pixel tiles. Non-integer zoom levels are accepted.
 //	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql

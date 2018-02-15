@@ -4,3 +4,5 @@ svg_files/*
 configs
 configs/*
 _svg_files/*
+_*
+log.txt

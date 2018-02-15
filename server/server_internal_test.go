@@ -14,11 +14,13 @@ func TestHostName(t *testing.T) {
 		port     string
 		expected string
 	}{
+		// With no host or port set in config, the hostname should match that used in request uri
 		{
 			// With hostname & port unset in config, expect host:port matching URL
 			url:      "http://localhost:8080/capabilities",
 			expected: "localhost:8080",
 		},
+		// With a hostname set in config, that's what the resulting hostname should equal
 		{
 			// With hostname set and port set to "none" in config, expect "cdn.tegola.io"
 			url:      "http://localhost:8080/capabilities",

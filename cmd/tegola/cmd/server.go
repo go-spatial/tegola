@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	gdcmd "github.com/gdey/cmd"
 	"github.com/spf13/cobra"
+	"github.com/terranodo/tegola/provider"
 	"github.com/terranodo/tegola/server"
 )
 
@@ -15,7 +17,9 @@ var serverCmd = &cobra.Command{
 	Short: "Use tegola as a tile server",
 	Long:  `Use tegola as a vector tile server. Maps tiles will be served at /maps/:map_name/:z/:x/:y`,
 	Run: func(cmd *cobra.Command, args []string) {
+		gdcmd.New()
 		initConfig()
+		gdcmd.OnComplete(provider.Cleanup)
 
 		//	check config for server port setting
 		//	if you set the port via the comand line it will override the port setting in the config
@@ -38,6 +42,10 @@ var serverCmd = &cobra.Command{
 		}
 
 		//	start our webserver
-		server.Start(serverPort)
+		srv := server.Start(serverPort)
+		shutdown(srv)
+		<-gdcmd.Cancelled()
+		gdcmd.Complete()
+
 	},
 }

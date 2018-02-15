@@ -41,6 +41,24 @@ func TestLayerGeomType(t *testing.T) {
 			layerName: "land",
 			geom:      geom.MultiPolygon{},
 		},
+		//	zoom token replacement
+		{
+			config: map[string]interface{}{
+				ConfigKeyHost:     os.Getenv("PGHOST"),
+				ConfigKeyPort:     port,
+				ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				ConfigKeyUser:     os.Getenv("PGUSER"),
+				ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+				ConfigKeyLayers: []map[string]interface{}{
+					{
+						ConfigKeyLayerName: "land",
+						ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE gid = !ZOOM! AND geom && !BBOX!",
+					},
+				},
+			},
+			layerName: "land",
+			geom:      geom.MultiPolygon{},
+		},
 	}
 
 	for i, tc := range testcases {
@@ -57,11 +75,9 @@ func TestLayerGeomType(t *testing.T) {
 			continue
 		}
 
-		expectedGeomType := reflect.TypeOf(tc.geom)
-		outputGeomType := reflect.TypeOf(layer.geomType)
-
-		if expectedGeomType != outputGeomType {
-			t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", i, outputGeomType, expectedGeomType)
+		if !reflect.DeepEqual(tc.geom, layer.geomType) {
+			t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", i, layer.geomType, tc.geom)
+			continue
 		}
 	}
 }

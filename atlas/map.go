@@ -2,6 +2,7 @@ package atlas
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/slippy"
 	"github.com/terranodo/tegola/internal/convert"
@@ -18,13 +20,13 @@ import (
 )
 
 //	NewMap creates a new map with the necessary default values
-func NewWGS84Map(name string) Map {
+func NewWebMercatorMap(name string) Map {
 	return Map{
 		Name: name,
 		//	default bounds
 		Bounds:     tegola.WGS84Bounds,
 		Layers:     []Layer{},
-		SRID:       tegola.WGS84,
+		SRID:       tegola.WebMercator,
 		TileExtent: 4096,
 		TileBuffer: 64,
 	}
@@ -151,6 +153,16 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				geo, err := convert.ToTegola(f.Geometry)
 				if err != nil {
 					return err
+				}
+
+				// check if the feature SRID and map SRID are different. If they are then reporject
+				if f.SRID != m.SRID {
+					// TODO(arolek): support for additional projections
+					g, err := basic.ToWebMercator(f.SRID, geo)
+					if err != nil {
+						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %v", f.SRID, f.ID, err)
+					}
+					geo = g.Geometry
 				}
 
 				// add default tags, but don't overwrite a tag that already exists

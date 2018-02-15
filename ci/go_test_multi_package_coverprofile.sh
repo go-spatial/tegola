@@ -96,7 +96,9 @@ push_to_coveralls() {
 # body of script
   # first get go cover tool in case it does not exist locally
 go_install golang.org/x/tools/cmd/cover
-generate_cover_data $(go list ./...)
+# generate coverage data, but skip the vendor directory.
+# skipping the vendor directory is necessary for go versions less than Go 1.9.x
+generate_cover_data $(go list ./... | grep -v vendor)
 generate_cover_report func
 if [ "$genhtml" = true ] ; then
     generate_cover_report html

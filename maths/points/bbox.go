@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/basic"
+	"github.com/terranodo/tegola/internal/log"
 	"github.com/terranodo/tegola/maths"
 )
 
@@ -33,6 +36,14 @@ func (bb BoundingBox) ContainBB(bb1 [4]float64) bool {
 
 }
 
+func (bb BoundingBox) DisjointBB(bbox2 [4]float64) bool {
+	// Returns true if the bounding boxes overlap, false otherwise.
+	// The two bounding boxe values should be in the same projection & in the form:
+	//	[MinX, MinY, MaxX, MaxY]
+	disjoint := (bb[0] > bbox2[2] || bb[1] > bbox2[3] || bb[2] < bbox2[0] || bb[3] < bbox2[1])
+	return disjoint
+}
+
 func (bb BoundingBox) LREdges() [4]maths.Line {
 	return [4]maths.Line{
 		{maths.Pt{bb[0], bb[1]}, maths.Pt{bb[2], bb[1]}}, // MinX,MinY -> MaxX,MinY
@@ -46,6 +57,7 @@ func (bb BoundingBox) Contains(pt maths.Pt) bool {
 	return bb[0] <= pt.X && pt.X <= bb[2] &&
 		bb[1] <= pt.Y && pt.Y <= bb[3]
 }
+
 func (bb BoundingBox) ContainsLine(l maths.Line) bool {
 	return bb.Contains(l[0]) && bb.Contains(l[1])
 }
@@ -79,6 +91,48 @@ func BBoxFloat64(pts ...[2]float64) (bb [2][2]float64, err error) {
 	return bb, nil
 }
 
+func (bb BoundingBox) ConvertSRID(fromID, toID uint64) BoundingBox {
+	var convFunc func(uint64, tegola.Geometry) (basic.G, error)
+	var convSRID uint64
+
+	if fromID == tegola.WebMercator {
+		convFunc = basic.FromWebMercator
+		convSRID = toID
+	} else if toID == tegola.WebMercator {
+		convFunc = basic.ToWebMercator
+		convSRID = fromID
+	} else if fromID == toID {
+		newBb := bb
+		return newBb
+	} else {
+		log.Fatal("Converting from srid %v -> %v is currently unsupported\n", fromID, toID)
+	}
+
+	// Lower left & top right points
+	ll := basic.Point{bb[0], bb[1]}
+	tr := basic.Point{bb[2], bb[3]}
+
+	// Same points converted
+	llC, err1 := convFunc(convSRID, ll)
+	trC, err2 := convFunc(convSRID, tr)
+
+	if err1 != nil || err2 != nil {
+		newBB := bb
+		msg := "Problem converting BoundingBox geometry from %v -> %v: %v"
+		log.Errorf(msg, fromID, toID, bb)
+		if err1 != nil {
+			log.Errorf(msg, fromID, toID, err1)
+		} else {
+			log.Errorf(msg, fromID, toID, err2)
+		}
+		return newBB
+	}
+
+	newBB := BoundingBox{llC.AsPoint().X(), llC.AsPoint().Y(), trC.AsPoint().X(), trC.AsPoint().Y()}
+
+	return newBB
+}
+
 // TODO:gdey — should we return an error?
 func BBox(pts []maths.Pt) (bb [4]float64) {
 	if len(pts) == 0 {
@@ -100,4 +154,23 @@ func BBox(pts []maths.Pt) (bb [4]float64) {
 		}
 	}
 	return bb
+}
+
+func (bb BoundingBox) AsGeoJSON() string {
+	template := `
+{
+  "type": "Polygon",
+  "coordinates": [
+    [
+      [%v, %v],
+      [%v, %v],
+      [%v, %v],
+      [%v, %v],
+      [%v, %v]
+    ]
+  ]
+}
+`
+	geoJson := fmt.Sprintf(template, bb[0], bb[1], bb[2], bb[1], bb[2], bb[3], bb[0], bb[3], bb[0], bb[1])
+	return geoJson
 }

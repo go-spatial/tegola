@@ -2,13 +2,14 @@
 package server
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/atlas"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 const (
@@ -34,11 +35,11 @@ var (
 )
 
 //	Start starts the tile server binding to the provided port
-func Start(port string) {
+func Start(port string) *http.Server {
 	Atlas = atlas.DefaultAtlas
 
 	//	notify the user the server is starting
-	log.Printf("Starting tegola server on port %v", port)
+	log.Infof("Starting tegola server on port %v", port)
 
 	r := httptreemux.New()
 	group := r.NewGroup("/")
@@ -63,7 +64,9 @@ func Start(port string) {
 	group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
 
 	//	start our server
-	log.Fatal(http.ListenAndServe(port, r))
+	srv := &http.Server{Addr: port, Handler: r}
+	go func() { log.Error(srv.ListenAndServe()) }()
+	return srv
 }
 
 //	determines the hostname:port to return based on the following hierarchy
@@ -72,7 +75,9 @@ func Start(port string) {
 func hostName(r *http.Request) string {
 	var requestHostname string
 	var requestPort string
+
 	substrs := strings.Split(r.Host, ":")
+
 	switch len(substrs) {
 	case 1:
 		requestHostname = substrs[0]
@@ -80,7 +85,7 @@ func hostName(r *http.Request) string {
 		requestHostname = substrs[0]
 		requestPort = substrs[1]
 	default:
-		log.Printf("multiple colons (':') in host string: %v", r.Host)
+		log.Warnf("multiple colons (':') in host string: %v", r.Host)
 	}
 
 	retHost := HostName

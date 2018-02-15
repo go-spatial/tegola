@@ -6,6 +6,7 @@ import (
 	goLog "log"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -19,10 +20,12 @@ func (_ Standard) SetOutput(w io.Writer) {
 
 func Output(level string, args ...interface{}) {
 	_, file, line, _ := runtime.Caller(4)
+	pkgs := strings.Split(file, "/")
+
 	logMsg := fmt.Sprint(args...)
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	// "\r" Eliminates the default message prefix so we can format as we like.
-	goLog.Printf("\r%v•%v•%v•%v•%v", timestamp, level, file, line, logMsg)
+	goLog.Printf("\r%v [%v] %v:%v: %v", timestamp, level, pkgs[len(pkgs)-1], line, logMsg)
 }
 
 func (_ Standard) Fatal(args ...interface{}) {

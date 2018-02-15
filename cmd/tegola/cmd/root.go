@@ -16,6 +16,7 @@ import (
 	"github.com/terranodo/tegola/config"
 	"github.com/terranodo/tegola/provider"
 	_ "github.com/terranodo/tegola/provider/debug"
+	_ "github.com/terranodo/tegola/provider/gpkg"
 	_ "github.com/terranodo/tegola/provider/postgis"
 )
 
@@ -65,24 +66,24 @@ func initConfig() {
 		log.Fatal(err)
 	}
 
-	//	validate our config
+	// validate our config
 	if err = conf.Validate(); err != nil {
 		log.Fatal(err)
 	}
 
-	//	init our providers
+	// init our providers
 	providers, err := initProviders(conf.Providers)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//	init our maps
+	// init our maps
 	if err = initMaps(conf.Maps, providers); err != nil {
 		log.Fatal(err)
 	}
 
 	if len(conf.Cache) != 0 {
-		//	init cache backends
+		// init cache backends
 		cache, err := initCache(conf.Cache)
 		if err != nil {
 			log.Fatal(err)
@@ -114,7 +115,7 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 
 	//	iterate our maps
 	for _, m := range maps {
-		newMap := atlas.NewWGS84Map(m.Name)
+		newMap := atlas.NewWebMercatorMap(m.Name)
 		newMap.Attribution = html.EscapeString(m.Attribution)
 		newMap.Center = m.Center
 
