@@ -39,7 +39,7 @@ func Start(port string) *http.Server {
 	Atlas = atlas.DefaultAtlas
 
 	//	notify the user the server is starting
-	log.Infof("Starting tegola server on port %v", port)
+	log.Infof("starting tegola server on port %v", port)
 
 	r := httptreemux.New()
 	group := r.NewGroup("/")
