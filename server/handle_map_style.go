@@ -3,9 +3,8 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 
 	"github.com/terranodo/tegola/atlas"
 	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/internal/log"
 	"github.com/terranodo/tegola/mapbox/style"
 )
 
@@ -49,7 +49,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	lookup our Map
 	m, err := atlas.GetMap(req.mapName)
 	if err != nil {
-		log.Printf("map (%v) not configured. check your config file", req.mapName)
+		log.Errorf("map (%v) not configured. check your config file", req.mapName)
 		http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusNotFound)
 		return
 	}
@@ -122,7 +122,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			hex, err := colors.ParseHEX(hexColor)
 			if err != nil {
-				log.Println("error parsing hex color (%v)", hexColor)
+				log.Errorf("error parsing hex color (%v)", hexColor)
 				hex, _ = colors.ParseHEX("#fff") //	default to white on error
 			}
 
@@ -135,7 +135,8 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				FillOutlineColor: hexColor,
 			}
 		default:
-			log.Printf("layer (providerLayerName: %v) has unsupported geometry type (%v)", l.ProviderLayerName, reflect.TypeOf(l.GeomType))
+			log.Infof("unable to infer geometry type for providerLayerName: %v. style defintion not generated", l.ProviderLayerName)
+			continue
 		}
 
 		//	add our layer to our tile layer response
@@ -151,7 +152,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Expires", "0")
 
 	if err = json.NewEncoder(w).Encode(mapboxStyle); err != nil {
-		log.Printf("error encoding tileJSON for map (%v)", req.mapName)
+		log.Errorf("error encoding tileJSON for map (%v)", req.mapName)
 	}
 }
 
