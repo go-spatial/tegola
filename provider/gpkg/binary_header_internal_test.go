@@ -18,10 +18,10 @@ func fmt8Bit(n byte) string {
 
 func TestHeaderFlag(t *testing.T) {
 
-	tcheader := func(hf headerFlag) string { return hf.String() + " " + fmt8Bit(byte(hf)) }
+	tcheader := func(hf headerFlags) string { return hf.String() + " " + fmt8Bit(byte(hf)) }
 
 	type tcase struct {
-		header     headerFlag
+		header     headerFlags
 		IsEmpty    bool
 		IsStandard bool
 		Envelope   envelopeType
@@ -55,96 +55,112 @@ func TestHeaderFlag(t *testing.T) {
 
 	tests := []tcase{
 		{
-			header:     0x00,
-			IsEmpty:    false,
+			header:     0x00, // 00 0 0 000 0
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeNone,
 			Endian:     binary.BigEndian,
 		},
 		{
-			header:     0x01,
-			IsEmpty:    false,
+			header:     0x01, // 00 0 0 000 1
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeNone,
 			Endian:     binary.LittleEndian,
 		},
 		{
-			header:     0x02,
-			IsEmpty:    false,
+			header:     0x02, // 00 0 0 001 0
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeXY,
 			Endian:     binary.BigEndian,
 		},
 		{
-			header:     0x03,
-			IsEmpty:    false,
+			header:     0x03, // 00 0 0 001 1
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeXY,
 			Endian:     binary.LittleEndian,
 		},
 		{
-			header:     0x04,
-			IsEmpty:    false,
+			header:     0x04, // 00 0 0 010 0
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeXYZ,
 			Endian:     binary.BigEndian,
 		},
+
+		// 0x05 is the same as 0x04 but LittleEndian
+
 		{
-			header:     0x06,
-			IsEmpty:    false,
+			header:     0x06, // 00 0 0 011 0
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeXYM,
 			Endian:     binary.BigEndian,
 		},
+		// 0x07 is the same as 0x06 but Little Endian
 		{
-			header:     0x08,
-			IsEmpty:    false,
+			header:     0x08, // 00 0 0 100 0
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeXYZM,
 			Endian:     binary.BigEndian,
 		},
+		// 0x09 is the same as 0x08 but little Endian
 		{
-			header:     0x0A,
-			IsEmpty:    false,
+			header:     0x0A, // 00 0 0 101 0
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeInvalid,
 			Endian:     binary.BigEndian,
 		},
 		{
-			header:     0x0B,
-			IsEmpty:    false,
+			header:     0x0B, // 00 0 0 101 1
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeInvalid,
 			Endian:     binary.LittleEndian,
 		},
 		{
-			header:     0x0C,
-			IsEmpty:    false,
+			header:     0x0C, // 00 0 0 110 0
 			IsStandard: true,
+			IsEmpty:    false,
+			Envelope:   EnvelopeTypeInvalid,
+			Endian:     binary.BigEndian,
+		},
+		// 0x0D is the same as 0x0C but little Endian
+		{
+			header:     0x0E, // 00 0 0 111 0
+			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeInvalid,
 			Endian:     binary.BigEndian,
 		},
 		{
-			header:     0x0E,
-			IsEmpty:    false,
+			header:     0x0F, // 00 0 0 111 1
 			IsStandard: true,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeInvalid,
-			Endian:     binary.BigEndian,
+			Endian:     binary.LittleEndian,
 		},
 		{
-			header:     0x10,
+			header:     0x10, // 00 0 1 000 0
+			IsStandard: true,
 			IsEmpty:    true,
-			IsStandard: true,
 			Envelope:   EnvelopeTypeNone,
 			Endian:     binary.BigEndian,
 		},
+		// 0x11-0x1F are the various iterations of 0x02-0x0F but with IsEmpty bit set to true
 		{
-			header:     0x20,
-			IsEmpty:    false,
+			header:     0x20, // 00 1 0 000 0
 			IsStandard: false,
+			IsEmpty:    false,
 			Envelope:   EnvelopeTypeNone,
 			Endian:     binary.BigEndian,
 		},
+		// 0x21-0x2F are the various iterations of 0x02-0x0F but with IsExtention bit set to true
+		// No need to test the high bits 0x30-0xFF as the are reserved.
 	}
 	for i := range tests {
 		test := tests[i]
@@ -156,7 +172,7 @@ func TestBinaryHeader(t *testing.T) {
 	type tcase struct {
 		bytes        []byte
 		version      uint8
-		flags        headerFlag // This will not be tested as it's already being tested elsewhere.
+		flags        headerFlags // This will not be tested as it's already being tested elsewhere.
 		srsid        int32
 		envelopetype envelopeType
 		envelope     []float64
@@ -273,7 +289,7 @@ func TestBinaryHeader(t *testing.T) {
 				0x20, 0xC2, 0x2E, 0x86, 0xB8, 0xF8, 0x42, 0x40, // MaxY
 			},
 			version:      0,
-			flags:        headerFlag(0x03),
+			flags:        headerFlags(0x03),
 			srsid:        4326,
 			envelopetype: EnvelopeTypeXY,
 			envelope: []float64{

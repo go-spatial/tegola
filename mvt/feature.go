@@ -525,7 +525,7 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	}
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Errorf("failed to create test file %v : %v.\n", filename, err)
+		log.Errorf("failed to create test file %v : %v.", filename, err)
 		return
 	}
 	defer f.Close()
