@@ -66,45 +66,45 @@ func (et envelopeType) String() string {
 // E Envelope type
 // B ByteOrder
 const (
-	flagByteOrder        = 1 << 0
-	flagEnvelopeType     = 1<<3 | 1<<2 | 1<<1
-	flagEmptyGeometry    = 1 << 4
-	flagGeoPackageBinary = 1 << 5
+	maskByteOrder        = 1 << 0
+	maskEnvelopeType     = 1<<3 | 1<<2 | 1<<1
+	maskEmptyGeometry    = 1 << 4
+	maskGeoPackageBinary = 1 << 5
 )
 
-type headerFlag byte
+type headerFlags byte
 
-func (hf headerFlag) String() string { return fmt.Sprintf("0x%02x", uint8(hf)) }
+func (hf headerFlags) String() string { return fmt.Sprintf("0x%02x", uint8(hf)) }
 
 // Endian will return the encoded Endianess
-func (hf headerFlag) Endian() binary.ByteOrder {
-	if hf&flagByteOrder == 0 {
+func (hf headerFlags) Endian() binary.ByteOrder {
+	if hf&maskByteOrder == 0 {
 		return binary.BigEndian
 	}
 	return binary.LittleEndian
 }
 
 // EnvelopeType returns the type of the envelope.
-func (hf headerFlag) Envelope() envelopeType {
-	et := uint8((hf & flagEnvelopeType) >> 1)
+func (hf headerFlags) Envelope() envelopeType {
+	et := uint8((hf & maskEnvelopeType) >> 1)
 	if et >= uint8(EnvelopeTypeInvalid) {
 		return EnvelopeTypeInvalid
 	}
 	return envelopeType(et)
 }
 
-// IsEmpty returns weather or not the geometry is empty.
-func (hf headerFlag) IsEmpty() bool { return ((hf & flagEmptyGeometry) >> 4) == 1 }
+// IsEmpty returns whether or not the geometry is empty.
+func (hf headerFlags) IsEmpty() bool { return ((hf & maskEmptyGeometry) >> 4) == 1 }
 
-// IsStandard returns weather or not the geometry is not a user-defined geometry type.
-func (hf headerFlag) IsStandard() bool { return ((hf & flagGeoPackageBinary) >> 5) == 0 }
+// IsStandard returns weather or not the geometry is a standard GeoPackage geometry type.
+func (hf headerFlags) IsStandard() bool { return ((hf & maskGeoPackageBinary) >> 5) == 0 }
 
 // BinaryHeader is the gpkg header that accompainies every feature.
 type BinaryHeader struct {
 	// See: http://www.geopackage.org/spec/
 	magic      [2]byte // should be 0x47 0x50  (GP in ASCII)
 	version    uint8
-	flags      headerFlag
+	flags      headerFlags
 	srsid      int32
 	envelope   []float64
 	headerSize int // total bytes in header
@@ -120,7 +120,7 @@ func NewBinaryHeader(data []byte) (*BinaryHeader, error) {
 	bh.magic[0] = data[0]
 	bh.magic[1] = data[1]
 	bh.version = data[2]
-	bh.flags = headerFlag(data[3])
+	bh.flags = headerFlags(data[3])
 	en := bh.flags.Endian()
 	bh.srsid = int32(en.Uint32(data[4 : 4+4]))
 
