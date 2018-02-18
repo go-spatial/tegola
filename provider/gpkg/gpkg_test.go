@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/go-spatial/tegola"
@@ -21,6 +22,102 @@ const (
 
 func init() {
 	//log.SetLogLevel(log.DEBUG)
+}
+
+func TestAutoConfig(t *testing.T) {
+	type tcase struct {
+		gpkgPath     string
+		expectedConf map[string]interface{}
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		conf, err := gpkg.AutoConfig(tc.gpkgPath)
+		if err != nil {
+			t.Errorf("problem getting config for '%v': %v", tc.gpkgPath, err)
+		}
+		if !reflect.DeepEqual(conf, tc.expectedConf) {
+			t.Errorf("expected %v - got %v", tc.expectedConf, conf)
+		}
+	}
+
+	tests := map[string]tcase{
+		"athens": {
+			gpkgPath: GPKGAthensFilePath,
+			expectedConf: map[string]interface{}{
+				"name":     "autoconfd_gpkg",
+				"type":     "gpkg",
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "amenities_points", "tablename": "amenities_points", "id_fieldname": "fid"},
+					{"tablename": "amenities_polygons", "id_fieldname": "fid", "name": "amenities_polygons"},
+					{"id_fieldname": "fid", "name": "aviation_lines", "tablename": "aviation_lines"},
+					{"name": "aviation_points", "tablename": "aviation_points", "id_fieldname": "fid"},
+					{"name": "aviation_polygons", "tablename": "aviation_polygons", "id_fieldname": "fid"},
+					{"name": "boundary", "tablename": "boundary", "id_fieldname": "id"},
+					{"name": "buildings_polygons", "tablename": "buildings_polygons", "id_fieldname": "fid"},
+					{"name": "harbours_points", "tablename": "harbours_points", "id_fieldname": "fid"},
+					{"tablename": "land_polygons", "id_fieldname": "ogc_fid", "name": "land_polygons"},
+					{"name": "landuse_polygons", "tablename": "landuse_polygons", "id_fieldname": "fid"},
+					{"id_fieldname": "fid", "name": "leisure_polygons", "tablename": "leisure_polygons"},
+					{"name": "natural_lines", "tablename": "natural_lines", "id_fieldname": "fid"},
+					{"tablename": "natural_polygons", "id_fieldname": "fid", "name": "natural_polygons"},
+					{"id_fieldname": "fid", "name": "places_points", "tablename": "places_points"},
+					{"name": "places_polygons", "tablename": "places_polygons", "id_fieldname": "fid"},
+					{"tablename": "rail_lines", "id_fieldname": "fid", "name": "rail_lines"},
+					{"name": "roads_lines", "tablename": "roads_lines", "id_fieldname": "fid"},
+					{"id_fieldname": "fid", "name": "towers_antennas_points", "tablename": "towers_antennas_points"},
+					{"name": "waterways_lines", "tablename": "waterways_lines", "id_fieldname": "fid"},
+				},
+			},
+		},
+		"natural earth": {
+			gpkgPath: GPKGNaturalEarthFilePath,
+			expectedConf: map[string]interface{}{
+				"name":     "autoconfd_gpkg",
+				"type":     "gpkg",
+				"filepath": GPKGNaturalEarthFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "ne_110m_land", "tablename": "ne_110m_land", "id_fieldname": "fid"},
+				},
+			},
+		},
+		"puerto monte": {
+			gpkgPath: GPKGPuertoMontFilePath,
+			expectedConf: map[string]interface{}{
+				"name":     "autoconfd_gpkg",
+				"type":     "gpkg",
+				"filepath": GPKGPuertoMontFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "amenities_points", "tablename": "amenities_points", "id_fieldname": "fid"},
+					{"name": "amenities_polygons", "tablename": "amenities_polygons", "id_fieldname": "fid"},
+					{"name": "aviation_lines", "tablename": "aviation_lines", "id_fieldname": "fid"},
+					{"name": "aviation_points", "tablename": "aviation_points", "id_fieldname": "fid"},
+					{"name": "aviation_polygons", "tablename": "aviation_polygons", "id_fieldname": "fid"},
+					{"name": "boundary", "tablename": "boundary", "id_fieldname": "id"},
+					{"name": "buildings_polygons", "tablename": "buildings_polygons", "id_fieldname": "fid"},
+					{"name": "harbours_points", "tablename": "harbours_points", "id_fieldname": "fid"},
+					{"name": "land_polygons", "tablename": "land_polygons", "id_fieldname": "ogc_fid"},
+					{"name": "landuse_polygons", "tablename": "landuse_polygons", "id_fieldname": "fid"},
+					{"name": "leisure_polygons", "tablename": "leisure_polygons", "id_fieldname": "fid"},
+					{"name": "natural_lines", "tablename": "natural_lines", "id_fieldname": "fid"},
+					{"name": "natural_polygons", "tablename": "natural_polygons", "id_fieldname": "fid"},
+					{"name": "places_points", "tablename": "places_points", "id_fieldname": "fid"},
+					{"name": "places_polygons", "tablename": "places_polygons", "id_fieldname": "fid"},
+					{"name": "rail_lines", "tablename": "rail_lines", "id_fieldname": "fid"},
+					{"name": "roads_lines", "tablename": "roads_lines", "id_fieldname": "fid"},
+					{"name": "towers_antennas_points", "tablename": "towers_antennas_points", "id_fieldname": "fid"},
+					{"name": "waterways_lines", "tablename": "waterways_lines", "id_fieldname": "fid"},
+				},
+			},
+		},
+	}
+
+	for tname, tc := range tests {
+		tc := tc
+		t.Run(tname, func(t *testing.T) {
+			fn(t, tc)
+		})
+	}
 }
 
 func TestNewTileProvider(t *testing.T) {

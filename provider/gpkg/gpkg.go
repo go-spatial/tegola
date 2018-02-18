@@ -236,13 +236,6 @@ func (p *Provider) Close() error {
 	return p.db.Close()
 }
 
-type GeomTableDetails struct {
-	geomFieldname string
-	geomType      geom.Geometry
-	srid          uint64
-	bbox          geom.BoundingBox
-}
-
 type GeomColumn struct {
 	name         string
 	geometryType string
