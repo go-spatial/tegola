@@ -89,7 +89,7 @@ func TestSetGetPurge(t *testing.T) {
 				X: 0,
 				Y: 0,
 			},
-			expectedData: []byte{},
+			expectedData: []byte(nil),
 			expectedHit:  false,
 		},
 	}
@@ -116,7 +116,7 @@ func TestSetGetPurge(t *testing.T) {
 			t.Errorf("[%v] read failed with error, expected %v got %v", k, nil, err)
 			continue
 		}
-		if tc.expectedHit == hit {
+		if tc.expectedHit != hit {
 			t.Errorf("[%v] read failed, wrong 'hit' value expected %t got %t", k, tc.expectedHit, hit)
 			continue
 		}
