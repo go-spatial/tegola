@@ -6,6 +6,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/util/dict"
+	"fmt"
 )
 
 const CacheType = "redis"
@@ -35,22 +36,22 @@ func New(config map[string]interface{}) (rcache cache.Interface, err error) {
 
 	network, err := c.String(ConfigKeyNetwork, &defaultNetwork)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	addr, err := c.String(ConfigKeyAddress, &defaultAddress)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	password, err := c.String(ConfigKeyPassword, &defaultPassword)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	db, err := c.Int(ConfigKeyDB, &defaultDB)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	client := redis.NewClient(&redis.Options{
@@ -63,21 +64,22 @@ func New(config map[string]interface{}) (rcache cache.Interface, err error) {
 	})
 
 	pong, err := client.Ping().Result()
-	if err != nil || pong != "PONG" {
-		return
+	if err != nil {
+		return nil, err
+	}
+	if pong != "PONG" {
+		return nil, fmt.Errorf("redis did not resoind with 'PONG', '%s'", pong)
 	}
 
 	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	rcache = &RedisCache{
+	return &RedisCache{
 		Redis:   client,
 		MaxZoom: maxZoom,
-	}
-
-	return
+	}, nil
 }
 
 type RedisCache struct {
@@ -86,9 +88,9 @@ type RedisCache struct {
 	MaxZoom    int
 }
 
-func (rdc *RedisCache) Set(key *cache.Key, val []byte) (err error) {
+func (rdc *RedisCache) Set(key *cache.Key, val []byte) (error) {
 	if key.Z > rdc.MaxZoom {
-		return
+		return nil
 	}
 
 	return rdc.Redis.
@@ -99,16 +101,16 @@ func (rdc *RedisCache) Set(key *cache.Key, val []byte) (err error) {
 func (rdc *RedisCache) Get(key *cache.Key) (val []byte, hit bool, err error) {
 	val, err = rdc.Redis.Get(key.String()).Bytes()
 
-	if err == nil { // cache hit
-		hit = true
-	} else if err == redis.Nil { // cache miss
-		err = nil // clear error
+	switch err {
+	case nil: // cache hit
+		return val, true, nil
+	case redis.Nil: // cache miss
+		return val, false, nil
+	default: // error
+		return val, false, err
 	}
-
-	return
 }
 
 func (rdc *RedisCache) Purge(key *cache.Key) (err error) {
-	err = rdc.Redis.Del(key.String()).Err()
-	return
+	return rdc.Redis.Del(key.String()).Err()
 }

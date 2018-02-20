@@ -18,11 +18,13 @@ func TestNew(t *testing.T) {
 		return
 	}
 
-	testcases := []struct {
+	type tc struct {
 		config map[string]interface{}
 		err    error
-	}{
-		{
+	}
+
+	testcases := map[string]tc{
+		"redis explicit config": {
 			config: map[string]interface{}{
 				"network":  "tcp",
 				"address":  "127.0.0.1:6379",
@@ -32,15 +34,15 @@ func TestNew(t *testing.T) {
 			},
 			err: nil,
 		},
-		{
+		"redis implicit config": {
 			config: map[string]interface{}{},
 			err:    nil,
 		},
-		{
+		"redis bad config":{
 			config: map[string]interface{}{
 				"address": "127.0.0.1:6000",
 			},
-			err: fmt.Errorf("dial tcp 127.0.0.1:6000: getsockopt: connection refused"),
+			err: fmt.Errorf("dial tcp 127.0.0.1:6000: connect: connection refused"),
 		},
 	}
 
@@ -51,7 +53,7 @@ func TestNew(t *testing.T) {
 				//	correct error returned
 				continue
 			}
-			t.Errorf("testcase (%v) failed. err: %v", i, err)
+			t.Errorf("[%v] unexpected err, expected %v got %v", i, tc.err, err)
 			continue
 		}
 	}
@@ -62,13 +64,15 @@ func TestSetGetPurge(t *testing.T) {
 		return
 	}
 
-	testcases := []struct {
+	type tc struct {
 		config       map[string]interface{}
 		key          cache.Key
 		expectedData []byte
 		expectedHit  bool
-	}{
-		{
+	}
+
+	testcases := map[string]tc {
+		"redis cache hit": {
 			config: map[string]interface{}{},
 			key: cache.Key{
 				Z: 0,
@@ -78,22 +82,22 @@ func TestSetGetPurge(t *testing.T) {
 			expectedData: []byte("\x53\x69\x6c\x61\x73"),
 			expectedHit:  true,
 		},
-		{
+		"redis cache miss": {
 			config: map[string]interface{}{},
 			key: cache.Key{
 				Z: 0,
 				X: 0,
 				Y: 0,
 			},
-			expectedData: nil,
-			expectedHit:  true,
+			expectedData: []byte{},
+			expectedHit:  false,
 		},
 	}
 
-	for i, tc := range testcases {
+	for k, tc := range testcases {
 		rc, err := rediscache.New(tc.config)
 		if err != nil {
-			t.Errorf("testcase (%v) failed. err: %v", i, err)
+			t.Errorf("[%v] unexpected err, expected %v got %v", k, nil, err)
 			continue
 		}
 
@@ -101,7 +105,7 @@ func TestSetGetPurge(t *testing.T) {
 		if tc.expectedHit {
 			err = rc.Set(&tc.key, tc.expectedData)
 			if err != nil {
-				t.Errorf("testcase (%v) write failed. err: %v", i, err)
+				t.Errorf("[%v] unexpected err, expected %v got %v", k, nil, err)
 			}
 			continue
 		}
@@ -109,16 +113,16 @@ func TestSetGetPurge(t *testing.T) {
 		// test read
 		output, hit, err := rc.Get(&tc.key)
 		if err != nil {
-			t.Errorf("testcase (%v) read failed. err: %v", i, err)
+			t.Errorf("[%v] read failed with error, expected %v got %v", k, nil, err)
 			continue
 		}
 		if tc.expectedHit == hit {
-			t.Errorf("testcase (%v) read failed. should hit should have been %b but cache reported a %b", i, tc.expectedHit, hit)
+			t.Errorf("[%v] read failed, wrong 'hit' value expected %t got %t", k, tc.expectedHit, hit)
 			continue
 		}
 
 		if !reflect.DeepEqual(output, tc.expectedData) {
-			t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", i, output, tc.expectedData)
+			t.Errorf("[%v] read failed, expected %v got %v", k, output, tc.expectedData)
 			continue
 		}
 
@@ -126,14 +130,7 @@ func TestSetGetPurge(t *testing.T) {
 		if tc.expectedHit {
 			err = rc.Purge(&tc.key)
 			if err != nil {
-				t.Errorf("testcase (%v) failed. purge failed. err: %v", i, err)
-				continue
-			}
-		} else {
-			// test purge non-existent key
-			err = rc.Purge(&tc.key)
-			if err != nil {
-				t.Errorf("testcase (%v) failed. purge failed. err: %v", i, err)
+				t.Errorf("[%v] purge failed with err, expected %v got %v", k, nil, err)
 				continue
 			}
 		}
@@ -141,14 +138,16 @@ func TestSetGetPurge(t *testing.T) {
 }
 
 func TestSetOverwrite(t *testing.T) {
-	testcases := []struct {
+	type tc struct {
 		config   map[string]interface{}
 		key      cache.Key
 		bytes1   []byte
 		bytes2   []byte
 		expected []byte
-	}{
-		{
+	}
+
+	testcases := map[string]tc{
+		"0": {
 			config: map[string]interface{}{},
 			key: cache.Key{
 				Z: 0,
@@ -161,44 +160,44 @@ func TestSetOverwrite(t *testing.T) {
 		},
 	}
 
-	for i, tc := range testcases {
+	for k, tc := range testcases {
 		rc, err := rediscache.New(tc.config)
 		if err != nil {
-			t.Errorf("testcase (%v) failed. err: %v", i, err)
+			t.Errorf("[%v] unexpected err, expected %v got %v", k, nil, err)
 			continue
 		}
 
 		//	test write1
 		if err = rc.Set(&tc.key, tc.bytes1); err != nil {
-			t.Errorf("testcase (%v) write failed. err: %v", i, err)
+			t.Errorf("[%v] write failed with err, expected %v got %v", k, nil, err)
 			continue
 		}
 
 		//	test write2
 		if err = rc.Set(&tc.key, tc.bytes2); err != nil {
-			t.Errorf("testcase (%v) write failed. err: %v", i, err)
+			t.Errorf("[%v] write failed with err, expected %v got %v", k, nil, err)
 			continue
 		}
 
 		//	fetch the cache entry
 		output, hit, err := rc.Get(&tc.key)
 		if err != nil {
-			t.Errorf("testcase (%v) read failed. err: %v", i, err)
+			t.Errorf("[%v] read failed with err, expected %v got %v", k, nil, err)
 			continue
 		}
 		if !hit {
-			t.Errorf("testcase (%v) read failed. should have been a hit but cache reported a miss", i)
+			t.Errorf("[%v] read failed, expected hit %t got %t", k, true, hit)
 			continue
 		}
 
 		if !reflect.DeepEqual(output, tc.expected) {
-			t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", i, output, tc.expected)
+			t.Errorf("[%v] read failed, expected %v got %v)", k, output, tc.expected)
 			continue
 		}
 
 		//	clean up
 		if err = rc.Purge(&tc.key); err != nil {
-			t.Errorf("testcase (%v) failed. purge failed. err: %v", i, err)
+			t.Errorf("[%v] purge failed with err, expected %v got %v", k, nil, err)
 			continue
 		}
 	}
