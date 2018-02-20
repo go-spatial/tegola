@@ -7,9 +7,7 @@ import (
 	"github.com/terranodo/tegola/geom"
 )
 
-type Encoder struct{}
-
-func (e *Encoder) Encode(g geom.Geometry) (result []byte, err error) {
+func Encode(g geom.Geometry) (result []byte, err error) {
 	switch g := g.(type) {
 	case geom.Pointer, geom.MultiPointer, geom.LineStringer, geom.MultiLineStringer, geom.Polygoner,
 		geom.MultiPolygoner:
@@ -19,7 +17,7 @@ func (e *Encoder) Encode(g geom.Geometry) (result []byte, err error) {
 		}
 		result, err = json.Marshal(*f)
 	case geom.Collectioner:
-		result, err = e.EncodeCollection(g)
+		result, err = EncodeCollection(g)
 	default:
 		err = fmt.Errorf("Unrecognized geometry type: %T", g)
 	}
@@ -140,7 +138,7 @@ func asFeature(g geom.Geometry) (*feature, error) {
 	return f, nil
 }
 
-func (e *Encoder) EncodeCollection(c geom.Collectioner) ([]byte, error) {
+func EncodeCollection(c geom.Collectioner) ([]byte, error) {
 	gs := c.Geometries()
 
 	fc := featureCollection{

@@ -105,10 +105,8 @@ func TestGeoJSONEncode(t *testing.T) {
 		},
 	}
 
-	E := geojson.Encoder{}
-
 	for i, tc := range testCases {
-		gjson, err := E.Encode(tc.g)
+		gjson, err := geojson.Encode(tc.g)
 		if err != nil {
 			t.Errorf("[%v] %v", i, err)
 		} else if string(gjson) != string(tc.expected) {
