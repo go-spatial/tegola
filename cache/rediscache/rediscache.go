@@ -68,7 +68,7 @@ func New(config map[string]interface{}) (rcache cache.Interface, err error) {
 		return nil, err
 	}
 	if pong != "PONG" {
-		return nil, fmt.Errorf("redis did not resoind with 'PONG', '%s'", pong)
+		return nil, fmt.Errorf("redis did not respond with 'PONG', '%s'", pong)
 	}
 
 	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
