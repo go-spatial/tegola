@@ -138,13 +138,4 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(pbyte) > MaxTileSize {
 		log.Infof("tile z:%v, x:%v, y:%v is rather large - %v", req.z, req.x, req.y, len(pbyte))
 	}
-	/*
-		//	log the request
-		L.Log(logItem{
-			X:         tile.X,
-			Y:         tile.Y,
-			Z:         tile.Z,
-			RequestIP: r.RemoteAddr,
-		})
-	*/
 }
