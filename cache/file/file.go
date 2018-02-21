@@ -1,4 +1,4 @@
-package filecache
+package file
 
 import (
 	"errors"
@@ -102,7 +102,7 @@ func (fc *Filecache) Set(key *cache.Key, val []byte) error {
 	var err error
 
 	//	check for maxzoom
-	if fc.MaxZoom != nil && key.Z <= int(*fc.MaxZoom) {
+	if fc.MaxZoom != nil && key.Z > int(*fc.MaxZoom) {
 		return nil
 	}
 

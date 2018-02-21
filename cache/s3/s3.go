@@ -1,4 +1,4 @@
-package s3cache
+package s3
 
 import (
 	"bytes"
@@ -194,7 +194,7 @@ func (s3c *S3Cache) Set(key *cache.Key, val []byte) error {
 	var err error
 
 	//	check for maxzoom
-	if s3c.MaxZoom != nil && key.Z <= int(*s3c.MaxZoom) {
+	if s3c.MaxZoom != nil && key.Z > int(*s3c.MaxZoom) {
 		return nil
 	}
 
