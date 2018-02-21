@@ -1,4 +1,4 @@
-package s3cache
+package s3
 
 import (
 	"bytes"
@@ -57,7 +57,7 @@ func init() {
 func New(config map[string]interface{}) (cache.Interface, error) {
 	var err error
 
-	s3cache := S3Cache{}
+	s3cache := Cache{}
 
 	//	parse the config
 	c := dict.M(config)
@@ -172,7 +172,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	return &s3cache, nil
 }
 
-type S3Cache struct {
+type Cache struct {
 	//	Bucket is the name of the s3 bucket to operate on
 	Bucket string
 
@@ -190,11 +190,11 @@ type S3Cache struct {
 	Client *s3.S3
 }
 
-func (s3c *S3Cache) Set(key *cache.Key, val []byte) error {
+func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	var err error
 
 	//	check for maxzoom
-	if s3c.MaxZoom != nil && key.Z <= int(*s3c.MaxZoom) {
+	if s3c.MaxZoom != nil && key.Z > int(*s3c.MaxZoom) {
 		return nil
 	}
 
@@ -215,7 +215,7 @@ func (s3c *S3Cache) Set(key *cache.Key, val []byte) error {
 	return nil
 }
 
-func (s3c *S3Cache) Get(key *cache.Key) ([]byte, bool, error) {
+func (s3c *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	var err error
 
 	//	add our basepath
@@ -248,7 +248,7 @@ func (s3c *S3Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	return buf.Bytes(), true, nil
 }
 
-func (s3c *S3Cache) Purge(key *cache.Key) error {
+func (s3c *Cache) Purge(key *cache.Key) error {
 	var err error
 
 	//	add our basepath

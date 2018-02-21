@@ -2,7 +2,7 @@ package server_test
 
 import (
 	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/cache/memorycache"
+	"github.com/terranodo/tegola/cache/memory"
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/provider/test"
 	"github.com/terranodo/tegola/server"
@@ -69,7 +69,7 @@ func init() {
 		testLayer3,
 	}...)
 
-	atlas.SetCache(memorycache.New())
+	atlas.SetCache(memory.New())
 
 	//	register a map with atlas
 	atlas.AddMap(testMap)

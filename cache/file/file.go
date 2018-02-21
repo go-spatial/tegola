@@ -1,4 +1,4 @@
-package filecache
+package file
 
 import (
 	"errors"
@@ -25,7 +25,7 @@ func init() {
 	cache.Register(CacheType, New)
 }
 
-//	New instantiates a Filecache. The config expects the following params:
+//	New instantiates a Cache. The config expects the following params:
 //
 //		basepath (string): a path to where the cache will be written
 //		max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
@@ -34,7 +34,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	var err error
 
 	//	new filecache
-	fc := Filecache{}
+	fc := Cache{}
 
 	//	parse the config
 	c := dict.M(config)
@@ -67,7 +67,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	return &fc, nil
 }
 
-type Filecache struct {
+type Cache struct {
 	Basepath string
 	//	MaxZoom determins the max zoom the cache to persist. Beyond this
 	//	zoom, cache Set() calls will be ignored. This is useful if the cache
@@ -78,7 +78,7 @@ type Filecache struct {
 // 	Get reads a z,x,y entry from the cache and returns the contents
 //	if there is a hit. the second argument denotes a hit or miss
 //	so the consumer does not need to sniff errors for cache read misses
-func (fc *Filecache) Get(key *cache.Key) ([]byte, bool, error) {
+func (fc *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	path := filepath.Join(fc.Basepath, key.String())
 
 	f, err := os.Open(path)
@@ -98,11 +98,11 @@ func (fc *Filecache) Get(key *cache.Key) ([]byte, bool, error) {
 	return val, true, nil
 }
 
-func (fc *Filecache) Set(key *cache.Key, val []byte) error {
+func (fc *Cache) Set(key *cache.Key, val []byte) error {
 	var err error
 
 	//	check for maxzoom
-	if fc.MaxZoom != nil && key.Z <= int(*fc.MaxZoom) {
+	if fc.MaxZoom != nil && key.Z > int(*fc.MaxZoom) {
 		return nil
 	}
 
@@ -135,7 +135,7 @@ func (fc *Filecache) Set(key *cache.Key, val []byte) error {
 	return os.Rename(tmpPath, destPath)
 }
 
-func (fc *Filecache) Purge(key *cache.Key) error {
+func (fc *Cache) Purge(key *cache.Key) error {
 	path := filepath.Join(fc.Basepath, key.String())
 
 	//	check if we have a file. if no file exists, return
