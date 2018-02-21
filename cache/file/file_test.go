@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/terranodo/tegola/cache"
-	"github.com/terranodo/tegola/cache/filecache"
+	"github.com/terranodo/tegola/cache/file"
 )
 
 func TestNew(t *testing.T) {
@@ -14,14 +14,14 @@ func TestNew(t *testing.T) {
 
 	type tcase struct {
 		config   map[string]interface{}
-		expected *filecache.Filecache
+		expected *file.Cache
 		err      error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
 
-		output, err := filecache.New(tc.config)
+		output, err := file.New(tc.config)
 		if err != nil {
 			if err.Error() == tc.err.Error() {
 				//	correct error returned
@@ -42,7 +42,7 @@ func TestNew(t *testing.T) {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
 			},
-			expected: &filecache.Filecache{
+			expected: &file.Cache{
 				Basepath: "testfiles/tegola-cache",
 			},
 			err: nil,
@@ -52,7 +52,7 @@ func TestNew(t *testing.T) {
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": 9,
 			},
-			expected: &filecache.Filecache{
+			expected: &file.Cache{
 				Basepath: "testfiles/tegola-cache",
 				MaxZoom:  &maxZoom,
 			},
@@ -61,7 +61,7 @@ func TestNew(t *testing.T) {
 		"missing basepath": {
 			config:   map[string]interface{}{},
 			expected: nil,
-			err:      filecache.ErrMissingBasepath,
+			err:      file.ErrMissingBasepath,
 		},
 		"invalid zoom": {
 			config: map[string]interface{}{
@@ -91,7 +91,7 @@ func TestSetGetPurge(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
 
-		fc, err := filecache.New(tc.config)
+		fc, err := file.New(tc.config)
 		if err != nil {
 			t.Errorf("%v", err)
 			return
@@ -159,7 +159,7 @@ func TestSetOverwrite(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
 
-		fc, err := filecache.New(tc.config)
+		fc, err := file.New(tc.config)
 		if err != nil {
 			t.Errorf("%v", err)
 			return
@@ -235,7 +235,7 @@ func TestMaxZoom(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
 
-		fc, err := filecache.New(tc.config)
+		fc, err := file.New(tc.config)
 		if err != nil {
 			t.Errorf("err: %v", err)
 			return
