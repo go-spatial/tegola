@@ -34,6 +34,12 @@ func (xy bySubRingSizeXY) Swap(i, j int) { xy[i], xy[j] = xy[j], xy[i] }
 type byPolygonMainSizeXY [][][][2]float64
 
 func (xy byPolygonMainSizeXY) Less(i, j int) bool {
+	if len(xy[i]) == 0 {
+		return true
+	}
+	if len(xy[j]) == 0 {
+		return false
+	}
 	if len(xy[i][0]) != len(xy[j][0]) {
 		return len(xy[i][0]) < len(xy[j][0])
 	}

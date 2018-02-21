@@ -72,11 +72,29 @@ func LineStringEqual(v1, v2 [][2]float64) bool {
 	return true
 }
 
+// MultiLineEqual will return if the two multilines are equal.
+func MultiLineEqual(ml1, ml2 [][][2]float64) bool {
+	if len(ml1) != len(ml2) {
+		return false
+	}
+LOOP:
+	for i := range ml1 {
+		for j := range ml2 {
+			if LineStringEqual(ml1[i], ml2[j]) {
+				continue LOOP
+			}
+		}
+		return false
+	}
+	return true
+}
+
 // Polygon will return weather the two polygons are the same.
 func PolygonEqual(ply1, ply2 [][][2]float64) bool {
 	if len(ply1) != len(ply2) {
 		return false
 	}
+
 	var points1, points2 [][2]float64
 	for i := range ply1 {
 		points1 = append(points1, ply1[i]...)
@@ -89,6 +107,7 @@ func PolygonEqual(ply1, ply2 [][][2]float64) bool {
 	if !BoundingBox([2][2]float64(bbox1), [2][2]float64(bbox2)) {
 		return false
 	}
+
 	sort.Sort(bySubRingSizeXY(ply1))
 	sort.Sort(bySubRingSizeXY(ply2))
 	for i := range ply1 {
@@ -117,7 +136,7 @@ func LineStringerEqual(geo1, geo2 geom.LineStringer) bool {
 func MultiLineStringerEqual(geo1, geo2 geom.MultiLineStringer) bool {
 	l1, l2 := geo1.LineStrings(), geo2.LineStrings()
 	// Polygon and MultiLine Strings are the same at this level.
-	return PolygonEqual(l1, l2)
+	return MultiLineEqual(l1, l2)
 }
 
 func PolygonerEqual(geo1, geo2 geom.Polygoner) bool {

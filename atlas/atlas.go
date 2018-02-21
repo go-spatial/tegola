@@ -6,8 +6,8 @@ import (
 
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/cache"
-	_ "github.com/terranodo/tegola/cache/filecache"
-	_ "github.com/terranodo/tegola/cache/s3cache"
+	_ "github.com/terranodo/tegola/cache/file"
+	_ "github.com/terranodo/tegola/cache/s3"
 	"github.com/terranodo/tegola/geom/slippy"
 )
 
