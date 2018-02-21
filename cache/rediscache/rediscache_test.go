@@ -8,6 +8,7 @@ import (
 
 	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/cache/rediscache"
+	"strings"
 )
 
 // TestNew will run tests against a local redis instance
@@ -20,7 +21,7 @@ func TestNew(t *testing.T) {
 
 	type tc struct {
 		config map[string]interface{}
-		err    error
+		errMatch    string
 	}
 
 	testcases := map[string]tc{
@@ -32,28 +33,28 @@ func TestNew(t *testing.T) {
 				"db":       0,
 				"max_zoom": 0,
 			},
-			err: nil,
+			errMatch: "",
 		},
 		"redis implicit config": {
 			config: map[string]interface{}{},
-			err:    nil,
+			errMatch:    "",
 		},
 		"redis bad config":{
 			config: map[string]interface{}{
 				"address": "127.0.0.1:6000",
 			},
-			err: fmt.Errorf("dial tcp 127.0.0.1:6000: connect: connection refused"),
+			errMatch: "connection refused",
 		},
 	}
 
 	for i, tc := range testcases {
 		_, err := rediscache.New(tc.config)
 		if err != nil {
-			if tc.err != nil && err.Error() == tc.err.Error() {
+			if tc.errMatch != "" && strings.Contains(err.Error(), tc.errMatch) {
 				//	correct error returned
 				continue
 			}
-			t.Errorf("[%v] unexpected err, expected %v got %v", i, tc.err, err)
+			t.Errorf("[%v] unexpected err, expected to find %v in %v", i, tc.errMatch, err)
 			continue
 		}
 	}
