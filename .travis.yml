@@ -17,6 +17,7 @@ env:
     - PGUSER="postgres"
     - DOCKERHUB_ORG="gospatial"
     - DOCKERHUB_REPO="tegola"
+    - RUN_REDIS_TESTS=yes
     # "COVERALLS_TOKEN" nvp encrypted using travis CLI - contains api key used to post test coverage results to coveralls.io account repo associated w/ github repo
     - secure: UtUTE+1Qhw2xal+Tcrsiag7H8bOjanksc0h/dmYE0NwC/nXIgmJPkA5zvowaP631Orw2iNeYM7mqOJqiNZ1fV30V4fbELogkDcpJEK9oYxl0xYpPMrd+EMrkm+aRZAnh31pvtxHNzf3lTpg2L3TAREEsDTU5tunxRBysgGjf89hmCWQ7GzN1+qSIIgCCZrX5tdAwUMDztrGc8aQJxhDPJZ+rHeEZ5qASTI7VdJxJ8wez+PmDQRPYp1glqXDU8JCDxhmBrD+8n3YZs/O0P7qEX41Dn670+ZLtZBp/EqbGGN8zOCOH3LrxnnmX/zopyvD0L6i8zkWIYDb0O9wwtahNT4ibT700h0v86B/ii9mvVjo3eSpBIiqfmqfaNuLaIQZl5q/UM9NMhdhYswmhjaBmLf2JEAtH+r7iQc9npR4hwxm7Fc04me3jkgBySE2uQfghAMpIgOwsGN9ip6ktJrvO047rnyMd7Zp95Z2MqoOOr21FS+7dqTTzfNWBf4eWa8sQALsQ54G9JC9CmO4poijcZmXPHcPtWHNvmjMbPHm5u0kYeZyi3XmvANC9N/bSmsMvhWT77ck7yQsiXiaLPNRftQj3YclGeCOz0QXc+vC7ECu9HCazri9NvymwHQ6uFFJMgzrIKDBrOA20cCj8sQwIhysIiwS6PFNEU8gQYApuJUY=
 
@@ -35,6 +36,7 @@ matrix:
 
 services:
   - postgresql
+  - redis-server
 
 addons:
   postgresql: "9.4"
