@@ -54,7 +54,7 @@ func ParseKey(str string) (*Key, error) {
 	}
 
 	//	parse our URL vals to ints
-	key.Z, err = strconv.Atoi(zxy[0])
+	key.Z, err = strconv.ParseUint(zxy[0], 10, 64)
 	if err != nil {
 		err = ErrInvalidFileKey{
 			path: str,
@@ -66,7 +66,7 @@ func ParseKey(str string) (*Key, error) {
 		return nil, err
 	}
 
-	key.X, err = strconv.Atoi(zxy[1])
+	key.X, err = strconv.ParseUint(zxy[1], 10, 64)
 	if err != nil {
 		err = ErrInvalidFileKey{
 			path: str,
@@ -80,7 +80,7 @@ func ParseKey(str string) (*Key, error) {
 
 	//	trim the extension if it exists
 	yParts := strings.Split(zxy[2], ".")
-	key.Y, err = strconv.Atoi(yParts[0])
+	key.Y, err = strconv.ParseUint(yParts[0], 10, 64)
 	if err != nil {
 		err = ErrInvalidFileKey{
 			path: str,
@@ -98,13 +98,18 @@ func ParseKey(str string) (*Key, error) {
 type Key struct {
 	MapName   string
 	LayerName string
-	Z         int
-	X         int
-	Y         int
+	Z         uint64
+	X         uint64
+	Y         uint64
 }
 
 func (k Key) String() string {
-	return filepath.Join(k.MapName, k.LayerName, strconv.Itoa(k.Z), strconv.Itoa(k.X), strconv.Itoa(k.Y))
+	return filepath.Join(
+		k.MapName,
+		k.LayerName,
+		strconv.FormatUint(k.Z, 10),
+		strconv.FormatUint(k.X, 10),
+		strconv.FormatUint(k.Y, 10))
 }
 
 // InitFunc initilize a cache given a config map.

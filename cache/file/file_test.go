@@ -5,12 +5,14 @@ import (
 	"reflect"
 	"testing"
 
+
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/file"
+	"github.com/go-spatial/tegola"
 )
 
 func TestNew(t *testing.T) {
-	maxZoom := uint(9)
+	maxZoom := 9
 
 	type tcase struct {
 		config   map[string]interface{}
@@ -23,7 +25,8 @@ func TestNew(t *testing.T) {
 
 		output, err := file.New(tc.config)
 		if err != nil {
-			if err.Error() == tc.err.Error() {
+
+			if tc.err != nil && err.Error() == tc.err.Error() {
 				//	correct error returned
 				return
 			}
@@ -44,6 +47,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &file.Cache{
 				Basepath: "testfiles/tegola-cache",
+				MaxZoom: tegola.MaxZ,
 			},
 			err: nil,
 		},
@@ -54,7 +58,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &file.Cache{
 				Basepath: "testfiles/tegola-cache",
-				MaxZoom:  &maxZoom,
+				MaxZoom:  uint64(maxZoom),
 			},
 			err: nil,
 		},
