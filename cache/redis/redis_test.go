@@ -30,7 +30,7 @@ func TestNew(t *testing.T) {
 				"address":  "127.0.0.1:6379",
 				"password": "",
 				"db":       0,
-				"max_zoom": 0,
+				"max_zoom": 10,
 			},
 			errMatch: "",
 		},
@@ -46,9 +46,15 @@ func TestNew(t *testing.T) {
 		},
 		"redis bad max_zoom":{
 			config: map[string]interface{}{
-				"max_zoom": "-2",
+				"max_zoom": "2",
 			},
 			errMatch: "max_zoom value needs to be of type int. Value is of type string",
+		},
+		"redis bad max_zoom 2":{
+			config: map[string]interface{}{
+				"max_zoom": -2,
+			},
+			errMatch: "max_zoom must be positive, got -2",
 		},
 	}
 
@@ -223,31 +229,31 @@ func TestMaxZoom(t *testing.T) {
 
 		rc, err := redis.New(tc.config)
 		if err != nil {
-			t.Errorf("unexpected err, expected %v got %v", nil, err)
+			t.Fatalf("unexpected err, expected %v got %v", nil, err)
 		}
 
 		//	test write
 		if tc.expectedHit {
 			err = rc.Set(&tc.key, tc.bytes)
 			if err != nil {
-				t.Errorf("unexpected err, expected %v got %v", nil, err)
+				t.Fatalf("unexpected err, expected %v got %v", nil, err)
 			}
 		}
 
 		// test read
 		_, hit, err := rc.Get(&tc.key)
 		if err != nil {
-			t.Errorf("read failed with error, expected %v got %v", nil, err)
+			t.Fatalf("read failed with error, expected %v got %v", nil, err)
 		}
 		if tc.expectedHit != hit {
-			t.Errorf("read failed, wrong 'hit' value expected %t got %t", tc.expectedHit, hit)
+			t.Fatalf("read failed, wrong 'hit' value expected %t got %t", tc.expectedHit, hit)
 		}
 
 		//	test purge
 		if tc.expectedHit {
 			err = rc.Purge(&tc.key)
 			if err != nil {
-				t.Errorf("purge failed with err, expected %v got %v", nil, err)
+				t.Fatalf("purge failed with err, expected %v got %v", nil, err)
 			}
 		}
 	}

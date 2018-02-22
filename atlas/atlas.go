@@ -63,9 +63,9 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint64) error {
 	//	cache key
 	key := cache.Key{
 		MapName: m.Name,
-		Z:       int(z),
-		X:       int(x),
-		Y:       int(y),
+		Z:       uint64(z),
+		X:       uint64(x),
+		Y:       uint64(y),
 	}
 
 	return a.cacher.Set(&key, b)
@@ -80,9 +80,9 @@ func (a *Atlas) PurgeMapTile(m Map, tile *tegola.Tile) error {
 	//	cache key
 	key := cache.Key{
 		MapName: m.Name,
-		Z:       tile.Z,
-		X:       tile.X,
-		Y:       tile.Y,
+		Z:       uint64(tile.Z),
+		X:       uint64(tile.X),
+		Y:       uint64(tile.Y),
 	}
 
 	return a.cacher.Purge(&key)

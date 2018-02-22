@@ -199,9 +199,9 @@ var cacheCmd = &cobra.Command{
 							//	cache key
 							key := cache.Key{
 								MapName: mt.MapName,
-								Z:       mt.Tile.Z,
-								X:       mt.Tile.X,
-								Y:       mt.Tile.Y,
+								Z:       uint64(mt.Tile.Z),
+								X:       uint64(mt.Tile.X),
+								Y:       uint64(mt.Tile.Y),
 							}
 
 							//	read the tile from the cache
