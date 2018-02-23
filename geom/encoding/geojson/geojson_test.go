@@ -6,13 +6,15 @@ import (
 	"testing"
 
 	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/geom/encoding"
 	"github.com/terranodo/tegola/geom/encoding/geojson"
 )
 
 func TestFeatureMarshalJSON(t *testing.T) {
 	type tcase struct {
-		geom     geom.Geometry
-		expected []byte
+		geom        geom.Geometry
+		expected    []byte
+		expectedErr json.MarshalerError
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -23,8 +25,8 @@ func TestFeatureMarshalJSON(t *testing.T) {
 		}
 
 		output, err := json.Marshal(f)
-		if err != nil {
-			t.Error(err)
+		if err != nil && err.Error() != tc.expectedErr.Error() {
+			t.Errorf("expected err %v got %v", tc.expectedErr.Error(), err)
 			return
 		}
 
@@ -105,6 +107,13 @@ func TestFeatureMarshalJSON(t *testing.T) {
 				geom.LineString{{3.2, 4.3}, {5.4, 6.5}, {7.6, 8.7}, {9.8, 10.9}},
 			},
 			expected: []byte(`{"type":"Feature","geometry":{"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[12.2,17.7]},{"type":"MultiPoint","coordinates":[[12.2,17.7],[13.3,18.8]]},{"type":"LineString","coordinates":[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9]]}]},"properties":null}`),
+		},
+		"nil geom": {
+			geom: nil,
+			expectedErr: json.MarshalerError{
+				Type: reflect.TypeOf(geojson.Geometry{}),
+				Err:  encoding.ErrUnknownGeometry{nil},
+			},
 		},
 	}
 

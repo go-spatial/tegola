@@ -2,9 +2,9 @@ package geojson
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/terranodo/tegola/geom"
+	"github.com/terranodo/tegola/geom/encoding"
 )
 
 type GeoJSONType string
@@ -19,22 +19,14 @@ const (
 	GeometryCollectionType GeoJSONType = "GeometryCollection"
 )
 
-type ErrUnknownGeometry struct {
-	Geom geom.Geometry
-}
-
-func (e ErrUnknownGeometry) Error() string {
-	return fmt.Sprintf("unknown geometry: %T", e.Geom)
-}
-
 type Geometry struct {
 	geom.Geometry
 }
 
 func (geo Geometry) MarshalJSON() ([]byte, error) {
 	type coordinates struct {
-		Type  GeoJSONType `json:"type"`
-		Coord interface{} `json:"coordinates,omitempty"`
+		Type   GeoJSONType `json:"type"`
+		Coords interface{} `json:"coordinates,omitempty"`
 	}
 	type collection struct {
 		Type       GeoJSONType `json:"type"`
@@ -44,38 +36,38 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 	switch g := geo.Geometry.(type) {
 	case geom.Pointer:
 		return json.Marshal(coordinates{
-			Type:  PointType,
-			Coord: g.XY(),
+			Type:   PointType,
+			Coords: g.XY(),
 		})
 
 	case geom.MultiPointer:
 		return json.Marshal(coordinates{
-			Type:  MultiPointType,
-			Coord: g.Points(),
+			Type:   MultiPointType,
+			Coords: g.Points(),
 		})
 
 	case geom.LineStringer:
 		return json.Marshal(coordinates{
-			Type:  LineStringType,
-			Coord: g.Verticies(),
+			Type:   LineStringType,
+			Coords: g.Verticies(),
 		})
 
 	case geom.MultiLineStringer:
 		return json.Marshal(coordinates{
-			Type:  MultiLineStringType,
-			Coord: g.LineStrings(),
+			Type:   MultiLineStringType,
+			Coords: g.LineStrings(),
 		})
 
 	case geom.Polygoner:
 		return json.Marshal(coordinates{
-			Type:  PolygonType,
-			Coord: g.LinearRings(),
+			Type:   PolygonType,
+			Coords: g.LinearRings(),
 		})
 
 	case geom.MultiPolygoner:
 		return json.Marshal(coordinates{
-			Type:  MultiPolygonType,
-			Coord: g.Polygons(),
+			Type:   MultiPolygonType,
+			Coords: g.Polygons(),
 		})
 
 	case geom.Collectioner:
@@ -90,11 +82,14 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 			Type:       GeometryCollectionType,
 			Geometries: geos,
 		})
-	}
 
-	return nil, ErrUnknownGeometry{geom.Geometry(geo)}
+	default:
+		return nil, encoding.ErrUnknownGeometry{g}
+	}
 }
 
+// featureType allows the GeoJSON type for Feature to be automatically set during json Marshalling
+// which avoids the user from accidenlty setting the incorrect GeoJSON type.
 type featureType struct{}
 
 func (_ featureType) MarshalJSON() ([]byte, error) {
@@ -110,6 +105,8 @@ type Feature struct {
 	Properties map[string]interface{} `json:"properties"`
 }
 
+// featureCollectionType allows the GeoJSON type for Feature to be automatically set during json Marshalling
+// which avoids the user from accidenlty setting the incorrect GeoJSON type.
 type featureCollectionType struct{}
 
 func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
