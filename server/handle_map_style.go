@@ -135,7 +135,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				FillOutlineColor: hexColor,
 			}
 		default:
-			log.Infof("unable to infer geometry type for providerLayerName: %v. style defintion not generated", l.ProviderLayerName)
+			log.Infof("unable to infer geometry type for providerLayerName: %v. style definition not generated", l.ProviderLayerName)
 			continue
 		}
 
