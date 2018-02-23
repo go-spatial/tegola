@@ -60,14 +60,24 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 
 	case geom.Polygoner:
 		return json.Marshal(coordinates{
-			Type:   PolygonType,
-			Coords: g.LinearRings(),
+			Type: PolygonType,
+			//	make sure our rings are closed
+			Coords: closePolygon(g).LinearRings(),
 		})
 
 	case geom.MultiPolygoner:
+		ps := g.Polygons()
+
+		//	pre allocate our memory for the copy
+		var mp = make(geom.MultiPolygon, 0, len(ps))
+		//	iterate through the polygons making sure they're closed
+		for _, p := range ps {
+			mp = append(mp, closePolygon(geom.Polygon(p)).LinearRings())
+		}
+
 		return json.Marshal(coordinates{
 			Type:   MultiPolygonType,
-			Coords: g.Polygons(),
+			Coords: mp.Polygons(),
 		})
 
 	case geom.Collectioner:
@@ -116,4 +126,24 @@ func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
 type FeatureCollection struct {
 	Type     featureCollectionType `json:"type"`
 	Features []Feature             `json:"features"`
+}
+
+// closePolygon will check if the polygon has the same value for the first and last point. if the value
+// is not the same it will add an extra point to "close" the polygon per the GeoJSON spec.
+func closePolygon(p geom.Polygoner) geom.Polygoner {
+	rings := p.LinearRings()
+	for i := range rings {
+
+		if len(rings[i]) < 3 {
+			return geom.Polygon(rings)
+		}
+
+		//	check if the first point and the last point are the same
+		//	if they're not, make a copy of the first point and add it as the last position
+		if rings[i][0] != rings[i][len(rings[i])-1] {
+			rings[i] = append(rings[i], rings[i][0])
+		}
+	}
+
+	return geom.Polygon(rings)
 }
