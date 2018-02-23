@@ -37,8 +37,6 @@ type Config struct {
 type Webserver struct {
 	HostName          string `toml:"hostname"`
 	Port              string `toml:"port"`
-	LogFile           string `toml:"log_file"`
-	LogFormat         string `toml:"log_format"`
 	CORSAllowedOrigin string `toml:"cors_allowed_origin"`
 }
 
@@ -59,6 +57,9 @@ type MapLayer struct {
 	MinZoom       int         `toml:"min_zoom"`
 	MaxZoom       int         `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
+	//	DontSimplify indicates wheather feature simplification should be applied.
+	//	We use a negative in the name so the default is to simplify
+	DontSimplify bool `toml:"dont_simplify"`
 }
 
 //	checks the config for issues
