@@ -272,7 +272,7 @@ func (p Provider) layerGeomType(l *Layer) error {
 
 	//	we want to know the geom type instead of returning the geom data so we modify the SQL
 	//	TODO: this strategy wont work if remove the requirement of wrapping ST_AsBinary(geom) in the SQL statements.
-	sql = strings.Replace(strings.ToLower(sql), "st_asbinary", "st_geometrytype", 1)
+	sql = strings.Replace(strings.ToLower(sql), "st_asbinary", "st_geometrytype", -1)
 
 	//	we only need a single result set to sniff out the geometry type
 	sql = fmt.Sprintf("%v LIMIT 1", sql)
