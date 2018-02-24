@@ -63,6 +63,7 @@ before_deploy:
   - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
   - docker push $DOCKERHUB_ORG/$DOCKERHUB_REPO:$TRAVIS_TAG
   - docker push $DOCKERHUB_ORG/$DOCKERHUB_REPO:latest
+  - echo $TRAVIS_GO_VERSION
   - bash ci/build_binary.sh
 
 deploy:
@@ -75,7 +76,7 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-    condition: "$TRAVIS_GO_VERSION =~ ^1\\.10\\.[0-9]+$"
+    condition: "$TRAVIS_GO_VERSION =~ ^1\\.10\\..*$"
 
 notifications:
   email:
