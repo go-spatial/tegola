@@ -24,6 +24,7 @@ func init() {
 
 // Metadata for feature tables in gpkg database
 type featureTableDetails struct {
+	colNames      []string
 	idFieldname   string
 	geomFieldname string
 	geomType      geom.Geometry
@@ -60,14 +61,48 @@ func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
 	conf["filepath"] = gpkgPath
 	conf["layers"] = make([]map[string]interface{}, len(tnames))
 	for i, tablename := range tnames {
+		// Use all columns besides the primary key (id) and geometry columns in "fields"
+		propFields := make([]string, 0, len(ftMetaData[tablename].colNames))
+		for _, colName := range ftMetaData[tablename].colNames {
+			if colName != ftMetaData[tablename].idFieldname && colName != ftMetaData[tablename].geomFieldname {
+				propFields = append(propFields, colName)
+			}
+		}
+
 		lconf := make(map[string]interface{})
 		lconf["name"] = tablename
 		lconf["tablename"] = tablename
 		lconf["id_fieldname"] = ftMetaData[tablename].idFieldname
+		lconf["fields"] = propFields
 		conf["layers"].([]map[string]interface{})[i] = lconf
 	}
 
 	return conf, nil
+}
+
+func extractColsFromSQL(sql string) []string {
+	// Get names of all columns
+	// Extract column definitions from sql.
+	colDefsPattern := `CREATE.*?\(\s+(.*)$`
+	colDefsFinder := regexp.MustCompile(colDefsPattern)
+
+	colPattern := `"(.+?)"`
+	colFinder := regexp.MustCompile(colPattern)
+
+	// Get all column names (drop "CREATE TABLE (" portion)
+	colDefs := colDefsFinder.FindStringSubmatch(sql)[1]
+	colMatches := colFinder.FindAllString(colDefs, -1)
+
+	colNames := make([]string, 0, 10)
+	for i := 0; i < len(colMatches); i++ {
+		// The matches will all have quotes around them at this point, remove them
+		dequoted := colFinder.ReplaceAllString(colMatches[i], "$1")
+		colNames = append(colNames, dequoted)
+	}
+	// Sort colNames for consistent output to facilitate testing
+	sort.Strings(colNames)
+
+	return colNames
 }
 
 // Collect meta data about all feature tables in opened gpkg.
@@ -92,7 +127,7 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 	//	container for tracking metadata for each table with a geometry
 	geomTableDetails := make(map[string]featureTableDetails)
 
-	// Find the primary key from the table's creation sql.
+	// Find the primary key column name from the table's creation sql.
 	pkPattern := `"(.+)" .*?PRIMARY KEY`
 	pkFinder := regexp.MustCompile(pkPattern)
 
@@ -110,8 +145,9 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 		}
 
 		// extract the table's primary key from it's creation sql
-		matches := pkFinder.FindStringSubmatch(tableSql.String)
-		pkCol := matches[1]
+		pkMatches := pkFinder.FindStringSubmatch(tableSql.String)
+		// matches[0] is tableSql.String
+		pkCol := pkMatches[1]
 
 		// map the returned geom type to a tegola geom type
 		tg, err := geomNameToGeom(geomType.String)
@@ -120,7 +156,10 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 			return nil, err
 		}
 
+		colNames := extractColsFromSQL(tableSql.String)
+
 		geomTableDetails[tablename.String] = featureTableDetails{
+			colNames:      colNames,
 			idFieldname:   pkCol,
 			geomFieldname: geomCol.String,
 			geomType:      tg,

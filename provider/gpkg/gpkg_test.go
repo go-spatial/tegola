@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"testing"
 
@@ -24,6 +25,54 @@ func init() {
 	//log.SetLogLevel(log.DEBUG)
 }
 
+func confEqual(t *testing.T, conf, expectedConf map[string]interface{}) bool {
+	equal := true
+
+	confKeys := make([]string, 0, len(conf))
+	for k, _ := range conf {
+		confKeys = append(confKeys, k)
+	}
+
+	exKeys := make([]string, 0, len(expectedConf))
+	for k, _ := range expectedConf {
+		exKeys = append(exKeys, k)
+	}
+
+	if len(confKeys) != len(exKeys) {
+		t.Errorf("Configs have different number of parameters: %v != %v", confKeys, exKeys)
+		equal = false
+	}
+
+	for k, v := range conf {
+		if k != "layers" {
+			if v != expectedConf[k] {
+				t.Errorf(`"%v": %v != %v`, k, v, expectedConf[k])
+				equal = false
+			}
+		} else {
+			lconf := v.([]map[string]interface{})
+			econf := expectedConf["layers"].([]map[string]interface{})
+
+			// safeLength is the smaller of these two lengths
+			safeLength := len(lconf)
+			if len(lconf) != len(econf) {
+				t.Errorf("Layer configs have different lengths: %v != %v", len(lconf), len(econf))
+				equal = false
+				safeLength = int(math.Min(float64(len(lconf)), float64(len(econf))))
+			}
+
+			for i := 0; i < safeLength; i++ {
+				if !reflect.DeepEqual(lconf[i], econf[i]) {
+					t.Errorf("layer conf [%v]: %v != %v", i, lconf[i], econf[i])
+					equal = false
+				}
+			}
+		}
+	}
+
+	return equal
+}
+
 func TestAutoConfig(t *testing.T) {
 	type tcase struct {
 		gpkgPath     string
@@ -35,8 +84,9 @@ func TestAutoConfig(t *testing.T) {
 		if err != nil {
 			t.Errorf("problem getting config for '%v': %v", tc.gpkgPath, err)
 		}
-		if !reflect.DeepEqual(conf, tc.expectedConf) {
-			t.Errorf("expected %v - got %v", tc.expectedConf, conf)
+
+		if !confEqual(t, conf, tc.expectedConf) {
+			t.Errorf("config doesn't match expected")
 		}
 	}
 
@@ -48,25 +98,25 @@ func TestAutoConfig(t *testing.T) {
 				"type":     "gpkg",
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
-					{"name": "amenities_points", "tablename": "amenities_points", "id_fieldname": "fid"},
-					{"tablename": "amenities_polygons", "id_fieldname": "fid", "name": "amenities_polygons"},
-					{"id_fieldname": "fid", "name": "aviation_lines", "tablename": "aviation_lines"},
-					{"name": "aviation_points", "tablename": "aviation_points", "id_fieldname": "fid"},
-					{"name": "aviation_polygons", "tablename": "aviation_polygons", "id_fieldname": "fid"},
-					{"name": "boundary", "tablename": "boundary", "id_fieldname": "id"},
-					{"name": "buildings_polygons", "tablename": "buildings_polygons", "id_fieldname": "fid"},
-					{"name": "harbours_points", "tablename": "harbours_points", "id_fieldname": "fid"},
-					{"tablename": "land_polygons", "id_fieldname": "ogc_fid", "name": "land_polygons"},
-					{"name": "landuse_polygons", "tablename": "landuse_polygons", "id_fieldname": "fid"},
-					{"id_fieldname": "fid", "name": "leisure_polygons", "tablename": "leisure_polygons"},
-					{"name": "natural_lines", "tablename": "natural_lines", "id_fieldname": "fid"},
-					{"tablename": "natural_polygons", "id_fieldname": "fid", "name": "natural_polygons"},
-					{"id_fieldname": "fid", "name": "places_points", "tablename": "places_points"},
-					{"name": "places_polygons", "tablename": "places_polygons", "id_fieldname": "fid"},
-					{"tablename": "rail_lines", "id_fieldname": "fid", "name": "rail_lines"},
-					{"name": "roads_lines", "tablename": "roads_lines", "id_fieldname": "fid"},
-					{"id_fieldname": "fid", "name": "towers_antennas_points", "tablename": "towers_antennas_points"},
-					{"name": "waterways_lines", "tablename": "waterways_lines", "id_fieldname": "fid"},
+					{"name": "amenities_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "amenity", "building", "historic", "information", "leisure", "name", "office", "osm_id", "religion", "shop", "tourism"}},
+					{"name": "amenities_polygons", "tablename": "amenities_polygons", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "amenity", "building", "historic", "information", "leisure", "name", "office", "osm_id", "osm_way_id", "religion", "shop", "tourism"}},
+					{"name": "aviation_lines", "tablename": "aviation_lines", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "source", "surface", "type"}},
+					{"name": "aviation_points", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "source", "surface", "type"}, "tablename": "aviation_points"},
+					{"name": "aviation_polygons", "tablename": "aviation_polygons", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "osm_way_id", "source", "surface", "type"}},
+					{"name": "boundary", "tablename": "boundary", "id_fieldname": "id", "fields": []string{}},
+					{"name": "buildings_polygons", "tablename": "buildings_polygons", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "building", "hazard_prone", "name", "osm_id", "osm_way_id"}},
+					{"name": "harbours_points", "tablename": "harbours_points", "id_fieldname": "fid", "fields": []string{"harbour", "landuse", "leisure", "name", "osm_id"}},
+					{"name": "land_polygons", "tablename": "land_polygons", "id_fieldname": "ogc_fid", "fields": []string{"fid"}},
+					{"name": "landuse_polygons", "tablename": "landuse_polygons", "id_fieldname": "fid", "fields": []string{"landuse", "name", "osm_id", "osm_way_id"}},
+					{"name": "leisure_polygons", "fields": []string{"leisure", "name", "osm_id", "osm_way_id"}, "tablename": "leisure_polygons", "id_fieldname": "fid"},
+					{"name": "natural_lines", "tablename": "natural_lines", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "natural", "osm_id"}},
+					{"name": "natural_polygons", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "natural", "osm_id", "osm_way_id"}, "tablename": "natural_polygons"},
+					{"name": "places_points", "fields": []string{"is_in", "name", "osm_id", "place"}, "tablename": "places_points", "id_fieldname": "fid"},
+					{"name": "places_polygons", "tablename": "places_polygons", "id_fieldname": "fid", "fields": []string{"is_in", "name", "osm_id", "osm_way_id", "place"}},
+					{"name": "rail_lines", "tablename": "rail_lines", "id_fieldname": "fid", "fields": []string{"bridge", "cutting", "embankment", "frequency", "layer", "name", "operator", "osm_id", "railway", "service", "source", "tracks", "tunnel", "usage", "voltage", "z_index"}},
+					{"name": "roads_lines", "tablename": "roads_lines", "id_fieldname": "fid", "fields": []string{"barrier", "bicycle_road", "ford", "hazard_prone", "highway", "layer", "name", "osm_id", "traffic_calming", "tunnel", "z_index"}},
+					{"name": "towers_antennas_points", "id_fieldname": "fid", "fields": []string{"man_made", "name", "osm_id"}, "tablename": "towers_antennas_points"},
+					{"name": "waterways_lines", "fields": []string{"hazard_prone", "name", "osm_id", "waterway"}, "tablename": "waterways_lines", "id_fieldname": "fid"},
 				},
 			},
 		},
@@ -77,7 +127,7 @@ func TestAutoConfig(t *testing.T) {
 				"type":     "gpkg",
 				"filepath": GPKGNaturalEarthFilePath,
 				"layers": []map[string]interface{}{
-					{"name": "ne_110m_land", "tablename": "ne_110m_land", "id_fieldname": "fid"},
+					{"name": "ne_110m_land", "tablename": "ne_110m_land", "id_fieldname": "fid", "fields": []string{"featurecla", "min_zoom", "scalerank"}},
 				},
 			},
 		},
@@ -88,25 +138,25 @@ func TestAutoConfig(t *testing.T) {
 				"type":     "gpkg",
 				"filepath": GPKGPuertoMontFilePath,
 				"layers": []map[string]interface{}{
-					{"name": "amenities_points", "tablename": "amenities_points", "id_fieldname": "fid"},
-					{"name": "amenities_polygons", "tablename": "amenities_polygons", "id_fieldname": "fid"},
-					{"name": "aviation_lines", "tablename": "aviation_lines", "id_fieldname": "fid"},
-					{"name": "aviation_points", "tablename": "aviation_points", "id_fieldname": "fid"},
-					{"name": "aviation_polygons", "tablename": "aviation_polygons", "id_fieldname": "fid"},
-					{"name": "boundary", "tablename": "boundary", "id_fieldname": "id"},
-					{"name": "buildings_polygons", "tablename": "buildings_polygons", "id_fieldname": "fid"},
-					{"name": "harbours_points", "tablename": "harbours_points", "id_fieldname": "fid"},
-					{"name": "land_polygons", "tablename": "land_polygons", "id_fieldname": "ogc_fid"},
-					{"name": "landuse_polygons", "tablename": "landuse_polygons", "id_fieldname": "fid"},
-					{"name": "leisure_polygons", "tablename": "leisure_polygons", "id_fieldname": "fid"},
-					{"name": "natural_lines", "tablename": "natural_lines", "id_fieldname": "fid"},
-					{"name": "natural_polygons", "tablename": "natural_polygons", "id_fieldname": "fid"},
-					{"name": "places_points", "tablename": "places_points", "id_fieldname": "fid"},
-					{"name": "places_polygons", "tablename": "places_polygons", "id_fieldname": "fid"},
-					{"name": "rail_lines", "tablename": "rail_lines", "id_fieldname": "fid"},
-					{"name": "roads_lines", "tablename": "roads_lines", "id_fieldname": "fid"},
-					{"name": "towers_antennas_points", "tablename": "towers_antennas_points", "id_fieldname": "fid"},
-					{"name": "waterways_lines", "tablename": "waterways_lines", "id_fieldname": "fid"},
+					{"name": "amenities_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "amenity", "building", "historic", "information", "leisure", "name", "office", "osm_id", "shop", "tourism"}},
+					{"name": "amenities_polygons", "tablename": "amenities_polygons", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "amenity", "building", "historic", "information", "leisure", "name", "office", "osm_id", "osm_way_id", "shop", "tourism"}},
+					{"name": "aviation_lines", "tablename": "aviation_lines", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "source", "surface", "type"}},
+					{"name": "aviation_points", "tablename": "aviation_points", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "source", "surface", "type"}},
+					{"name": "aviation_polygons", "tablename": "aviation_polygons", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "osm_way_id", "source", "surface", "type"}},
+					{"name": "boundary", "fields": []string{}, "tablename": "boundary", "id_fieldname": "id"},
+					{"name": "buildings_polygons", "tablename": "buildings_polygons", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "building", "hazard_prone", "name", "osm_id", "osm_way_id"}},
+					{"name": "harbours_points", "id_fieldname": "fid", "fields": []string{"harbour", "landuse", "leisure", "name", "osm_id"}, "tablename": "harbours_points"},
+					{"name": "land_polygons", "fields": []string{"fid"}, "tablename": "land_polygons", "id_fieldname": "ogc_fid"},
+					{"name": "landuse_polygons", "tablename": "landuse_polygons", "id_fieldname": "fid", "fields": []string{"landuse", "name", "osm_id", "osm_way_id"}},
+					{"name": "leisure_polygons", "tablename": "leisure_polygons", "id_fieldname": "fid", "fields": []string{"leisure", "name", "osm_id", "osm_way_id"}},
+					{"name": "natural_lines", "tablename": "natural_lines", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "natural", "osm_id"}},
+					{"name": "natural_polygons", "tablename": "natural_polygons", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "natural", "osm_id", "osm_way_id"}},
+					{"name": "places_points", "tablename": "places_points", "id_fieldname": "fid", "fields": []string{"is_in", "name", "osm_id", "place"}},
+					{"name": "places_polygons", "id_fieldname": "fid", "fields": []string{"is_in", "name", "osm_id", "osm_way_id", "place"}, "tablename": "places_polygons"},
+					{"name": "rail_lines", "fields": []string{"bridge", "cutting", "embankment", "frequency", "layer", "name", "operator", "osm_id", "railway", "service", "source", "tracks", "tunnel", "usage", "voltage", "z_index"}, "tablename": "rail_lines", "id_fieldname": "fid"},
+					{"name": "roads_lines", "tablename": "roads_lines", "id_fieldname": "fid", "fields": []string{"barrier", "bicycle_road", "ford", "hazard_prone", "highway", "layer", "name", "osm_id", "traffic_calming", "tunnel", "z_index"}},
+					{"name": "towers_antennas_points", "fields": []string{"man_made", "name", "osm_id"}, "tablename": "towers_antennas_points", "id_fieldname": "fid"},
+					{"name": "waterways_lines", "tablename": "waterways_lines", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "osm_id", "waterway"}},
 				},
 			},
 		},
