@@ -23,15 +23,15 @@ env:
 
 matrix:
   include:
-    - go: 1.9.x
+    - go: "1.10.x"
       env: CGO_ENABLED=0
-    - go: 1.8.x
+    - go: "1.9.x"
       env: CGO_ENABLED=0
-    - go: 1.7.x
+    - go: "1.8.x"
       env: CGO_ENABLED=0
-    - go: 1.9.x
-    - go: 1.8.x
-    - go: 1.7.x
+    - go: "1.10.x"
+    - go: "1.9.x"
+    - go: "1.8.x"
 
 
 services:
@@ -63,34 +63,19 @@ before_deploy:
   - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
   - docker push $DOCKERHUB_ORG/$DOCKERHUB_REPO:$TRAVIS_TAG
   - docker push $DOCKERHUB_ORG/$DOCKERHUB_REPO:latest
-  - go get github.com/mitchellh/gox
-  - cd cmd/tegola/    # If you change this directory change back so deploy.file finds what it needs
-  - gox -ldflags "-w -X github.com/terranodo/tegola/cmd/tegola/cmd.Version=$TRAVIS_TAG" -output "{{.Dir}}_{{.OS}}_{{.Arch}}"
+  - bash ci/build_binary.sh
 
 deploy:
   provider: releases
   api_key:
     secure: GrkTzVjddIHB8MXfLloPgifJKrZuFptk9DzrrSSXAOxxBBqYnddg2WKAr2TfrPLQaSNdR84PaPN3FXW009W/CjclxM3mW9h9a/sFVlWtWOWd5u/szFPwn5JQKKt0D/EhScBUF9Jvyo4g28YxSR9rV/RnJne/B6pthJAFSrztHglC7XGkW9mSTH7aG68yIALoGeqHRIKT3DDHJPCm14EEXKq8oacJSX6SZyexBcBJRKj8S+/k3HoYDeKqvCC8oPHt1kPHXiSF/mZdeox0CQ+Q9B3cWPu6rFNbOjiLQriq9ayY/DxdZPVHdQ/nFkTpBQ3lwDLFL4X2jcT1V0jvNxJnExJOXV9lFtjvyExqr7quGHTMd4iJVeYOkWwEl8/cJJAoePIlKaGL5FDxLhlq1RscHOu25sd1DgmbhJMjlexxG/bXyJhV873kyv6JhIq+XniA2TxpaMMrut8MOBH76THbQr9yWpdf6GXs7NdRiK8yzS+L/hvXJO88NXegavCk8gGtWhHSLSJzYg5fVIo9QdghfRe8cLj2HcMehwzLyu3GRiWdm8TtNQ+PIp9qXxB+BIOfXN+Dx1ydVdlt8aghefONw9+0zDtrGZhWyORMHBCypXrTEmiGxlIfsR4QQxVpejd8DXi3i9CQou68ECuC51YqxhH49tfiE8Adh0WPKCklRnY=
+  file_glob: true
   file:
-    - tegola_darwin_386
-    - tegola_linux_386
-    - tegola_netbsd_arm
-    - tegola_darwin_amd64
-    - tegola_linux_amd64
-    - tegola_openbsd_386
-    - tegola_freebsd_386
-    - tegola_linux_arm
-    - tegola_openbsd_amd64
-    - tegola_freebsd_amd64
-    - tegola_netbsd_386
-    - tegola_windows_386.exe
-    - tegola_freebsd_arm
-    - tegola_netbsd_amd64
-    - tegola_windows_amd64.exe
+    - releases/*
   skip_cleanup: true
   on:
     tags: true
-    condition: "$TRAVIS_GO_VERSION =~ ^1\\.9\\.[0-9]+$"
+    condition: "$TRAVIS_GO_VERSION =~ ^1\\.10\\.[0-9]+$"
 
 notifications:
   email:
