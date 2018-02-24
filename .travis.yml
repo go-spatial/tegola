@@ -45,6 +45,7 @@ addons:
     - postgresql-9.4-postgis-2.3
 
 install:
+  - echo $TRAVIS_GO_VERSION
   - bash ci/build_bindata.sh
   - bash ci/config_postgis.sh
 
@@ -63,7 +64,6 @@ before_deploy:
   - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
   - docker push $DOCKERHUB_ORG/$DOCKERHUB_REPO:$TRAVIS_TAG
   - docker push $DOCKERHUB_ORG/$DOCKERHUB_REPO:latest
-  - echo $TRAVIS_GO_VERSION
   - bash ci/build_binary.sh
 
 deploy:
