@@ -85,7 +85,7 @@ func TestHandleMapZXY(t *testing.T) {
 		router.ServeHTTP(w, r)
 
 		if w.Code != test.expectedCode {
-			t.Errorf("failed test %v. handler returned wrong status code: got (%v) expected (%v)", i, w.Code, test.expectedCode)
+			t.Errorf("[%v] status code, expected %v got %v", i, test.expectedCode, w.Code)
 		}
 
 		// Only try to decode as string for errors.
@@ -93,7 +93,7 @@ func TestHandleMapZXY(t *testing.T) {
 			wbody := strings.TrimSpace(w.Body.String())
 
 			if string(test.expected) != wbody {
-				t.Errorf("failed test %v. handler returned wrong body: got (%v) expected (%v)", i, wbody, string(test.expected))
+				t.Errorf("[%v] body, expected %v got %v", i, string(test.expected), wbody)
 			}
 		}
 
@@ -104,12 +104,12 @@ func TestHandleMapZXY(t *testing.T) {
 
 			responseBodyBytes, err = ioutil.ReadAll(w.Body)
 			if err != nil {
-				t.Errorf("[%v] error reading response body", i, err)
+				t.Errorf("[%v] error response body, expected nil got %v", i, err)
 				continue
 			}
 
 			if err = proto.Unmarshal(responseBodyBytes, &tile); err != nil {
-				t.Errorf("[%v] error unmarshalling response body", i, err)
+				t.Errorf("[%v] error unmarshalling body, expected nil got %v", i, err)
 				continue
 			}
 
@@ -120,7 +120,7 @@ func TestHandleMapZXY(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(test.expectedLayers, tileLayers) {
-				t.Errorf("[%v] expected layers (%v) got (%v)", i, test.expectedLayers, tileLayers)
+				t.Errorf("[%v] layers, expected %v got %v", i, test.expectedLayers, tileLayers)
 				continue
 			}
 		}

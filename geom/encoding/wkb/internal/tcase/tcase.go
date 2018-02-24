@@ -14,6 +14,8 @@ import (
 	"github.com/terranodo/tegola/geom/encoding/wkb/internal/tcase/token"
 )
 
+var ErrMissingDesc = fmt.Errorf("missing desc field")
+
 type C struct {
 	Desc     string
 	BOM      binary.ByteOrder
@@ -31,7 +33,7 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 		}
 		label, err := t.ParseLabel()
 		if err != nil {
-			log.Printf("Error trying to get label. %#v", cC)
+			log.Printf("error trying to get label %#v", cC)
 			return nil, err
 		}
 		switch strings.ToLower(string(label)) {
@@ -43,7 +45,7 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			cC.Desc = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
 		case "bytes":
 			if cC == nil {
-				return cases, fmt.Errorf("Missing Desc field.")
+				return cases, ErrMissingDesc
 			}
 			bin, err := t.ParseBinaryField()
 			if err != nil {
@@ -52,7 +54,7 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			cC.Bytes = bin
 		case "bom":
 			if cC == nil {
-				return cases, fmt.Errorf("Missing Desc field.")
+				return cases, ErrMissingDesc
 			}
 			bom := strings.ToLower(strings.TrimSpace(string(t.ParseTillEndIgnoreComments())))
 			switch bom {
@@ -61,13 +63,13 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			case "big":
 				cC.BOM = binary.BigEndian
 			default:
-				return cases, fmt.Errorf("Invalid bom value: %v expect “little” or “big”")
+				return cases, fmt.Errorf("invalid bom(%v), expect “little” or “big”",bom)
 			}
 		case "geometry":
 			fallthrough
 		case "expected":
 			if cC == nil {
-				return cases, fmt.Errorf("Missing Desc field.")
+				return cases, ErrMissingDesc
 			}
 			geom, err := t.ParseExpectedField()
 			if err != nil {
@@ -75,7 +77,7 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			}
 			cC.Expected = geom
 		default:
-			return cases, fmt.Errorf("Unknown label:%v", string(label))
+			return cases, fmt.Errorf("unknown label:%v", string(label))
 		}
 	}
 	cases = append(cases, *cC)

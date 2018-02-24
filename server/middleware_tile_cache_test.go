@@ -41,7 +41,7 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 
 		r, err := http.NewRequest("GET", test.uri, nil)
 		if err != nil {
-			t.Errorf("[%v] error making request", i, err)
+			t.Errorf("[%v] error, expected nil got %v", i, err)
 			continue
 		}
 
@@ -50,14 +50,14 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 
 		//	first response we expect the cache to MISS
 		if w.Header().Get("Tegola-Cache") != "MISS" {
-			t.Errorf("[%v] expected a Tegoal-Cache MISS got %v", i, w.Header().Get("Tegola-Cache"))
+			t.Errorf("[%v] header Tegola-Cache, expected MISS got %v", i, w.Header().Get("Tegola-Cache"))
 			continue
 		}
 
 		//	play the request again to get a HIT
 		r, err = http.NewRequest("GET", test.uri, nil)
 		if err != nil {
-			t.Errorf("[%v] error making request", i, err)
+			t.Errorf("[%v] GET error, expected nil got %v", i, err)
 			continue
 		}
 
@@ -65,7 +65,7 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 		router.ServeHTTP(w, r)
 
 		if w.Header().Get("Tegola-Cache") != "HIT" {
-			t.Errorf("[%v] expected a Tegoal-Cache HIT got %v", i, w.Header().Get("Tegola-Cache"))
+			t.Errorf("[%v] Tegoal-Cache, expected HIT got %v", i, w.Header().Get("Tegola-Cache"))
 			continue
 		}
 	}

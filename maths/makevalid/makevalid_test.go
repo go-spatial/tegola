@@ -49,10 +49,10 @@ func TestPointPairs(t *testing.T) {
 	tests.Run(func(idx int, test testcase) {
 		got, err := maths.PointPairs(test.pts)
 		if test.err != err {
-			t.Error("Expected an error %v but got %v", test.err, err)
+			t.Errorf("[%v] error, expected %v got %v", idx, test.err, err)
 		}
 		if test.err != nil && !reflect.DeepEqual(test.expected, got) {
-			t.Error("Expected\n\t", test.expected, "\ngot\n\t", got)
+			t.Errorf("[%v] point pairs, expected\n\t%v\ngot\n\t%v", idx, test.expected, got)
 		}
 	})
 }

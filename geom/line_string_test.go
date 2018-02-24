@@ -35,13 +35,13 @@ func TestLineStringSetter(t *testing.T) {
 	for i, tc := range testcases {
 		err := tc.setter.SetVerticies(tc.points)
 		if err != nil {
-			t.Errorf("test case (%v) failed. err:", i, err)
+			t.Errorf("[%v] set verticies, expected nil got %v", i, err)
 			continue
 		}
 
 		//	compare the results
 		if !reflect.DeepEqual(tc.expected, tc.setter) {
-			t.Errorf("test case (%v) failed. Expected (%v) does not match result (%v)", i, tc.expected, tc.setter)
+			t.Errorf("[%v] set verticies, expected %v got %v", i, tc.expected, tc.setter)
 		}
 	}
 }

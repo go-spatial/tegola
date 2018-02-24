@@ -36,7 +36,7 @@ func TestScaleLinestring(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		got := cursor.scalelinestr(tc.g)
 		if !reflect.DeepEqual(tc.e, got) {
-			t.Errorf("scale line, expected %t got %t", tc.e, got)
+			t.Errorf("scale line, expected %v got %v", tc.e, got)
 		}
 	}
 	tests := map[string]tcase{

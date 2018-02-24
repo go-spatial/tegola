@@ -41,7 +41,7 @@ func TestCollectionSetter(t *testing.T) {
 	for i, tc := range testcases {
 		err := tc.setter.SetGeometries(tc.geoms)
 		if err != nil {
-			t.Errorf("test case (%v) failed. err:", i, err)
+			t.Errorf("test case (%v) failed. err: %v", i, err)
 			continue
 		}
 

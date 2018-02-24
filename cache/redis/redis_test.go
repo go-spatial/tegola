@@ -1,7 +1,6 @@
 package redis_test
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -11,13 +10,16 @@ import (
 	"strings"
 )
 
+func shouldSkip(t *testing.T){
+	if os.Getenv("RUN_REDIS_TESTS") != "yes" {
+		t.Skip("RUN_REDIS_TESTS not set to 'yes' skipping tests")
+	}
+}
+
 // TestNew will run tests against a local redis instance
 // on 127.0.0.1:6379
 func TestNew(t *testing.T) {
-	if os.Getenv("RUN_REDIS_TESTS") != "yes" {
-		fmt.Println("RUN_REDIS_TESTS not set to 'yes' skipping tests")
-		return
-	}
+	shouldSkip(t)
 
 	type tc struct {
 		config map[string]interface{}
@@ -67,9 +69,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestSetGetPurge(t *testing.T) {
-	if os.Getenv("RUN_REDIS_TESTS") != "yes" {
-		return
-	}
+	shouldSkip(t)
 
 	type tc struct {
 		config       map[string]interface{}
@@ -145,6 +145,7 @@ func TestSetGetPurge(t *testing.T) {
 }
 
 func TestSetOverwrite(t *testing.T) {
+	shouldSkip(t)
 	type tc struct {
 		config   map[string]interface{}
 		key      cache.Key
@@ -212,9 +213,7 @@ func TestSetOverwrite(t *testing.T) {
 
 
 func TestMaxZoom(t *testing.T) {
-	if os.Getenv("RUN_REDIS_TESTS") != "yes" {
-		return
-	}
+	shouldSkip(t)
 
 	type tcase struct {
 		config      map[string]interface{}

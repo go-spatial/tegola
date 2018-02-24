@@ -76,13 +76,13 @@ func drawCommand(cmd *cobra.Command, args []string) {
 
 	z, x, y, err := parseTileString(zxystr)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Invalid zxy (%v): %v", zxystr, err)
+		fmt.Fprintf(os.Stderr, "Invalid zxy (%v): %v\n", zxystr, err)
 		os.Exit(1)
 	}
 
 	config, err := config.LoadAndValidate(configFilename)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Invalid config (%v): %v", configFilename, err)
+		fmt.Fprintf(os.Stderr, "Invalid config (%v): %v\n", configFilename, err)
 		os.Exit(1)
 	}
 	dfn := drawFilename{
@@ -119,7 +119,7 @@ func drawCommand(cmd *cobra.Command, args []string) {
 		if lyr == "" {
 			lysi, err := tiler.Layers()
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "Skipping error getting layers for provider (%v): %v", name, err)
+				fmt.Fprintf(os.Stderr, "Skipping error getting layers for provider (%v): %v\n", name, err)
 			}
 			for _, li := range lysi {
 				layers = append(layers, li.Name())
