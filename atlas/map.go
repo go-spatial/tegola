@@ -141,8 +141,10 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 		// go routine for fetching the layer concurrently
 		go func(i int, l Layer) {
-			var mvtLayer mvt.Layer
-			mvtLayer.Name = l.MVTName()
+			mvtLayer := mvt.Layer{
+				Name:         l.MVTName(),
+				DontSimplify: l.DontSimplify,
+			}
 
 			// on completion let the wait group know
 			defer wg.Done()

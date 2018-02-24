@@ -9,11 +9,51 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	testcases := []struct {
+	type tcase struct {
 		config   string
 		expected config.Config
-	}{
-		{
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
+		r := strings.NewReader(tc.config)
+
+		conf, err := config.Parse(r, "")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		//	compare the various parts fo the config
+		if !reflect.DeepEqual(conf.LocationName, tc.expected.LocationName) {
+			t.Errorf("expected LocationName \n\n %+v \n\n got \n\n %+v ", tc.expected.LocationName, conf.LocationName)
+			return
+		}
+
+		if !reflect.DeepEqual(conf.Webserver, tc.expected.Webserver) {
+			t.Errorf("expected Webserver output \n\n %+v \n\n got \n\n %+v ", tc.expected.Webserver, conf.Webserver)
+			return
+		}
+
+		if !reflect.DeepEqual(conf.Providers, tc.expected.Providers) {
+			t.Errorf("expected Providers output \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected.Providers, conf.Providers)
+			return
+		}
+
+		if !reflect.DeepEqual(conf.Maps, tc.expected.Maps) {
+			t.Errorf("expected Maps output \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected.Maps, conf.Maps)
+			return
+		}
+
+		if !reflect.DeepEqual(conf, tc.expected) {
+			t.Errorf("expected \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected, conf)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		"1": {
 			config: `
 				tile_buffer = 12
 
@@ -21,8 +61,6 @@ func TestParse(t *testing.T) {
 				hostname = "cdn.tegola.io"
 				port = ":8080"
 				cors_allowed_origin = "tegola.io"
-				log_file = "/var/log/tegola/tegola.log"
-				log_format = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
 
 				[cache]
 				type = "file"
@@ -52,7 +90,8 @@ func TestParse(t *testing.T) {
 					[[maps.layers]]
 					provider_layer = "provider1.water"
 					min_zoom = 10
-					max_zoom = 20`,
+					max_zoom = 20
+					dont_simplify = true`,
 			expected: config.Config{
 				TileBuffer:   12,
 				LocationName: "",
@@ -60,8 +99,6 @@ func TestParse(t *testing.T) {
 					HostName:          "cdn.tegola.io",
 					Port:              ":8080",
 					CORSAllowedOrigin: "tegola.io",
-					LogFile:           "/var/log/tegola/tegola.log",
-					LogFormat:         "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
 				},
 				Cache: map[string]interface{}{
 					"type":     "file",
@@ -97,19 +134,18 @@ func TestParse(t *testing.T) {
 								ProviderLayer: "provider1.water",
 								MinZoom:       10,
 								MaxZoom:       20,
+								DontSimplify:  true,
 							},
 						},
 					},
 				},
 			},
 		},
-		{
+		"2": {
 			config: `
 				[webserver]
 				hostname = "cdn.tegola.io"
 				port = ":8080"
-				log_file = "/var/log/tegola/tegola.log"
-				log_format = "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}"
 
 				[[providers]]
 				name = "provider1"
@@ -170,10 +206,8 @@ func TestParse(t *testing.T) {
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName:  "cdn.tegola.io",
-					Port:      ":8080",
-					LogFile:   "/var/log/tegola/tegola.log",
-					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
+					HostName: "cdn.tegola.io",
+					Port:     ":8080",
 				},
 				Providers: []map[string]interface{}{
 					{
@@ -246,55 +280,36 @@ func TestParse(t *testing.T) {
 		},
 	}
 
-	for i, tc := range testcases {
-		r := strings.NewReader(tc.config)
-
-		conf, err := config.Parse(r, "")
-		if err != nil {
-			t.Errorf("test case (%v) failed err: %v", i, err)
-			return
-		}
-
-		//	compare the various parts fo the config
-		if !reflect.DeepEqual(conf.LocationName, tc.expected.LocationName) {
-			t.Errorf("[%v] LocationName output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.LocationName, tc.expected.LocationName)
-			return
-		}
-
-		if !reflect.DeepEqual(conf.Webserver, tc.expected.Webserver) {
-			t.Errorf("[%v] Webserver output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Webserver, tc.expected.Webserver)
-			return
-		}
-
-		if !reflect.DeepEqual(conf.Providers, tc.expected.Providers) {
-			t.Errorf("[%v] Providers output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Providers, tc.expected.Providers)
-			return
-		}
-
-		if !reflect.DeepEqual(conf.Maps, tc.expected.Maps) {
-			t.Errorf("[%v] Maps output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf.Maps, tc.expected.Maps)
-			return
-		}
-
-		if !reflect.DeepEqual(conf, tc.expected) {
-			t.Errorf("[%v] output \n\n (%+v) \n\n does not match expected \n\n (%+v) ", i, conf, tc.expected)
-			return
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
 	}
 }
 
 func TestValidate(t *testing.T) {
-	testcases := []struct {
-		config   config.Config
-		expected error
-	}{
-		{
+	type tcase struct {
+		config      config.Config
+		expectedErr error
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
+		err := tc.config.Validate()
+		if err != tc.expectedErr {
+			t.Errorf("expected err: %v got %v", tc.expectedErr, err)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		"1": {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					Port:      ":8080",
-					LogFile:   "/var/log/tegola/tegola.log",
-					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
+					Port: ":8080",
 				},
 				Providers: []map[string]interface{}{
 					{
@@ -353,12 +368,12 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: config.ErrOverlappingLayerZooms{
+			expectedErr: config.ErrOverlappingLayerZooms{
 				ProviderLayer1: "provider1.water",
 				ProviderLayer2: "provider2.water",
 			},
 		},
-		{
+		"2": {
 			config: config.Config{
 				Providers: []map[string]interface{}{
 					{
@@ -419,18 +434,16 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: config.ErrOverlappingLayerZooms{
+			expectedErr: config.ErrOverlappingLayerZooms{
 				ProviderLayer1: "provider1.water_0_5",
 				ProviderLayer2: "provider2.water_5_10",
 			},
 		},
-		{
+		"3": {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					Port:      ":8080",
-					LogFile:   "/var/log/tegola/tegola.log",
-					LogFormat: "{{.Time}}:{{.RequestIP}} —— Tile:{{.Z}}/{{.X}}/{{.Y}}",
+					Port: ":8080",
 				},
 				Providers: []map[string]interface{}{
 					{
@@ -507,15 +520,14 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: nil,
+			expectedErr: nil,
 		},
 	}
 
-	for i, tc := range testcases {
-		err := tc.config.Validate()
-		if err != tc.expected {
-			t.Errorf("[%v] \n\n expected \n\n (%v) \n\n got \n\n (%v)", i, tc.expected, err)
-			return
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
 	}
 }
