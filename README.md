@@ -150,6 +150,8 @@ max_connections = 50        # The max connections to maintain in the connection 
 name = "zoning"                              # used in the URL to reference this map (/maps/:map_name)
 
 	[[maps.layers]]
+	name = "landuse"                         # name is optional. If it's not defined the name of the ProviderLayer will be used.
+	                                         # It can also be used to group multiple ProviderLayers under the same namespace.
 	provider_layer = "test_postgis.landuse"  # must match a data provider layer
 	min_zoom = 12                            # minimum zoom level to include this layer
 	max_zoom = 16                            # maximum zoom level to include this layer
@@ -158,6 +160,8 @@ name = "zoning"                              # used in the URL to reference this
 		class = "park"
 
 	[[maps.layers]]
+	name = "rivers"                          # name is optional. If it's not defined the name of the ProviderLayer will be used.
+	                                         # It can also be used to group multiple ProviderLayers under the same namespace.
 	provider_layer = "test_postgis.rivers"   # must match a data provider layer
 	min_zoom = 10                            # minimum zoom level to include this layer
 	max_zoom = 18                            # maximum zoom level to include this layer
