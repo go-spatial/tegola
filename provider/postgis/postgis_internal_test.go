@@ -6,18 +6,24 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/terranodo/tegola/internal/ttools"
 	"github.com/terranodo/tegola/geom"
 )
 
-func TestLayerGeomType(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
-		return
-	}
+// TESTENV is the environment variable that must be set to "yes" to run postgis tests.
+const TESTENV = "RUN_POSTGIS_TESTS"
 
+func GetTestPort(t *testing.T) int64{
+	ttools.ShouldSkip(t,TESTENV)
 	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
 	if err != nil {
-		t.Fatalf("err parsing PGPORT: %v", err)
+		t.Skipf("err parsing PGPORT: %v", err)
 	}
+	return port
+}
+
+func TestLayerGeomType(t *testing.T) {
+	port := GetTestPort(t)
 
 	testcases := []struct {
 		config    map[string]interface{}
@@ -64,19 +70,19 @@ func TestLayerGeomType(t *testing.T) {
 	for i, tc := range testcases {
 		provider, err := NewTileProvider(tc.config)
 		if err != nil {
-			t.Errorf("testcase (%v) failed on NewProvider. err: %v", i, err)
+			t.Errorf("[%v] NewProvider error, expected nil got %v", i, err)
 			continue
 		}
 
 		p := provider.(Provider)
 		layer := p.layers[tc.layerName]
 		if err := p.layerGeomType(&layer); err != nil {
-			t.Errorf("testcase (%v) failed on layerGeomType. err: %v", i, err)
+			t.Errorf("[%v] layerGeomType error, expected nil got %v", i, err)
 			continue
 		}
 
 		if !reflect.DeepEqual(tc.geom, layer.geomType) {
-			t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", i, layer.geomType, tc.geom)
+			t.Errorf("[%v] geom type, expected %v got %v", i, tc.geom, layer.geomType)
 			continue
 		}
 	}

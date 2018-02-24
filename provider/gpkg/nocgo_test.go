@@ -13,6 +13,6 @@ import (
 func TestNewProviderStartup(t *testing.T) {
 	_, err := NewTileProvider(nil)
 	if err != provider.ErrUnsupported {
-		t.Fatal("unsupported, expected %v go %v", provider.ErrUnsupported, err)
+		t.Fatalf("unsupported, expected %v got %v", provider.ErrUnsupported, err)
 	}
 }

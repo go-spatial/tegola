@@ -1,25 +1,22 @@
 package redis_test
 
 import (
-	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/terranodo/tegola/cache"
 	"github.com/terranodo/tegola/cache/redis"
-	"strings"
+	"github.com/terranodo/tegola/internal/ttools"
 )
 
-func shouldSkip(t *testing.T){
-	if os.Getenv("RUN_REDIS_TESTS") != "yes" {
-		t.Skip("RUN_REDIS_TESTS not set to 'yes' skipping tests")
-	}
-}
+// TESTENV is the environment variable that must be set to "yes" to run the redis tests.
+const TESTENV = "RUN_REDIS_TESTS"
 
 // TestNew will run tests against a local redis instance
 // on 127.0.0.1:6379
 func TestNew(t *testing.T) {
-	shouldSkip(t)
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tc struct {
 		config map[string]interface{}
@@ -69,7 +66,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestSetGetPurge(t *testing.T) {
-	shouldSkip(t)
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tc struct {
 		config       map[string]interface{}
@@ -145,7 +142,7 @@ func TestSetGetPurge(t *testing.T) {
 }
 
 func TestSetOverwrite(t *testing.T) {
-	shouldSkip(t)
+	ttools.ShouldSkip(t, TESTENV)
 	type tc struct {
 		config   map[string]interface{}
 		key      cache.Key
@@ -213,8 +210,7 @@ func TestSetOverwrite(t *testing.T) {
 
 
 func TestMaxZoom(t *testing.T) {
-	shouldSkip(t)
-
+	ttools.ShouldSkip(t, TESTENV)
 	type tcase struct {
 		config      map[string]interface{}
 		key         cache.Key

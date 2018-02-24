@@ -2,7 +2,6 @@ package postgis_test
 
 import (
 	"os"
-	"strconv"
 	"testing"
 
 	"context"
@@ -13,15 +12,10 @@ import (
 	"github.com/terranodo/tegola/provider/postgis"
 )
 
-func TestNewTileProvider(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
-		return
-	}
 
-	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
-	if err != nil {
-		t.Fatalf("err parsing PGPORT: %v", err)
-	}
+
+func TestNewTileProvider(t *testing.T) {
+	port := postgis.GetTestPort(t)
 
 	testcases := []struct {
 		config map[string]interface{}
@@ -53,14 +47,7 @@ func TestNewTileProvider(t *testing.T) {
 }
 
 func TestTileFeatures(t *testing.T) {
-	if os.Getenv("RUN_POSTGIS_TESTS") != "yes" {
-		return
-	}
-
-	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
-	if err != nil {
-		t.Fatalf("err parsing PGPORT: %v", err)
-	}
+	port := postgis.GetTestPort(t)
 
 	testcases := []struct {
 		config               map[string]interface{}
@@ -127,7 +114,7 @@ func TestTileFeatures(t *testing.T) {
 	for i, tc := range testcases {
 		p, err := postgis.NewTileProvider(tc.config)
 		if err != nil {
-			t.Errorf("[%v] unexpected error; unable to create a new provider, Expected: nil Got %v", i, err)
+			t.Errorf("[%v] unexpected error; unable to create a new provider, expected: nil Got %v", i, err)
 			continue
 		}
 
@@ -142,12 +129,12 @@ func TestTileFeatures(t *testing.T) {
 				return nil
 			})
 			if err != nil {
-				t.Errorf("[%v] unexpected error; failed to create mvt layer, Expected nil Got %v", i, err)
+				t.Errorf("[%v] unexpected error; failed to create mvt layer, expected nil got %v", i, err)
 				continue
 			}
 
 			if featureCount != tc.expectedFeatureCount {
-				t.Errorf("[%v] feature count, Expected %v Got %v", i, tc.expectedFeatureCount, featureCount)
+				t.Errorf("[%v] feature count, expected %v got %v", i, tc.expectedFeatureCount, featureCount)
 			}
 		}
 	}
