@@ -5,6 +5,7 @@ import (
 
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/encoding"
+	"github.com/terranodo/tegola/internal/log"
 )
 
 type GeoJSONType string
@@ -132,18 +133,22 @@ type FeatureCollection struct {
 // is not the same it will add an extra point to "close" the polygon per the GeoJSON spec.
 func closePolygon(p geom.Polygoner) geom.Polygoner {
 	rings := p.LinearRings()
-	for i := range rings {
 
+	rs := make([][][2]float64, 0, len(rings))
+	for i := range rings {
 		if len(rings[i]) < 3 {
-			return geom.Polygon(rings)
+			log.Warn("encounted polygon with less than 3 points. dropping")
+			continue
 		}
 
 		//	check if the first point and the last point are the same
 		//	if they're not, make a copy of the first point and add it as the last position
 		if rings[i][0] != rings[i][len(rings[i])-1] {
-			rings[i] = append(rings[i], rings[i][0])
+			rs = append(rs, append(rings[i], rings[i][0]))
+		} else {
+			rs = append(rs, rings[i])
 		}
 	}
 
-	return geom.Polygon(rings)
+	return geom.Polygon(rs)
 }
