@@ -4,7 +4,18 @@
 ################################################################################
 
 OLDDIR=$(pwd)
-LDFLAGS="-w -X github.com/terranodo/tegola/cmd/tegola/cmd.Version=${TRAVIS_TAG}"
+VERSION_TAG=$TRAVIS_TAG
+if [ -z "$VERSION_TAG" ]; then 
+	VERSION_TAG=$(git rev-parse --short HEAD)
+fi
+
+LDFLAGS="-w -X github.com/terranodo/tegola/cmd/tegola/cmd.Version=${VERSION_TAG}"
+if [[ $CGO_ENABLED == 0 ]]; then
+	LDFLAGS="${LDFLAGS} -s"
+fi
+
+echo $@ 
+echo $(basename $0)
 
 
 if [ -z "$TRAVIS_BUILD_DIR" ]; then
@@ -18,14 +29,16 @@ for GOARCH in AMD64
 do
 	for GOOS in darwin linux windows
 	do
-		unset CGO_ENABLED
 		FILENAME="${TRAVIS_BUILD_DIR}/releases/tegola_${GOOS}_${GOARCH}"
-	
-		go build -ldflags ${LDFLAGS} -o ${FILENAME}
+		if [[ $CGO_ENABLED == 0 ]]; then
+			FILENAME="${FILENAME}_nocgo"
+		fi
+		if [[ $GOOS == windows ]]; then 
+			FILENAME="${FILENAME}.exe"
+		fi
+
+		go build -ldflags "${LDFLAGS}" -o ${FILENAME}
 		chmod +x ${FILENAME}
-		CGO_ENABLED=0
-		go build -ldflags ${LDFLAGS} -o "${FILENAME}_nocgo"
-		chmod +x "${FILENAME}_nocgo"
 	done
 done
 cd $OLDDIR

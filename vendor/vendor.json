@@ -207,6 +207,12 @@
 			"revisionTime": "2017-02-27T21:27:28Z"
 		},
 		{
+			"checksumSHA1": "H5aa/58hIaaMETBYW8rYYBsVOc0=",
+			"path": "github.com/gdey/bastet",
+			"revision": "314ac74cee07ff4ca20650990ab63c7f757da5fe",
+			"revisionTime": "2018-02-26T19:53:48Z"
+		},
+		{
 			"checksumSHA1": "elx/c9FcwbSdPa0bqc8LeFzn2zQ=",
 			"path": "github.com/gdey/cmd",
 			"revision": "8f086d11c1e61030ecf6e3ab796c31f478ccefab",
