@@ -95,7 +95,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 		router.ServeHTTP(w, r)
 
 		if w.Code != test.expectedCode {
-			t.Errorf("[%v] status code, expected %v got %v", i,  test.expectedCode,w.Code)
+			t.Errorf("[%v] status code, expected %v got %v", i, test.expectedCode, w.Code)
 			continue
 		}
 
@@ -104,7 +104,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			wbody := strings.TrimSpace(w.Body.String())
 
 			if string(test.expectedBody) != wbody {
-				t.Errorf("[%v] body,  expected %v got %v", i,  string(test.expectedBody),wbody)
+				t.Errorf("[%v] body,  expected %v got %v", i, string(test.expectedBody), wbody)
 				continue
 			}
 			continue

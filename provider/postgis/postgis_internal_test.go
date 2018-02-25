@@ -13,8 +13,8 @@ import (
 // TESTENV is the environment variable that must be set to "yes" to run postgis tests.
 const TESTENV = "RUN_POSTGIS_TESTS"
 
-func GetTestPort(t *testing.T) int64{
-	ttools.ShouldSkip(t,TESTENV)
+func GetTestPort(t *testing.T) int64 {
+	ttools.ShouldSkip(t, TESTENV)
 	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
 	if err != nil {
 		t.Skipf("err parsing PGPORT: %v", err)
