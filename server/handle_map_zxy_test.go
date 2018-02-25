@@ -61,7 +61,25 @@ func TestHandleMapZXY(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 		},
 		"5": { // Check that nagative x value results in 404.
-			uri:          "/maps/test-map/1/-1/3.pbf",
+			uri:          "/maps/test-map/1/-1/1.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
+		"6": { // Check that over max zoom results in 404.
+			uri:          "/maps/test-map/25/1/1.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
+		"7": { // Check that out of bounds x results in 404.
+			uri:          "/maps/test-map/1/4/0.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
+		"8": { // Check that out of bounds y results in 404.
+			uri:          "/maps/test-map/1/1/4.pbf",
 			uriPattern:   "/maps/:map_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,

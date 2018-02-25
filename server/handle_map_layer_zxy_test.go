@@ -60,6 +60,20 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 			expectedBody: []byte("invalid Z value (-1)"),
 		},
+		{ // issue-334
+			uri:          "/maps/test-map/test-layer/1/4/0.pbf",
+			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+			expectedBody: []byte("invalid X value (4)"),
+		},
+		{ // issue-334
+			uri:          "/maps/test-map/test-layer/1/0/4.pbf",
+			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+			expectedBody: []byte("invalid Y value (4.pbf)"),
+		},
 	}
 
 	for i, test := range testcases {
