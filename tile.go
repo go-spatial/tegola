@@ -19,9 +19,9 @@ var UnknownConversionError = fmt.Errorf("do not know how to convert value to req
 //Tile slippy map tilenames
 //	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
-	Z         int
-	X         int
-	Y         int
+	Z         uint
+	X         uint
+	Y         uint
 	Lat       float64
 	Long      float64
 	Tolerance float64
@@ -39,7 +39,7 @@ type Tile struct {
 }
 
 // NewTile will return a non-nil tile object.
-func NewTile(z, x, y int) (t *Tile) {
+func NewTile(z, x, y uint) (t *Tile) {
 	t = &Tile{
 		Z:         z,
 		X:         x,
@@ -54,7 +54,7 @@ func NewTile(z, x, y int) (t *Tile) {
 }
 
 // NewTileLatLong will return a non-nil tile object.
-func NewTileLatLong(z int, lat, lon float64) (t *Tile) {
+func NewTileLatLong(z uint, lat, lon float64) (t *Tile) {
 	t = &Tile{
 		Z:         z,
 		Lat:       lat,
@@ -63,7 +63,8 @@ func NewTileLatLong(z int, lat, lon float64) (t *Tile) {
 		Extent:    DefaultExtent,
 		Tolerance: DefaultEpislon,
 	}
-	t.X, t.Y = t.Deg2Num()
+	x, y := t.Deg2Num()
+	t.X, t.Y = uint(x), uint(y)
 	t.Init()
 	return t
 }
@@ -238,7 +239,7 @@ func (t *Tile) PixelBufferedBounds() (bounds [2][2]float64, err error) {
 }
 
 // Returns web mercator zoom level
-func (t *Tile) ZLevel() int {
+func (t *Tile) ZLevel() uint {
 	return t.Z
 }
 
