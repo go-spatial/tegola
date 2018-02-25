@@ -68,7 +68,7 @@ func ParseKey(str string) (*Key, error) {
 		return nil, err
 	}
 
-	maxXYatZ := maths.Exp2(key.Z) - 1 // placeholder holds the zoom value
+	maxXYatZ := maths.Exp2(key.Z) - 1
 
 	key.X, err = strconv.ParseUint(zxy[1], 10, 32)
 	if err != nil || key.X > maxXYatZ{
