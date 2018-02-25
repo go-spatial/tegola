@@ -51,7 +51,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
 
-	maxXYatZ := maths.Exp2(req.z) - 1 // placeholder holds the zoom value
+	maxXYatZ := maths.Exp2(req.z) - 1
 
 	x := params["x"]
 	req.x, err = strconv.ParseUint(x, 10, 32)
