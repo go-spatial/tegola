@@ -87,7 +87,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 
 		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
 		if err != nil {
-			t.Errorf("[%v] error making request, %v", i, err)
+			t.Errorf("[%v] new request, expected nil got %v", i, err)
 			continue
 		}
 
