@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"github.com/terranodo/tegola"
+	"github.com/terranodo/tegola/maths"
 )
 
 //	Interface defines a cache back end
@@ -54,8 +56,8 @@ func ParseKey(str string) (*Key, error) {
 	}
 
 	//	parse our URL vals to ints
-	key.Z, err = strconv.ParseUint(zxy[0], 10, 64)
-	if err != nil {
+	key.Z, err = strconv.ParseUint(zxy[0], 10, 32)
+	if err != nil || key.Z > tegola.MaxZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "Z",
@@ -66,8 +68,10 @@ func ParseKey(str string) (*Key, error) {
 		return nil, err
 	}
 
-	key.X, err = strconv.ParseUint(zxy[1], 10, 64)
-	if err != nil {
+	maxXYatZ := maths.Exp2(key.Z) - 1 // placeholder holds the zoom value
+
+	key.X, err = strconv.ParseUint(zxy[1], 10, 32)
+	if err != nil || key.X > maxXYatZ{
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "X",
@@ -81,7 +85,7 @@ func ParseKey(str string) (*Key, error) {
 	//	trim the extension if it exists
 	yParts := strings.Split(zxy[2], ".")
 	key.Y, err = strconv.ParseUint(yParts[0], 10, 64)
-	if err != nil {
+	if err != nil || key.Y > maxXYatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "Y",
