@@ -47,10 +47,6 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 		return nil, err
 	}
 
-	if maxZoom < 0 {
-		return nil, fmt.Errorf("max_zoom must be positive, got %d", maxZoom)
-	}
-
 	fc.MaxZoom = uint64(maxZoom)
 
 	fc.Basepath, err = c.String(ConfigKeyBasepath, nil)
