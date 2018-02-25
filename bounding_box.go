@@ -6,6 +6,6 @@ type BoundingBox struct {
 	// Epsilon is the tolerance for the simplification function.
 	Epsilon float64
 	// X,Y,Z are just for debug and display purposes.
-	X, Y, Z int
+	X, Y, Z uint
 	HasXYZ  bool
 }

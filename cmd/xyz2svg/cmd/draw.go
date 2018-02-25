@@ -37,7 +37,7 @@ func init() {
 }
 
 type drawFilename struct {
-	z, x, y int
+	z, x, y uint
 	basedir string
 	format  string
 	ext     string

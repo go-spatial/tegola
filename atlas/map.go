@@ -216,7 +216,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	z, x, y := tile.ZXY()
 
 	// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-	tegolaTile := tegola.NewTile(int(z), int(x), int(y))
+	tegolaTile := tegola.NewTile(uint(z), uint(x), uint(y))
 
 	// generate our tile
 	vtile, err := mvtTile.VTile(ctx, tegolaTile)
