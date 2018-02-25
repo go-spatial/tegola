@@ -9,8 +9,8 @@ type Layer struct {
 	//	optional. if not set, the ProviderLayerName will be used
 	Name              string
 	ProviderLayerName string
-	MinZoom           int
-	MaxZoom           int
+	MinZoom           uint64
+	MaxZoom           uint64
 	//	instantiated provider
 	Provider provider.Tiler
 	//	default tags to include when encoding the layer. provider tags take precedence
