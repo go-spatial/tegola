@@ -14,23 +14,25 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/maths"
 )
 
 type HandleMapZXY struct {
 	//	required
 	mapName string
 	//	zoom
-	z int
+	z uint64
 	//	row
-	x int
+	x uint64
 	//	column
-	y int
+	y uint64
 	//	the requests extension (i.e. pbf or json)
 	//	defaults to "pbf"
 	extension string
 	//	debug
 	debug bool
 }
+
 
 //	parseURI reads the request URI and extracts the various values for the request
 func (req *HandleMapZXY) parseURI(r *http.Request) error {
@@ -43,15 +45,17 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 
 	//	parse our URL vals to ints
 	z := params["z"]
-	req.z, err = strconv.Atoi(z)
-	if err != nil || req.z < 0 {
+	req.z, err = strconv.ParseUint(z, 10, 32)
+	if err != nil || req.z > tegola.MaxZ {
 		log.Warnf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
 
+	maxXYatZ := maths.Exp2(req.z) - 1 // placeholder holds the zoom value
+
 	x := params["x"]
-	req.x, err = strconv.Atoi(x)
-	if err != nil || req.x < 0 {
+	req.x, err = strconv.ParseUint(x, 10, 32)
+	if err != nil || req.x > maxXYatZ{
 		log.Warnf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
@@ -59,8 +63,8 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	//	trim the "y" param in the url in case it has an extension
 	y := params["y"]
 	yParts := strings.Split(y, ".")
-	req.y, err = strconv.Atoi(yParts[0])
-	if err != nil || req.y < 0 {
+	req.y, err = strconv.ParseUint(yParts[0], 10, 32)
+	if err != nil || req.y > maxXYatZ {
 		log.Warnf("invalid Y value (%v)", y)
 		return fmt.Errorf("invalid Y value (%v)", y)
 	}
