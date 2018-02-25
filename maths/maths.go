@@ -320,7 +320,7 @@ func YXorder(pt1, pt2 Pt) int {
 }
 
 // Powers of 2
-func Exp2(p uint64) (uint64) {
+func Exp2(p uint64) uint64 {
 	// this mimics behavior from casting
 	// a math.Exp2 which should overflow
 	if p > 63 {
