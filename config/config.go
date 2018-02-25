@@ -54,8 +54,8 @@ type MapLayer struct {
 	//	Name can also be used to group multiple ProviderLayers under the same namespace.
 	Name          string      `toml:"name"`
 	ProviderLayer string      `toml:"provider_layer"`
-	MinZoom       uint64         `toml:"min_zoom"`
-	MaxZoom       uint64         `toml:"max_zoom"`
+	MinZoom       uint64      `toml:"min_zoom"`
+	MaxZoom       uint64      `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
 	//	DontSimplify indicates wheather feature simplification should be applied.
 	//	We use a negative in the name so the default is to simplify

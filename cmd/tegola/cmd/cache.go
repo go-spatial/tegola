@@ -314,7 +314,7 @@ func parseTileString(str string) (*tegola.Tile, error) {
 		return tile, fmt.Errorf("invalid Z value (%v)", z)
 	}
 
-	maxXYatZ := maths.Exp2(z) -1
+	maxXYatZ := maths.Exp2(z) - 1
 
 	x, err := strconv.ParseUint(parts[1], 10, 64)
 	if err != nil || x > maxXYatZ {

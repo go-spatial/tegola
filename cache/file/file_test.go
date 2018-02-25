@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/file"
 	"github.com/go-spatial/tegola"
@@ -47,7 +46,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &file.Cache{
 				Basepath: "testfiles/tegola-cache",
-				MaxZoom: tegola.MaxZ,
+				MaxZoom:  tegola.MaxZ,
 			},
 			err: nil,
 		},

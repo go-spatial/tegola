@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
 	"github.com/terranodo/tegola"
 	"github.com/terranodo/tegola/maths"
 )
@@ -71,7 +72,7 @@ func ParseKey(str string) (*Key, error) {
 	maxXYatZ := maths.Exp2(key.Z) - 1
 
 	key.X, err = strconv.ParseUint(zxy[1], 10, 32)
-	if err != nil || key.X > maxXYatZ{
+	if err != nil || key.X > maxXYatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "X",

@@ -19,8 +19,8 @@ func TestNew(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
 	type tc struct {
-		config map[string]interface{}
-		errMatch    string
+		config   map[string]interface{}
+		errMatch string
 	}
 
 	testcases := map[string]tc{
@@ -35,22 +35,22 @@ func TestNew(t *testing.T) {
 			errMatch: "",
 		},
 		"redis implicit config": {
-			config: map[string]interface{}{},
-			errMatch:    "",
+			config:   map[string]interface{}{},
+			errMatch: "",
 		},
-		"redis bad address":{
+		"redis bad address": {
 			config: map[string]interface{}{
 				"address": "127.0.0.1:6000",
 			},
 			errMatch: "connection refused",
 		},
-		"redis bad max_zoom":{
+		"redis bad max_zoom": {
 			config: map[string]interface{}{
 				"max_zoom": "2",
 			},
 			errMatch: "max_zoom value needs to be of type int. Value is of type string",
 		},
-		"redis bad max_zoom 2":{
+		"redis bad max_zoom 2": {
 			config: map[string]interface{}{
 				"max_zoom": -2,
 			},
@@ -81,7 +81,7 @@ func TestSetGetPurge(t *testing.T) {
 		expectedHit  bool
 	}
 
-	testcases := map[string]tc {
+	testcases := map[string]tc{
 		"redis cache hit": {
 			config: map[string]interface{}{},
 			key: cache.Key{
@@ -214,7 +214,6 @@ func TestSetOverwrite(t *testing.T) {
 	}
 }
 
-
 func TestMaxZoom(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 	type tcase struct {
@@ -304,4 +303,3 @@ func TestMaxZoom(t *testing.T) {
 		})
 	}
 }
-
