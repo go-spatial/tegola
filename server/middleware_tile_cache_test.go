@@ -41,7 +41,7 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 
 		r, err := http.NewRequest("GET", test.uri, nil)
 		if err != nil {
-			t.Errorf("[%v] error, expected nil got %v", i, err)
+			t.Errorf("[%v] error making request, %v", i, err)
 			continue
 		}
 
@@ -57,7 +57,7 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 		//	play the request again to get a HIT
 		r, err = http.NewRequest("GET", test.uri, nil)
 		if err != nil {
-			t.Errorf("[%v] GET error, expected nil got %v", i, err)
+			t.Errorf("[%v] error making request, %v", i, err)
 			continue
 		}
 
