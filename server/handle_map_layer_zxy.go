@@ -55,7 +55,7 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 
 	x := params["x"]
 	req.x, err = strconv.ParseUint(x, 10, 32)
-	if err != nil || req.x > maxXYatZ{
+	if err != nil || req.x > maxXYatZ {
 		log.Warnf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}

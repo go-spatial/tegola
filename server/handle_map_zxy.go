@@ -33,7 +33,6 @@ type HandleMapZXY struct {
 	debug bool
 }
 
-
 //	parseURI reads the request URI and extracts the various values for the request
 func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	var err error
@@ -55,7 +54,7 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 
 	x := params["x"]
 	req.x, err = strconv.ParseUint(x, 10, 32)
-	if err != nil || req.x > maxXYatZ{
+	if err != nil || req.x > maxXYatZ {
 		log.Warnf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}

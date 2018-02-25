@@ -40,7 +40,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			expectedLayers: []string{"test-layer", "debug-tile-outline", "debug-tile-center"},
 		},
 		{ // Negative row (y) not allowed (issue-229)
-			uri:          "/maps/test-map/test-layer/1/2/-1.pbf",
+			uri:          "/maps/test-map/test-layer/1/1/-1.pbf",
 			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
@@ -73,7 +73,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 
 		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
 		if err != nil {
-			t.Errorf("[%v] new request, expected nil got %v", i, err)
+			t.Errorf("[%v] error making request, %v", i, err)
 			continue
 		}
 
@@ -103,12 +103,12 @@ func TestHandleMapLayerZXY(t *testing.T) {
 
 			responseBodyBytes, err = ioutil.ReadAll(w.Body)
 			if err != nil {
-				t.Errorf("[%v] body error, expected nil got %v", i, err)
+				t.Errorf("[%v] error reading response body, %v", i, err)
 				continue
 			}
 
 			if err = proto.Unmarshal(responseBodyBytes, &tile); err != nil {
-				t.Errorf("[%v] error unmarshalling response body, expected nil got %v", i, err)
+				t.Errorf("[%v] error unmarshalling response body, %v", i, err)
 				continue
 			}
 

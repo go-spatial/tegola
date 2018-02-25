@@ -26,8 +26,8 @@ type CapabilitiesMap struct {
 type CapabilitiesLayer struct {
 	Name    string   `json:"name"`
 	Tiles   []string `json:"tiles"`
-	MinZoom uint64      `json:"minzoom"`
-	MaxZoom uint64      `json:"maxzoom"`
+	MinZoom uint64   `json:"minzoom"`
+	MaxZoom uint64   `json:"maxzoom"`
 }
 
 type HandleCapabilities struct{}
