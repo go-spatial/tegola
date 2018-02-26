@@ -60,7 +60,7 @@ func TestFeatureMarshalJSON(t *testing.T) {
 		"polygon": {
 			geom: geom.Polygon{
 				{
-					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5}, geom.Point{7.6, 8.7}, geom.Point{9.8, 10.9}, geom.Point{3.2, 4.3},
+					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5}, geom.Point{7.6, 8.7}, geom.Point{9.8, 10.9},
 				},
 			},
 			expected: []byte(`{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9],[3.2,4.3]]]},"properties":null}`),
@@ -80,21 +80,18 @@ func TestFeatureMarshalJSON(t *testing.T) {
 					},
 					// Hole 1
 					{
-						geom.Point{15.5, 15.5}, geom.Point{11.1, 14.4}, geom.Point{11.1, 11.1},
-						geom.Point{15.5, 11.1}, geom.Point{15.5, 15.5},
+						geom.Point{15.5, 15.5}, geom.Point{11.1, 14.4}, geom.Point{11.1, 11.1}, geom.Point{15.5, 11.1},
 					},
 					// Hole 2
 					{
-						geom.Point{25.5, 25.5}, geom.Point{21.1, 24.4}, geom.Point{21.1, 21.1},
-						geom.Point{25.5, 21.1}, geom.Point{25.5, 25.5},
+						geom.Point{25.5, 25.5}, geom.Point{21.1, 24.4}, geom.Point{21.1, 21.1}, geom.Point{25.5, 21.1},
 					},
 				},
 				// Polygon 2, simple
 				geom.Polygon{
 					// Hole 2
 					{
-						geom.Point{75.5, 75.5}, geom.Point{71.1, 74.4}, geom.Point{71.1, 71.1},
-						geom.Point{75.5, 71.1}, geom.Point{75.5, 75.5},
+						geom.Point{75.5, 75.5}, geom.Point{71.1, 74.4}, geom.Point{71.1, 71.1}, geom.Point{75.5, 71.1},
 					},
 				},
 			},
