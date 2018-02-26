@@ -5,7 +5,6 @@ import (
 
 	"github.com/terranodo/tegola/geom"
 	"github.com/terranodo/tegola/geom/encoding"
-	"github.com/terranodo/tegola/internal/log"
 )
 
 type GeoJSONType string
@@ -132,8 +131,7 @@ type FeatureCollection struct {
 
 func closePolygon(p geom.Polygon) {
 	for i := range p {
-		if len(p[i]) < 3 {
-			log.Warn("encounted polygon with less than 3 points")
+		if len(p[i]) == 0 {
 			continue
 		}
 

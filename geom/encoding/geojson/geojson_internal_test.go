@@ -49,53 +49,9 @@ func TestClosePolygon(t *testing.T) {
 				},
 			},
 		},
-		"two point only polygon": {
-			geom: geom.Polygon{
-				{
-					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5},
-				},
-			},
-			expected: geom.Polygon{
-				{
-					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5},
-				},
-			},
-		},
-		"two point polygon 1": {
-			geom: geom.Polygon{
-				{
-					geom.Point{3, 4}, geom.Point{5, 7}, geom.Point{7.6, 8.7}, geom.Point{9.8, 10.9},
-				},
-				{
-					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5},
-				},
-			},
-			expected: geom.Polygon{
-				{
-					geom.Point{3, 4}, geom.Point{5, 7}, geom.Point{7.6, 8.7}, geom.Point{9.8, 10.9}, geom.Point{3, 4},
-				},
-				{
-					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5},
-				},
-			},
-		},
-		"two point only polygon 2": {
-			geom: geom.Polygon{
-				{
-					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5},
-				},
-				{
-					geom.Point{3, 4}, geom.Point{5, 7}, geom.Point{7.6, 8.7}, geom.Point{9.8, 10.9},
-				},
-			},
-			expected: geom.Polygon{
-				{
-					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5},
-				},
-				{
-					geom.Point{3, 4}, geom.Point{5, 7}, geom.Point{7.6, 8.7}, geom.Point{9.8, 10.9}, geom.Point{3, 4},
-				},
-			},
+		"0 points": {
+			geom:     geom.Polygon{},
+			expected: geom.Polygon{},
 		},
 	}
 
