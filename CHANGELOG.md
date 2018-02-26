@@ -1,5 +1,35 @@
-## 0.6.0 (2018-)
-- Fixed: 
+## 0.6.0 (2018-02-26)
+
+- `provider/postgis`: Added: connection parameterization for tegola unit-test suite (#221)
+- `provider/postgis`: Fixed: Using !ZOOM! token can cause nil geom type on style generation (#232)
+- `provider/postgis`: Refactor postgis provider to use provider.Tiler interface (#265)
+- `provider/gpkg`: Add GeoPackage as a Provider (#161)
+- `wkb`: Fixed: WKT for collection doesn't do much (#227, @remster)
+- `server`: Fixed: A GET request for a Tile with a negative row value is successful (#229)
+- `server`: Fixed: Tile request returns 200 when using invalid map (#250)
+- `internal/log`: Added: Logger outputs file:line of log/standard.go along with timestamp in output. (#231)
+- `tegola`: Fixed / Added: Configurable tile buffer (#107)
+- `config`: Added: Support environment variables in config file (#210)
+- `config`: Added: Support for turning off simplification per layer (#165)
+- `server`: Added: Configurable CORS header (#28)
+- `server`: Fixed: Tile cache middleware not receiving response code 200 (#263)
+- `server`: Fixed: /maps/:map/:layer/:z/:x/:y not filtering to correct layer (#252)
+- `server`: Fixed: style generator handling of nil geoms (#302)
+- `server`: Removed configurable request logger in server package (#255)
+- `server`: Added: Configurable layer simplification (#165)
+- `mvt/feature`: Fixed: 2 pt lines are being disregarded (#280)
+- `maths/clip/`: Fixed: Line clipping panics when linestring has 0 points (#290)
+- `cache/file`: Fixed: Caching at higher levels than specified by maxZoom (#311)
+- `cache/s3`: Fixed: Caching at higher levels than specified by maxZoom (#311)
+- `cache/redis`: Added: Redis cache support (#300 - @ear7h)
+- `encoding/geojson`: Added: geojson data types and encoding. (#288)
+- Write Dockerfile to build tegola & create minimal deployment images (#244)
+- Wire docker image build into CI (#245)
+- Fixed: clipping & simplification bugs (#282)
+- `Documentation`: Document the layer name property in the example config (#333 @pnorman)
+
+**Additional Notes**
+- tegola now has a public docker image which can be found at https://hub.docker.com/r/terranodo/tegola/. 
 
 ## 0.5.0 (2017-12-12)
 
