@@ -14,10 +14,6 @@ if [[ $CGO_ENABLED == 0 ]]; then
 	LDFLAGS="${LDFLAGS} -s"
 fi
 
-echo $@ 
-echo $(basename $0)
-
-
 if [ -z "$TRAVIS_BUILD_DIR" ]; then
 	TRAVIS_BUILD_DIR=.
 fi
@@ -38,7 +34,7 @@ do
 		fi
 
 		go build -ldflags "${LDFLAGS}" -o ${FILENAME}
-		chmod +x ${FILENAME}
+		chmod a+x ${FILENAME}
 	done
 done
 cd $OLDDIR

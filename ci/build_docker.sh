@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-if [ -z "${CGO_ENABLED}" == "0" ]; then
+if [ "${CGO_ENABLED}" == "0" ]; then
 	echo "skipping build of docker to avoid double build in TRAVIS."
 	exit 0
 fi

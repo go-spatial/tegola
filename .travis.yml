@@ -59,8 +59,8 @@ script:
   - bash ci/go_test_multi_package_coverprofile.sh --coveralls
 
 before_deploy:
-  - bash ci/build_binary.sh
-  - bash ci/build_docker.sh
+  - bash -x ci/build_binary.sh
+  - bash -x ci/build_docker.sh
 
 deploy:
   provider: releases
