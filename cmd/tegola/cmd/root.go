@@ -178,6 +178,7 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 				Provider:          provider,
 				DefaultTags:       defaultTags,
 				GeomType:          layerGeomType,
+				DontSimplify:      l.DontSimplify,
 			})
 		}
 

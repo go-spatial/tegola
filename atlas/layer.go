@@ -16,6 +16,9 @@ type Layer struct {
 	//	default tags to include when encoding the layer. provider tags take precedence
 	DefaultTags map[string]interface{}
 	GeomType    geom.Geometry
+	//	DontSimplify indicates wheather feature simplification should be applied.
+	//	We use a negative in the name so the default is to simplify
+	DontSimplify bool
 }
 
 //	MVTName will return the value that will be encoded in the Name field when the layer is encoded as MVT
