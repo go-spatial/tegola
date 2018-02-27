@@ -24,6 +24,38 @@ var extent = points.Extent{
 	{4096.0 + TileBuffer, 4096.0 + TileBuffer},
 }
 
+func TestSortUniqueF64(t *testing.T) {
+	type tcase struct {
+		usfs []float64
+		sfs  []float64
+	}
+	fn := func(idx int, tc tcase) {
+		gsfs := sortUniqueF64(tc.usfs)
+		if !reflect.DeepEqual(gsfs, tc.sfs) {
+			t.Errorf("[%v] did not sort and unique, Expected %v Got %v", idx, tc.sfs, gsfs)
+		}
+	}
+	tbltest.Cases(
+		tcase{},
+		tcase{
+			usfs: []float64{1},
+			sfs:  []float64{1},
+		},
+		tcase{
+			usfs: []float64{1, 2, 3},
+			sfs:  []float64{1, 2, 3},
+		},
+		tcase{
+			usfs: []float64{1, 1},
+			sfs:  []float64{1},
+		},
+		tcase{
+			usfs: []float64{1, 1, 5, 1, 4, 2, 3, 4, 5, 5},
+			sfs:  []float64{1, 2, 3, 4, 5},
+		},
+	).Run(fn)
+}
+
 func TestPointPairs(t *testing.T) {
 	type testcase struct {
 		pts      []maths.Pt
@@ -360,6 +392,45 @@ func TestMakeValid(t *testing.T) {
 	)
 	test.Run(fn)
 
+}
+
+func BenchmarkSortUniqueF64(b *testing.B) {
+	datas := make([][]float64, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		var fs []float64
+		for j := 0; j < 400; j++ {
+			fs = append(fs, float64(j))
+			if j%10 == 0 {
+				fs = append(fs, float64(j))
+			}
+		}
+
+		datas = append(datas, fs)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sortUniqueF64(datas[i])
+	}
+}
+
+func BenchmarkSortUniqueF64_worstCase(b *testing.B) {
+	datas := make([][]float64, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		var fs []float64
+		for j := 0; j < 200; j++ {
+			fs = append(fs, float64(j), float64(j))
+		}
+
+		datas = append(datas, fs)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sortUniqueF64(datas[i])
+	}
 }
 
 func BenchmarkMakeValid5PolyA(b *testing.B) {

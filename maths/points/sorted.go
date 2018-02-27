@@ -6,27 +6,24 @@ import (
 	"github.com/terranodo/tegola/maths"
 )
 
+// SortAndUnique sorts the points using the X first then Y ordering
+// and removes duplicates.
 func SortAndUnique(pts []maths.Pt) []maths.Pt {
+	if len(pts) == 0 {
+		return pts
+	}
+
 	sort.Sort(ByXY(pts))
-	lp := 0
-	ptslen := len(pts)
-	for i := 1; i < ptslen; i++ {
-		if pts[i].IsEqual(pts[lp]) {
+
+	count := 0
+	for i := range pts {
+		if pts[count].IsEqual(pts[i]) {
 			continue
 		}
-		lp += 1
-		if lp == i {
-			continue
-		}
-		// found something that is not the same.
-		copy(pts[lp:], pts[i:])
-		// Adjust the length.
-		ptslen -= (i - lp)
-		i = lp
+
+		count++
+		pts[count] = pts[i]
 	}
-	if ptslen > lp+1 {
-		// Need to copy things over, and adjust the ptslen
-		return pts[:lp+1]
-	}
-	return pts[:ptslen]
+
+	return pts[:count+1]
 }
