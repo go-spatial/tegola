@@ -1,8 +1,8 @@
 # Tegola
 
-[![Build Status](https://travis-ci.org/terranodo/tegola.svg?branch=master)](https://travis-ci.org/terranodo/tegola)
-[![Report Card](https://goreportcard.com/badge/github.com/go-spatial/tegola)](https://goreportcard.com/badge/github.com/terranodo/tegola)
-[![Coverage Status](https://coveralls.io/repos/github/terranodo/tegola/badge.svg?branch=v0.6.0)](https://coveralls.io/github/terranodo/tegola?branch=v0.6.0)
+[![Build Status](https://travis-ci.org/go-spatial/tegola.svg?branch=master)](https://travis-ci.org/go-spatial/tegola)
+[![Report Card](https://goreportcard.com/badge/github.com/go-spatial/tegola)](https://goreportcard.com/badge/github.com/go-spatial/tegola)
+[![Coverage Status](https://coveralls.io/repos/github/go-spatial/tegola/badge.svg?branch=v0.6.0)](https://coveralls.io/github/go-spatial/tegola?branch=v0.6.0)
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/go-spatial/tegola)
 [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/go-spatial/tegola/blob/master/LICENSE.md)
 
