@@ -1,6 +1,6 @@
 # RedisCache
 
-This package implement's tegola's cache interface for use with Redis. If a redis instance is running locally with default configurations solely for tegola simply include the following snippet in tegola's config file:
+This package implements tegola's cache interface for use with Redis. If a redis instance is running locally with default configurations solely for tegola simply include the following snippet in tegola's config file:
 
 ```toml
 [cache]
