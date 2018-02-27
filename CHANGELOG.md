@@ -29,7 +29,7 @@
 - `Documentation`: Document the layer name property in the example config (#333 @pnorman)
 
 **Additional Notes**
-- tegola now has a public docker image which can be found at https://hub.docker.com/r/terranodo/tegola/. 
+- tegola now has a public docker image which can be found at https://hub.docker.com/r/gospatial/tegola/. 
 
 ## 0.5.0 (2017-12-12)
 
