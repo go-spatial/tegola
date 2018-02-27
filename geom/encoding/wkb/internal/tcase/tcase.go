@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/terranodo/tegola/geom/encoding/wkb/internal/tcase/token"
+	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/tcase/token"
 )
 
 var ErrMissingDesc = fmt.Errorf("missing desc field")

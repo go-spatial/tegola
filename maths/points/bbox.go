@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/internal/log"
-	"github.com/terranodo/tegola/maths"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/maths"
 )
 
 type BoundingBox [4]float64

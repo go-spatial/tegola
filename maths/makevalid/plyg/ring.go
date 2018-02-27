@@ -12,9 +12,9 @@ import (
 	"time"
 
 	svg "github.com/ajstarks/svgo"
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/hitmap"
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/hitmap"
+	"github.com/go-spatial/tegola/maths/points"
 )
 
 var ColLenghtErr = errors.New("Col's need to have length of at least 2")

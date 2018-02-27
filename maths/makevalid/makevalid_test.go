@@ -11,10 +11,10 @@ import (
 
 	"github.com/gdey/tbltest"
 	"github.com/go-test/deep"
-	"github.com/terranodo/tegola/draw/svg"
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/hitmap"
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/go-spatial/tegola/draw/svg"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/hitmap"
+	"github.com/go-spatial/tegola/maths/points"
 )
 
 const TileBuffer = 16

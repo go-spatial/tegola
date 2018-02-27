@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/terranodo/tegola/atlas"
+	"github.com/go-spatial/tegola/atlas"
 )
 
 type Capabilities struct {

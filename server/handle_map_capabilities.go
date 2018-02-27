@@ -9,9 +9,9 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/mapbox/tilejson"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/mapbox/tilejson"
 )
 
 type HandleMapCapabilities struct {

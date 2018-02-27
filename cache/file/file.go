@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/terranodo/tegola/cache"
-	"github.com/terranodo/tegola/util/dict"
+	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/util/dict"
 )
 
 var (

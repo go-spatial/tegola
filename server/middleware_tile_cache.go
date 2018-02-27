@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/terranodo/tegola/cache"
-	"github.com/terranodo/tegola/internal/log"
+	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 //	TileCacheHandler implements a request cache for tiles on requests when the URLs

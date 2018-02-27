@@ -3,8 +3,8 @@ package basic
 import (
 	"fmt"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/maths"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/maths"
 )
 
 // Line is a basic line type which is made up of two or more points that don't

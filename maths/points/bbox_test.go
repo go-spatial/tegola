@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/terranodo/tegola"
+	"github.com/go-spatial/tegola"
 )
 
 func TestDisjointBB(t *testing.T) {

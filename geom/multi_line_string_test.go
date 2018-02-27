@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/terranodo/tegola/geom"
+	"github.com/go-spatial/tegola/geom"
 )
 
 func TestMultiLineStringSetter(t *testing.T) {

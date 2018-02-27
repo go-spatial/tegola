@@ -3,7 +3,7 @@ package encoding
 import (
 	"fmt"
 
-	"github.com/terranodo/tegola/geom"
+	"github.com/go-spatial/tegola/geom"
 )
 
 type ErrUnknownGeometry struct {

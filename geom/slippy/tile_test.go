@@ -3,8 +3,8 @@ package slippy_test
 import (
 	"testing"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/geom/slippy"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/geom/slippy"
 )
 
 func TestExtent(t *testing.T) {

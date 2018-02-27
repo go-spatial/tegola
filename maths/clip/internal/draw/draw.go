@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/draw/svg"
-	"github.com/terranodo/tegola/maths/clip/region"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/draw/svg"
+	"github.com/go-spatial/tegola/maths/clip/region"
 )
 
 /*

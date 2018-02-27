@@ -16,7 +16,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/terranodo/tegola/internal/log"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 // Config represents a tegola config file.

@@ -5,7 +5,7 @@ package gpkg
 import (
 	"testing"
 
-	"github.com/terranodo/tegola/provider"
+	"github.com/go-spatial/tegola/provider"
 )
 
 // This is a test to just see that the init function is doing something.

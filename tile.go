@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/terranodo/tegola/maths/webmercator"
+	"github.com/go-spatial/tegola/maths/webmercator"
 )
 
 const (

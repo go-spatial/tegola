@@ -13,12 +13,12 @@ import (
 
 	gdcmd "github.com/gdey/cmd"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/cache"
-	"github.com/terranodo/tegola/internal/log"
-	"github.com/terranodo/tegola/maths/webmercator"
-	"github.com/terranodo/tegola/provider"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/maths/webmercator"
+	"github.com/go-spatial/tegola/provider"
 )
 
 var (

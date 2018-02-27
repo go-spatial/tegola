@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/provider"
+	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/provider"
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.

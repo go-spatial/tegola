@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
-	"github.com/terranodo/tegola/geom/encoding/wkb"
-	"github.com/terranodo/tegola/geom/encoding/wkb/internal/tcase"
+	"github.com/go-spatial/tegola/geom/encoding/wkb"
+	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/tcase"
 )
 
 func TestWKBEncode(t *testing.T) {

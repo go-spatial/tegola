@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/geom/encoding/wkb/internal/consts"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/consts"
 )
 
 func ByteOrderType(r io.Reader) (byteOrder binary.ByteOrder, typ uint32, err error) {

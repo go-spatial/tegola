@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/internal/assert"
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/internal/assert"
+	"github.com/go-spatial/tegola/maths/points"
 )
 
 func TestSplitPoints(t *testing.T) {

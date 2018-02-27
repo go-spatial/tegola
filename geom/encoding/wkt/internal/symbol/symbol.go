@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/terranodo/tegola/geom/internal/parsing"
+	"github.com/go-spatial/tegola/geom/internal/parsing"
 )
 
 const (

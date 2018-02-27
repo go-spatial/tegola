@@ -3,8 +3,8 @@ package geojson
 import (
 	"encoding/json"
 
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/geom/encoding"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/geom/encoding"
 )
 
 type GeoJSONType string

@@ -3,7 +3,7 @@ package gpkg
 import (
 	"testing"
 
-	"github.com/terranodo/tegola/geom"
+	"github.com/go-spatial/tegola/geom"
 )
 
 func TestReplaceTokens(t *testing.T) {

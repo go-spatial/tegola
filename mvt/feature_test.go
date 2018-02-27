@@ -8,9 +8,9 @@ import (
 	"context"
 
 	"github.com/gdey/tbltest"
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/mvt/vector_tile"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/mvt/vector_tile"
 )
 
 func TestScaleLinestring(t *testing.T) {

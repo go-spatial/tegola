@@ -11,10 +11,10 @@ import (
 	"github.com/dimfeld/httptreemux"
 	"gopkg.in/go-playground/colors.v1"
 
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/internal/log"
-	"github.com/terranodo/tegola/mapbox/style"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/mapbox/style"
 )
 
 type HandleMapStyle struct {

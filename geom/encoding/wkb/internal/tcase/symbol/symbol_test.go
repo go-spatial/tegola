@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
-	"github.com/terranodo/tegola/geom/internal/parsing"
+	"github.com/go-spatial/tegola/geom/internal/parsing"
 )
 
 func TestSymbol(t *testing.T) {

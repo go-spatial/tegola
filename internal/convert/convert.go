@@ -3,9 +3,9 @@ package convert
 import (
 	"errors"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/geom"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/geom"
 )
 
 var ErrUnknownGeometry = errors.New("Unknown Geometry")

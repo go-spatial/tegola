@@ -10,8 +10,8 @@ import (
 
 	"errors"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/maths/webmercator"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/maths/webmercator"
 )
 
 const (

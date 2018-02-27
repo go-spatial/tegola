@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/terranodo/tegola/geom"
+	"github.com/go-spatial/tegola/geom"
 )
 
 const TOLERANCE = 0.000001

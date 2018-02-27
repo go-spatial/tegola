@@ -11,9 +11,9 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/mapbox/tilejson"
-	"github.com/terranodo/tegola/server"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/mapbox/tilejson"
+	"github.com/go-spatial/tegola/server"
 )
 
 func TestHandleMapCapabilities(t *testing.T) {

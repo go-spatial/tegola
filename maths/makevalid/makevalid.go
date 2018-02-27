@@ -5,8 +5,8 @@ import (
 	"log"
 	"sort"
 
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/points"
 )
 
 func allCoordForPts(idx int, pts ...[2]float64) []float64 {

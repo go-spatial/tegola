@@ -3,9 +3,9 @@ package intersect
 import (
 	"testing"
 
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/clip/region"
-	"github.com/terranodo/tegola/maths/clip/subject"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/clip/region"
+	"github.com/go-spatial/tegola/maths/clip/subject"
 )
 
 func TestNewIntersect(t *testing.T) {
