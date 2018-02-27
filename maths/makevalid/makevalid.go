@@ -9,10 +9,12 @@ import (
 	"github.com/go-spatial/tegola/maths/points"
 )
 
-func allCoordForPts(idx int, pts ...[2]float64) (fs []float64) {
+func allCoordForPts(idx int, pts ...[2]float64) []float64 {
 	if idx != 0 && idx != 1 {
 		panic("idx can only be 0 or 1 for x, and y")
 	}
+
+	fs := make([]float64, 0, len(pts))
 	for i := range pts {
 		fs = append(fs, pts[i][idx])
 	}
@@ -20,27 +22,22 @@ func allCoordForPts(idx int, pts ...[2]float64) (fs []float64) {
 }
 
 func sortUniqueF64(fs []float64) []float64 {
+	if len(fs) == 0 {
+		return fs
+	}
+
 	sort.Float64s(fs)
-	lf := 0
-	fslen := len(fs)
-	for i := 1; i < fslen; i++ {
-		if fs[i] == fs[lf] {
+	count := 0
+	for i := range fs {
+		if fs[count] == fs[i] {
 			continue
 		}
-		lf += 1
-		if lf == i {
-			continue
-		}
-		// found something that is not the same.
-		copy(fs[lf:], fs[i:])
-		fslen -= (i - lf)
-		i = lf
+
+		count++
+		fs[count] = fs[i]
 	}
-	if fslen > lf+1 {
-		// Need to copy things over, and adjust the fslen
-		return fs[:lf+1]
-	}
-	return fs[:fslen]
+
+	return fs[:count+1]
 }
 
 // splitPoints will find the points amount the lines that lines should be split at.
