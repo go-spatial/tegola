@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/geom/encoding/wkb/internal/consts"
-	"github.com/terranodo/tegola/geom/encoding/wkb/internal/decode"
-	"github.com/terranodo/tegola/geom/encoding/wkb/internal/encode"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/consts"
+	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/decode"
+	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/encode"
 )
 
 type ErrUnknownGeometry struct {

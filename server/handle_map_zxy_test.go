@@ -11,8 +11,8 @@ import (
 	"github.com/dimfeld/httptreemux"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/terranodo/tegola/mvt/vector_tile"
-	"github.com/terranodo/tegola/server"
+	"github.com/go-spatial/tegola/mvt/vector_tile"
+	"github.com/go-spatial/tegola/server"
 )
 
 func TestHandleMapZXY(t *testing.T) {

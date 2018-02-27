@@ -9,14 +9,14 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/geom/slippy"
-	"github.com/terranodo/tegola/internal/convert"
-	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/provider"
-	"github.com/terranodo/tegola/provider/debug"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/tegola/internal/convert"
+	"github.com/go-spatial/tegola/mvt"
+	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/provider/debug"
 )
 
 //	NewMap creates a new map with the necessary default values

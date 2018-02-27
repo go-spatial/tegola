@@ -1,8 +1,8 @@
 package atlas
 
 import (
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/provider"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/provider"
 )
 
 type Layer struct {

@@ -1,9 +1,9 @@
 package atlas_test
 
 import (
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/provider/test"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/provider/test"
 )
 
 var testLayer1 = atlas.Layer{

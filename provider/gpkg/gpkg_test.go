@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/provider"
-	"github.com/terranodo/tegola/provider/gpkg"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/provider/gpkg"
 )
 
 const (

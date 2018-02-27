@@ -7,9 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/provider"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/provider"
 )
 
 const Name = "debug"

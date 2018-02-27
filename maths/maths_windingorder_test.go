@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/maths"
+	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/maths"
 )
 
 func invertPoints(pts []float64) (rpts []float64) {

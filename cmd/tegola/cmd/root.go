@@ -10,14 +10,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/cache"
-	"github.com/terranodo/tegola/config"
-	"github.com/terranodo/tegola/provider"
-	_ "github.com/terranodo/tegola/provider/debug"
-	_ "github.com/terranodo/tegola/provider/gpkg"
-	_ "github.com/terranodo/tegola/provider/postgis"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/provider"
+	_ "github.com/go-spatial/tegola/provider/debug"
+	_ "github.com/go-spatial/tegola/provider/gpkg"
+	_ "github.com/go-spatial/tegola/provider/postgis"
 )
 
 var (

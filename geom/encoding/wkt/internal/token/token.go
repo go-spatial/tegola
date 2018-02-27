@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/geom/encoding/wkt/internal/symbol"
-	"github.com/terranodo/tegola/geom/internal/parsing"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/geom/encoding/wkt/internal/symbol"
+	"github.com/go-spatial/tegola/geom/internal/parsing"
 )
 
 type T struct {

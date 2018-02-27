@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/terranodo/tegola/server"
+	"github.com/go-spatial/tegola/server"
 )
 
 func TestMiddlewareTileCacheHandler(t *testing.T) {

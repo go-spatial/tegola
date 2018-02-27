@@ -4,11 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/cache"
-	_ "github.com/terranodo/tegola/cache/file"
-	_ "github.com/terranodo/tegola/cache/s3"
-	"github.com/terranodo/tegola/geom/slippy"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/cache"
+	_ "github.com/go-spatial/tegola/cache/file"
+	_ "github.com/go-spatial/tegola/cache/s3"
+	"github.com/go-spatial/tegola/geom/slippy"
 )
 
 //	DefaultAtlas is instanitated for convenience

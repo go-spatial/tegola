@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/terranodo/tegola/cache"
-	"github.com/terranodo/tegola/cache/s3"
+	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/cache/s3"
 )
 
 func TestNew(t *testing.T) {

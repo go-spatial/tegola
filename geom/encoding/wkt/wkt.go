@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/terranodo/tegola/geom"
+	"github.com/go-spatial/tegola/geom"
 )
 
 func isNil(a interface{}) bool {

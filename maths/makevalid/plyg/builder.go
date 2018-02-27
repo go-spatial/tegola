@@ -3,8 +3,8 @@ package plyg
 import (
 	"sort"
 
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/points"
 )
 
 type Builder struct {

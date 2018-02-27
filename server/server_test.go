@@ -1,11 +1,11 @@
 package server_test
 
 import (
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/cache/memory"
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/provider/test"
-	"github.com/terranodo/tegola/server"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/cache/memory"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/provider/test"
+	"github.com/go-spatial/tegola/server"
 )
 
 //	test server config

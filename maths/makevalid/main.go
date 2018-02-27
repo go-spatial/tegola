@@ -9,10 +9,10 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/hitmap"
-	"github.com/terranodo/tegola/maths/makevalid/plyg"
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/hitmap"
+	"github.com/go-spatial/tegola/maths/makevalid/plyg"
+	"github.com/go-spatial/tegola/maths/points"
 )
 
 var numWorkers = 1

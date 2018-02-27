@@ -3,7 +3,7 @@ package memory
 import (
 	"sync"
 
-	"github.com/terranodo/tegola/cache"
+	"github.com/go-spatial/tegola/cache"
 )
 
 func New() *MemoryCache {

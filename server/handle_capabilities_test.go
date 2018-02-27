@@ -11,9 +11,9 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/server"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/server"
 )
 
 func TestHandleCapabilities(t *testing.T) {

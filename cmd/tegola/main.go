@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/terranodo/tegola/cmd/tegola/cmd"
+	"github.com/go-spatial/tegola/cmd/tegola/cmd"
 )
 
 var codeLogFile *os.File

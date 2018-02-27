@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/terranodo/tegola/geom"
+	"github.com/go-spatial/tegola/geom"
 )
 
 func init() {

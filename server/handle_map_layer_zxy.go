@@ -9,10 +9,10 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/geom/slippy"
-	"github.com/terranodo/tegola/internal/log"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 type HandleMapLayerZXY struct {

@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/terranodo/tegola/mapbox/style"
-	"github.com/terranodo/tegola/server"
+	"github.com/go-spatial/tegola/mapbox/style"
+	"github.com/go-spatial/tegola/server"
 )
 
 func TestHandleMapStyle(t *testing.T) {

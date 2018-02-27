@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	geom "github.com/terranodo/tegola/geom"
+	geom "github.com/go-spatial/tegola/geom"
 )
 
 /*

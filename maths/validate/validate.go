@@ -3,13 +3,13 @@ package validate
 import (
 	"context"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/clip"
-	"github.com/terranodo/tegola/maths/hitmap"
-	"github.com/terranodo/tegola/maths/makevalid"
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/clip"
+	"github.com/go-spatial/tegola/maths/hitmap"
+	"github.com/go-spatial/tegola/maths/makevalid"
+	"github.com/go-spatial/tegola/maths/points"
 )
 
 func CleanLinestring(g []float64) (l []float64, err error) {

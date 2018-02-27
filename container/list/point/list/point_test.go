@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
-	"github.com/terranodo/tegola/maths"
+	"github.com/go-spatial/tegola/maths"
 )
 
 func checkListLen(t *testing.T, desc string, l *List, es []*Pt) bool {

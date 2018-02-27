@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/internal/log"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 type Tile interface {

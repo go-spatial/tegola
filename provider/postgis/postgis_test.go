@@ -6,10 +6,10 @@ import (
 
 	"context"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/geom/slippy"
-	"github.com/terranodo/tegola/provider"
-	"github.com/terranodo/tegola/provider/postgis"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/provider/postgis"
 )
 
 

@@ -3,8 +3,8 @@ package subject
 import (
 	"fmt"
 
-	"github.com/terranodo/tegola/container/singlelist/point/list"
-	"github.com/terranodo/tegola/maths"
+	"github.com/go-spatial/tegola/container/singlelist/point/list"
+	"github.com/go-spatial/tegola/maths"
 )
 
 func (s *Subject) GoString() string {

@@ -10,15 +10,15 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/config"
-	"github.com/terranodo/tegola/draw/svg"
-	"github.com/terranodo/tegola/geom/slippy"
-	"github.com/terranodo/tegola/internal/convert"
-	"github.com/terranodo/tegola/maths/points"
-	"github.com/terranodo/tegola/maths/validate"
-	"github.com/terranodo/tegola/mvt"
-	"github.com/terranodo/tegola/provider"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/draw/svg"
+	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/tegola/internal/convert"
+	"github.com/go-spatial/tegola/maths/points"
+	"github.com/go-spatial/tegola/maths/validate"
+	"github.com/go-spatial/tegola/mvt"
+	"github.com/go-spatial/tegola/provider"
 )
 
 var drawCmd = &cobra.Command{

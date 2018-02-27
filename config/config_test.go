@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/terranodo/tegola/config"
+	"github.com/go-spatial/tegola/config"
 )
 
 func TestParse(t *testing.T) {

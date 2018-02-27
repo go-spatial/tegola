@@ -9,7 +9,7 @@ if [ -z "$VERSION_TAG" ]; then
 	VERSION_TAG=$(git rev-parse --short HEAD)
 fi
 
-LDFLAGS="-w -X github.com/terranodo/tegola/cmd/tegola/cmd.Version=${VERSION_TAG}"
+LDFLAGS="-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION_TAG}"
 if [[ $CGO_ENABLED == 0 ]]; then
 	LDFLAGS="${LDFLAGS} -s"
 fi
@@ -33,7 +33,7 @@ do
 			FILENAME="${FILENAME}.exe"
 		fi
 
-		go build -ldflags "${LDFLAGS}" -o ${FILENAME} github.com/terranodo/tegola/cmd/tegola
+		go build -ldflags "${LDFLAGS}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola
 		chmod a+x ${FILENAME}
 	done
 done

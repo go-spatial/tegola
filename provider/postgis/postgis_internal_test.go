@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/terranodo/tegola/internal/ttools"
-	"github.com/terranodo/tegola/geom"
+	"github.com/go-spatial/tegola/internal/ttools"
+	"github.com/go-spatial/tegola/geom"
 )
 
 // TESTENV is the environment variable that must be set to "yes" to run postgis tests.

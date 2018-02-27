@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/terranodo/tegola/maths"
-	"github.com/terranodo/tegola/maths/internal/assert"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/maths/internal/assert"
 )
 
 func TestGetTrianglesForCol(t *testing.T) {

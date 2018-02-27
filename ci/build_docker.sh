@@ -28,7 +28,7 @@ if [ "${DOCKER_NAME}" == "/" ] ; then
 fi
 
 
-LDFLAGS="-w -X github.com/terranodo/tegola/cmd/tegola/cmd.Version=${VERSION_TAG}"
+LDFLAGS="-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION_TAG}"
 CONTAINER_MAINTAINER="Development@JivanAmara.net"
 
 bastet -o docker/Dockerfile1 docker/Dockerfile.tpl "flags=-ldflags \"${LDFLAGS}\"" "version=${VERSION_TAG}" "maintainer=${CONTAINER_MAINTAINER}"

@@ -11,12 +11,12 @@ import (
 
 	"context"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/geom"
-	"github.com/terranodo/tegola/geom/encoding/wkb"
-	"github.com/terranodo/tegola/geom/slippy"
-	"github.com/terranodo/tegola/provider"
-	"github.com/terranodo/tegola/util/dict"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/geom/encoding/wkb"
+	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/util/dict"
 )
 
 const Name = "postgis"
@@ -265,7 +265,7 @@ func (p Provider) layerGeomType(l *Layer) error {
 	// we want to know the geom type instead of returning the geom data so we modify the SQL
 	// TODO (arolek): this strategy wont work if remove the requirement of wrapping ST_AsBinary(geom) in the SQL statements.
 	//
-	// https://github.com/terranodo/tegola/issues/180
+	// https://github.com/go-spatial/tegola/issues/180
 	//
 	// case insensitive search
 	re := regexp.MustCompile(`(?i)ST_AsBinary`)

@@ -8,11 +8,11 @@ import (
 	"github.com/arolek/p"
 	"github.com/golang/protobuf/proto"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/atlas"
-	"github.com/terranodo/tegola/geom/slippy"
-	"github.com/terranodo/tegola/mvt/vector_tile"
-	"github.com/terranodo/tegola/provider/test"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/tegola/mvt/vector_tile"
+	"github.com/go-spatial/tegola/provider/test"
 )
 
 func TestMapFilterLayersByZoom(t *testing.T) {

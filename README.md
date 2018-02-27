@@ -1,10 +1,10 @@
 # Tegola
 
 [![Build Status](https://travis-ci.org/terranodo/tegola.svg?branch=master)](https://travis-ci.org/terranodo/tegola)
-[![Report Card](https://goreportcard.com/badge/github.com/terranodo/tegola)](https://goreportcard.com/badge/github.com/terranodo/tegola)
+[![Report Card](https://goreportcard.com/badge/github.com/go-spatial/tegola)](https://goreportcard.com/badge/github.com/terranodo/tegola)
 [![Coverage Status](https://coveralls.io/repos/github/terranodo/tegola/badge.svg?branch=v0.6.0)](https://coveralls.io/github/terranodo/tegola?branch=v0.6.0)
-[![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/terranodo/tegola)
-[![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/terranodo/tegola/blob/master/LICENSE.md)
+[![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/go-spatial/tegola)
+[![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/go-spatial/tegola/blob/master/LICENSE.md)
 
 Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) leveraging PostGIS as the data provider.
 
@@ -40,7 +40,7 @@ Use "tegola [command] --help" for more information about a command.
 ```
 
 ## Running tegola as a vector tile server
-1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/terranodo/tegola/releases).
+1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/go-spatial/tegola/releases).
 2. After the download you will need to make the binary executable. The binary, will be name `tegola_$OS_$ARCH`, to follow along with the instructions make sure to rename it to `tegola`.
 2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
@@ -56,7 +56,7 @@ Use "tegola [command] --help" for more information about a command.
 
 The server root will display a built in viewer with an auto generated style. For example:
 
-![tegola built in viewer](https://raw.githubusercontent.com/terranodo/tegola/v0.4.0/docs/screenshots/built-in-viewer.png "tegola built in viewer")
+![tegola built in viewer](https://raw.githubusercontent.com/go-spatial/tegola/v0.4.0/docs/screenshots/built-in-viewer.png "tegola built in viewer")
 
 
 ```

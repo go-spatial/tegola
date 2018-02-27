@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/terranodo/tegola/mvt"
+	"github.com/go-spatial/tegola/mvt"
 )
 
 // InitFunc initilize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.

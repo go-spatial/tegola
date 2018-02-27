@@ -3,7 +3,7 @@ package points
 import (
 	"sort"
 
-	"github.com/terranodo/tegola/maths"
+	"github.com/go-spatial/tegola/maths"
 )
 
 type ByXY []maths.Pt

@@ -1,11 +1,11 @@
 package clip
 
 import (
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/basic"
-	"github.com/terranodo/tegola/geom/cmp"
-	"github.com/terranodo/tegola/maths/lines"
-	"github.com/terranodo/tegola/maths/points"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/geom/cmp"
+	"github.com/go-spatial/tegola/maths/lines"
+	"github.com/go-spatial/tegola/maths/points"
 )
 
 func LineString(linestr tegola.LineString, extent *points.Extent) (ls []basic.Line, err error) {
