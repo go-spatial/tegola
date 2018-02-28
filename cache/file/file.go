@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"fmt"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"

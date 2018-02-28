@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/maths"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/maths"
 )
 
 //	Interface defines a cache back end
