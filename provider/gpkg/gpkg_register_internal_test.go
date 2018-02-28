@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-spatial/tegola/geom"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/terranodo/tegola/geom"
 )
 
 var (
