@@ -51,8 +51,8 @@ func TestReplaceTokens(t *testing.T) {
 				WHERE
 					!BBOX!`,
 			extent: geom.BoundingBox{
-				{180, 85.0511},
-				{-180, -85.0511},
+				-180, -85.0511,
+				180, 85.0511,
 			},
 			expected: `
 				SELECT
@@ -71,8 +71,8 @@ func TestReplaceTokens(t *testing.T) {
 				WHERE
 					!BBOX! AND min_zoom = !ZOOM!`,
 			extent: geom.BoundingBox{
-				{180, 85.0511},
-				{-180, -85.0511},
+				-180, -85.0511,
+				180, 85.0511,
 			},
 			zoom: 3,
 			expected: `

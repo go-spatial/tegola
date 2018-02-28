@@ -85,8 +85,8 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	// TODO: leverage minx/y maxx/y methods once the BufferedExtent returns a geom.Extent type
 	tileBBox := geom.BoundingBox{
-		{bufferedExtent[0][0], bufferedExtent[0][1]}, //minx, miny
-		{bufferedExtent[1][0], bufferedExtent[1][1]}, //maxx, maxy
+		bufferedExtent[0][0], bufferedExtent[0][1], //minx, miny
+		bufferedExtent[1][0], bufferedExtent[1][1], //maxx, maxy
 	}
 
 	// TODO(arolek): reimplement once the geom package has reprojection
@@ -103,8 +103,8 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		}
 
 		tileBBox = geom.BoundingBox{
-			{minGeo.AsPoint().X(), minGeo.AsPoint().Y()},
-			{maxGeo.AsPoint().X(), maxGeo.AsPoint().Y()},
+			minGeo.AsPoint().X(), minGeo.AsPoint().Y(),
+			maxGeo.AsPoint().X(), maxGeo.AsPoint().Y(),
 		}
 	}
 

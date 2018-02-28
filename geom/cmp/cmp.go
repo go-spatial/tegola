@@ -10,16 +10,34 @@ import (
 const TOLERANCE = 0.000001
 
 // Float64 compares two floats to see if they are within the given tolerance.
-func Float64(f1, f2, tolerance float64) bool { return math.Abs(f1-f2) < tolerance }
+func Float64(f1, f2, tolerance float64) bool {
+	if math.IsInf(f1, 1) {
+		return math.IsInf(f2, 1)
+	}
+	if math.IsInf(f2, 1) {
+		return math.IsInf(f1, 1)
+	}
+	if math.IsInf(f1, -1) {
+		return math.IsInf(f2, -1)
+	}
+	if math.IsInf(f2, -1) {
+		return math.IsInf(f1, -1)
+	}
+	return math.Abs(f1-f2) < tolerance
+}
 
 // Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.
 func Float(f1, f2 float64) bool { return Float64(f1, f2, TOLERANCE) }
 
 // BoundingBox will check to see if the BoundingBox's are the same.
-func BoundingBox(bbox1, bbox2 [2][2]float64) bool {
+func BoundingBox(bbox1, bbox2 [4]float64) bool {
+	return Float(bbox1[0], bbox2[0]) && Float(bbox1[1], bbox2[1]) &&
+		Float(bbox1[2], bbox2[2]) && Float(bbox1[3], bbox2[3])
+}
 
-	return Float(bbox1[0][0], bbox2[0][0]) && Float(bbox1[0][1], bbox2[0][1]) &&
-		Float(bbox1[1][0], bbox2[1][0]) && Float(bbox1[1][1], bbox2[1][1])
+// BBox will check to see if geom.BoundingBox's are the same.
+func BBox(bbox1, bbox2 geom.BoundingBoxer) bool {
+	return BoundingBox(bbox1.BBox(), bbox2.BBox())
 }
 
 func PointLess(p1, p2 [2]float64) bool {
@@ -104,7 +122,7 @@ func PolygonEqual(ply1, ply2 [][][2]float64) bool {
 		points2 = append(points2, ply2[i]...)
 	}
 	bbox2 := geom.NewBBox(points2...)
-	if !BoundingBox([2][2]float64(bbox1), [2][2]float64(bbox2)) {
+	if !BBox(bbox1, bbox2) {
 		return false
 	}
 

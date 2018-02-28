@@ -118,7 +118,6 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *points.Extent
 		}
 		return scaleMultiPolygon(mp, 0.10), nil
 
-		//return makePolygonValid(ctx, &hm, extent, gg)
 	case tegola.MultiPolygon:
 		expp := scaleMultiPolygon(gg, 10.0)
 		hm := hitmap.NewFromGeometry(expp)
@@ -134,7 +133,6 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *points.Extent
 			return nil, err
 		}
 		return scaleMultiPolygon(mp, 0.10), nil
-		//return makePolygonValid(ctx, &hm, ext, gg.Polygons()...)
 
 	case tegola.MultiLine:
 		var ml basic.MultiLine

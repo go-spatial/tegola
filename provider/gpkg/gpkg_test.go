@@ -121,7 +121,7 @@ func TestTileFeatures(t *testing.T) {
 
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			t.Fatalf("err creating NewTileProvider: %v", err)
+			t.Fatalf("new tile, expected nil got %v", err)
 			return
 		}
 
@@ -172,8 +172,12 @@ func TestTileFeatures(t *testing.T) {
 			tile: MockTile{
 				srid: tegola.WGS84,
 				bufferedExtent: [2][2]float64{
-					{23.6, 38.0},
-					{23.8, 37.8},
+					/*
+						{23.6, 38.0},
+						{23.8, 37.8},
+					*/
+					{23.6, 37.8},
+					{23.8, 38.0},
 				},
 			},
 			expectedFeatureCount: 187,

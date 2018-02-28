@@ -79,12 +79,15 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			return nil, err
 		}
 
+		bbox := geom.NewBBox([2]float64{minX.Float64, minY.Float64}, [2]float64{maxX.Float64, maxX.Float64})
+
 		geomTableDetails[tablename.String] = GeomTableDetails{
 			geomFieldname: geomCol.String,
 			geomType:      tg,
 			srid:          uint64(srid.Int64),
 			//	the extent of the layer's features
-			bbox: geom.BoundingBox{{minX.Float64, minY.Float64}, {maxX.Float64, maxY.Float64}},
+			//bbox: geom.BoundingBox{minX.Float64, minY.Float64, maxX.Float64, maxY.Float64},
+			bbox: *bbox,
 		}
 	}
 
@@ -186,7 +189,8 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			customSQL = replaceTokens(customSQL, 0, geom.BoundingBox{{180.0, 85.0511}, {-180.0, -85.0511}})
+			wgs84BB := geom.NewBBox([2]float64{180.0, 85.0551}, [2]float64{-180.0, -85.0511})
+			customSQL = replaceTokens(customSQL, 0, *wgs84BB)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
