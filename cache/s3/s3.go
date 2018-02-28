@@ -14,16 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-<<<<<<< HEAD
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/util/dict"
 	"github.com/go-spatial/tegola"
-=======
-	"fmt"
-	"github.com/terranodo/tegola"
-	"github.com/terranodo/tegola/cache"
-	"github.com/terranodo/tegola/util/dict"
->>>>>>> gofmt
 )
 
 var (
