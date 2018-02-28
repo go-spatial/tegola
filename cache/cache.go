@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -126,6 +127,15 @@ func Register(cacheType string, init InitFunc) error {
 	cache[cacheType] = init
 
 	return nil
+}
+
+// Registered returns the caché's that have been registered.
+func Registered() (c []string) {
+	for k, _ := range cache {
+		c = append(c, k)
+	}
+	sort.Strings(c)
+	return c
 }
 
 // For function returns a configed cache of the given type, provided the correct config map.

@@ -6,8 +6,6 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
-	_ "github.com/go-spatial/tegola/cache/file"
-	_ "github.com/go-spatial/tegola/cache/s3"
 	"github.com/go-spatial/tegola/geom/slippy"
 )
 
