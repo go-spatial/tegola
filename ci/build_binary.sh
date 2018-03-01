@@ -21,7 +21,7 @@ fi
 mkdir -p "${TRAVIS_BUILD_DIR}/releases"
 echo "building bins into ${TRAVIS_BUILD_DIR}/releases"
 
-for GOARCH in AMD64
+for GOARCH in amd64
 do
 	for GOOS in darwin linux windows
 	do
@@ -35,6 +35,13 @@ do
 
 		go build -ldflags "${LDFLAGS}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola
 		chmod a+x ${FILENAME}
+		dir=$(dirname $FILENAME)
+		fn=$(basename $FILENAME)
+		cdir=$(pwd)
+		cd $dir
+		zip -9 -D ${fn}.zip ${fn}
+		rm ${fn}
+		cd ${cdir}
 	done
 done
 cd $OLDDIR
