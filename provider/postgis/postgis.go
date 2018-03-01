@@ -319,8 +319,6 @@ func (p Provider) layerGeomType(l *Layer) error {
 					l.geomType = geom.MultiLineString{}
 				case "ST_MultiPolygon":
 					l.geomType = geom.MultiPolygon{}
-				case "ST_GeometryCollection":
-					l.geomType = geom.Collection{}
 				default:
 					return fmt.Errorf("layer (%v) returned unsupported geometry type (%v)", l.name, v)
 				}
