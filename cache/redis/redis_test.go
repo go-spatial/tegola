@@ -24,37 +24,37 @@ func TestNew(t *testing.T) {
 	}
 
 	testcases := map[string]tc{
-		"redis explicit config": {
+		"explicit config": {
 			config: map[string]interface{}{
 				"network":  "tcp",
 				"address":  "127.0.0.1:6379",
 				"password": "",
 				"db":       0,
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			errMatch: "",
 		},
-		"redis implicit config": {
+		"implicit config": {
 			config:   map[string]interface{}{},
 			errMatch: "",
 		},
-		"redis bad address": {
+		"bad address": {
 			config: map[string]interface{}{
 				"address": "127.0.0.1:6000",
 			},
 			errMatch: "connection refused",
 		},
-		"redis bad max_zoom": {
+		"bad max_zoom": {
 			config: map[string]interface{}{
 				"max_zoom": "2",
 			},
-			errMatch: "max_zoom value needs to be of type int. Value is of type string",
+			errMatch: "max_zoom value needs to be of type uint. Value is of type string",
 		},
-		"redis bad max_zoom 2": {
+		"bad max_zoom 2": {
 			config: map[string]interface{}{
 				"max_zoom": -2,
 			},
-			errMatch: "max_zoom must be positive, got -2",
+			errMatch: "max_zoom value needs to be of type uint. Value is of type int",
 		},
 	}
 
@@ -260,7 +260,7 @@ func TestMaxZoom(t *testing.T) {
 	tests := map[string]tcase{
 		"over max zoom": tcase{
 			config: map[string]interface{}{
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 11,
@@ -272,7 +272,7 @@ func TestMaxZoom(t *testing.T) {
 		},
 		"under max zoom": tcase{
 			config: map[string]interface{}{
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 9,
@@ -284,7 +284,7 @@ func TestMaxZoom(t *testing.T) {
 		},
 		"equals max zoom": tcase{
 			config: map[string]interface{}{
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 10,
