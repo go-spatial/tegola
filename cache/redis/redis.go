@@ -32,7 +32,7 @@ func New(config map[string]interface{}) (rcache cache.Interface, err error) {
 	defaultAddress := "127.0.0.1:6379"
 	defaultPassword := ""
 	defaultDB := 0
-	defaultMaxZoom := int(tegola.MaxZ)
+	defaultMaxZoom := uint(tegola.MaxZ)
 
 	c := dict.M(config)
 
@@ -74,25 +74,21 @@ func New(config map[string]interface{}) (rcache cache.Interface, err error) {
 	}
 
 	// the config map's underlying value is int
-	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
+	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
 
-	if maxZoom < 0 {
-		return nil, fmt.Errorf("max_zoom must be positive, got %d", maxZoom)
-	}
-
 	return &RedisCache{
 		Redis:   client,
-		MaxZoom: uint64(maxZoom),
+		MaxZoom: maxZoom,
 	}, nil
 }
 
 type RedisCache struct {
 	Redis      *redis.Client
 	Expiration time.Duration
-	MaxZoom    uint64
+	MaxZoom    uint
 }
 
 func (rdc *RedisCache) Set(key *cache.Key, val []byte) error {

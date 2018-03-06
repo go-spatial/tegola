@@ -137,7 +137,7 @@ func drawCommand(cmd *cobra.Command, args []string) {
 func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, dfn *drawFilename) error {
 	ctx := context.Background()
 	ttile := tegola.NewTile(dfn.z, dfn.x, dfn.y)
-	slippyTile := slippy.NewTile(uint64(dfn.z), uint64(dfn.x), uint64(dfn.y), tegola.DefaultTileBuffer, tegola.WebMercator)
+	slippyTile := slippy.NewTile(dfn.z, dfn.x, dfn.y, tegola.DefaultTileBuffer, tegola.WebMercator)
 	for _, name := range layers {
 		count := 0
 		err := tiler.TileFeatures(ctx, name, slippyTile, func(f *provider.Feature) error {

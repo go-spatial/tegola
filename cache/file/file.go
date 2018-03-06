@@ -40,13 +40,13 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	//	parse the config
 	c := dict.M(config)
 
-	defaultMaxZoom := tegola.MaxZ
-	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
+	defaultMaxZoom := uint(tegola.MaxZ)
+	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
 
-	fc.MaxZoom = uint64(maxZoom)
+	fc.MaxZoom = maxZoom
 
 	fc.Basepath, err = c.String(ConfigKeyBasepath, nil)
 	if err != nil {
@@ -70,7 +70,7 @@ type Cache struct {
 	//	MaxZoom determins the max zoom the cache to persist. Beyond this
 	//	zoom, cache Set() calls will be ignored. This is useful if the cache
 	//	should not be leveraged for higher zooms when data changes often.
-	MaxZoom uint64
+	MaxZoom uint
 }
 
 // 	Get reads a z,x,y entry from the cache and returns the contents
