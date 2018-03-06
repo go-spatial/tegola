@@ -187,7 +187,7 @@ var cacheCmd = &cobra.Command{
 						}
 
 						//	filter down the layers we need for this zoom
-						m = m.FilterLayersByZoom(uint64(mt.Tile.Z))
+						m = m.FilterLayersByZoom(mt.Tile.Z)
 
 						//	check if overwriting the cache is not ok
 						if !cacheOverwrite {
@@ -200,9 +200,9 @@ var cacheCmd = &cobra.Command{
 							//	cache key
 							key := cache.Key{
 								MapName: mt.MapName,
-								Z:       uint64(mt.Tile.Z),
-								X:       uint64(mt.Tile.X),
-								Y:       uint64(mt.Tile.Y),
+								Z:       mt.Tile.Z,
+								X:       mt.Tile.X,
+								Y:       mt.Tile.Y,
 							}
 
 							//	read the tile from the cache
@@ -223,7 +223,7 @@ var cacheCmd = &cobra.Command{
 						}
 
 						//	seed the tile
-						if err = atlas.SeedMapTile(ctx, m, uint64(mt.Tile.Z), uint64(mt.Tile.X), uint64(mt.Tile.Y)); err != nil {
+						if err = atlas.SeedMapTile(ctx, m, mt.Tile.Z, mt.Tile.X, mt.Tile.Y); err != nil {
 							log.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
 							break
 						}

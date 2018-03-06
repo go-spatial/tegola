@@ -11,8 +11,6 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	maxZoom := 9
-
 	type tcase struct {
 		config   map[string]interface{}
 		expected *file.Cache
@@ -53,11 +51,11 @@ func TestNew(t *testing.T) {
 		"valid basepath and max zoom": {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
-				"max_zoom": 9,
+				"max_zoom": uint(9),
 			},
 			expected: &file.Cache{
 				Basepath: "testfiles/tegola-cache",
-				MaxZoom:  uint64(maxZoom),
+				MaxZoom:  9,
 			},
 			err: nil,
 		},
@@ -72,7 +70,7 @@ func TestNew(t *testing.T) {
 				"max_zoom": "foo",
 			},
 			expected: nil,
-			err:      fmt.Errorf("max_zoom value needs to be of type int. Value is of type string"),
+			err:      fmt.Errorf("max_zoom value needs to be of type uint. Value is of type string"),
 		},
 	}
 
@@ -274,7 +272,7 @@ func TestMaxZoom(t *testing.T) {
 		"over max zoom": tcase{
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 11,
@@ -287,7 +285,7 @@ func TestMaxZoom(t *testing.T) {
 		"under max zoom": tcase{
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 9,
@@ -300,7 +298,7 @@ func TestMaxZoom(t *testing.T) {
 		"equals max zoom": tcase{
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 10,

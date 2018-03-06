@@ -85,7 +85,7 @@ func (m Map) AddDebugLayers() Map {
 }
 
 // FilterLayersByZoom returns a copy of a Map with a subset of layers that match the given zoom
-func (m Map) FilterLayersByZoom(zoom uint64) Map {
+func (m Map) FilterLayersByZoom(zoom uint) Map {
 	var layers []Layer
 
 	for i := range m.Layers {

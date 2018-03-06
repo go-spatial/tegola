@@ -43,10 +43,10 @@ type TileJSON struct {
 	Format string `json:"format"`
 	// OPTIONAL. Default: 0. >= 0, <= 22.
 	// A positive integer specifying the minimum zoom level.
-	MinZoom uint64 `json:"minzoom"`
+	MinZoom uint `json:"minzoom"`
 	// OPTIONAL. Default: 22. >= 0, <= 22.
 	// An positive integer specifying the maximum zoom level. MUST be >= minzoom.
-	MaxZoom uint64 `json:"maxzoom"`
+	MaxZoom uint `json:"maxzoom"`
 	// OPTIONAL. Default: null. A name describing the tileset. The name can
 	// contain any legal character. Implementations SHOULD NOT interpret the
 	// name as HTML.
@@ -129,10 +129,10 @@ type VectorLayer struct {
 	GeometryType GeomType `json:"geometry_type,omitempty"`
 	// OPTIONAL. Default: 0. >= 0, <= 22.
 	// A positive integer specifying the minimum zoom level.
-	MinZoom uint64 `json:"minzoom"`
+	MinZoom uint `json:"minzoom"`
 	// OPTIONAL. Default: 22. >= 0, <= 22.
 	// A positive integer specifying the maximum zoom level. MUST be >= minzoom.
-	MaxZoom uint64 `json:"maxzoom"`
+	MaxZoom uint `json:"maxzoom"`
 	//	Tegola supports individual layer tiles.
 	Tiles []string `json:"tiles"`
 }

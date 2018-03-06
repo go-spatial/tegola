@@ -57,8 +57,9 @@ func ParseKey(str string) (*Key, error) {
 	}
 
 	//	parse our URL vals to ints
-	key.Z, err = strconv.ParseUint(zxy[0], 10, 32)
-	if err != nil || key.Z > tegola.MaxZ {
+	var placeholder uint64
+	placeholder, err = strconv.ParseUint(zxy[0], 10, 32)
+	if err != nil || placeholder > tegola.MaxZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "Z",
@@ -69,10 +70,11 @@ func ParseKey(str string) (*Key, error) {
 		return nil, err
 	}
 
-	maxXYatZ := maths.Exp2(key.Z) - 1
+	key.Z = uint(placeholder)
+	maxXYatZ := maths.Exp2(placeholder) - 1
 
-	key.X, err = strconv.ParseUint(zxy[1], 10, 32)
-	if err != nil || key.X > maxXYatZ {
+	placeholder, err = strconv.ParseUint(zxy[1], 10, 32)
+	if err != nil || placeholder > maxXYatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "X",
@@ -83,10 +85,12 @@ func ParseKey(str string) (*Key, error) {
 		return nil, err
 	}
 
+	key.X = uint(placeholder)
+
 	//	trim the extension if it exists
 	yParts := strings.Split(zxy[2], ".")
-	key.Y, err = strconv.ParseUint(yParts[0], 10, 64)
-	if err != nil || key.Y > maxXYatZ {
+	placeholder, err = strconv.ParseUint(yParts[0], 10, 64)
+	if err != nil || placeholder > maxXYatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "Y",
@@ -96,6 +100,7 @@ func ParseKey(str string) (*Key, error) {
 		log.Printf(err.Error())
 		return nil, err
 	}
+	key.Y = uint(placeholder)
 
 	return &key, nil
 }
@@ -103,18 +108,18 @@ func ParseKey(str string) (*Key, error) {
 type Key struct {
 	MapName   string
 	LayerName string
-	Z         uint64
-	X         uint64
-	Y         uint64
+	Z         uint
+	X         uint
+	Y         uint
 }
 
 func (k Key) String() string {
 	return filepath.Join(
 		k.MapName,
 		k.LayerName,
-		strconv.FormatUint(k.Z, 10),
-		strconv.FormatUint(k.X, 10),
-		strconv.FormatUint(k.Y, 10))
+		strconv.FormatUint(uint64(k.Z), 10),
+		strconv.FormatUint(uint64(k.X), 10),
+		strconv.FormatUint(uint64(k.Y), 10))
 }
 
 // InitFunc initilize a cache given a config map.

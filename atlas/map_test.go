@@ -18,7 +18,7 @@ import (
 func TestMapFilterLayersByZoom(t *testing.T) {
 	testcases := []struct {
 		atlasMap atlas.Map
-		zoom     uint64
+		zoom     uint
 		expected atlas.Map
 	}{
 		{
