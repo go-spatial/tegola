@@ -318,3 +318,13 @@ func YXorder(pt1, pt2 Pt) int {
 	// when you exclude all other possibilities, what remains  is...
 	return 0 // they are the same point
 }
+
+// Powers of 2
+func Exp2(p uint64) uint64 {
+	// this mimics behavior from casting
+	// a math.Exp2 which should overflow
+	if p > 63 {
+		p = 63
+	}
+	return uint64(1) << p
+}

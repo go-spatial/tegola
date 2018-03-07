@@ -40,7 +40,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			expectedLayers: []string{"test-layer", "debug-tile-outline", "debug-tile-center"},
 		},
 		{ // Negative row (y) not allowed (issue-229)
-			uri:          "/maps/test-map/test-layer/1/2/-1.pbf",
+			uri:          "/maps/test-map/test-layer/1/1/-1.pbf",
 			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
@@ -59,6 +59,20 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
 			expectedBody: []byte("invalid Z value (-1)"),
+		},
+		{ // issue-334
+			uri:          "/maps/test-map/test-layer/1/4/0.pbf",
+			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+			expectedBody: []byte("invalid X value (4)"),
+		},
+		{ // issue-334
+			uri:          "/maps/test-map/test-layer/1/0/4.pbf",
+			uriPattern:   "/maps/:map_name/:layer_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+			expectedBody: []byte("invalid Y value (4.pbf)"),
 		},
 	}
 
@@ -81,7 +95,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 		router.ServeHTTP(w, r)
 
 		if w.Code != test.expectedCode {
-			t.Errorf("[%v] status code, expected %v got %v", i,  test.expectedCode,w.Code)
+			t.Errorf("[%v] status code, expected %v got %v", i, test.expectedCode, w.Code)
 			continue
 		}
 
@@ -90,7 +104,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			wbody := strings.TrimSpace(w.Body.String())
 
 			if string(test.expectedBody) != wbody {
-				t.Errorf("[%v] body,  expected %v got %v", i,  string(test.expectedBody),wbody)
+				t.Errorf("[%v] body,  expected %v got %v", i, string(test.expectedBody), wbody)
 				continue
 			}
 			continue
@@ -103,12 +117,12 @@ func TestHandleMapLayerZXY(t *testing.T) {
 
 			responseBodyBytes, err = ioutil.ReadAll(w.Body)
 			if err != nil {
-				t.Errorf("[%v] body error, expected nil got %v", i, err)
+				t.Errorf("[%v] error reading response body, %v", i, err)
 				continue
 			}
 
 			if err = proto.Unmarshal(responseBodyBytes, &tile); err != nil {
-				t.Errorf("[%v] error unmarshalling response body, expected nil got %v", i, err)
+				t.Errorf("[%v] error unmarshalling response body, %v", i, err)
 				continue
 			}
 

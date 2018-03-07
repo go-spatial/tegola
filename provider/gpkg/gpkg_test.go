@@ -90,7 +90,7 @@ func TestNewTileProvider(t *testing.T) {
 type MockTile struct {
 	extent         [2][2]float64
 	bufferedExtent [2][2]float64
-	Z, X, Y        uint64
+	Z, X, Y        uint
 	srid           uint64
 }
 
@@ -104,7 +104,7 @@ func (t *MockTile) BufferedExtent() ([2][2]float64, uint64) {
 	return t.bufferedExtent, t.srid
 }
 
-func (t *MockTile) ZXY() (uint64, uint64, uint64) {
+func (t *MockTile) ZXY() (uint, uint, uint) {
 	return t.Z, t.X, t.Y
 }
 

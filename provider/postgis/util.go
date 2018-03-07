@@ -98,7 +98,7 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 	z, _, _ := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
-		zoomToken, strconv.FormatUint(z, 10),
+		zoomToken, strconv.FormatUint(uint64(z), 10),
 	)
 
 	return tokenReplacer.Replace(sql), nil

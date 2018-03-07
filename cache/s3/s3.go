@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/util/dict"
+	"github.com/go-spatial/tegola"
 )
 
 var (
@@ -62,16 +63,14 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	//	parse the config
 	c := dict.M(config)
 
-	//	TODO: this could be cleaner
-	defaultMaxZoom := 0
-	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
+	// the config map's underlying value is int
+	defaultMaxZoom := uint(tegola.MaxZ)
+	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
-	if maxZoom != 0 {
-		mz := uint(maxZoom)
-		s3cache.MaxZoom = &mz
-	}
+
+	s3cache.MaxZoom = maxZoom
 
 	s3cache.Bucket, err = c.String(ConfigKeyBucket, nil)
 	if err != nil {
@@ -183,7 +182,7 @@ type Cache struct {
 	//	MaxZoom determins the max zoom the cache to persist. Beyond this
 	//	zoom, cache Set() calls will be ignored. This is useful if the cache
 	//	should not be leveraged for higher zooms when data changes often.
-	MaxZoom *uint
+	MaxZoom uint
 
 	//	client holds a reference to the s3 client. it's expected the client
 	//	has an active session and read, write, delete permissions have been checked
@@ -194,7 +193,7 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	var err error
 
 	//	check for maxzoom
-	if s3c.MaxZoom != nil && key.Z > int(*s3c.MaxZoom) {
+	if key.Z > s3c.MaxZoom {
 		return nil
 	}
 

@@ -7,6 +7,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/maths"
 )
 
 //	Interface defines a cache back end
@@ -54,8 +57,9 @@ func ParseKey(str string) (*Key, error) {
 	}
 
 	//	parse our URL vals to ints
-	key.Z, err = strconv.Atoi(zxy[0])
-	if err != nil {
+	var placeholder uint64
+	placeholder, err = strconv.ParseUint(zxy[0], 10, 32)
+	if err != nil || placeholder > tegola.MaxZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "Z",
@@ -66,8 +70,11 @@ func ParseKey(str string) (*Key, error) {
 		return nil, err
 	}
 
-	key.X, err = strconv.Atoi(zxy[1])
-	if err != nil {
+	key.Z = uint(placeholder)
+	maxXYatZ := maths.Exp2(placeholder) - 1
+
+	placeholder, err = strconv.ParseUint(zxy[1], 10, 32)
+	if err != nil || placeholder > maxXYatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "X",
@@ -78,10 +85,12 @@ func ParseKey(str string) (*Key, error) {
 		return nil, err
 	}
 
+	key.X = uint(placeholder)
+
 	//	trim the extension if it exists
 	yParts := strings.Split(zxy[2], ".")
-	key.Y, err = strconv.Atoi(yParts[0])
-	if err != nil {
+	placeholder, err = strconv.ParseUint(yParts[0], 10, 64)
+	if err != nil || placeholder > maxXYatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "Y",
@@ -91,6 +100,7 @@ func ParseKey(str string) (*Key, error) {
 		log.Printf(err.Error())
 		return nil, err
 	}
+	key.Y = uint(placeholder)
 
 	return &key, nil
 }
@@ -98,13 +108,18 @@ func ParseKey(str string) (*Key, error) {
 type Key struct {
 	MapName   string
 	LayerName string
-	Z         int
-	X         int
-	Y         int
+	Z         uint
+	X         uint
+	Y         uint
 }
 
 func (k Key) String() string {
-	return filepath.Join(k.MapName, k.LayerName, strconv.Itoa(k.Z), strconv.Itoa(k.X), strconv.Itoa(k.Y))
+	return filepath.Join(
+		k.MapName,
+		k.LayerName,
+		strconv.FormatUint(uint64(k.Z), 10),
+		strconv.FormatUint(uint64(k.X), 10),
+		strconv.FormatUint(uint64(k.Y), 10))
 }
 
 // InitFunc initilize a cache given a config map.

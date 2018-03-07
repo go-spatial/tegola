@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/util/dict"
 )
@@ -39,16 +40,13 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	//	parse the config
 	c := dict.M(config)
 
-	//	TODO: this could be cleaner
-	defaultMaxZoom := 0
-	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
+	defaultMaxZoom := uint(tegola.MaxZ)
+	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
-	if maxZoom != 0 {
-		mz := uint(maxZoom)
-		fc.MaxZoom = &mz
-	}
+
+	fc.MaxZoom = maxZoom
 
 	fc.Basepath, err = c.String(ConfigKeyBasepath, nil)
 	if err != nil {
@@ -72,7 +70,7 @@ type Cache struct {
 	//	MaxZoom determins the max zoom the cache to persist. Beyond this
 	//	zoom, cache Set() calls will be ignored. This is useful if the cache
 	//	should not be leveraged for higher zooms when data changes often.
-	MaxZoom *uint
+	MaxZoom uint
 }
 
 // 	Get reads a z,x,y entry from the cache and returns the contents
@@ -102,7 +100,7 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 	var err error
 
 	//	check for maxzoom
-	if fc.MaxZoom != nil && key.Z > int(*fc.MaxZoom) {
+	if key.Z > fc.MaxZoom {
 		return nil
 	}
 

@@ -63,7 +63,7 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			case "big":
 				cC.BOM = binary.BigEndian
 			default:
-				return cases, fmt.Errorf("invalid bom(%v), expect “little” or “big”",bom)
+				return cases, fmt.Errorf("invalid bom(%v), expect “little” or “big”", bom)
 			}
 		case "geometry":
 			fallthrough

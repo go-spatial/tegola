@@ -19,6 +19,7 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths/webmercator"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/maths"
 )
 
 var (
@@ -84,7 +85,7 @@ var cacheCmd = &cobra.Command{
 			log.Fatalf("mising cache backend. check your config (%v)", configFile)
 		}
 
-		var zooms []int
+		var zooms []uint
 		var minx, miny, maxx, maxy int
 		var bounds [4]float64
 
@@ -136,14 +137,14 @@ var cacheCmd = &cobra.Command{
 			if cacheMaxZoom != 0 {
 				if cacheMaxZoom >= cacheMinZoom {
 					for i := cacheMinZoom; i <= cacheMaxZoom; i++ {
-						zooms = append(zooms, int(i))
+						zooms = append(zooms, i)
 					}
 				} else {
 					log.Fatalf("invalid zoom range. min (%v) is greater than max (%v)", cacheMinZoom, cacheMaxZoom)
 				}
 			} else {
 				//	every zoom
-				for i := 0; i <= atlas.MaxZoom; i++ {
+				for i := uint(0); i <= atlas.MaxZoom; i++ {
 					zooms = append(zooms, i)
 				}
 			}
@@ -222,7 +223,7 @@ var cacheCmd = &cobra.Command{
 						}
 
 						//	seed the tile
-						if err = atlas.SeedMapTile(ctx, m, uint64(mt.Tile.Z), uint64(mt.Tile.X), uint64(mt.Tile.Y)); err != nil {
+						if err = atlas.SeedMapTile(ctx, m, mt.Tile.Z, mt.Tile.X, mt.Tile.Y); err != nil {
 							log.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
 							break
 						}
@@ -272,7 +273,7 @@ var cacheCmd = &cobra.Command{
 					for m := range maps {
 						mapTile := MapTile{
 							MapName: maps[m].Name,
-							Tile:    tegola.NewTile(zooms[i], x, y),
+							Tile:    tegola.NewTile(zooms[i], uint(x), uint(y)),
 						}
 						select {
 						case tiler <- mapTile:
@@ -308,24 +309,23 @@ func parseTileString(str string) (*tegola.Tile, error) {
 		return tile, fmt.Errorf("invalid zxy value (%v). expecting the format z/x/y", str)
 	}
 
-	z, err := strconv.Atoi(parts[0])
-	if err != nil {
+	z, err := strconv.ParseUint(parts[0], 10, 64)
+	if err != nil || z > tegola.MaxZ {
 		return tile, fmt.Errorf("invalid Z value (%v)", z)
 	}
-	if z < 0 {
-		return tile, fmt.Errorf("negative zoom levels are not allowed")
-	}
 
-	x, err := strconv.Atoi(parts[1])
-	if err != nil {
+	maxXYatZ := maths.Exp2(z) - 1
+
+	x, err := strconv.ParseUint(parts[1], 10, 64)
+	if err != nil || x > maxXYatZ {
 		return tile, fmt.Errorf("invalid X value (%v)", x)
 	}
 
-	y, err := strconv.Atoi(parts[2])
-	if err != nil {
+	y, err := strconv.ParseUint(parts[2], 10, 64)
+	if err != nil || y > maxXYatZ {
 		return tile, fmt.Errorf("invalid Y value (%v)", y)
 	}
-	tile = tegola.NewTile(z, x, y)
+	tile = tegola.NewTile(uint(z), uint(x), uint(y))
 
 	return tile, nil
 }

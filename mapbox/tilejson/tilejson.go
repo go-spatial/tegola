@@ -42,11 +42,11 @@ type TileJSON struct {
 	//	pbf - protocol buffer
 	Format string `json:"format"`
 	// OPTIONAL. Default: 0. >= 0, <= 22.
-	// An integer specifying the minimum zoom level.
-	MinZoom int `json:"minzoom"`
+	// A positive integer specifying the minimum zoom level.
+	MinZoom uint `json:"minzoom"`
 	// OPTIONAL. Default: 22. >= 0, <= 22.
-	// An integer specifying the maximum zoom level. MUST be >= minzoom.
-	MaxZoom int `json:"maxzoom"`
+	// An positive integer specifying the maximum zoom level. MUST be >= minzoom.
+	MaxZoom uint `json:"maxzoom"`
 	// OPTIONAL. Default: null. A name describing the tileset. The name can
 	// contain any legal character. Implementations SHOULD NOT interpret the
 	// name as HTML.
@@ -128,11 +128,11 @@ type VectorLayer struct {
 	// possible values include: "point", "line", "polygon", "unknown"
 	GeometryType GeomType `json:"geometry_type,omitempty"`
 	// OPTIONAL. Default: 0. >= 0, <= 22.
-	// An integer specifying the minimum zoom level.
-	MinZoom int `json:"minzoom"`
+	// A positive integer specifying the minimum zoom level.
+	MinZoom uint `json:"minzoom"`
 	// OPTIONAL. Default: 22. >= 0, <= 22.
-	// An integer specifying the maximum zoom level. MUST be >= minzoom.
-	MaxZoom int `json:"maxzoom"`
+	// A positive integer specifying the maximum zoom level. MUST be >= minzoom.
+	MaxZoom uint `json:"maxzoom"`
 	//	Tegola supports individual layer tiles.
 	Tiles []string `json:"tiles"`
 }
