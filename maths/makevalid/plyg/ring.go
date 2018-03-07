@@ -12,6 +12,8 @@ import (
 	"time"
 
 	svg "github.com/ajstarks/svgo"
+	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/hitmap"
 	"github.com/go-spatial/tegola/maths/points"
@@ -23,17 +25,26 @@ type Ring struct {
 	Points []maths.Pt
 	Label  maths.Label
 	hasBB  bool
-	bb     [4]float64
+	bb     *geom.BoundingBox
 }
 
-func (r *Ring) BBox() [4]float64 {
+func (r *Ring) initBB() *geom.BoundingBox {
 	if r.hasBB {
 		return r.bb
 	}
-	r.bb = points.BBox(r.Points)
+	pts := convert.FromMathPoint(r.Points...)
+	r.bb = geom.NewBBox(pts...)
 	r.hasBB = true
 	return r.bb
 }
+
+func (r *Ring) BBox() [4]float64 { return r.initBB().BBox() }
+
+func (r *Ring) MinX() float64   { return r.initBB().MinX() }
+func (r *Ring) MinY() float64   { return r.initBB().MinY() }
+func (r *Ring) MaxX() float64   { return r.initBB().MaxX() }
+func (r *Ring) BBArea() float64 { return r.initBB().Area() }
+func (r *Ring) MaxY() float64   { return r.initBB().MaxY() }
 
 // LineRing returns a copy of the points in the correct winding order.
 func (r Ring) LineRing() (pts []maths.Pt) {
@@ -382,15 +393,15 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 
 	// Now run through all the outside Rings.
 	for _, i := range outsidePlys {
-		obb := points.BoundingBox(rc.Rings[i].BBox())
 
 		for j := len(rings) - 1; j >= 0; j-- {
-			ibb := points.BoundingBox(points.BBox(rings[j][0]))
-			if ibb.Area() <= obb.Area() {
+			pts := convert.FromMathPoint(rings[j][0]...)
+			ibb := geom.NewBBox(pts...)
+
+			if ibb.Area() <= rc.Rings[i].BBArea() {
 				continue
 			}
-			containsbb := ibb.ContainBB(obb)
-			if !containsbb {
+			if !ibb.Contains(&(rc.Rings[i])) {
 				continue
 			}
 
