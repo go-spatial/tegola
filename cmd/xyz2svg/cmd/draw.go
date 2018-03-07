@@ -9,16 +9,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/draw/svg"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/maths/points"
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/spf13/cobra"
 )
 
 var drawCmd = &cobra.Command{
@@ -148,13 +148,13 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 			count++
 			cursor := mvt.NewCursor(ttile)
 
-			geom, err := convert.ToTegola(f.Geometry)
+			geometry, err := convert.ToTegola(f.Geometry)
 			if err != nil {
 				return err
 			}
 
 			// Scale
-			g := cursor.ScaleGeo(geom)
+			g := cursor.ScaleGeo(geometry)
 
 			// Simplify
 			sg := mvt.SimplifyGeometry(g, ttile.ZEpislon(), true)
@@ -164,8 +164,8 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 			}
 
 			// Clip and validate
-			ext := points.Extent(pbb)
-			vg, err := validate.CleanGeometry(ctx, sg, &ext)
+			ext := geom.NewBBox(pbb[0], pbb[1])
+			vg, err := validate.CleanGeometry(ctx, sg, ext)
 
 			// Draw each of the steps.
 			ffname, file, err := dfn.createFile(pname, name, gid, count)

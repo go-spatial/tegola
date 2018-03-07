@@ -9,3 +9,9 @@ type BoundingBox struct {
 	X, Y, Z int
 	HasXYZ  bool
 }
+
+// Adhear to the MinMaxer interface.
+func (bb BoundingBox) MinX() float64 { return bb.Minx }
+func (bb BoundingBox) MaxX() float64 { return bb.Maxx }
+func (bb BoundingBox) MinY() float64 { return bb.Miny }
+func (bb BoundingBox) MaxY() float64 { return bb.Maxy }
