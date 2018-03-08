@@ -1,4 +1,4 @@
-# Sever
+# Server
 
 The server package is responsible for handling webserver requests for map tiles and various JSON endpoints describing the configured server. Example config:
 
@@ -22,7 +22,7 @@ tegola's built in viewer code is stored in the static/ directory. To generate a 
 go-bindata-assetfs -pkg=server -ignore=.DS_Store static/...
 ```
 
-bindata-assetfs also supports a debug mode which is descried as "Do not embed the assets, but provide the embedding API. Contents will still be loaded from disk." This mode is ideal for development and can be configured using the following command:
+bindata-assetfs also supports a debug mode which is described as "Do not embed the assets, but provide the embedding API. Contents will still be loaded from disk." This mode is ideal for development and can be configured using the following command:
 
 ```
 go-bindata-assetfs -debug -pkg=server -ignore=.DS_Store static/...
