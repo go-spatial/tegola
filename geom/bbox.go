@@ -81,6 +81,20 @@ func (bb *BoundingBox) MinY() float64 {
 	return bb[1]
 }
 
+// TODO (gdey): look at how to have this function take into account the dpi.
+func (bb *BoundingBox) XSpan() float64 {
+	if bb == nil {
+		return math.Inf(1)
+	}
+	return bb[2] - bb[0]
+}
+func (bb *BoundingBox) YSpan() float64 {
+	if bb == nil {
+		return math.Inf(1)
+	}
+	return bb[3] - bb[1]
+}
+
 func (bb *BoundingBox) BBox() [4]float64 {
 	return [4]float64{bb.MinX(), bb.MinY(), bb.MaxX(), bb.MaxY()}
 }
@@ -194,7 +208,21 @@ func (bb *BoundingBox) ScaleBy(s float64) *BoundingBox {
 	if bb == nil {
 		return nil
 	}
-	return &BoundingBox{bb[0] * s, bb[1] * s, bb[2] * s, bb[3] * s}
+	return NewBBox(
+		[2]float64{bb[0] * s, bb[1] * s},
+		[2]float64{bb[2] * s, bb[3] * s},
+	)
+}
+
+// ExpandBy will expand bounding box by the given factor.
+func (bb *BoundingBox) ExpandBy(s float64) *BoundingBox {
+	if bb == nil {
+		return nil
+	}
+	return NewBBox(
+		[2]float64{bb[0] - s, bb[1] - s},
+		[2]float64{bb[2] + s, bb[3] + s},
+	)
 }
 
 func (bb *BoundingBox) Clone() *BoundingBox {

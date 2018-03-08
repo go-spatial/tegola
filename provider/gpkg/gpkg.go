@@ -81,28 +81,22 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	pLayer := p.layers[layer]
 
 	//	read the tile extent
-	bufferedExtent, tileSRID := tile.BufferedExtent()
-
-	// TODO: leverage minx/y maxx/y methods once the BufferedExtent returns a geom.Extent type
-	tileBBox := geom.BoundingBox{
-		bufferedExtent[0][0], bufferedExtent[0][1], //minx, miny
-		bufferedExtent[1][0], bufferedExtent[1][1], //maxx, maxy
-	}
+	tileBBox, tileSRID := tile.BufferedExtent()
 
 	// TODO(arolek): reimplement once the geom package has reprojection
 	// check if the SRID of the layer differs from that of the tile. tileSRID is assumed to always be WebMercator
 	if pLayer.srid != tileSRID {
-		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
+		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox.MinX(), tileBBox.MinY()})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
+		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox.MaxX(), tileBBox.MaxY()})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		tileBBox = geom.BoundingBox{
+		tileBBox = &geom.BoundingBox{
 			minGeo.AsPoint().X(), minGeo.AsPoint().Y(),
 			maxGeo.AsPoint().X(), maxGeo.AsPoint().Y(),
 		}

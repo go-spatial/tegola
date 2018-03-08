@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/maths/webmercator"
 )
 
@@ -34,8 +35,8 @@ type Tile struct {
 	xspan float64
 	yspan float64
 	// This is the computed bounding box.
-	extent  [2][2]float64
-	bufpext [2][2]float64
+	extent  *geom.BoundingBox
+	bufpext *geom.BoundingBox
 }
 
 // NewTile will return a non-nil tile object.
@@ -74,22 +75,19 @@ func (t *Tile) Init() {
 	//	resolution
 	res := (max * 2) / math.Exp2(float64(t.Z))
 	t.cached = true
-	t.extent = [2][2]float64{
-		{
-			-max + (float64(t.X) * res), // MinX
-			max - (float64(t.Y) * res),  // Miny
-		},
-		{
-			-max + (float64(t.X) * res) + res, // MaxX
-			max - (float64(t.Y) * res) - res,  // MaxY
+	t.extent = &geom.BoundingBox{
+		-max + (float64(t.X) * res),       // MinX
+		max - (float64(t.Y) * res),        // Miny
+		-max + (float64(t.X) * res) + res, // MaxX
+		max - (float64(t.Y) * res) - res,  // MaxY
 
-		},
 	}
-	t.xspan = t.extent[1][0] - t.extent[0][0]
-	t.yspan = t.extent[1][1] - t.extent[0][1]
+	t.xspan = t.extent.MaxX() - t.extent.MinX()
+	t.yspan = t.extent.MaxY() - t.extent.MinY()
 	/*
 		// This is how we can calculate it. But, it will always be a constant.
 		// So, we just return that constant.
+		// Where PixelBounds is :  [4]float64{0.0, 0.0, t.Extent, t.Extent}
 		bounds, err = t.PixelBounds()
 		if err != nil {
 			return bounds, err
@@ -99,8 +97,10 @@ func (t *Tile) Init() {
 		bounds[1][0] += t.Buffer
 		bounds[1][1] += t.Buffer
 	*/
-	t.bufpext = [2][2]float64{{0 - t.Buffer, 0 - t.Buffer}, {t.Extent + t.Buffer, t.Extent + t.Buffer}}
-
+	t.bufpext = &geom.BoundingBox{
+		0 - t.Buffer, 0 - t.Buffer,
+		t.Extent + t.Buffer, t.Extent + t.Buffer,
+	}
 }
 
 func (t *Tile) Deg2Num() (x, y int) {
@@ -111,12 +111,29 @@ func (t *Tile) Deg2Num() (x, y int) {
 }
 
 func (t *Tile) Num2Deg() (lat, lng float64) {
-	n := math.Pi - 2.0*math.Pi*float64(t.Y)/math.Exp2(float64(t.Z))
-
-	lat = 180.0 / math.Pi * math.Atan(0.5*(math.Exp(n)-math.Exp(-n)))
-	lng = float64(t.X)/math.Exp2(float64(t.Z))*360.0 - 180.0
-
+	lat = Tile2Lat(uint64(t.Y), uint64(t.Z))
+	lng = Tile2Lon(uint64(t.X), uint64(t.Z))
 	return lat, lng
+}
+
+func Tile2Lon(x, z uint64) float64 { return float64(x)/math.Exp2(float64(z))*360.0 - 180.0 }
+
+func Tile2Lat(y, z uint64) float64 {
+	var n float64 = math.Pi
+	if y != 0 {
+		n = math.Pi - 2.0*math.Pi*float64(y)/math.Exp2(float64(z))
+	}
+
+	return 180.0 / math.Pi * math.Atan(0.5*(math.Exp(n)-math.Exp(-n)))
+}
+
+// Bounds returns the bounds of the Tile as defined by the North most Longitude, East most Latitude, South most Longitude, West most Latitude.
+func (t *Tile) Bounds() [4]float64 {
+	north := Tile2Lon(uint64(t.X), uint64(t.Z))
+	east := Tile2Lat(uint64(t.Y), uint64(t.Z))
+	south := Tile2Lon(uint64(t.X+1), uint64(t.Z))
+	west := Tile2Lat(uint64(t.Y+1), uint64(t.Z))
+	return [4]float64{north, east, south, west}
 }
 
 func toWebMercator(srid int, pt [2]float64) (npt [2]float64, err error) {
@@ -155,8 +172,8 @@ func (t *Tile) ToPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
 		return npt, err
 	}
 
-	nx := int64((spt[0] - t.extent[0][0]) * t.Extent / t.xspan)
-	ny := int64((spt[1] - t.extent[0][1]) * t.Extent / t.yspan)
+	nx := int64((spt[0] - t.extent.MinX()) * t.Extent / t.xspan)
+	ny := int64((spt[1] - t.extent.MinY()) * t.Extent / t.yspan)
 	return [2]float64{float64(nx), float64(ny)}, nil
 }
 
@@ -165,76 +182,14 @@ func (t *Tile) FromPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
 	x := float64(int64(pt[0]))
 	y := float64(int64(pt[1]))
 
-	wmx := (x * t.xspan / t.Extent) + t.extent[0][0]
-	wmy := (y * t.yspan / t.Extent) + t.extent[0][1]
+	wmx := (x * t.xspan / t.Extent) + t.extent.MinX()
+	wmy := (y * t.yspan / t.Extent) + t.extent.MinY()
 	return fromWebMercator(srid, [2]float64{wmx, wmy})
 
 }
 
-//BoundingBox returns the bound box coordinates for upper left (ulx, uly) and lower right (lrx, lry)
-// in web mercator projection
-// ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
-func (t *Tile) BoundingBox() BoundingBox {
-	return BoundingBox{
-		Minx:    t.extent[0][0],
-		Miny:    t.extent[0][1],
-		Maxx:    t.extent[1][0],
-		Maxy:    t.extent[1][1],
-		Epsilon: t.ZEpislon(),
-		HasXYZ:  true,
-		X:       t.X,
-		Y:       t.Y,
-		Z:       t.Z,
-	}
-}
-
-func (t *Tile) BufferedBoundingBox() (BoundingBox, error) {
-
-	pbounds, err := t.PixelBufferedBounds()
-	if err != nil {
-		return BoundingBox{}, err
-	}
-
-	min, err := t.FromPixel(WebMercator, pbounds[0])
-	if err != nil {
-		return BoundingBox{}, err
-	}
-	max, err := t.FromPixel(WebMercator, pbounds[1])
-	if err != nil {
-		return BoundingBox{}, err
-	}
-
-	return BoundingBox{
-		Minx:    min[0],
-		Miny:    min[1],
-		Maxx:    max[0],
-		Maxy:    max[1],
-		Epsilon: t.ZEpislon(),
-		HasXYZ:  true,
-		X:       t.X,
-		Y:       t.Y,
-		Z:       t.Z,
-	}, nil
-}
-
-func (t *Tile) PixelBounds() (bounds [2][2]float64, err error) {
-	/*
-		// This is how we can calculate it. But, it will always be a constant.
-		// So, we just return that constant.
-		bounds[0], err = t.ToPixel(WebMercator, t.extent[0])
-		if err != nil {
-			return bounds, err
-		}
-		bounds[1], err = t.ToPixel(WebMercator, t.extent[1])
-		if err != nil {
-			return bounds, err
-		}
-	*/
-	return [2][2]float64{{0.0, 0.0}, {t.Extent, t.Extent}}, nil
-}
-
-func (t *Tile) PixelBufferedBounds() (bounds [2][2]float64, err error) {
-	return t.bufpext, nil
+func (t *Tile) PixelBufferedBounds() (bounds [4]float64, err error) {
+	return t.bufpext.BBox(), nil
 }
 
 // Returns web mercator zoom level
@@ -243,15 +198,10 @@ func (t *Tile) ZLevel() int {
 }
 
 //ZRes takes a web mercator zoom level and returns the pixel resolution for that
-//	scale, assuming 256x256 pixel tiles. Non-integer zoom levels are accepted.
+//	scale, assuming t.Extent x t.Extent pixel tiles. Non-integer zoom levels are accepted.
 //	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
-// TODO(gdey):  I'm pretty sure we should be using the extent instead of 256 here. But I don't know what the magic number 40075016.6855785 is used for.
-// 40075016.6855785 is close to 2*webmercator.MaxXExtent or 2*webmercator.MaxYExtent
 // 40075016.6855785 is the equator in meters for WGS84 at z=0
-// 256 is the tile width and height.
 func (t *Tile) ZRes() float64 {
-
-	//return 40075016.6855785 / (256 * math.Exp2(float64(t.Z)))
 	return 40075016.6855785 / (t.Extent * math.Exp2(float64(t.Z)))
 }
 

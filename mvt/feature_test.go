@@ -63,7 +63,6 @@ func TestEncodeGeometry(t *testing.T) {
 		desc string `tbltest:"desc"`
 		geo  basic.Geometry
 		typ  vectorTile.Tile_GeomType
-		bbox tegola.BoundingBox
 		egeo []uint32
 		eerr error
 	}
@@ -172,13 +171,7 @@ func TestEncodeGeometry(t *testing.T) {
 					},
 				},
 			},
-			typ: vectorTile.Tile_POLYGON,
-			bbox: tegola.BoundingBox{
-				Minx: 0,
-				Miny: 0,
-				Maxx: 4096,
-				Maxy: 4096,
-			},
+			typ:  vectorTile.Tile_POLYGON,
 			egeo: []uint32{9, 0, 0, 26, 18, 0, 0, 18, 17, 0, 15, 9, 22, 4, 26, 18, 0, 0, 18, 17, 0, 15, 9, 2, 15, 26, 0, 8, 8, 0, 0, 7, 15},
 		},
 	).Run(fn)

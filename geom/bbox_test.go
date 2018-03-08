@@ -243,9 +243,15 @@ func TestBBoxAttributes(t *testing.T) {
 		return pt[0] == x && pt[1] == y
 	}
 
-	fn := func(t *testing.T, bb *geom.BoundingBox) {
+	type tcase struct {
+		bb           *geom.BoundingBox
+		xspan, yspan float64
+	}
+
+	fn := func(t *testing.T, tc tcase) {
 
 		t.Parallel()
+		bb := tc.bb
 
 		{
 			vert := bb.Vertices()
@@ -327,13 +333,36 @@ func TestBBoxAttributes(t *testing.T) {
 		}
 		cbb := bb.Clone()
 		if !cmp.BBox(bb, cbb) {
-			t.Errorf("Clone, equal, expected (%v) true got (%v) false", bb, cbb)
+			t.Errorf("Clone equal, expected (%v) true got (%v) false", bb, cbb)
 		}
-
+		xspan := bb.XSpan()
+		if tc.xspan == math.Inf(1) && xspan != tc.xspan {
+			t.Errorf("xspan, expected ∞ got %v", xspan)
+		} else {
+			if !cmp.Float(tc.xspan, xspan) {
+				t.Errorf("xspan, expected %v got %v", tc.xspan, xspan)
+			}
+		}
+		yspan := bb.YSpan()
+		if tc.yspan == math.Inf(1) && yspan != tc.yspan {
+			t.Errorf("yspan, expected ∞ got %v", yspan)
+		} else {
+			if !cmp.Float(tc.yspan, yspan) {
+				t.Errorf("yspan, expected %v got %v", tc.yspan, yspan)
+			}
+		}
 	}
-	tests := map[string]*geom.BoundingBox{
-		"std": &geom.BoundingBox{0.0, 0.0, 10.0, 10.0},
-		"nil": nil,
+	tests := map[string]tcase{
+		"std": tcase{
+			bb:    &geom.BoundingBox{0.0, 0.0, 10.0, 10.0},
+			xspan: 10.0,
+			yspan: 10.0,
+		},
+		"nil": tcase{
+			bb:    nil,
+			xspan: math.Inf(1),
+			yspan: math.Inf(1),
+		},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -349,7 +378,7 @@ func TestBBoxScaleBy(t *testing.T) {
 	}
 	fn := func(t *testing.T, tc tcase) {
 		sbb := tc.bb.ScaleBy(tc.scale)
-		if !reflect.DeepEqual(sbb, tc.ebb) {
+		if !cmp.BBox(tc.ebb, sbb) {
 			t.Errorf("Scale by, expected %v got %v", tc.ebb, sbb)
 		}
 	}
@@ -366,6 +395,44 @@ func TestBBoxScaleBy(t *testing.T) {
 			bb:    &geom.BoundingBox{0, 0, 10, 10},
 			ebb:   &geom.BoundingBox{0, 0, 20, 20},
 			scale: 2.0,
+		},
+		"-2.0 scale": tcase{
+			bb:    &geom.BoundingBox{0, 0, 10, 10},
+			ebb:   &geom.BoundingBox{-20, -20, 0, 0},
+			scale: -2.0,
+		},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
+
+func TestBBoxExpandBy(t *testing.T) {
+	type tcase struct {
+		bb     *geom.BoundingBox
+		factor float64
+		ebb    *geom.BoundingBox
+	}
+	fn := func(t *testing.T, tc tcase) {
+		sbb := tc.bb.ExpandBy(tc.factor)
+		if !cmp.BBox(tc.ebb, sbb) {
+			t.Errorf("Expand by, expected %v got %v", tc.ebb, sbb)
+		}
+	}
+	tests := map[string]tcase{
+		"nil": tcase{
+			factor: 2.0,
+		},
+		"1.0 factor": tcase{
+			bb:     &geom.BoundingBox{0, 0, 10, 10},
+			ebb:    &geom.BoundingBox{-1, -1, 11, 11},
+			factor: 1.0,
+		},
+		"-20.1 factor": tcase{
+			bb:     &geom.BoundingBox{0, 0, 10, 10},
+			ebb:    &geom.BoundingBox{-10.1, -10.1, 20.1, 20.1},
+			factor: -20.1,
 		},
 	}
 	for name, tc := range tests {

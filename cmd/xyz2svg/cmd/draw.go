@@ -164,7 +164,7 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 			}
 
 			// Clip and validate
-			ext := geom.NewBBox(pbb[0], pbb[1])
+			ext := geom.NewBBox([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 			vg, err := validate.CleanGeometry(ctx, sg, ext)
 
 			// Draw each of the steps.

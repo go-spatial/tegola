@@ -592,7 +592,7 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
-	ext := geom.NewBBox(pbb[0], pbb[1])
+	ext := geom.NewBBox([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 
 	geometry, err = validate.CleanGeometry(ctx, sg, ext)
 	if err != nil {

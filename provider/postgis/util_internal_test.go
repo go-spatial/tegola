@@ -18,14 +18,14 @@ func TestReplaceTokens(t *testing.T) {
 			sql:      "SELECT * FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
 			tile:     slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
-			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,1.017529720390625e+07,156543.03390624933,-156543.03390624933,3857)",
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.018e+07,-1.565e+05,1.565e+05,1.018e+07,3857)",
 		},
 		{
 
 			sql:      "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
 			tile:     slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
-			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,1.017529720390625e+07,156543.03390624933,-156543.03390624933,3857)",
+			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.018e+07,-1.565e+05,1.565e+05,1.018e+07,3857)",
 		},
 	}
 
@@ -37,7 +37,7 @@ func TestReplaceTokens(t *testing.T) {
 		}
 
 		if sql != tc.expected {
-			t.Errorf("[%v] incorrect sql, Expected (%v) Got (%v)", i, tc.expected, sql)
+			t.Errorf("[%v] incorrect sql,\n Expected \n \t%v\n Got \n \t%v", i, tc.expected, sql)
 		}
 	}
 }

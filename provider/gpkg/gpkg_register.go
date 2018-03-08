@@ -190,7 +190,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
 			wgs84BB := geom.NewBBox([2]float64{180.0, 85.0551}, [2]float64{-180.0, -85.0511})
-			customSQL = replaceTokens(customSQL, 0, *wgs84BB)
+			customSQL = replaceTokens(customSQL, 0, wgs84BB)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
