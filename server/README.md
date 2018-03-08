@@ -1,4 +1,4 @@
-# Sever
+# Server
 
 The server package is responsible for handling webserver requests for map tiles and various JSON endpoints describing the configured server. Example config:
 
