@@ -317,25 +317,25 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"static": &bintree{nil, map[string]*bintree{
-		"css": &bintree{nil, map[string]*bintree{
-			"tegola.css": &bintree{staticCssTegolaCss, map[string]*bintree{}},
+	"static": {nil, map[string]*bintree{
+		"css": {nil, map[string]*bintree{
+			"tegola.css": {staticCssTegolaCss, map[string]*bintree{}},
 		}},
-		"favicon.ico": &bintree{staticFaviconIco, map[string]*bintree{}},
-		"index.html":  &bintree{staticIndexHtml, map[string]*bintree{}},
-		"js": &bintree{nil, map[string]*bintree{
-			"tegola.js": &bintree{staticJsTegolaJs, map[string]*bintree{}},
+		"favicon.ico": {staticFaviconIco, map[string]*bintree{}},
+		"index.html":  {staticIndexHtml, map[string]*bintree{}},
+		"js": {nil, map[string]*bintree{
+			"tegola.js": {staticJsTegolaJs, map[string]*bintree{}},
 		}},
-		"lib": &bintree{nil, map[string]*bintree{
-			"mapbox-gl-js": &bintree{nil, map[string]*bintree{
-				"v0.41.0": &bintree{nil, map[string]*bintree{
-					"mapbox-gl.css": &bintree{staticLibMapboxGlJsV0410MapboxGlCss, map[string]*bintree{}},
-					"mapbox-gl.js":  &bintree{staticLibMapboxGlJsV0410MapboxGlJs, map[string]*bintree{}},
+		"lib": {nil, map[string]*bintree{
+			"mapbox-gl-js": {nil, map[string]*bintree{
+				"v0.41.0": {nil, map[string]*bintree{
+					"mapbox-gl.css": {staticLibMapboxGlJsV0410MapboxGlCss, map[string]*bintree{}},
+					"mapbox-gl.js":  {staticLibMapboxGlJsV0410MapboxGlJs, map[string]*bintree{}},
 				}},
 			}},
-			"vue": &bintree{nil, map[string]*bintree{
-				"v2.3.0": &bintree{nil, map[string]*bintree{
-					"vue.min.js": &bintree{staticLibVueV230VueMinJs, map[string]*bintree{}},
+			"vue": {nil, map[string]*bintree{
+				"v2.3.0": {nil, map[string]*bintree{
+					"vue.min.js": {staticLibVueV230VueMinJs, map[string]*bintree{}},
 				}},
 			}},
 		}},

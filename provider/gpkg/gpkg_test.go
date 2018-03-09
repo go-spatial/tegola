@@ -54,7 +54,7 @@ func TestNewTileProvider(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"duplicate layer name": tcase{
+		"duplicate layer name": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
@@ -64,7 +64,7 @@ func TestNewTileProvider(t *testing.T) {
 			},
 			expectedErr: errors.New("layer name (a_points) is duplicated in both layer 1 and layer 0"),
 		},
-		"3 layers": tcase{
+		"3 layers": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
@@ -143,7 +143,7 @@ func TestTileFeatures(t *testing.T) {
 
 	tests := map[string]tcase{
 		// roads_lines bounding box is: [23.6655, 37.85, 23.7958, 37.9431] (see gpkg_contents table)
-		"tile outside layer extent": tcase{
+		"tile outside layer extent": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
@@ -161,7 +161,7 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 0,
 		},
 		// rail lines bounding box is: [23.6828, 37.8501, 23.7549, 37.9431]
-		"tile inside layer extent": tcase{
+		"tile inside layer extent": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
@@ -178,7 +178,7 @@ func TestTileFeatures(t *testing.T) {
 			},
 			expectedFeatureCount: 187,
 		},
-		"zoom token": tcase{
+		"zoom token": {
 			config: map[string]interface{}{
 				"filepath": GPKGNaturalEarthFilePath,
 				"layers": []map[string]interface{}{
@@ -205,7 +205,7 @@ func TestTileFeatures(t *testing.T) {
 			},
 			expectedFeatureCount: 101,
 		},
-		"zoom token 2": tcase{
+		"zoom token 2": {
 			config: map[string]interface{}{
 				"filepath": GPKGNaturalEarthFilePath,
 				"layers": []map[string]interface{}{
@@ -287,7 +287,7 @@ func TestConfigs(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"expecting tags": tcase{
+		"expecting tags": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
@@ -305,21 +305,21 @@ func TestConfigs(t *testing.T) {
 			},
 			layerName: "a_points",
 			expectedTags: map[uint64]map[string]interface{}{
-				515: map[string]interface{}{
+				515: {
 					"amenity": "boat_rental",
 					"shop":    "yachts",
 				},
-				359: map[string]interface{}{
+				359: {
 					"amenity": "bench",
 					"tourism": "viewpoint",
 				},
-				273: map[string]interface{}{
+				273: {
 					"amenity":  "place_of_worship",
 					"religion": "christian",
 				},
 			},
 		},
-		"no tags provided": tcase{
+		"no tags provided": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
@@ -337,10 +337,10 @@ func TestConfigs(t *testing.T) {
 			},
 			layerName: "rd_lines",
 			expectedTags: map[uint64]map[string]interface{}{
-				1: map[string]interface{}{},
+				1: {},
 			},
 		},
-		"simple sql": tcase{
+		"simple sql": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
@@ -359,21 +359,21 @@ func TestConfigs(t *testing.T) {
 			},
 			layerName: "a_points",
 			expectedTags: map[uint64]map[string]interface{}{
-				515: map[string]interface{}{
+				515: {
 					"amenity": "boat_rental",
 					"shop":    "yachts",
 				},
-				359: map[string]interface{}{
+				359: {
 					"amenity": "bench",
 					"tourism": "viewpoint",
 				},
-				273: map[string]interface{}{
+				273: {
 					"amenity":  "place_of_worship",
 					"religion": "christian",
 				},
 			},
 		},
-		"complex sql": tcase{
+		"complex sql": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
@@ -404,7 +404,7 @@ func TestConfigs(t *testing.T) {
 			},
 			layerName: "a_p_points",
 			expectedTags: map[uint64]map[string]interface{}{
-				255: map[string]interface{}{
+				255: {
 					"amenity":  "place_of_worship",
 					"religion": "christian",
 				},

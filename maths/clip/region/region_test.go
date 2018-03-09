@@ -19,7 +19,7 @@ func TestNewRegion(t *testing.T) {
 		!(maths.Pt{10, 10}).IsEqual(cr.Max()) {
 		t.Errorf("For clockwise Min,Max got (%v,%v) expected ( (0 0),(10 10))", cr.Min(), cr.Max())
 	}
-	expectedPt := []maths.Pt{maths.Pt{0, 10}, maths.Pt{0, 0}, maths.Pt{10, 0}, maths.Pt{10, 10}}
+	expectedPt := []maths.Pt{{0, 10}, {0, 0}, {10, 0}, {10, 10}}
 	expectedDr := []bool{false, true, true, false}
 	{
 		ctx, cancel := context.WithCancel(context.Background())
@@ -49,7 +49,7 @@ func TestNewRegion(t *testing.T) {
 		!(maths.Pt{10, 10}).IsEqual(cr.Max()) {
 		t.Errorf("For counter clockwise Min,Max got (%v,%v) expected ( (0 0),(10 10))", cr.Min(), cr.Max())
 	}
-	expectedPt = []maths.Pt{maths.Pt{0, 0}, maths.Pt{0, 10}, maths.Pt{10, 10}, maths.Pt{10, 0}}
+	expectedPt = []maths.Pt{{0, 0}, {0, 10}, {10, 10}, {10, 0}}
 	expectedDr = []bool{true, true, false, false}
 	{
 		ctx, cancel := context.WithCancel(context.Background())
@@ -88,7 +88,7 @@ func TestNewRegion(t *testing.T) {
 		t.Errorf("Axis 0's winding (%v) want %v", a0.winding, cr.winding)
 	}
 	a0.PushInBetween(list.NewPoint(0, 5))
-	expectedPt = []maths.Pt{maths.Pt{0, 0}, maths.Pt{0, 5}, maths.Pt{0, 10}, maths.Pt{10, 10}, maths.Pt{10, 0}}
+	expectedPt = []maths.Pt{{0, 0}, {0, 5}, {0, 10}, {10, 10}, {10, 0}}
 	cr.ForEachPt(func(i int, pt maths.Pt) (cont bool) {
 		if !expectedPt[i].IsEqual(pt) {
 			t.Errorf("For counter clockwise point %d got %v expected %v", i, pt, expectedPt[i])

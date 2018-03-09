@@ -258,7 +258,7 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"over max zoom": tcase{
+		"over max zoom": {
 			config: map[string]interface{}{
 				"max_zoom": uint(10),
 			},
@@ -270,7 +270,7 @@ func TestMaxZoom(t *testing.T) {
 			bytes:       []byte("\x41\x64\x61"),
 			expectedHit: false,
 		},
-		"under max zoom": tcase{
+		"under max zoom": {
 			config: map[string]interface{}{
 				"max_zoom": uint(10),
 			},
@@ -282,7 +282,7 @@ func TestMaxZoom(t *testing.T) {
 			bytes:       []byte("\x41\x64\x61"),
 			expectedHit: true,
 		},
-		"equals max zoom": tcase{
+		"equals max zoom": {
 			config: map[string]interface{}{
 				"max_zoom": uint(10),
 			},

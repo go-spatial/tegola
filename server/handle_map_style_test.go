@@ -38,7 +38,7 @@ func TestHandleMapStyle(t *testing.T) {
 				Center:  [2]float64{testMapCenter[0], testMapCenter[1]},
 				Zoom:    testMapCenter[2],
 				Sources: map[string]style.Source{
-					testMapName: style.Source{
+					testMapName: {
 						Type: style.SourceTypeVector,
 						URL:  fmt.Sprintf("http://%v/capabilities/%v.json", serverHostName, testMapName),
 					},

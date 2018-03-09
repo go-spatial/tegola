@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/draw/svg"
@@ -19,6 +18,7 @@ import (
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/spf13/cobra"
 )
 
 var drawCmd = &cobra.Command{

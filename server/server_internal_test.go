@@ -84,7 +84,7 @@ func TestScheme(t *testing.T) {
 		{
 			request: http.Request{
 				Header: map[string][]string{
-					"X-Forwarded-Proto": []string{
+					"X-Forwarded-Proto": {
 						"https",
 						"http",
 					},

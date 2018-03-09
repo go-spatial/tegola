@@ -69,7 +69,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Center:  [2]float64{m.Center[0], m.Center[1]},
 		Zoom:    m.Center[2],
 		Sources: map[string]style.Source{
-			req.mapName: style.Source{
+			req.mapName: {
 				Type: style.SourceTypeVector,
 				URL:  sourceURL,
 			},
