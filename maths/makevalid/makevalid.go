@@ -92,8 +92,8 @@ func splitSegments(ctx context.Context, segments []maths.Line, clipbox *points.E
 	for _, pt := range pts {
 		for i := 1; i < len(pt); i++ {
 			ln := [2][2]float64{
-				[2]float64{pt[i-1].X, pt[i-1].Y},
-				[2]float64{pt[i].X, pt[i].Y},
+				{pt[i-1].X, pt[i-1].Y},
+				{pt[i].X, pt[i].Y},
 			}
 			// if clipbox is provided use it to filter out the  lines.
 			if clipbox != nil && !clipbox.ContainsLine(ln) {

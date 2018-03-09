@@ -36,7 +36,7 @@ func TestCleanup(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"cleanup": tcase{
+		"cleanup": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{

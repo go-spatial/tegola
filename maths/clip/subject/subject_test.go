@@ -13,9 +13,9 @@ func TestNewSubject(t *testing.T) {
 		return
 	}
 	exp := [][2]maths.Pt{
-		[2]maths.Pt{maths.Pt{X: 10, Y: 10}, maths.Pt{X: 0, Y: 0}}, [2]maths.Pt{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 1, Y: 1}},
-		[2]maths.Pt{maths.Pt{X: 1, Y: 1}, maths.Pt{X: 2, Y: 10}},
-		[2]maths.Pt{maths.Pt{X: 2, Y: 10}, maths.Pt{X: 10, Y: 10}},
+		{{X: 10, Y: 10}, {X: 0, Y: 0}}, {{X: 0, Y: 0}, {X: 1, Y: 1}},
+		{{X: 1, Y: 1}, {X: 2, Y: 10}},
+		{{X: 2, Y: 10}, {X: 10, Y: 10}},
 	}
 	for p, i := sub.FirstPair(), 0; p != nil; p, i = p.Next(), i+1 {
 		pt1 := p.Pt1().Point()

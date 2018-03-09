@@ -44,12 +44,12 @@ func TestRotateToLeftMostPoint(t *testing.T) {
 	}
 	tests := map[string][][2]float64{
 
-		"1": [][2]float64{{11, 10}, {9, 8}, {7, 6}, {5, 4}},
-		"2": [][2]float64{{0, 10}, {9, 8}, {7, 6}, {5, 4}},
-		"3": [][2]float64{{0, 10}},
-		"4": [][2]float64{{3, 100}, {4, -5}, {6, 90}, {4, 15}},
-		"5": [][2]float64{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
-		"6": [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
+		"1": {{11, 10}, {9, 8}, {7, 6}, {5, 4}},
+		"2": {{0, 10}, {9, 8}, {7, 6}, {5, 4}},
+		"3": {{0, 10}},
+		"4": {{3, 100}, {4, -5}, {6, 90}, {4, 15}},
+		"5": {{1, 5}, {1, 2}, {1, 3}, {1, 4}},
+		"6": {{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -161,22 +161,22 @@ func TestPoint(t *testing.T) {
 	}
 
 	tests := map[string]tc{
-		"0": tc{
+		"0": {
 			p1: [2]float64{1, 2},
 			p2: [2]float64{1, 2},
 			e:  true,
 		},
-		"1": tc{
+		"1": {
 			p1: [2]float64{1, 1},
 			p2: [2]float64{1, 2},
 			e:  false,
 		},
-		"3": tc{
+		"3": {
 			p1: [2]float64{1, 2},
 			p2: [2]float64{2, 2},
 			e:  false,
 		},
-		"4": tc{
+		"4": {
 			p1: [2]float64{1, 1},
 			p2: [2]float64{2, 2},
 			e:  false,
@@ -211,49 +211,49 @@ func TestMultiPoint(t *testing.T) {
 	}
 
 	tests := map[string]tc{
-		"0": tc{
+		"0": {
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		"1": tc{
+		"1": {
 			// Simple test.
 			l1: [][2]float64{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		"2": tc{
+		"2": {
 			// Simple test.
 			l1: [][2]float64{{1, 4}, {1, 5}, {1, 2}, {1, 3}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		"3": tc{
+		"3": {
 			// Simple test.
 			l1: [][2]float64{},
 			l2: [][2]float64{},
 			e:  true,
 		},
-		"4": tc{
+		"4": {
 			// Simple test.
 			l1: nil,
 			l2: [][2]float64{},
 			e:  true,
 		},
-		"5": tc{
+		"5": {
 			// Simple test.
 			l1: nil,
 			l2: nil,
 			e:  true,
 		},
-		"6": tc{
+		"6": {
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 5}, {1, 2}, {1, 4}, {1, 4}},
 			e:  false,
 		},
-		"7": tc{
+		"7": {
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}},
@@ -288,49 +288,49 @@ func TestLineString(t *testing.T) {
 	}
 
 	tests := map[string]tc{
-		"0": tc{
+		"0": {
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		"1": tc{
+		"1": {
 			// Simple test.
 			l1: [][2]float64{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		"2": tc{
+		"2": {
 			// Simple test.
 			l1: [][2]float64{{1, 4}, {1, 5}, {1, 2}, {1, 3}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			e:  true,
 		},
-		"3": tc{
+		"3": {
 			// Simple test.
 			l1: [][2]float64{},
 			l2: [][2]float64{},
 			e:  true,
 		},
-		"4": tc{
+		"4": {
 			// Simple test.
 			l1: nil,
 			l2: [][2]float64{},
 			e:  true,
 		},
-		"5": tc{
+		"5": {
 			// Simple test.
 			l1: nil,
 			l2: nil,
 			e:  true,
 		},
-		"6": tc{
+		"6": {
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 2}, {1, 3}, {1, 4}},
 			e:  false,
 		},
-		"7": tc{
+		"7": {
 			// Simple test.
 			l1: [][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}},
 			l2: [][2]float64{{1, 5}, {1, 2}, {1, 4}, {1, 4}},
@@ -365,49 +365,49 @@ func TestMultiLineString(t *testing.T) {
 
 	/***** TEST CASES ******/
 	tests := map[string]tc{
-		"0": tc{
+		"0": {
 			// Simple test.
 			ml1: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			ml2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			e:   true,
 		},
-		"1": tc{
+		"1": {
 			// Simple test.
 			ml1: [][][2]float64{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}},
 			ml2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			e:   true,
 		},
-		"2": tc{
+		"2": {
 			// Simple test.
 			ml1: [][][2]float64{},
 			ml2: [][][2]float64{},
 			e:   true,
 		},
-		"3": tc{
+		"3": {
 			// Simple test.
 			ml1: nil,
 			ml2: [][][2]float64{},
 			e:   true,
 		},
-		"4": tc{
+		"4": {
 			// Simple test.
 			ml1: nil,
 			ml2: nil,
 			e:   true,
 		},
-		"5": tc{
+		"5": {
 			// Simple test.
 			ml1: [][][2]float64{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}},
 			ml2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}}},
 			e:   false,
 		},
-		"6": tc{
+		"6": {
 			// Simple test.
 			ml1: [][][2]float64{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}},
 			ml2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 6}}},
 			e:   false,
 		},
-		"different ring sizes": tc{
+		"different ring sizes": {
 			// Simple test.
 			ml1: [][][2]float64{
 				{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
@@ -418,7 +418,7 @@ func TestMultiLineString(t *testing.T) {
 			},
 			e: false,
 		},
-		"same rings different order - both": tc{
+		"same rings different order - both": {
 			// Simple test.
 			ml1: [][][2]float64{
 				{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
@@ -430,7 +430,7 @@ func TestMultiLineString(t *testing.T) {
 			},
 			e: true,
 		},
-		"same rings different order in rings": tc{
+		"same rings different order in rings": {
 			// Simple test.
 			ml1: [][][2]float64{
 				{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
@@ -470,55 +470,55 @@ func TestPolygon(t *testing.T) {
 
 	/***** TEST CASES ******/
 	tests := map[string]tc{
-		"0": tc{
+		"0": {
 			// Simple test.
 			ply1: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			ply2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			e:    true,
 		},
-		"1": tc{
+		"1": {
 			// Simple test.
 			ply1: [][][2]float64{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}},
 			ply2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}},
 			e:    true,
 		},
-		"2": tc{
+		"2": {
 			// Simple test.
 			ply1: [][][2]float64{},
 			ply2: [][][2]float64{},
 			e:    true,
 		},
-		"3": tc{
+		"3": {
 			// Simple test.
 			ply1: nil,
 			ply2: [][][2]float64{},
 			e:    true,
 		},
-		"4": tc{
+		"4": {
 			// Simple test.
 			ply1: nil,
 			ply2: nil,
 			e:    true,
 		},
-		"5": tc{
+		"5": {
 			// Simple test.
 			ply1: [][][2]float64{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}},
 			ply2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}}},
 			e:    false,
 		},
-		"6": tc{
+		"6": {
 			// Simple test.
 			ply1: [][][2]float64{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}},
 			ply2: [][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 6}}},
 			e:    false,
 		},
-		"7": tc{
+		"7": {
 			// Simple test.
 			ply1: [][][2]float64{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}},
 			ply2: nil,
 			e:    false,
 		},
-		"first ring not same": tc{
+		"first ring not same": {
 			// Simple test.
 			ply1: [][][2]float64{
 				{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
@@ -530,7 +530,7 @@ func TestPolygon(t *testing.T) {
 			},
 			e: false,
 		},
-		"first ring same, different order for others": tc{
+		"first ring same, different order for others": {
 			// Simple test.
 			ply1: [][][2]float64{
 				{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
@@ -544,7 +544,7 @@ func TestPolygon(t *testing.T) {
 			},
 			e: true,
 		},
-		"first ring same, different order for different others": tc{
+		"first ring same, different order for different others": {
 			// Simple test.
 			ply1: [][][2]float64{
 				{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
@@ -583,55 +583,55 @@ func TestMultiPolygon(t *testing.T) {
 
 	/***** TEST CASES ******/
 	tests := map[string]tc{
-		"0": tc{
+		"0": {
 			// Simple test.
 			mp1: [][][][2]float64{{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}},
 			mp2: [][][][2]float64{{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}},
 			e:   true,
 		},
-		"1": tc{
+		"1": {
 			// Simple test.
 			mp1: [][][][2]float64{{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}}},
 			mp2: [][][][2]float64{{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}},
 			e:   true,
 		},
-		"2": tc{
+		"2": {
 			// Simple test.
 			mp1: [][][][2]float64{},
 			mp2: [][][][2]float64{},
 			e:   true,
 		},
-		"3": tc{
+		"3": {
 			// Simple test.
 			mp1: nil,
 			mp2: [][][][2]float64{},
 			e:   true,
 		},
-		"4": tc{
+		"4": {
 			// Simple test.
 			mp1: nil,
 			mp2: nil,
 			e:   true,
 		},
-		"5": tc{
+		"5": {
 			// Simple test.
 			mp1: [][][][2]float64{{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}}},
 			mp2: [][][][2]float64{{{{1, 2}, {1, 3}, {1, 4}}}},
 			e:   false,
 		},
-		"6": tc{
+		"6": {
 			// Simple test.
 			mp1: [][][][2]float64{{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}}},
 			mp2: [][][][2]float64{{{{1, 2}, {1, 3}, {1, 4}, {1, 6}}}},
 			e:   false,
 		},
-		"7": tc{
+		"7": {
 			// Simple test.
 			mp1: [][][][2]float64{{{{1, 5}, {1, 2}, {1, 3}, {1, 4}}}},
 			mp2: nil,
 			e:   false,
 		},
-		"first ring not same": tc{
+		"first ring not same": {
 			// Simple test.
 			mp1: [][][][2]float64{{
 				{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
@@ -643,7 +643,7 @@ func TestMultiPolygon(t *testing.T) {
 			}},
 			e: false,
 		},
-		"first ring same, different order for others": tc{
+		"first ring same, different order for others": {
 			// Simple test.
 			mp1: [][][][2]float64{{
 				{{1, 5}, {1, 2}, {1, 3}, {1, 4}},
@@ -657,7 +657,7 @@ func TestMultiPolygon(t *testing.T) {
 			}},
 			e: true,
 		},
-		"Polygons in different order": tc{
+		"Polygons in different order": {
 			// Simple test.
 			mp1: [][][][2]float64{
 				{ // Polygon one
@@ -679,7 +679,7 @@ func TestMultiPolygon(t *testing.T) {
 			},
 			e: true,
 		},
-		"Polygons in different order 1": tc{
+		"Polygons in different order 1": {
 			// Simple test.
 			mp1: [][][][2]float64{
 				{ // Polygon one
@@ -705,7 +705,7 @@ func TestMultiPolygon(t *testing.T) {
 			},
 			e: true,
 		},
-		"different Polygons in different order ": tc{
+		"different Polygons in different order ": {
 			// Simple test.
 			mp1: [][][][2]float64{
 				{ // Polygon one
@@ -755,19 +755,19 @@ func TestCollection(t *testing.T) {
 
 	/***** TEST CASES ******/
 	tests := map[string]tc{
-		"0": tc{
+		"0": {
 			// Simple test.
 			cl1: geom.Collection{geom.Point{0.0, 0.0}},
 			cl2: geom.Collection{geom.Point{0.0, 0.0}},
 			e:   true,
 		},
-		"1": tc{
+		"1": {
 			// Simple test.
 			cl1: geom.Collection{geom.Point{0.0, 0.0}},
 			cl2: geom.Collection{geom.Point{1.0, 0.0}},
 			e:   false,
 		},
-		"2": tc{
+		"2": {
 			// Simple test.
 			cl1: geom.Collection{geom.Point{0.0, 0.0}},
 			cl2: geom.Collection{},

@@ -10,20 +10,20 @@ import (
 )
 
 var testExtents = []points.Extent{
-	/* 00 */ points.Extent{{0, 0}, {10, 10}},
-	/* 01 */ points.Extent{{2, 2}, {9, 9}},
-	/* 02 */ points.Extent{{-1, -1}, {11, 11}},
-	/* 03 */ points.Extent{{-2, -2}, {12, 12}},
-	/* 04 */ points.Extent{{-3, -3}, {13, 13}},
+	/* 00 */ {{0, 0}, {10, 10}},
+	/* 01 */ {{2, 2}, {9, 9}},
+	/* 02 */ {{-1, -1}, {11, 11}},
+	/* 03 */ {{-2, -2}, {12, 12}},
+	/* 04 */ {{-3, -3}, {13, 13}},
 
-	/* 05 */ points.Extent{{-4, -4}, {14, 14}},
-	/* 06 */ points.Extent{{5, 1}, {7, 3}},
-	/* 07 */ points.Extent{{0, 5}, {2, 7}},
-	/* 08 */ points.Extent{{0, 5}, {2, 7}},
-	/* 09 */ points.Extent{{5, 2}, {11, 9}},
+	/* 05 */ {{-4, -4}, {14, 14}},
+	/* 06 */ {{5, 1}, {7, 3}},
+	/* 07 */ {{0, 5}, {2, 7}},
+	/* 08 */ {{0, 5}, {2, 7}},
+	/* 09 */ {{5, 2}, {11, 9}},
 
-	/* 10 */ points.Extent{{-1, -1}, {11, 11}},
-	/* 11 */ points.Extent{{0, 0}, {4096, 4096}},
+	/* 10 */ {{-1, -1}, {11, 11}},
+	/* 11 */ {{0, 0}, {4096, 4096}},
 }
 
 func TestLineString(t *testing.T) {
@@ -67,7 +67,7 @@ func TestLineString(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"0": tcase{
+		"0": {
 			extent:  &testExtents[0],
 			linestr: basic.NewLine(-2, 1, 2, 1, 2, 2, -1, 2, -1, 11, 2, 11, 2, 4, 4, 4, 4, 13, -2, 13),
 			expected: []basic.Line{
@@ -75,7 +75,7 @@ func TestLineString(t *testing.T) {
 				basic.NewLine(2, 10, 2, 4, 4, 4, 4, 10),
 			},
 		},
-		"1": tcase{
+		"1": {
 			extent:  &testExtents[0],
 			linestr: basic.NewLine(-2, 1, 12, 1, 12, 2, -1, 2, -1, 11, 2, 11, 2, 4, 4, 4, 4, 13, -2, 13),
 			expected: []basic.Line{
@@ -84,7 +84,7 @@ func TestLineString(t *testing.T) {
 				basic.NewLine(2, 10, 2, 4, 4, 4, 4, 10),
 			},
 		},
-		"2": tcase{
+		"2": {
 			extent:  &testExtents[0],
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
@@ -93,7 +93,7 @@ func TestLineString(t *testing.T) {
 				basic.NewLine(0, 4, 3, 4, 3, 1),
 			},
 		},
-		"3": tcase{
+		"3": {
 			extent:  &testExtents[1],
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
@@ -102,7 +102,7 @@ func TestLineString(t *testing.T) {
 				basic.NewLine(2, 4, 3, 4, 3, 2),
 			},
 		},
-		"4": tcase{
+		"4": {
 			extent:  &points.Extent{{0, 0}, {11, 11}},
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
@@ -110,57 +110,57 @@ func TestLineString(t *testing.T) {
 				basic.NewLine(0, 4, 3, 4, 3, 1),
 			},
 		},
-		"5": tcase{
+		"5": {
 			extent:  &testExtents[3],
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
 				basic.NewLine(-2, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			},
 		},
-		"6": tcase{
+		"6": {
 			extent:  &testExtents[4],
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
 				basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			},
 		},
-		"7": tcase{
+		"7": {
 			extent:  &testExtents[5],
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
 				basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			},
 		},
-		"8": tcase{
+		"8": {
 			extent:  &testExtents[6],
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
 				basic.NewLine(7, 2, 5, 2, 5, 3),
 			},
 		},
-		"9": tcase{
+		"9": {
 			extent:   &testExtents[7],
 			linestr:  basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: nil,
 		},
-		"10": tcase{
+		"10": {
 			extent:   &testExtents[8],
 			linestr:  basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: nil,
 		},
-		"11": tcase{
+		"11": {
 			extent:  &testExtents[9],
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
 				basic.NewLine(5, 9, 11, 9, 11, 2, 5, 2, 5, 8),
 			},
 		},
-		"12": tcase{
+		"12": {
 			extent:   &testExtents[9],
 			linestr:  basic.NewLine(-3, 1, -3, 10, 12, 10, 12, 1, 4, 1, 4, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: nil,
 		},
-		"13": tcase{
+		"13": {
 			extent:  &testExtents[0],
 			linestr: basic.NewLine(-3, -3, -3, 10, 12, 10, 12, 1, 4, 1, 4, 8, -1, 8, -1, 4, 3, 4, 3, 3),
 			expected: []basic.Line{
@@ -169,14 +169,14 @@ func TestLineString(t *testing.T) {
 				basic.NewLine(0, 4, 3, 4, 3, 3),
 			},
 		},
-		"14": tcase{
+		"14": {
 			extent:  &testExtents[10],
 			linestr: basic.NewLine(-1, -1, 12, -1, 12, 12, -1, 12),
 			expected: []basic.Line{
 				basic.NewLine(-1, -1, 11, -1),
 			},
 		},
-		"15": tcase{
+		"15": {
 			extent: &testExtents[11],
 
 			linestr: basic.NewLine(
@@ -189,7 +189,7 @@ func TestLineString(t *testing.T) {
 				basic.NewLine(144.397830, 4096, 0, 3901.712895),
 			},
 		},
-		"empty line": tcase{
+		"empty line": {
 			extent:  &testExtents[11],
 			linestr: basic.Line{},
 		},

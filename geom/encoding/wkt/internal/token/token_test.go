@@ -150,12 +150,12 @@ func TestParseMultiPointe(t *testing.T) {
 
 	}
 	tests = map[string]tcase{
-		"empty": tcase{input: "MultiPoint EMPTY"},
-		"without pren": tcase{
+		"empty": {input: "MultiPoint EMPTY"},
+		"without pren": {
 			input: "MULTIPOINT ( 10 10, 12 12 )",
 			exp:   geom.MultiPoint{{10, 10}, {12, 12}},
 		},
-		"with pren": tcase{
+		"with pren": {
 			input: "MULTIPOINT ( (10 10), (12 12) )",
 			exp:   geom.MultiPoint{{10, 10}, {12, 12}},
 		},

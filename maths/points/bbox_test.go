@@ -94,21 +94,21 @@ func TestConvertSRID(t *testing.T) {
 	}
 
 	testCases := [...]TestCase{
-		TestCase{
+		{
 			bbox:     BoundingBox{26.0, 32.0, 27.0, 33.0},
 			fromSRID: tegola.WebMercator,
 			toSRID:   tegola.WGS84,
 			expectedBbox: BoundingBox{0.00023356197387107555, 0.0002874608909118022,
 				0.0002425451267122708, 0.00029644404375279597},
 		},
-		TestCase{
+		{
 			bbox: BoundingBox{0.00023356197387107555, 0.0002874608909118022,
 				0.0002425451267122708, 0.00029644404375279597},
 			fromSRID:     tegola.WGS84,
 			toSRID:       tegola.WebMercator,
 			expectedBbox: BoundingBox{26.0, 32.0, 27.0, 33.0},
 		},
-		TestCase{
+		{
 			bbox: BoundingBox{0.00023356197387107555, 0.0002874608909118022,
 				0.0002425451267122708, 0.00029644404375279597},
 			fromSRID: tegola.WebMercator,
@@ -116,7 +116,7 @@ func TestConvertSRID(t *testing.T) {
 			expectedBbox: BoundingBox{0.00023356197387107555, 0.0002874608909118022,
 				0.0002425451267122708, 0.00029644404375279597},
 		},
-		TestCase{
+		{
 			bbox:         BoundingBox{26.0, 32.0, 27.0, 33.0},
 			fromSRID:     tegola.WGS84,
 			toSRID:       tegola.WGS84,

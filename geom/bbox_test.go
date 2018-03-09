@@ -186,15 +186,15 @@ func TestBBoxAttributes(t *testing.T) {
 
 	}
 	tests := map[string]geom.BoundingBox{
-		"std": geom.BoundingBox{
+		"std": {
 			[2]float64{0.0, 0.0},
 			[2]float64{10.0, 10.0},
 		},
-		"inverted-y": geom.BoundingBox{
+		"inverted-y": {
 			[2]float64{0.0, 10.0},
 			[2]float64{10.0, 0.0},
 		},
-		"inverted-x": geom.BoundingBox{
+		"inverted-x": {
 			[2]float64{10.0, 0.0},
 			[2]float64{0.0, 10.0},
 		},
