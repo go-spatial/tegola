@@ -9,7 +9,7 @@ import (
 	"github.com/go-spatial/tegola/geom/cmp"
 )
 
-func TestBBoxNew(t *testing.T) {
+func TestExtentNew(t *testing.T) {
 	type tcase struct {
 		points   [][2]float64
 		expected *geom.Extent
@@ -59,39 +59,39 @@ func TestBBoxNew(t *testing.T) {
 	}
 }
 
-func TestBBoxAdd(t *testing.T) {
+func TestExtentAdd(t *testing.T) {
 	type tcase struct {
 		bb       *geom.Extent
-		bbox     *geom.Extent
+		extent   *geom.Extent
 		expected *geom.Extent
 	}
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
 		bb := tc.bb
-		bb.Add(tc.bbox)
-		if !cmp.BBox(tc.expected, bb) {
+		bb.Add(tc.extent)
+		if !cmp.GeomExtent(tc.expected, bb) {
 			t.Errorf("failed, expected %+v got %+v", tc.expected, bb)
 		}
 	}
 	tests := map[string]tcase{
 		"nil expanded by point": {
 			bb:       nil,
-			bbox:     &geom.Extent{3.0, 3.0, 3.0, 3.0},
+			extent:   &geom.Extent{3.0, 3.0, 3.0, 3.0},
 			expected: nil,
 		},
 		"point expanded by nil": {
 			bb:       &geom.Extent{1.0, 2.0, 1.0, 2.0},
-			bbox:     nil,
+			extent:   nil,
 			expected: nil,
 		},
 		"point expanded by point": {
 			bb:       &geom.Extent{1.0, 2.0, 1.0, 2.0},
-			bbox:     &geom.Extent{3.0, 3.0, 3.0, 3.0},
+			extent:   &geom.Extent{3.0, 3.0, 3.0, 3.0},
 			expected: &geom.Extent{1.0, 2.0, 3.0, 3.0},
 		},
 		"point expanded by enclosing box": {
 			bb:       &geom.Extent{1.0, 2.0, 1.0, 2.0},
-			bbox:     &geom.Extent{0.0, 0.0, 3.0, 3.0},
+			extent:   &geom.Extent{0.0, 0.0, 3.0, 3.0},
 			expected: &geom.Extent{0.0, 0.0, 3.0, 3.0},
 		},
 	}
@@ -101,7 +101,7 @@ func TestBBoxAdd(t *testing.T) {
 	}
 }
 
-func TestBBoxAddPoints(t *testing.T) {
+func TestExtentAddPoints(t *testing.T) {
 	type tcase struct {
 		bb       *geom.Extent
 		points   [][2]float64
@@ -111,7 +111,7 @@ func TestBBoxAddPoints(t *testing.T) {
 		t.Parallel()
 		bb := tc.bb
 		bb.AddPoints(tc.points...)
-		if !cmp.BBox(tc.expected, bb) {
+		if !cmp.GeomExtent(tc.expected, bb) {
 			t.Errorf("failed, expected %+v got %+v", tc.expected, bb)
 		}
 	}
@@ -143,7 +143,7 @@ func TestBBoxAddPoints(t *testing.T) {
 	}
 }
 
-func TestBBoxContains(t *testing.T) {
+func TestExtentContains(t *testing.T) {
 	type tcase struct {
 		mm       geom.MinMaxer
 		bb       *geom.Extent
@@ -194,7 +194,7 @@ func TestBBoxContains(t *testing.T) {
 	}
 }
 
-func TestBBoxContainsPoint(t *testing.T) {
+func TestExtentContainsPoint(t *testing.T) {
 	type tcase struct {
 		bb       *geom.Extent
 		pt       [2]float64
@@ -236,9 +236,9 @@ func TestBBoxContainsPoint(t *testing.T) {
 	}
 }
 
-// TestBBoxAttributes check that the bbox is returning the correct values for the different
-//	attributes that a bbox can have.
-func TestBBoxAttributes(t *testing.T) {
+// TestExtentAttributes check that the extent is returning the correct values for the different
+//	attributes that a extent can have.
+func TestExtentAttributes(t *testing.T) {
 	bblncmp := func(pt [2]float64, x, y float64) bool {
 		return pt[0] == x && pt[1] == y
 	}
@@ -332,7 +332,7 @@ func TestBBoxAttributes(t *testing.T) {
 			t.Errorf("miny, expected %v, got %v", miny, bb.MinY())
 		}
 		cbb := bb.Clone()
-		if !cmp.BBox(bb, cbb) {
+		if !cmp.GeomExtent(bb, cbb) {
 			t.Errorf("Clone equal, expected (%v) true got (%v) false", bb, cbb)
 		}
 		xspan := bb.XSpan()
@@ -370,7 +370,7 @@ func TestBBoxAttributes(t *testing.T) {
 	}
 }
 
-func TestBBoxScaleBy(t *testing.T) {
+func TestExtentScaleBy(t *testing.T) {
 	type tcase struct {
 		bb    *geom.Extent
 		scale float64
@@ -378,7 +378,7 @@ func TestBBoxScaleBy(t *testing.T) {
 	}
 	fn := func(t *testing.T, tc tcase) {
 		sbb := tc.bb.ScaleBy(tc.scale)
-		if !cmp.BBox(tc.ebb, sbb) {
+		if !cmp.GeomExtent(tc.ebb, sbb) {
 			t.Errorf("Scale by, expected %v got %v", tc.ebb, sbb)
 		}
 	}
@@ -408,7 +408,7 @@ func TestBBoxScaleBy(t *testing.T) {
 	}
 }
 
-func TestBBoxExpandBy(t *testing.T) {
+func TestExtentExpandBy(t *testing.T) {
 	type tcase struct {
 		bb     *geom.Extent
 		factor float64
@@ -416,7 +416,7 @@ func TestBBoxExpandBy(t *testing.T) {
 	}
 	fn := func(t *testing.T, tc tcase) {
 		sbb := tc.bb.ExpandBy(tc.factor)
-		if !cmp.BBox(tc.ebb, sbb) {
+		if !cmp.GeomExtent(tc.ebb, sbb) {
 			t.Errorf("Expand by, expected %v got %v", tc.ebb, sbb)
 		}
 	}
@@ -441,7 +441,7 @@ func TestBBoxExpandBy(t *testing.T) {
 	}
 }
 
-func TestBBoxIntersect(t *testing.T) {
+func TestExtentIntersect(t *testing.T) {
 	type tcase struct {
 		bb   *geom.Extent
 		nbb  *geom.Extent
@@ -453,7 +453,7 @@ func TestBBoxIntersect(t *testing.T) {
 		if does != tc.does {
 			t.Errorf(" Intersect does, expected %v got %v", tc.does, does)
 		}
-		if !cmp.BBox(tc.ibb, gbb) {
+		if !cmp.GeomExtent(tc.ibb, gbb) {
 			t.Errorf(" Intersect, expected %v got %v", tc.ibb, gbb)
 		}
 	}
@@ -501,7 +501,7 @@ func TestBBoxIntersect(t *testing.T) {
 	}
 }
 
-func TestBBoxArea(t *testing.T) {
+func TestExtentArea(t *testing.T) {
 	maxarea := math.Inf(1)
 	type tcase struct {
 		bb   *geom.Extent
@@ -529,7 +529,7 @@ func TestBBoxArea(t *testing.T) {
 	}
 }
 
-func TestBBoxContainsLine(t *testing.T) {
+func TestExtentContainsLine(t *testing.T) {
 	type tcase struct {
 		bb *geom.Extent
 		l  [2][2]float64

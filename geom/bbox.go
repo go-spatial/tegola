@@ -4,9 +4,9 @@ import (
 	"math"
 )
 
-// BoundingBoxer represents an interface that returns a boundbox.
-type BoundingBoxer interface {
-	BBox() (bbox [4]float64)
+// Extenter represents an interface that returns a boundbox.
+type Extenter interface {
+	Extent() (extent [4]float64)
 }
 
 type MinMaxer interface {
@@ -95,41 +95,41 @@ func (e *Extent) YSpan() float64 {
 	return e[3] - e[1]
 }
 
-func (e *Extent) BBox() [4]float64 {
+func (e *Extent) Extent() [4]float64 {
 	return [4]float64{e.MinX(), e.MinY(), e.MaxX(), e.MaxY()}
 }
 
 /* ========================= EXPANDING BOUNDING BOX ========================= */
 // Add will expand the boundong box to contain the given bounding box.
-func (e *Extent) Add(bbox MinMaxer) {
+func (e *Extent) Add(extent MinMaxer) {
 	if e == nil {
 		return
 	}
-	if e[0] > bbox.MinX() {
-		e[0] = bbox.MinX()
+	if e[0] > extent.MinX() {
+		e[0] = extent.MinX()
 	}
-	if e[1] > bbox.MinY() {
-		e[1] = bbox.MinY()
+	if e[1] > extent.MinY() {
+		e[1] = extent.MinY()
 	}
-	if e[2] < bbox.MaxX() {
-		e[2] = bbox.MaxX()
+	if e[2] < extent.MaxX() {
+		e[2] = extent.MaxX()
 	}
-	if e[3] < bbox.MaxY() {
-		e[3] = bbox.MaxY()
+	if e[3] < extent.MaxY() {
+		e[3] = extent.MaxY()
 	}
 }
 
 // AddPoints will expand the bounding box to contain the given points.
 func (e *Extent) AddPoints(points ...[2]float64) {
-	// A nil bbox is all encompassing.
+	// A nil extent is all encompassing.
 	if e == nil {
 		return
 	}
 	if len(points) == 0 {
 		return
 	}
-	bbox := NewExtent(points...)
-	e.Add(bbox)
+	extent := NewExtent(points...)
+	e.Add(extent)
 }
 
 // AsPolygon will return the bounding box as a Polygon
@@ -147,28 +147,28 @@ func NewExtent(points ...[2]float64) *Extent {
 		return nil
 	}
 
-	bbox := Extent{points[0][0], points[0][1], points[0][0], points[0][1]}
+	extent := Extent{points[0][0], points[0][1], points[0][0], points[0][1]}
 	if len(points) == 1 {
-		return &bbox
+		return &extent
 	}
 	for i := 1; i < len(points); i++ {
 		xy = points[i]
 		// Check the x coords
 		switch {
-		case xy[0] < bbox[0]:
-			bbox[0] = xy[0]
-		case xy[0] > bbox[2]:
-			bbox[2] = xy[0]
+		case xy[0] < extent[0]:
+			extent[0] = xy[0]
+		case xy[0] > extent[2]:
+			extent[2] = xy[0]
 		}
 		// Check the y coords
 		switch {
-		case xy[1] < bbox[1]:
-			bbox[1] = xy[1]
-		case xy[1] > bbox[3]:
-			bbox[3] = xy[1]
+		case xy[1] < extent[1]:
+			extent[1] = xy[1]
+		case xy[1] > extent[3]:
+			extent[3] = xy[1]
 		}
 	}
-	return &bbox
+	return &extent
 }
 
 // Contains will return weather the given bounding box is inside of the bounding box.

@@ -190,7 +190,7 @@ func (t *Tile) FromPixel(srid int, pt [2]float64) (npt [2]float64, err error) {
 }
 
 func (t *Tile) PixelBufferedBounds() (bounds [4]float64, err error) {
-	return t.bufpext.BBox(), nil
+	return t.bufpext.Extent(), nil
 }
 
 // Returns web mercator zoom level

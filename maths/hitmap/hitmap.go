@@ -221,7 +221,7 @@ func NewSegmentFromRing(label maths.Label, ring []maths.Pt) (seg Segment) {
 
 	j := len(ring) - 1
 	pts := convert.FromMathPoint(ring...)
-	seg.bbox.f = geom.NewExtent(pts...).BBox()
+	seg.bbox.f = geom.NewExtent(pts...).Extent()
 	seg.bbox.init = true
 	for i := range ring {
 		l := maths.Line{ring[j], ring[i]}

@@ -56,7 +56,7 @@ func TestNewTile(t *testing.T) {
 				t.Errorf("buffered extent srid, expected %v got %v", tc.srid, srid)
 			}
 
-			if !cmp.BBox(tc.eBExtent, bufferedExtent) {
+			if !cmp.GeomExtent(tc.eBExtent, bufferedExtent) {
 				t.Errorf("buffered extent, expected %v got %v", tc.eBExtent, bufferedExtent)
 			}
 		}
@@ -66,7 +66,7 @@ func TestNewTile(t *testing.T) {
 				t.Errorf("extent srid, expected %v got %v", tc.srid, srid)
 			}
 
-			if !cmp.BBox(tc.eExtent, extent) {
+			if !cmp.GeomExtent(tc.eExtent, extent) {
 				t.Errorf("extent, expected %v got %v", tc.eExtent, extent)
 			}
 		}

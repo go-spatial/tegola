@@ -29,15 +29,15 @@ func Float64(f1, f2, tolerance float64) bool {
 // Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.
 func Float(f1, f2 float64) bool { return Float64(f1, f2, TOLERANCE) }
 
-// BoundingBox will check to see if the BoundingBox's are the same.
-func BoundingBox(bbox1, bbox2 [4]float64) bool {
-	return Float(bbox1[0], bbox2[0]) && Float(bbox1[1], bbox2[1]) &&
-		Float(bbox1[2], bbox2[2]) && Float(bbox1[3], bbox2[3])
+// Extent will check to see if the Extents's are the same.
+func Extent(extent1, extent2 [4]float64) bool {
+	return Float(extent1[0], extent2[0]) && Float(extent1[1], extent2[1]) &&
+		Float(extent1[2], extent2[2]) && Float(extent1[3], extent2[3])
 }
 
-// BBox will check to see if geom.BoundingBox's are the same.
-func BBox(bbox1, bbox2 geom.BoundingBoxer) bool {
-	return BoundingBox(bbox1.BBox(), bbox2.BBox())
+// GeomExtent will check to see if geom.BoundingBox's are the same.
+func GeomExtent(extent1, extent2 geom.Extenter) bool {
+	return Extent(extent1.Extent(), extent2.Extent())
 }
 
 func PointLess(p1, p2 [2]float64) bool {
@@ -117,12 +117,12 @@ func PolygonEqual(ply1, ply2 [][][2]float64) bool {
 	for i := range ply1 {
 		points1 = append(points1, ply1[i]...)
 	}
-	bbox1 := geom.NewExtent(points1...)
+	extent1 := geom.NewExtent(points1...)
 	for i := range ply2 {
 		points2 = append(points2, ply2[i]...)
 	}
-	bbox2 := geom.NewExtent(points2...)
-	if !BBox(bbox1, bbox2) {
+	extent2 := geom.NewExtent(points2...)
+	if !GeomExtent(extent1, extent2) {
 		return false
 	}
 

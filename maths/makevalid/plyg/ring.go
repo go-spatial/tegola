@@ -24,27 +24,29 @@ var ColLenghtErr = errors.New("Col's need to have length of at least 2")
 type Ring struct {
 	Points []maths.Pt
 	Label  maths.Label
-	hasBB  bool
-	bb     *geom.Extent
+
+	// Cached extent
+	hasExtent bool
+	extent    *geom.Extent
 }
 
-func (r *Ring) initBB() *geom.Extent {
-	if r.hasBB {
-		return r.bb
+func (r *Ring) initExtent() *geom.Extent {
+	if r.hasExtent {
+		return r.extent
 	}
 	pts := convert.FromMathPoint(r.Points...)
-	r.bb = geom.NewExtent(pts...)
-	r.hasBB = true
-	return r.bb
+	r.extent = geom.NewExtent(pts...)
+	r.hasExtent = true
+	return r.extent
 }
 
-func (r *Ring) BBox() [4]float64 { return r.initBB().BBox() }
+func (r *Ring) Extent() [4]float64 { return r.initExtent().Extent() }
 
-func (r *Ring) MinX() float64   { return r.initBB().MinX() }
-func (r *Ring) MinY() float64   { return r.initBB().MinY() }
-func (r *Ring) MaxX() float64   { return r.initBB().MaxX() }
-func (r *Ring) BBArea() float64 { return r.initBB().Area() }
-func (r *Ring) MaxY() float64   { return r.initBB().MaxY() }
+func (r *Ring) MinX() float64       { return r.initExtent().MinX() }
+func (r *Ring) MinY() float64       { return r.initExtent().MinY() }
+func (r *Ring) MaxX() float64       { return r.initExtent().MaxX() }
+func (r *Ring) ExtentArea() float64 { return r.initExtent().Area() }
+func (r *Ring) MaxY() float64       { return r.initExtent().MaxY() }
 
 // LineRing returns a copy of the points in the correct winding order.
 func (r Ring) LineRing() (pts []maths.Pt) {
@@ -368,9 +370,9 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 		}
 
 		if ring.Label == maths.Outside {
-			bb := ring.BBox()
+			e := ring.Extent()
 			// the ring touches the the top or bottom boader.
-			if bb[1] == miny || bb[3] == maxy {
+			if e[1] == miny || e[3] == maxy {
 				continue
 			}
 			// Save for later processing.
@@ -398,7 +400,7 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 			pts := convert.FromMathPoint(rings[j][0]...)
 			ibb := geom.NewExtent(pts...)
 
-			if ibb.Area() <= rc.Rings[i].BBArea() {
+			if ibb.Area() <= rc.Rings[i].ExtentArea() {
 				continue
 			}
 			if !ibb.Contains(&(rc.Rings[i])) {
@@ -775,7 +777,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 				//log.Println("Marking Ring as seen", ccoli, idx)
 				seenRings[[2]int{ccoli, idx}] = true
 				walkedRings = append(walkedRings, [2]int{ccoli, idx})
-				cols[ccoli].Rings[cri].BBox()
+				cols[ccoli].Rings[cri].Extent()
 				// don't continue searching.
 				// Let's check the other column real quick with the new edge.
 				pt := cols[ccoli].Rings[cri].Points[ptid]
@@ -805,7 +807,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 					//log.Println("Marking Ring as seen", ccoli, idx)
 					seenRings[[2]int{ccoli, idx}] = true
 					walkedRings = append(walkedRings, [2]int{ccoli, idx})
-					cols[ccoli].Rings[cri].BBox()
+					cols[ccoli].Rings[cri].Extent()
 					if nptid >= len(cols[ccoli].Rings[cri].Points) {
 						nptid = 0
 					}
