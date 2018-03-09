@@ -2,14 +2,14 @@ package maths
 
 //https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
 
-func DouglasPeucker(points []Pt, tolerence float64, simplify bool) []Pt {
+func DouglasPeucker(points []Pt, tolerance float64, simplify bool) []Pt {
 	//log.Println("In DP simplify")
-	if tolerence <= 0 || len(points) <= 2 || !simplify {
+	if tolerance <= 0 || len(points) <= 2 || !simplify {
 		//log.Println("Not doing simplification")
 		return points
 	}
 
-	epsilon := tolerence * tolerence
+	epsilon := tolerance * tolerance
 	/*
 		// If the last and first point is the same.
 		if points[0].IsEqual(points[len(points)-1]) {

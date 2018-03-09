@@ -260,7 +260,7 @@ var cacheCmd = &cobra.Command{
 						select {
 						case tiler <- mapTile:
 						case <-gdcmd.Cancelled():
-							log.Info("cancel recieved; cleaning up…")
+							log.Info("cancel received; cleaning up…")
 							break ZoomLoop
 						}
 

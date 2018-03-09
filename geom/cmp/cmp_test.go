@@ -10,7 +10,7 @@ import (
 
 /*
 RotateToLeftMostPoint is a slightly more complicated function that is relied upon
-by Comparision for LineStrings and all the functions that rely on it. That's the
+by Comparison for LineStrings and all the functions that rely on it. That's the
 reason for the test cases. Even though this seems like a trivial function. It got
 a bit of complexity to it.
 */

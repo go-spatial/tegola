@@ -99,7 +99,7 @@ func (ib *Inbound) Walk(fn func(idx int, pt maths.Pt) bool) {
 
 		ipp := asIntersect(p)
 		if ipp == firstInboundPoint {
-			//log.Println("Back to the begining.\n\n\n")
+			//log.Println("Back to the beginning.\n\n\n")
 			return
 		}
 

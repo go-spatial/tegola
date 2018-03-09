@@ -103,7 +103,7 @@ func parseTileString(str string) (uint, uint, uint, error) {
 
 		placeholder, err = strconv.ParseUint(parts[i], 10, 64)
 		if err != nil {
-			return 0, 0, 0, fmt.Errorf("invalid %v value (%v); should be a postive integer.", attr[i], vals[i])
+			return 0, 0, 0, fmt.Errorf("invalid %v value (%v); should be a positive integer.", attr[i], vals[i])
 		}
 		vals[i] = uint(placeholder)
 	}

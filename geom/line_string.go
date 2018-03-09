@@ -4,7 +4,7 @@ import "errors"
 
 var ErrNilLineString = errors.New("geom: nil LineString")
 
-// LineString is a basic line type which is made up of two or more points that don't interect.
+// LineString is a basic line type which is made up of two or more points that don't interacted.
 type LineString [][2]float64
 
 /* We need to change this to a WalkPoints function.

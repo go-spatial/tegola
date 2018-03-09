@@ -9,7 +9,7 @@ import (
 )
 
 type Encoder struct {
-	// W is the writer to which the binary data will be writen to.
+	// W is the writer to which the binary data will be written to.
 	W io.Writer
 	// ByteOrder is the Byte Order Marker, it defaults to binary.LittleEndian
 	ByteOrder binary.ByteOrder
@@ -83,7 +83,7 @@ func (en *Encoder) MultiLineString(lns [][][2]float64) {
 func (en *Encoder) Polygon(ply [][][2]float64) {
 	en.BOM().Write(consts.Polygon, uint32(len(ply)))
 	for _, r := range ply {
-		// close defination is:
+		// close definition is:
 		// •  Verify that the line segments close (z coordinates at start and endpoints must also be the same) and don't cross.
 		// gotten from: http://edndoc.esri.com/arcsde/9.0/general_topics/shape_validation.htm
 		var needToClose bool

@@ -53,7 +53,7 @@ func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
 type Provider struct {
 	// path to the geopackage file
 	Filepath string
-	// map of layer name and corrosponding sql
+	// map of layer name and corresponding sql
 	layers map[string]Layer
 	// reference to the database connection
 	db *sql.DB

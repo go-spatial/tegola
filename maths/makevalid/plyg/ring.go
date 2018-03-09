@@ -633,7 +633,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 			ringsToProcess = append(ringsToProcess, [2]int{0, d.Idx})
 		}
 	}
-	// Go through the rings that tourch the Y1 edge only and add them to our list of rings.
+	// Go through the rings that torch the Y1 edge only and add them to our list of rings.
 	for i := range c1.Y1s {
 		for _, d := range c1.Y1s[i].Descs {
 			// Skip any rings that are touching Y2 as well.

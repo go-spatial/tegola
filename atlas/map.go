@@ -54,7 +54,7 @@ type Map struct {
 
 // AddDebugLayers returns a copy of a Map with the debug layers appended to the layer list
 func (m Map) AddDebugLayers() Map {
-	//	make an explict copy of the layers
+	//	make an explicit copy of the layers
 	layers := make([]Layer, len(m.Layers))
 	copy(layers, m.Layers)
 	m.Layers = layers

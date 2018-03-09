@@ -25,7 +25,7 @@ const Name = "postgis"
 type Provider struct {
 	config pgx.ConnPoolConfig
 	pool   *pgx.ConnPool
-	// map of layer name and corrosponding sql
+	// map of layer name and corresponding sql
 	layers     map[string]Layer
 	srid       uint64
 	firstlayer string

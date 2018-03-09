@@ -47,7 +47,7 @@ func GenRandLineString(withNil bool) *geom.LineString {
 	return &ls
 }
 
-// GenRandMultiLineString will generate a random MultiLineString (that may be nil depending on withNil), and a random number of linestrings. There is no gaurantee that the line strings are simple.
+// GenRandMultiLineString will generate a random MultiLineString (that may be nil depending on withNil), and a random number of linestrings. There is no guarantee that the line strings are simple.
 func GenRandMultiLineString(withNil bool) *geom.MultiLineString {
 	if genNil(withNil) {
 		return (*geom.MultiLineString)(nil)

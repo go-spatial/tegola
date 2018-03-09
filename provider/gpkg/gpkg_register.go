@@ -228,7 +228,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 // reference to all instantiated proivders
 var providers []Provider
 
-// Cleanup will close all database connections and destory all previously instantiated Provider instances
+// Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
 	for i := range providers {
 		if err := providers[i].Close(); err != nil {

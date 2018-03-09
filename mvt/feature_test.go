@@ -125,7 +125,7 @@ func TestEncodeGeometry(t *testing.T) {
 		},
 		/*
 				Disabling this for now; Currently it's getting clipped out because the transformation. scaling and clipping are intermingled with the encoding
-				process. Once that is seperated out we can have a better encoding test. Issue #224
+				process. Once that is separated out we can have a better encoding test. Issue #224
 			tc{ // 5
 				geo: basic.MultiLine{
 					basic.Line{*fromPixel(2, 2), *fromPixel(2, 10), *fromPixel(10, 10)},
