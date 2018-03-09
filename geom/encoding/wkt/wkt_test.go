@@ -31,275 +31,275 @@ func TestEncode(t *testing.T) {
 
 	}
 	tests := map[string]map[string]tcase{
-		"Point": map[string]tcase{
-			"empty nil": tcase{
+		"Point": {
+			"empty nil": {
 				Err: ErrUnknownGeometry{nil},
 			},
-			"empty": tcase{
+			"empty": {
 				Geom: (*geom.Point)(nil),
 				Rep:  "POINT EMPTY",
 			},
-			"zero": tcase{
+			"zero": {
 				Geom: geom.Point{0, 0},
 				Rep:  "POINT (0 0)",
 			},
-			"one": tcase{
+			"one": {
 				Geom: geom.Point{10, 0},
 				Rep:  "POINT (10 0)",
 			},
 		},
-		"MultiPoint": map[string]tcase{
-			"empty nil": tcase{
+		"MultiPoint": {
+			"empty nil": {
 				Geom: (*geom.MultiPoint)(nil),
 				Rep:  "MULTIPOINT EMPTY",
 			},
-			"empty zero": tcase{
+			"empty zero": {
 				Geom: geom.MultiPoint{},
 				Rep:  "MULTIPOINT EMPTY",
 			},
-			"one": tcase{
+			"one": {
 				Geom: geom.MultiPoint{{0, 0}},
 				Rep:  "MULTIPOINT (0 0)",
 			},
-			"two": tcase{
+			"two": {
 				Geom: geom.MultiPoint{{0, 0}, {10, 10}},
 				Rep:  "MULTIPOINT (0 0,10 10)",
 			},
-			"three": tcase{
+			"three": {
 				Geom: geom.MultiPoint{{1, 1}, {3, 3}, {4, 5}},
 				Rep:  "MULTIPOINT (1 1,3 3,4 5)",
 			},
 		},
-		"LineString": map[string]tcase{
-			"empty nil": tcase{
+		"LineString": {
+			"empty nil": {
 				Geom: (*geom.LineString)(nil),
 				Rep:  "LINESTRING EMPTY",
 			},
-			"empty zero": tcase{
+			"empty zero": {
 				Geom: geom.LineString{},
 				Rep:  "LINESTRING EMPTY",
 			},
-			"one": tcase{
+			"one": {
 				Geom: geom.LineString{{0, 0}},
 				Rep:  "LINESTRING (0 0)",
 			},
-			"two": tcase{
+			"two": {
 				Geom: geom.LineString{{10, 10}, {0, 0}},
 				Rep:  "LINESTRING (10 10,0 0)",
 			},
-			"three": tcase{
+			"three": {
 				Geom: geom.LineString{{10, 10}, {9, 9}, {0, 0}},
 				Rep:  "LINESTRING (10 10,9 9,0 0)",
 			},
 		},
-		"MultiLineString": map[string]tcase{
-			"empty nil": tcase{
+		"MultiLineString": {
+			"empty nil": {
 				Geom: (*geom.MultiLineString)(nil),
 				Rep:  "MULTILINE EMPTY",
 			},
-			"zero lines": tcase{
+			"zero lines": {
 				Geom: geom.MultiLineString{},
 				Rep:  "MULTILINE EMPTY",
 			},
-			"one line zero points": tcase{
+			"one line zero points": {
 				Geom: geom.MultiLineString{{}},
 				Rep:  "MULTILINE EMPTY",
 			},
-			"one line one point": tcase{
+			"one line one point": {
 				Geom: geom.MultiLineString{{{10, 10}}},
 				Rep:  "MULTILINE ((10 10))",
 			},
-			"one line two points": tcase{
+			"one line two points": {
 				Geom: geom.MultiLineString{{{10, 10}, {11, 11}}},
 				Rep:  "MULTILINE ((10 10,11 11))",
 			},
-			"two lines zero,zero point": tcase{
+			"two lines zero,zero point": {
 				Geom: geom.MultiLineString{{}, {}},
 				Rep:  "MULTILINE EMPTY",
 			},
-			"two lines zero,one point": tcase{
+			"two lines zero,one point": {
 				Geom: geom.MultiLineString{{}, {{10, 10}}},
 				Rep:  "MULTILINE ((10 10))",
 			},
-			"two lines zero,two point": tcase{
+			"two lines zero,two point": {
 				Geom: geom.MultiLineString{{}, {{10, 10}, {20, 20}}},
 				Rep:  "MULTILINE ((10 10,20 20))",
 			},
-			"two lines one,zero point": tcase{
+			"two lines one,zero point": {
 				Geom: geom.MultiLineString{{{10, 10}}, {}},
 				Rep:  "MULTILINE ((10 10))",
 			},
-			"two lines one,one point": tcase{
+			"two lines one,one point": {
 				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}}},
 				Rep:  "MULTILINE ((10 10),(10 10))",
 			},
-			"two lines one,two point": tcase{
+			"two lines one,two point": {
 				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}, {20, 20}}},
 				Rep:  "MULTILINE ((10 10),(10 10,20 20))",
 			},
-			"two lines two,zero point": tcase{
+			"two lines two,zero point": {
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {}},
 				Rep:  "MULTILINE ((10 10,20 20))",
 			},
-			"two lines two,one point": tcase{
+			"two lines two,one point": {
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}}},
 				Rep:  "MULTILINE ((10 10,20 20),(10 10))",
 			},
-			"two lines two,two point": tcase{
+			"two lines two,two point": {
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}, {20, 20}}},
 				Rep:  "MULTILINE ((10 10,20 20),(10 10,20 20))",
 			},
 		},
-		"Polygon": map[string]tcase{
-			"empty nil": tcase{
+		"Polygon": {
+			"empty nil": {
 				Geom: (*geom.Polygon)(nil),
 				Rep:  "POLYGON EMPTY",
 			},
-			"empty": tcase{
+			"empty": {
 				Geom: geom.Polygon{},
 				Rep:  "POLYGON EMPTY",
 			},
-			"one line zero": tcase{
+			"one line zero": {
 				Geom: geom.Polygon{{}},
 				Rep:  "POLYGON EMPTY",
 			},
-			"two lines zero zero": tcase{
+			"two lines zero zero": {
 				Geom: geom.Polygon{{}, {}},
 				Rep:  "POLYGON EMPTY",
 			},
-			"two lines one zero": tcase{
+			"two lines one zero": {
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {}},
 				Rep:  "POLYGON ((10 10,11 11,12 12))",
 			},
-			"two lines one one": tcase{
+			"two lines one one": {
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
 				Rep:  "POLYGON ((10 10,11 11,12 12),(20 20,21 21,22 22))",
 			},
-			"two lines zero one": tcase{
+			"two lines zero one": {
 				Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
 				Rep:  "POLYGON ((10 10,11 11,12 12))",
 			},
 		},
-		"MultiPolygon": map[string]tcase{
-			"empty nil": tcase{
+		"MultiPolygon": {
+			"empty nil": {
 				Geom: (*geom.MultiPolygon)(nil),
 				Rep:  "MULTIPOLYGON EMPTY",
 			},
-			"empty MultiPolygon": tcase{
+			"empty MultiPolygon": {
 				Geom: geom.MultiPolygon{},
 				Rep:  "MULTIPOLYGON EMPTY",
 			},
-			"empty one polygon": tcase{
+			"empty one polygon": {
 				Geom: geom.MultiPolygon{{}},
 				Rep:  "MULTIPOLYGON EMPTY",
 			},
-			"empty one polygon one line": tcase{
+			"empty one polygon one line": {
 				Geom: geom.MultiPolygon{{{}}},
 				Rep:  "MULTIPOLYGON EMPTY",
 			},
-			"empty two polygon 0": tcase{
+			"empty two polygon 0": {
 				Geom: geom.MultiPolygon{{}, {}},
 				Rep:  "MULTIPOLYGON EMPTY",
 			},
-			"empty two polygon 1": tcase{
+			"empty two polygon 1": {
 				Geom: geom.MultiPolygon{{{}}, {}},
 				Rep:  "MULTIPOLYGON EMPTY",
 			},
-			"empty two polygon 2": tcase{
+			"empty two polygon 2": {
 				Geom: geom.MultiPolygon{{}, {{}}},
 				Rep:  "MULTIPOLYGON EMPTY",
 			},
-			"empty two polygon 3": tcase{
+			"empty two polygon 3": {
 				Geom: geom.MultiPolygon{{{}}, {{}}},
 				Rep:  "MULTIPOLYGON EMPTY",
 			},
-			"one polygon": tcase{
+			"one polygon": {
 				Geom: geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}}},
 				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12)))",
 			},
 		},
-		"Collectioner": map[string]tcase{
-			"empty nil": tcase{
+		"Collectioner": {
+			"empty nil": {
 				Geom: (*geom.Collection)(nil),
 				Rep:  "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty": tcase{
+			"empty": {
 				Geom: geom.Collection{},
 				Rep:  "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty nil point": tcase{
+			"empty nil point": {
 				Geom: geom.Collection{
 					(*geom.Point)(nil),
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty nil MultiPoint": tcase{
+			"empty nil MultiPoint": {
 				Geom: geom.Collection{
 					(*geom.MultiPoint)(nil),
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty nil LineString": tcase{
+			"empty nil LineString": {
 				Geom: geom.Collection{
 					(*geom.LineString)(nil),
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty nil MultiLineString": tcase{
+			"empty nil MultiLineString": {
 				Geom: geom.Collection{
 					(*geom.MultiLineString)(nil),
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty nil Polygon": tcase{
+			"empty nil Polygon": {
 				Geom: geom.Collection{
 					(*geom.Polygon)(nil),
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty nil MultiPolygon": tcase{
+			"empty nil MultiPolygon": {
 				Geom: geom.Collection{
 					(*geom.MultiPolygon)(nil),
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty MultiPoint": tcase{
+			"empty MultiPoint": {
 				Geom: geom.Collection{
 					geom.MultiPoint{},
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty LineString": tcase{
+			"empty LineString": {
 				Geom: geom.Collection{
 					geom.LineString{},
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty MultiLineString": tcase{
+			"empty MultiLineString": {
 				Geom: geom.Collection{
 					geom.MultiLineString{},
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty Polygon": tcase{
+			"empty Polygon": {
 				Geom: geom.Collection{
 					geom.Polygon{},
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"empty MultiPolygon": tcase{
+			"empty MultiPolygon": {
 				Geom: geom.Collection{
 					geom.MultiPolygon{},
 				},
 				Rep: "GEOMETRYCOLLECTION EMPTY",
 			},
-			"point": tcase{
+			"point": {
 				Geom: geom.Collection{
 					geom.Point{10, 10},
 				},
 				Rep: "GEOMETRYCOLLECTION (POINT (10 10))",
 			},
-			"point and linestring": tcase{
+			"point and linestring": {
 				Geom: geom.Collection{
 					geom.Point{10, 10},
 					geom.LineString{{11, 11}, {22, 22}},

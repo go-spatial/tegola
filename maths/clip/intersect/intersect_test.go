@@ -41,8 +41,8 @@ func TestNewIntersect(t *testing.T) {
 		log.Printf("subject: %#v\n", sl)
 	*/
 	expectedWalk := [][]maths.Pt{
-		[]maths.Pt{
-			maths.Pt{0, 5}, maths.Pt{5, 5}, maths.Pt{5, 0}, maths.Pt{0, 0},
+		{
+			{0, 5}, {5, 5}, {5, 0}, {0, 0},
 		},
 	}
 	current := 0

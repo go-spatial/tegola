@@ -146,7 +146,7 @@ func Register(cacheType string, init InitFunc) error {
 
 // Registered returns the caché's that have been registered.
 func Registered() (c []string) {
-	for k, _ := range cache {
+	for k := range cache {
 		c = append(c, k)
 	}
 	sort.Strings(c)

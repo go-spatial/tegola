@@ -104,7 +104,7 @@ func TestReplaceEnvVars(t *testing.T) {
 		}
 
 		// Unset the env vars prior to the next test.
-		for envVar, _ := range tc.envVars {
+		for envVar := range tc.envVars {
 			os.Unsetenv(envVar)
 		}
 

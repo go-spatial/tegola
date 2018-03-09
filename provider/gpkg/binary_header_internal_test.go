@@ -229,16 +229,16 @@ func TestBinaryHeader(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"nil": tcase{
+		"nil": {
 			empty:        true,
 			standard:     true,
 			envelopetype: EnvelopeTypeInvalid,
 		},
-		"zero bytes": tcase{
+		"zero bytes": {
 			bytes: []byte{},
 			err:   errors.New("not enough bytes to decode header"),
 		},
-		"bad magic": tcase{
+		"bad magic": {
 			bytes: []byte{
 				0x50, 0x47, // Magic number
 				0x00,                   // Version
@@ -251,7 +251,7 @@ func TestBinaryHeader(t *testing.T) {
 			},
 			err: errors.New("invalid magic number"),
 		},
-		"invalid envelope XY given for XYZM": tcase{
+		"invalid envelope XY given for XYZM": {
 			bytes: []byte{
 				0x47, 0x50, // Magic number
 				0x00,                   // Version
@@ -264,7 +264,7 @@ func TestBinaryHeader(t *testing.T) {
 			},
 			err: errors.New("not enough bytes to decode header"),
 		},
-		"invalid envelope type": tcase{
+		"invalid envelope type": {
 			bytes: []byte{
 				0x47, 0x50, // Magic number
 				0x00,                   // Version
@@ -277,7 +277,7 @@ func TestBinaryHeader(t *testing.T) {
 			},
 			err: errors.New("invalid envelope type"),
 		},
-		"4326 XY": tcase{
+		"4326 XY": {
 			bytes: []byte{
 				0x47, 0x50, // Magic number
 				0x00,                   // Version

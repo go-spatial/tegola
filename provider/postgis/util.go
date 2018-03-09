@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/jackc/pgx"
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
@@ -29,7 +29,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		}
 		//	to avoid field names possibly colliding with Postgres keywords,
 		//	we wrap the field names in quotes
-		for i, _ := range fdescs {
+		for i := range fdescs {
 			flds = append(flds, fdescs[i].Name)
 		}
 	}

@@ -280,7 +280,7 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"over max zoom": tcase{
+		"over max zoom": {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",
@@ -294,7 +294,7 @@ func TestMaxZoom(t *testing.T) {
 			bytes:       []byte("\x66\x6f\x6f"),
 			expectedHit: false,
 		},
-		"under max zoom": tcase{
+		"under max zoom": {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",
@@ -308,7 +308,7 @@ func TestMaxZoom(t *testing.T) {
 			bytes:       []byte("\x66\x6f\x6f"),
 			expectedHit: true,
 		},
-		"equals max zoom": tcase{
+		"equals max zoom": {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",

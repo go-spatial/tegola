@@ -70,8 +70,8 @@ func TestBuildRingCol(t *testing.T) {
 			testYs: true,
 			hm:     hitmap.AllwaysInside,
 			icols: [2][]maths.Pt{
-				[]maths.Pt{{0, 0}, {0, 1}},
-				[]maths.Pt{{1, 0}, {1, 1}},
+				{{0, 0}, {0, 1}},
+				{{1, 0}, {1, 1}},
 			},
 			pt2my: map[maths.Pt]int64{},
 			Col: RingCol{
@@ -109,8 +109,8 @@ func TestBuildRingCol(t *testing.T) {
 			desc: "Simple Rectangle with constrined rightward line.",
 			hm:   hitmap.AllwaysInside,
 			icols: [2][]maths.Pt{
-				[]maths.Pt{{0, 0}, {0, 1}},
-				[]maths.Pt{{1, 0}, {1, 1}},
+				{{0, 0}, {0, 1}},
+				{{1, 0}, {1, 1}},
 			},
 			pt2my: map[maths.Pt]int64{
 				{0, 0}: 100,
@@ -130,8 +130,8 @@ func TestBuildRingCol(t *testing.T) {
 			desc: "Simple Rectangle with constrined rightward line 1.",
 			hm:   hitmap.AllwaysInside,
 			icols: [2][]maths.Pt{
-				[]maths.Pt{{1, 0}, {1, 1}},
-				[]maths.Pt{{2, 0}, {2, 1}},
+				{{1, 0}, {1, 1}},
+				{{2, 0}, {2, 1}},
 			},
 			pt2my: map[maths.Pt]int64{
 				{1, 0}: 100,
@@ -151,8 +151,8 @@ func TestBuildRingCol(t *testing.T) {
 			desc: "Empty column (all outside) should be empty",
 			hm:   new(hitmap.M), // Everything will be marked as outside
 			icols: [2][]maths.Pt{
-				[]maths.Pt{{0, 0}, {0, 1}, {0, 8}, {0, 9}},
-				[]maths.Pt{{1, 0}, {1, 1}, {1, 2}, {1, 4}, {1, 5}, {1, 7}, {1, 8}, {1, 9}},
+				{{0, 0}, {0, 1}, {0, 8}, {0, 9}},
+				{{1, 0}, {1, 1}, {1, 2}, {1, 4}, {1, 5}, {1, 7}, {1, 8}, {1, 9}},
 			},
 			pt2my: map[maths.Pt]int64{
 				{0, 0}: 0,
@@ -173,8 +173,8 @@ func TestBuildRingCol(t *testing.T) {
 				hitmap.NewSegmentFromRing(maths.Outside, []maths.Pt{{1, 5}, {3, 5}, {3, 7}, {1, 7}}),
 			),
 			icols: [2][]maths.Pt{
-				[]maths.Pt{{0, 0}, {0, 1}, {0, 8}, {0, 9}},
-				[]maths.Pt{{1, 0}, {1, 1}, {1, 2}, {1, 4}, {1, 5}, {1, 7}, {1, 8}, {1, 9}},
+				{{0, 0}, {0, 1}, {0, 8}, {0, 9}},
+				{{1, 0}, {1, 1}, {1, 2}, {1, 4}, {1, 5}, {1, 7}, {1, 8}, {1, 9}},
 			},
 			pt2my: map[maths.Pt]int64{
 				{0, 0}: 0,
@@ -233,20 +233,20 @@ func TestMerge2AdjecentRings(t *testing.T) {
 			desc: "Simple 2 Rectangle merge",
 			hm:   hitmap.AllwaysInside,
 			icols: [2][2][]maths.Pt{
-				[2][]maths.Pt{
-					[]maths.Pt{{0, 0}, {0, 1}},
-					[]maths.Pt{{1, 0}, {1, 1}},
+				{
+					{{0, 0}, {0, 1}},
+					{{1, 0}, {1, 1}},
 				},
-				[2][]maths.Pt{
-					[]maths.Pt{{1, 0}, {1, 1}},
-					[]maths.Pt{{2, 0}, {2, 1}},
+				{
+					{{1, 0}, {1, 1}},
+					{{2, 0}, {2, 1}},
 				},
 			},
 			pt2my: [2]map[maths.Pt]int64{
-				map[maths.Pt]int64{
+				{
 					{0, 0}: 100,
 				},
-				map[maths.Pt]int64{
+				{
 					{1, 0}: 100,
 				},
 			},
@@ -290,20 +290,20 @@ func TestMerge2AdjecentRings(t *testing.T) {
 				hitmap.NewSegmentFromRing(maths.Inside, []maths.Pt{{0, 3}, {1, 2}, {2, 3}}),
 			),
 			icols: [2][2][]maths.Pt{
-				[2][]maths.Pt{
-					[]maths.Pt{{0, 0}, {0, 1}, {0, 3}},
-					[]maths.Pt{{1, 0}, {1, 1}, {1, 2}, {1, 3}},
+				{
+					{{0, 0}, {0, 1}, {0, 3}},
+					{{1, 0}, {1, 1}, {1, 2}, {1, 3}},
 				},
-				[2][]maths.Pt{
-					[]maths.Pt{{1, 0}, {1, 1}, {1, 2}, {1, 3}},
-					[]maths.Pt{{2, 0}, {2, 3}},
+				{
+					{{1, 0}, {1, 1}, {1, 2}, {1, 3}},
+					{{2, 0}, {2, 3}},
 				},
 			},
 			pt2my: [2]map[maths.Pt]int64{
-				map[maths.Pt]int64{
+				{
 					{0, 1}: 200,
 				},
-				map[maths.Pt]int64{
+				{
 					{1, 2}: 300,
 				},
 			},
@@ -376,24 +376,24 @@ func TestMerge2AdjecentRings(t *testing.T) {
 			),
 			// Points {{{3
 			icols: [2][2][]maths.Pt{
-				[2][]maths.Pt{
-					[]maths.Pt{{0, 0}, {0, 1}, {0, 8}, {0, 9}},
-					[]maths.Pt{{1, 0}, {1, 1}, {1, 2}, {1, 4}, {1, 5}, {1, 7}, {1, 8}, {1, 9}},
+				{
+					{{0, 0}, {0, 1}, {0, 8}, {0, 9}},
+					{{1, 0}, {1, 1}, {1, 2}, {1, 4}, {1, 5}, {1, 7}, {1, 8}, {1, 9}},
 				},
-				[2][]maths.Pt{
-					[]maths.Pt{{1, 0}, {1, 1}, {1, 2}, {1, 4}, {1, 5}, {1, 7}, {1, 8}, {1, 9}},
-					[]maths.Pt{{3, 0}, {3, 1}, {3, 2}, {3, 4}, {3, 5}, {3, 7}, {3, 8}, {3, 9}},
+				{
+					{{1, 0}, {1, 1}, {1, 2}, {1, 4}, {1, 5}, {1, 7}, {1, 8}, {1, 9}},
+					{{3, 0}, {3, 1}, {3, 2}, {3, 4}, {3, 5}, {3, 7}, {3, 8}, {3, 9}},
 				},
 			},
 			// MaxY Point Map {{{3
 			pt2my: [2]map[maths.Pt]int64{
-				map[maths.Pt]int64{
+				{
 					{0, 0}: 0,
 					{0, 1}: 100,
 					{0, 8}: 800,
 					{0, 9}: 900,
 				},
-				map[maths.Pt]int64{
+				{
 					{1, 0}: 0,
 					{1, 1}: 100,
 					{1, 2}: 200,
@@ -531,21 +531,21 @@ func TestMerge2AdjecentRings(t *testing.T) {
 			),
 			// Points {{{3
 			icols: [2][2][]maths.Pt{
-				[2][]maths.Pt{
-					[]maths.Pt{{0, 0}, {0, 4}},
-					[]maths.Pt{{1, 0}, {1, 2}, {1, 4}},
+				{
+					{{0, 0}, {0, 4}},
+					{{1, 0}, {1, 2}, {1, 4}},
 				},
-				[2][]maths.Pt{
-					[]maths.Pt{{1, 0}, {1, 2}, {1, 4}},
-					[]maths.Pt{{2, 0}, {2, 1}, {2, 3}, {2, 4}},
+				{
+					{{1, 0}, {1, 2}, {1, 4}},
+					{{2, 0}, {2, 1}, {2, 3}, {2, 4}},
 				},
 			},
 			// MaxY {{{3
 			pt2my: [2]map[maths.Pt]int64{
-				map[maths.Pt]int64{
+				{
 					{1, 2}: 300,
 				},
-				map[maths.Pt]int64{
+				{
 					{1, 2}: 300,
 				},
 			},
