@@ -91,7 +91,7 @@ func TestNewTileProvider(t *testing.T) {
 type MockTile struct {
 	extent         *geom.Extent
 	bufferedExtent *geom.Extent
-	Z, X, Y        uint64
+	Z, X, Y        uint
 	srid           uint64
 }
 
@@ -101,7 +101,7 @@ func (t *MockTile) Extent() (*geom.Extent, uint64) { return t.extent, t.srid }
 // TODO(arolek): BufferedExtent needs to return a geom.Extent
 func (t *MockTile) BufferedExtent() (*geom.Extent, uint64) { return t.bufferedExtent, t.srid }
 
-func (t *MockTile) ZXY() (uint64, uint64, uint64) { return t.Z, t.X, t.Y }
+func (t *MockTile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
 func TestTileFeatures(t *testing.T) {
 	type tcase struct {

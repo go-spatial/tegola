@@ -12,8 +12,6 @@ import (
 	"github.com/go-spatial/tegola/provider/postgis"
 )
 
-
-
 func TestNewTileProvider(t *testing.T) {
 	port := postgis.GetTestPort(t)
 

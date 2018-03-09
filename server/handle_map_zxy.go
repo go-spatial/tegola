@@ -14,17 +14,18 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/maths"
 )
 
 type HandleMapZXY struct {
 	//	required
 	mapName string
 	//	zoom
-	z int
+	z uint
 	//	row
-	x int
+	x uint
 	//	column
-	y int
+	y uint
 	//	the requests extension (i.e. pbf or json)
 	//	defaults to "pbf"
 	extension string
@@ -41,29 +42,38 @@ func (req *HandleMapZXY) parseURI(r *http.Request) error {
 	//	set map name
 	req.mapName = params["map_name"]
 
+	var placeholder uint64
+
 	//	parse our URL vals to ints
 	z := params["z"]
-	req.z, err = strconv.Atoi(z)
-	if err != nil || req.z < 0 {
+	placeholder, err = strconv.ParseUint(z, 10, 32)
+	if err != nil || placeholder > tegola.MaxZ {
 		log.Warnf("invalid Z value (%v)", z)
 		return fmt.Errorf("invalid Z value (%v)", z)
 	}
 
+	req.z = uint(placeholder)
+	maxXYatZ := maths.Exp2(placeholder) - 1
+
 	x := params["x"]
-	req.x, err = strconv.Atoi(x)
-	if err != nil || req.x < 0 {
+	placeholder, err = strconv.ParseUint(x, 10, 32)
+	if err != nil || placeholder > maxXYatZ {
 		log.Warnf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
 
+	req.x = uint(placeholder)
+
 	//	trim the "y" param in the url in case it has an extension
 	y := params["y"]
 	yParts := strings.Split(y, ".")
-	req.y, err = strconv.Atoi(yParts[0])
-	if err != nil || req.y < 0 {
+	placeholder, err = strconv.ParseUint(yParts[0], 10, 32)
+	if err != nil || placeholder > maxXYatZ {
 		log.Warnf("invalid Y value (%v)", y)
 		return fmt.Errorf("invalid Y value (%v)", y)
 	}
+
+	req.y = uint(placeholder)
 
 	//	check if we have a file extension
 	if len(yParts) > 1 {
@@ -101,7 +111,7 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tile := slippy.NewTile(uint64(req.z), uint64(req.x), uint64(req.y), TileBuffer, tegola.WebMercator)
+	tile := slippy.NewTile(req.z, req.x, req.y, TileBuffer, tegola.WebMercator)
 
 	//	filter down the layers we need for this zoom
 	m = m.FilterLayersByZoom(req.z)

@@ -77,7 +77,7 @@ func TestTileBufferedExtent(t *testing.T) {
 
 func TestNewTile(t *testing.T) {
 	type tcase struct {
-		z, x, y  uint64
+		z, x, y  uint
 		buffer   float64
 		srid     uint64
 		eBounds  [4]float64

@@ -17,49 +17,69 @@ import (
 
 func TestHandleMapZXY(t *testing.T) {
 	//	setup a new provider
-	testcases := []struct {
+	type tc struct {
 		uri            string
 		uriPattern     string
 		reqMethod      string
 		expected       []byte
 		expectedCode   int
 		expectedLayers []string
-	}{
-		{
+	}
+
+	testcases := map[string]tc{
+		"0": {
 			uri:            "/maps/test-map/10/2/3.pbf",
 			uriPattern:     "/maps/:map_name/:z/:x/:y",
 			reqMethod:      "GET",
 			expectedCode:   http.StatusOK,
 			expectedLayers: []string{"test-layer-2-name", "test-layer"},
 		},
-		{
+		"1": {
 			uri:            "/maps/test-map/10/2/3.pbf?debug=true",
 			uriPattern:     "/maps/:map_name/:z/:x/:y",
 			reqMethod:      "GET",
 			expectedCode:   http.StatusOK,
 			expectedLayers: []string{"test-layer-2-name", "test-layer", "debug-tile-outline", "debug-tile-center"},
 		},
-		{ // issue-163
+		"2": { // issue-163
 			uri:          "/maps/test-map/-1/0/0.pbf",
 			uriPattern:   "/maps/:map_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
 			expected:     []byte("invalid Z value (-1)"),
 		},
-		{ // Check that values outside expected zoom result in 404.
+		"3": { // Check that values outside expected zoom result in 404.
 			uri:          "/maps/test-map/-1/2/3.pbf",
 			uriPattern:   "/maps/:map_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
 		},
-		{ // Check that negative y value results in 404. (issue-229)
+		"4": { // Check that negative y value results in 404. (issue-229)
 			uri:          "/maps/test-map/1/2/-1.pbf",
 			uriPattern:   "/maps/:map_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
 		},
-		{ // Check that nagative x value results in 404.
-			uri:          "/maps/test-map/1/-1/3.pbf",
+		"5": { // Check that nagative x value results in 404.
+			uri:          "/maps/test-map/1/-1/1.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
+		"6": { // Check that over max zoom results in 404.
+			uri:          "/maps/test-map/25/1/1.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
+		"7": { // Check that out of bounds x results in 404.
+			uri:          "/maps/test-map/1/4/0.pbf",
+			uriPattern:   "/maps/:map_name/:z/:x/:y",
+			reqMethod:    "GET",
+			expectedCode: http.StatusBadRequest,
+		},
+		"8": { // Check that out of bounds y results in 404.
+			uri:          "/maps/test-map/1/1/4.pbf",
 			uriPattern:   "/maps/:map_name/:z/:x/:y",
 			reqMethod:    "GET",
 			expectedCode: http.StatusBadRequest,
@@ -104,12 +124,12 @@ func TestHandleMapZXY(t *testing.T) {
 
 			responseBodyBytes, err = ioutil.ReadAll(w.Body)
 			if err != nil {
-				t.Errorf("[%v] error response body, expected nil got %v", i, err)
+				t.Errorf("[%v] error reading response body, %v", i, err)
 				continue
 			}
 
 			if err = proto.Unmarshal(responseBodyBytes, &tile); err != nil {
-				t.Errorf("[%v] error unmarshalling body, expected nil got %v", i, err)
+				t.Errorf("[%v] error unmarshalling response body, %v", i, err)
 				continue
 			}
 

@@ -85,7 +85,7 @@ func (m Map) AddDebugLayers() Map {
 }
 
 // FilterLayersByZoom returns a copy of a Map with a subset of layers that match the given zoom
-func (m Map) FilterLayersByZoom(zoom int) Map {
+func (m Map) FilterLayersByZoom(zoom uint) Map {
 	var layers []Layer
 
 	for i := range m.Layers {
@@ -216,7 +216,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	z, x, y := tile.ZXY()
 
 	// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-	tegolaTile := tegola.NewTile(int(z), int(x), int(y))
+	tegolaTile := tegola.NewTile(uint(z), uint(x), uint(y))
 
 	// generate our tile
 	vtile, err := mvtTile.VTile(ctx, tegolaTile)

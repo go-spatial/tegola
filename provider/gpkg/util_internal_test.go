@@ -9,7 +9,7 @@ import (
 func TestReplaceTokens(t *testing.T) {
 	type tcase struct {
 		qtext string
-		zoom  uint64
+		zoom  uint
 		// TODO: replace with geom.Extent once it's ready
 		extent   *geom.Extent
 		expected string

@@ -19,36 +19,42 @@ func TestNew(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
 	type tc struct {
-		config map[string]interface{}
-		errMatch    string
+		config   map[string]interface{}
+		errMatch string
 	}
 
 	testcases := map[string]tc{
-		"redis explicit config": {
+		"explicit config": {
 			config: map[string]interface{}{
 				"network":  "tcp",
 				"address":  "127.0.0.1:6379",
 				"password": "",
 				"db":       0,
-				"max_zoom": 0,
+				"max_zoom": uint(10),
 			},
 			errMatch: "",
 		},
-		"redis implicit config": {
-			config: map[string]interface{}{},
-			errMatch:    "",
+		"implicit config": {
+			config:   map[string]interface{}{},
+			errMatch: "",
 		},
-		"redis bad address":{
+		"bad address": {
 			config: map[string]interface{}{
 				"address": "127.0.0.1:6000",
 			},
 			errMatch: "connection refused",
 		},
-		"redis bad max_zoom":{
+		"bad max_zoom": {
 			config: map[string]interface{}{
-				"max_zoom": "-2",
+				"max_zoom": "2",
 			},
-			errMatch: "max_zoom value needs to be of type int. Value is of type string",
+			errMatch: "max_zoom value needs to be of type uint. Value is of type string",
+		},
+		"bad max_zoom 2": {
+			config: map[string]interface{}{
+				"max_zoom": -2,
+			},
+			errMatch: "max_zoom value needs to be of type uint. Value is of type int",
 		},
 	}
 
@@ -75,7 +81,7 @@ func TestSetGetPurge(t *testing.T) {
 		expectedHit  bool
 	}
 
-	testcases := map[string]tc {
+	testcases := map[string]tc{
 		"redis cache hit": {
 			config: map[string]interface{}{},
 			key: cache.Key{
@@ -208,7 +214,6 @@ func TestSetOverwrite(t *testing.T) {
 	}
 }
 
-
 func TestMaxZoom(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 	type tcase struct {
@@ -223,31 +228,31 @@ func TestMaxZoom(t *testing.T) {
 
 		rc, err := redis.New(tc.config)
 		if err != nil {
-			t.Errorf("unexpected err, expected %v got %v", nil, err)
+			t.Fatalf("unexpected err, expected %v got %v", nil, err)
 		}
 
 		//	test write
 		if tc.expectedHit {
 			err = rc.Set(&tc.key, tc.bytes)
 			if err != nil {
-				t.Errorf("unexpected err, expected %v got %v", nil, err)
+				t.Fatalf("unexpected err, expected %v got %v", nil, err)
 			}
 		}
 
 		// test read
 		_, hit, err := rc.Get(&tc.key)
 		if err != nil {
-			t.Errorf("read failed with error, expected %v got %v", nil, err)
+			t.Fatalf("read failed with error, expected %v got %v", nil, err)
 		}
 		if tc.expectedHit != hit {
-			t.Errorf("read failed, wrong 'hit' value expected %t got %t", tc.expectedHit, hit)
+			t.Fatalf("read failed, wrong 'hit' value expected %t got %t", tc.expectedHit, hit)
 		}
 
 		//	test purge
 		if tc.expectedHit {
 			err = rc.Purge(&tc.key)
 			if err != nil {
-				t.Errorf("purge failed with err, expected %v got %v", nil, err)
+				t.Fatalf("purge failed with err, expected %v got %v", nil, err)
 			}
 		}
 	}
@@ -255,7 +260,7 @@ func TestMaxZoom(t *testing.T) {
 	tests := map[string]tcase{
 		"over max zoom": tcase{
 			config: map[string]interface{}{
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 11,
@@ -267,7 +272,7 @@ func TestMaxZoom(t *testing.T) {
 		},
 		"under max zoom": tcase{
 			config: map[string]interface{}{
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 9,
@@ -279,7 +284,7 @@ func TestMaxZoom(t *testing.T) {
 		},
 		"equals max zoom": tcase{
 			config: map[string]interface{}{
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 10,
@@ -298,4 +303,3 @@ func TestMaxZoom(t *testing.T) {
 		})
 	}
 }
-

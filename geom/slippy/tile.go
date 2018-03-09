@@ -6,7 +6,7 @@ import (
 	"github.com/go-spatial/tegola/geom"
 )
 
-func NewTile(z, x, y uint64, buffer float64, srid uint64) *Tile {
+func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {
 	return &Tile{
 		z:      z,
 		x:      x,
@@ -18,11 +18,11 @@ func NewTile(z, x, y uint64, buffer float64, srid uint64) *Tile {
 
 type Tile struct {
 	// zoom
-	z uint64
+	z uint
 	// column
-	x uint64
+	x uint
 	// row
-	y uint64
+	y uint
 	// buffer will add a buffer to the tile bounds. this buffer is expected to use the same units as the SRID
 	// of the projected tile (i.e. WebMercator = pixels, 3395 = meters)
 	Buffer float64
@@ -30,11 +30,11 @@ type Tile struct {
 	SRID uint64
 }
 
-func (t *Tile) ZXY() (uint64, uint64, uint64) { return t.z, t.x, t.y }
+func (t *Tile) ZXY() (uint, uint, uint) { return t.z, t.x, t.y }
 
-func Tile2Lon(x, z uint64) float64 { return float64(x)/math.Exp2(float64(z))*360.0 - 180.0 }
+func Tile2Lon(x, z uint) float64 { return float64(x)/math.Exp2(float64(z))*360.0 - 180.0 }
 
-func Tile2Lat(y, z uint64) float64 {
+func Tile2Lat(y, z uint) float64 {
 	var n float64 = math.Pi
 	if y != 0 {
 		n = math.Pi - 2.0*math.Pi*float64(y)/math.Exp2(float64(z))

@@ -56,5 +56,3 @@ func NewPointSlice(pts ...maths.Pt) (rpts []*Pt) {
 	}
 	return rpts
 }
-
-

@@ -11,7 +11,7 @@ import (
 
 type Tile interface {
 	// ZXY returns the z, x and y values of the tile
-	ZXY() (uint64, uint64, uint64)
+	ZXY() (uint, uint, uint)
 	// Extent returns the extent of the tile excluding any buffer
 	Extent() (extent *geom.Extent, srid uint64)
 	// BufferedExtent returns the extent of the tile including any buffer

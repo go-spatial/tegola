@@ -90,23 +90,22 @@ func initProviders(providers []map[string]interface{}) (prvs map[string]provider
 }
 
 //parseTileString will convert a z/x/y formatted string into a the three components.
-func parseTileString(str string) (int, int, int, error) {
+func parseTileString(str string) (uint, uint, uint, error) {
 	parts := strings.Split(str, "/")
 	if len(parts) != 3 {
 		return 0, 0, 0, fmt.Errorf("invalid zxy value “%v”; expected format “z/x/y”", str)
 	}
 	attr := [3]string{"z", "x", "y"}
-	var vals [3]int
+	var vals [3]uint
+	var placeholder uint64
 	var err error
 	for i := range attr {
 
-		vals[i], err = strconv.Atoi(parts[i])
+		placeholder, err = strconv.ParseUint(parts[i], 10, 64)
 		if err != nil {
 			return 0, 0, 0, fmt.Errorf("invalid %v value (%v); should be a postive integer.", attr[i], vals[i])
 		}
-		if vals[i] < 0 {
-			return 0, 0, 0, fmt.Errorf("%v value should be a positive integer.", attr[i])
-		}
+		vals[i] = uint(placeholder)
 	}
 	return vals[0], vals[1], vals[2], nil
 
