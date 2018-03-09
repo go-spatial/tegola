@@ -28,15 +28,15 @@ func TestTileExtent(t *testing.T) {
 		tcase{
 			tile: slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
 			expectedExtent: [2][2]float64{
-				[2]float64{-10018754.17, 10018754.17},
-				[2]float64{0, 0},
+				{-10018754.17, 10018754.17},
+				{0, 0},
 			},
 		},
 		tcase{
 			tile: slippy.NewTile(16, 11436, 26461, 64, tegola.WebMercator),
 			expectedExtent: [2][2]float64{
-				[2]float64{-13044437.497219238996, 3856706.6986199953},
-				[2]float64{-13043826.000993041, 3856095.202393799},
+				{-13044437.497219238996, 3856706.6986199953},
+				{-13043826.000993041, 3856095.202393799},
 			},
 		},
 	}
@@ -62,8 +62,8 @@ func TestTileBufferedExtent(t *testing.T) {
 		tcase{
 			tile: slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
 			expectedExtent: [2][2]float64{
-				[2]float64{-1.017529720390625e+07, 1.017529720390625e+07},
-				[2]float64{156543.03390624933, -156543.03390624933},
+				{-1.017529720390625e+07, 1.017529720390625e+07},
+				{156543.03390624933, -156543.03390624933},
 			},
 		},
 	}
@@ -138,7 +138,7 @@ func TestNewTile(t *testing.T) {
 
 	}
 	tests := [...]tcase{
-		tcase{
+		{
 			z:      2,
 			x:      1,
 			y:      1,
@@ -154,7 +154,7 @@ func TestNewTile(t *testing.T) {
 			),
 			eBounds: [4]float64{-90, 66.51, 0, 0},
 		},
-		tcase{
+		{
 			z:      16,
 			x:      11436,
 			y:      26461,

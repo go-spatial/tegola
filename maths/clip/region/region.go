@@ -66,10 +66,10 @@ func (r *Region) Init(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
 			   MinX,MaxY       MaxX,MaxY
 		*/
 		pts = [4][2]float64{
-			[2]float64{Min.X, Max.Y},
-			[2]float64{Min.X, Min.Y},
-			[2]float64{Max.X, Min.Y},
-			[2]float64{Max.X, Max.Y},
+			{Min.X, Max.Y},
+			{Min.X, Min.Y},
+			{Max.X, Min.Y},
+			{Max.X, Max.Y},
 		}
 		r.aDownOrRight = [4]bool{false, true, true, false}
 	} else {
@@ -84,7 +84,7 @@ func (r *Region) Init(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
 					1pt     1    2pt
 			   MinX,MaxY       MaxX,MaxY
 		*/
-		pts = [4][2]float64{[2]float64{Min.X, Min.Y}, [2]float64{Min.X, Max.Y}, [2]float64{Max.X, Max.Y}, [2]float64{Max.X, Min.Y}}
+		pts = [4][2]float64{{Min.X, Min.Y}, {Min.X, Max.Y}, {Max.X, Max.Y}, {Max.X, Min.Y}}
 		r.aDownOrRight = [4]bool{true, true, false, false}
 	}
 	for i, pt := range pts {

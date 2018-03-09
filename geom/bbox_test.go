@@ -119,7 +119,7 @@ func TestBBoxAddPoints(t *testing.T) {
 		"nil expanded by point": {
 			bb: nil,
 			points: [][2]float64{
-				[2]float64{1.0, 2.0},
+				{1.0, 2.0},
 			},
 			expected: nil,
 		},
@@ -156,33 +156,33 @@ func TestBBoxContains(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"nil bb nil mm": tcase{
+		"nil bb nil mm": {
 			expected: true,
 		},
-		"nil bb non-nil mm": tcase{
+		"nil bb non-nil mm": {
 			mm:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			expected: true,
 		},
-		"non-nil bb nil mm": tcase{
+		"non-nil bb nil mm": {
 			bb:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			expected: false,
 		},
-		"same": tcase{
+		"same": {
 			bb:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			mm:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			expected: true,
 		},
-		"contained": tcase{
+		"contained": {
 			bb:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			mm:       geom.NewExtent([2]float64{1, 1}, [2]float64{5, 5}),
 			expected: true,
 		},
-		"same only at 0,0": tcase{
+		"same only at 0,0": {
 			bb:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			mm:       geom.NewExtent([2]float64{0, 0}, [2]float64{-10, -10}),
 			expected: false,
 		},
-		"overlap not contained": tcase{
+		"overlap not contained": {
 			bb:       geom.NewExtent([2]float64{-1, -1}, [2]float64{10, 10}),
 			mm:       geom.NewExtent([2]float64{0, 0}, [2]float64{-10, -10}),
 			expected: false,
@@ -277,10 +277,10 @@ func TestBBoxAttributes(t *testing.T) {
 				t.Errorf("edges length, expected 4 got %v", len(edges))
 			} else {
 				eedge := [][2][2]float64{
-					[2][2]float64{vert[0], vert[1]},
-					[2][2]float64{vert[1], vert[2]},
-					[2][2]float64{vert[2], vert[3]},
-					[2][2]float64{vert[3], vert[0]},
+					{vert[0], vert[1]},
+					{vert[1], vert[2]},
+					{vert[2], vert[3]},
+					{vert[3], vert[0]},
 				}
 				if !reflect.DeepEqual(edges, eedge) {
 					t.Errorf("edges, expected %v got %v", eedge, edges)
@@ -291,10 +291,10 @@ func TestBBoxAttributes(t *testing.T) {
 				t.Errorf("edges length, expected 4 got %v", len(edges))
 			} else {
 				eedge := [][2][2]float64{
-					[2][2]float64{vert[3], vert[2]},
-					[2][2]float64{vert[2], vert[1]},
-					[2][2]float64{vert[1], vert[0]},
-					[2][2]float64{vert[0], vert[3]},
+					{vert[3], vert[2]},
+					{vert[2], vert[1]},
+					{vert[1], vert[0]},
+					{vert[0], vert[3]},
 				}
 				if !reflect.DeepEqual(edges, eedge) {
 					t.Errorf("edges, expected %v got %v", eedge, edges)
@@ -353,12 +353,12 @@ func TestBBoxAttributes(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"std": tcase{
+		"std": {
 			bb:    &geom.Extent{0.0, 0.0, 10.0, 10.0},
 			xspan: 10.0,
 			yspan: 10.0,
 		},
-		"nil": tcase{
+		"nil": {
 			bb:    nil,
 			xspan: math.Inf(1),
 			yspan: math.Inf(1),
@@ -383,20 +383,20 @@ func TestBBoxScaleBy(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"nil": tcase{
+		"nil": {
 			scale: 2.0,
 		},
-		"1.0 scale": tcase{
+		"1.0 scale": {
 			bb:    &geom.Extent{0, 0, 10, 10},
 			ebb:   &geom.Extent{0, 0, 10, 10},
 			scale: 1.0,
 		},
-		"2.0 scale": tcase{
+		"2.0 scale": {
 			bb:    &geom.Extent{0, 0, 10, 10},
 			ebb:   &geom.Extent{0, 0, 20, 20},
 			scale: 2.0,
 		},
-		"-2.0 scale": tcase{
+		"-2.0 scale": {
 			bb:    &geom.Extent{0, 0, 10, 10},
 			ebb:   &geom.Extent{-20, -20, 0, 0},
 			scale: -2.0,
@@ -421,15 +421,15 @@ func TestBBoxExpandBy(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"nil": tcase{
+		"nil": {
 			factor: 2.0,
 		},
-		"1.0 factor": tcase{
+		"1.0 factor": {
 			bb:     &geom.Extent{0, 0, 10, 10},
 			ebb:    &geom.Extent{-1, -1, 11, 11},
 			factor: 1.0,
 		},
-		"-20.1 factor": tcase{
+		"-20.1 factor": {
 			bb:     &geom.Extent{0, 0, 10, 10},
 			ebb:    &geom.Extent{-10.1, -10.1, 20.1, 20.1},
 			factor: -20.1,
@@ -458,37 +458,37 @@ func TestBBoxIntersect(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"nil": tcase{
+		"nil": {
 			bb:   nil,
 			nbb:  nil,
 			ibb:  nil,
 			does: true,
 		},
-		"bb not nil": tcase{
+		"bb not nil": {
 			bb:   &geom.Extent{10, 10, 20, 20},
 			nbb:  nil,
 			ibb:  &geom.Extent{10, 10, 20, 20},
 			does: true,
 		},
-		"1": tcase{
+		"1": {
 			bb:   &geom.Extent{10, 10, 20, 20},
 			nbb:  &geom.Extent{10, 10, 15, 15},
 			ibb:  &geom.Extent{10, 10, 15, 15},
 			does: true,
 		},
-		"2": tcase{
+		"2": {
 			bb:   &geom.Extent{10, 10, 15, 15},
 			nbb:  &geom.Extent{10, 10, 20, 20},
 			ibb:  &geom.Extent{10, 10, 15, 15},
 			does: true,
 		},
-		"3": tcase{
+		"3": {
 			bb:   &geom.Extent{10, 10, 15, 15},
 			nbb:  &geom.Extent{15, 15, 20, 20},
 			ibb:  nil,
 			does: false,
 		},
-		"4": tcase{
+		"4": {
 			bb:   &geom.Extent{10, 10, 15, 15},
 			nbb:  &geom.Extent{10, 15, 20, 20},
 			ibb:  nil,
@@ -514,11 +514,11 @@ func TestBBoxArea(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"nil": tcase{
+		"nil": {
 			bb:   nil,
 			area: maxarea,
 		},
-		"simple 10x10": tcase{
+		"simple 10x10": {
 			bb:   geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			area: 100,
 		},
@@ -541,13 +541,13 @@ func TestBBoxContainsLine(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"nil": tcase{
-			l: [2][2]float64{[2]float64{0, 0}, [2]float64{10, 10}},
+		"nil": {
+			l: [2][2]float64{{0, 0}, {10, 10}},
 			e: true,
 		},
-		"contained": tcase{
+		"contained": {
 			bb: &geom.Extent{-1, -1, 20, 20},
-			l:  [2][2]float64{[2]float64{0, 0}, [2]float64{10, 10}},
+			l:  [2][2]float64{{0, 0}, {10, 10}},
 			e:  true,
 		},
 	}

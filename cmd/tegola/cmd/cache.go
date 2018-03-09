@@ -17,8 +17,8 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/provider"
 )
 
 var (

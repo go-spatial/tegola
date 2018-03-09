@@ -75,7 +75,7 @@ func TestGetTrianglesForCol(t *testing.T) {
 		},
 		"with_maxy1": {
 			Pt2Maxy: map[maths.Pt]int64{
-				maths.Pt{0, 1}: 300,
+				{0, 1}: 300,
 			},
 			Col1: []maths.Pt{
 				{0, 1},
@@ -97,7 +97,7 @@ func TestGetTrianglesForCol(t *testing.T) {
 		},
 		"with maxy": {
 			Pt2Maxy: map[maths.Pt]int64{
-				maths.Pt{0, 1}: 300,
+				{0, 1}: 300,
 			},
 			Col1: []maths.Pt{
 				{0, 0},

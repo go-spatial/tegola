@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/file"
-	"github.com/go-spatial/tegola"
 )
 
 func TestNew(t *testing.T) {
@@ -269,7 +269,7 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"over max zoom": tcase{
+		"over max zoom": {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": uint(10),
@@ -282,7 +282,7 @@ func TestMaxZoom(t *testing.T) {
 			bytes:       []byte("\x66\x6f\x6f"),
 			expectedHit: false,
 		},
-		"under max zoom": tcase{
+		"under max zoom": {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": uint(10),
@@ -295,7 +295,7 @@ func TestMaxZoom(t *testing.T) {
 			bytes:       []byte("\x66\x6f\x6f"),
 			expectedHit: true,
 		},
-		"equals max zoom": tcase{
+		"equals max zoom": {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": uint(10),

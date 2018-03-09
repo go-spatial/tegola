@@ -50,13 +50,13 @@ func TestOfPoints(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"simple points": tcase{
+		"simple points": {
 			pts: [][2]float64{
 				{0, 0}, {10, 0}, {10, 10}, {0, 10},
 			},
 			order: Clockwise,
 		},
-		"counter simple points": tcase{
+		"counter simple points": {
 			pts: [][2]float64{
 				{0, 10}, {10, 10}, {10, 0}, {0, 0},
 			},

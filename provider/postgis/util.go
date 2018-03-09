@@ -29,7 +29,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		}
 		//	to avoid field names possibly colliding with Postgres keywords,
 		//	we wrap the field names in quotes
-		for i, _ := range fdescs {
+		for i := range fdescs {
 			flds = append(flds, fdescs[i].Name)
 		}
 	}

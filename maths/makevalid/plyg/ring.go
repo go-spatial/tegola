@@ -447,7 +447,7 @@ func getTriangles(pt2maxy map[maths.Pt]int64, col1, col2 []maths.Pt) (tris []tri
 		//      /   |
 		//     /    |
 		//  0 +-----+ 1
-		return []tri{tri{0, 1, 0, 2}}, 0, 1, nil
+		return []tri{{0, 1, 0, 2}}, 0, 1, nil
 	case clen2 == 1:
 		// col1      col2
 		//  0 +
@@ -457,7 +457,7 @@ func getTriangles(pt2maxy map[maths.Pt]int64, col1, col2 []maths.Pt) (tris []tri
 		//    |   \
 		//    |    \
 		//  1 +-----+ 0
-		return []tri{tri{0, 2, 0, 1}}, 1, 0, nil
+		return []tri{{0, 2, 0, 1}}, 1, 0, nil
 
 	}
 
@@ -707,7 +707,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 		npt := cols[ccoli].Rings[cri].Points[nptid]
 		ptmap := make(map[maths.Pt]int)
 		ptcounter := make(map[maths.Pt]int)
-		walkedRings := [][2]int{[2]int{c, r}}
+		walkedRings := [][2]int{{c, r}}
 		for {
 			etime := time.Now()
 			elapsed := etime.Sub(stime)

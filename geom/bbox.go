@@ -25,10 +25,10 @@ type Extent [4]float64
 // (minx,miny), (maxx,miny), (maxx,maxy), (minx,maxy)
 func (e *Extent) Vertices() [][2]float64 {
 	return [][2]float64{
-		[2]float64{e.MinX(), e.MinY()},
-		[2]float64{e.MaxX(), e.MinY()},
-		[2]float64{e.MaxX(), e.MaxY()},
-		[2]float64{e.MinX(), e.MaxY()},
+		{e.MinX(), e.MinY()},
+		{e.MaxX(), e.MinY()},
+		{e.MaxX(), e.MaxY()},
+		{e.MinX(), e.MaxY()},
 	}
 }
 
@@ -42,10 +42,10 @@ func (e *Extent) Edges(cwfn ClockwiseFunc) [][2][2]float64 {
 		v[0], v[1], v[2], v[3] = v[3], v[2], v[1], v[0]
 	}
 	return [][2][2]float64{
-		[2][2]float64{v[0], v[1]},
-		[2][2]float64{v[1], v[2]},
-		[2][2]float64{v[2], v[3]},
-		[2][2]float64{v[3], v[0]},
+		{v[0], v[1]},
+		{v[1], v[2]},
+		{v[2], v[3]},
+		{v[3], v[0]},
 	}
 }
 

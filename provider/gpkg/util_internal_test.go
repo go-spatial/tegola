@@ -25,7 +25,7 @@ func TestReplaceTokens(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"zoom": tcase{
+		"zoom": {
 			qtext: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
@@ -42,7 +42,7 @@ func TestReplaceTokens(t *testing.T) {
 				WHERE
 					min_zoom <= 9 AND max_zoom >= 9`,
 		},
-		"bbox": tcase{
+		"bbox": {
 			qtext: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
@@ -62,7 +62,7 @@ func TestReplaceTokens(t *testing.T) {
 				WHERE
 					minx <= 180 AND maxx >= -180 AND miny <= 85.0511 AND maxy >= -85.0511`,
 		},
-		"bbox zoom": tcase{
+		"bbox zoom": {
 			qtext: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy

@@ -40,14 +40,14 @@ func TestScaleLinestring(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"duplicate pt simple line": tcase{
+		"duplicate pt simple line": {
 			g: basic.NewLine(9.0, 9.0, 9.0, 9.0),
 		},
-		"simple line": tcase{
+		"simple line": {
 			g: newLine(10.0, 10.0, 11.0, 11.0),
 			e: basic.NewLine(9.0, 9.0, 11.0, 11.0),
 		},
-		"simple line 3pt": tcase{
+		"simple line 3pt": {
 			g: newLine(10.0, 10.0, 11.0, 10.0, 11.0, 15.0),
 			e: basic.NewLine(9.0, 9.0, 11.0, 9.0, 11.0, 14.0),
 		},

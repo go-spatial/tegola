@@ -37,7 +37,7 @@ func TestCleanPolygon(t *testing.T) {
 				basic.NewLine(4, 2, 2, 4, 2, 6, 3, 7, 5, 8, 7, 7, 8, 5, 8, 3, 6, 2),
 			},
 			Expected: []basic.Polygon{
-				basic.Polygon{
+				{
 					basic.NewLine(1, 1, 9, 1, 9, 9, 1, 9),
 					basic.NewLine(4, 2, 2, 4, 2, 6, 3, 7, 5, 8, 7, 7, 8, 5, 8, 3, 6, 2),
 				},

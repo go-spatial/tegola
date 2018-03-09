@@ -70,7 +70,7 @@ func Drivers() (l []string) {
 		return l
 	}
 
-	for k, _ := range providers {
+	for k := range providers {
 		l = append(l, k)
 	}
 
