@@ -54,33 +54,41 @@ func (t *Tile) Bounds() [4]float64 {
 }
 
 /*
+	// Keep this comment as it is a guide for how we can take bounds and a srid and convert it to Extents and Buffereded Extents.
 	// This is how we convert from the Bounds, and TileSize to Extent for Webmercator.
 	bounds := t.Bounds()
 	east,north,west, south := bounds[0],bounds[1],bounds[2],bounds[3]
 
 	TileSize := 4096.0
+	// Convert bounds to coordinates in webmercator.
 	c, err := webmercator.PToXY(east, north, west, south)
 	log.Println("c", c, "err", err)
 
+	// Turn the Coordinates into an Extent (minx, miny, maxx, maxy)
+	// Here is where the origin flip happens if there is one.
 	extent := geom.NewBBox(
 		[2]float64{c[0], c[1]},
 		[2]float64{c[2], c[3]},
 	)
 
+	// A Span is just MaxX - MinX
 	xspan := extent.XSpan()
 	yspan := extent.YSpan()
 
 	log.Println("Extent", extent, "MinX", extent.MinX(), "MinY", extent.MinY(), "xspan", xspan, "yspan", yspan)
 
 	// To get the Buffered Extent, we just need the extent and the Buffer size.
-	// Convert to tile coordinates.
+	// Convert to tile coordinates. Convert the meters (WebMercator) into pixels of the tile..
 	nx := float64(int64((c[0] - extent.MinX()) * TileSize / xspan))
 	ny := float64(int64((c[1] - extent.MinY()) * TileSize / yspan))
 	mx := float64(int64((c[2] - extent.MinX()) * TileSize / xspan))
 	my := float64(int64((c[3] - extent.MinY()) * TileSize / yspan))
 
+	// Expend by the that number of pixels. We could also do the Expand on the Extent instead, of the Bounding Box on the Pixel.
 	mextent := geom.NewBBox([2]float64{nx, ny}, [2]float64{mx, my}).ExpandBy(64)
 	log.Println("mxy[", nx, ny, mx, my, "]", "err", err, "mext", mextent)
+
+	// Convert Pixel back to meters.
 	bext := geom.NewBBox(
 		[2]float64{
 			(mextent.MinX() * xspan / TileSize) + extent.MinX(),
