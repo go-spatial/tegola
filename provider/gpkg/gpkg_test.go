@@ -89,17 +89,17 @@ func TestNewTileProvider(t *testing.T) {
 }
 
 type MockTile struct {
-	extent         *geom.BoundingBox
-	bufferedExtent *geom.BoundingBox
+	extent         *geom.Extent
+	bufferedExtent *geom.Extent
 	Z, X, Y        uint64
 	srid           uint64
 }
 
 // TODO(arolek): Extent needs to return a geom.Extent
-func (t *MockTile) Extent() (*geom.BoundingBox, uint64) { return t.extent, t.srid }
+func (t *MockTile) Extent() (*geom.Extent, uint64) { return t.extent, t.srid }
 
 // TODO(arolek): BufferedExtent needs to return a geom.Extent
-func (t *MockTile) BufferedExtent() (*geom.BoundingBox, uint64) { return t.bufferedExtent, t.srid }
+func (t *MockTile) BufferedExtent() (*geom.Extent, uint64) { return t.bufferedExtent, t.srid }
 
 func (t *MockTile) ZXY() (uint64, uint64, uint64) { return t.Z, t.X, t.Y }
 
@@ -148,7 +148,7 @@ func TestTileFeatures(t *testing.T) {
 			layerName: "rd_lines",
 			tile: MockTile{
 				srid: tegola.WGS84,
-				bufferedExtent: geom.NewBBox(
+				bufferedExtent: geom.NewExtent(
 					[2]float64{20.0, 37.85},
 					[2]float64{23.6, 37.9431},
 				),
@@ -166,7 +166,7 @@ func TestTileFeatures(t *testing.T) {
 			layerName: "rl_lines",
 			tile: MockTile{
 				srid: tegola.WGS84,
-				bufferedExtent: geom.NewBBox(
+				bufferedExtent: geom.NewExtent(
 					/*
 						{23.6, 38.0},
 						{23.8, 37.8},
@@ -197,7 +197,7 @@ func TestTileFeatures(t *testing.T) {
 			tile: MockTile{
 				Z:    1,
 				srid: tegola.WebMercator,
-				bufferedExtent: geom.NewBBox(
+				bufferedExtent: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
@@ -224,7 +224,7 @@ func TestTileFeatures(t *testing.T) {
 			tile: MockTile{
 				Z:    0,
 				srid: tegola.WebMercator,
-				bufferedExtent: geom.NewBBox(
+				bufferedExtent: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
@@ -296,7 +296,7 @@ func TestConfigs(t *testing.T) {
 				},
 			},
 			tile: MockTile{
-				bufferedExtent: geom.NewBBox(
+				bufferedExtent: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
@@ -328,7 +328,7 @@ func TestConfigs(t *testing.T) {
 				},
 			},
 			tile: MockTile{
-				bufferedExtent: geom.NewBBox(
+				bufferedExtent: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
@@ -350,7 +350,7 @@ func TestConfigs(t *testing.T) {
 				},
 			},
 			tile: MockTile{
-				bufferedExtent: geom.NewBBox(
+				bufferedExtent: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
@@ -395,7 +395,7 @@ func TestConfigs(t *testing.T) {
 				},
 			},
 			tile: MockTile{
-				bufferedExtent: geom.NewBBox(
+				bufferedExtent: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),

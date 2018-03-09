@@ -12,12 +12,12 @@ import (
 func TestBBoxNew(t *testing.T) {
 	type tcase struct {
 		points   [][2]float64
-		expected *geom.BoundingBox
+		expected *geom.Extent
 	}
 	var tests map[string]tcase
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
-		got := geom.NewBBox(tc.points...)
+		got := geom.NewExtent(tc.points...)
 		if !reflect.DeepEqual(got, tc.expected) {
 			t.Errorf("failed,  expected %+v got %+v", tc.expected, *got)
 		}
@@ -28,7 +28,7 @@ func TestBBoxNew(t *testing.T) {
 			points: [][2]float64{
 				{1.0, 2.0},
 			},
-			expected: &geom.BoundingBox{1.0, 2.0, 1.0, 2.0},
+			expected: &geom.Extent{1.0, 2.0, 1.0, 2.0},
 		},
 		"3 points": {
 			points: [][2]float64{
@@ -36,7 +36,7 @@ func TestBBoxNew(t *testing.T) {
 				{6.0, 4.0},
 				{3.0, 7.0},
 			},
-			expected: &geom.BoundingBox{0.0, 0.0, 6.0, 7.0},
+			expected: &geom.Extent{0.0, 0.0, 6.0, 7.0},
 		},
 		"4 points": {
 			points: [][2]float64{
@@ -45,7 +45,7 @@ func TestBBoxNew(t *testing.T) {
 				{6.0, 4.0},
 				{3.0, 7.0},
 			},
-			expected: &geom.BoundingBox{-10.0, -10.0, 6.0, 7.0},
+			expected: &geom.Extent{-10.0, -10.0, 6.0, 7.0},
 		},
 		"0 points": {
 			points:   [][2]float64{},
@@ -61,9 +61,9 @@ func TestBBoxNew(t *testing.T) {
 
 func TestBBoxAdd(t *testing.T) {
 	type tcase struct {
-		bb       *geom.BoundingBox
-		bbox     *geom.BoundingBox
-		expected *geom.BoundingBox
+		bb       *geom.Extent
+		bbox     *geom.Extent
+		expected *geom.Extent
 	}
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
@@ -76,23 +76,23 @@ func TestBBoxAdd(t *testing.T) {
 	tests := map[string]tcase{
 		"nil expanded by point": {
 			bb:       nil,
-			bbox:     &geom.BoundingBox{3.0, 3.0, 3.0, 3.0},
+			bbox:     &geom.Extent{3.0, 3.0, 3.0, 3.0},
 			expected: nil,
 		},
 		"point expanded by nil": {
-			bb:       &geom.BoundingBox{1.0, 2.0, 1.0, 2.0},
+			bb:       &geom.Extent{1.0, 2.0, 1.0, 2.0},
 			bbox:     nil,
 			expected: nil,
 		},
 		"point expanded by point": {
-			bb:       &geom.BoundingBox{1.0, 2.0, 1.0, 2.0},
-			bbox:     &geom.BoundingBox{3.0, 3.0, 3.0, 3.0},
-			expected: &geom.BoundingBox{1.0, 2.0, 3.0, 3.0},
+			bb:       &geom.Extent{1.0, 2.0, 1.0, 2.0},
+			bbox:     &geom.Extent{3.0, 3.0, 3.0, 3.0},
+			expected: &geom.Extent{1.0, 2.0, 3.0, 3.0},
 		},
 		"point expanded by enclosing box": {
-			bb:       &geom.BoundingBox{1.0, 2.0, 1.0, 2.0},
-			bbox:     &geom.BoundingBox{0.0, 0.0, 3.0, 3.0},
-			expected: &geom.BoundingBox{0.0, 0.0, 3.0, 3.0},
+			bb:       &geom.Extent{1.0, 2.0, 1.0, 2.0},
+			bbox:     &geom.Extent{0.0, 0.0, 3.0, 3.0},
+			expected: &geom.Extent{0.0, 0.0, 3.0, 3.0},
 		},
 	}
 	for name, tc := range tests {
@@ -103,9 +103,9 @@ func TestBBoxAdd(t *testing.T) {
 
 func TestBBoxAddPoints(t *testing.T) {
 	type tcase struct {
-		bb       *geom.BoundingBox
+		bb       *geom.Extent
 		points   [][2]float64
-		expected *geom.BoundingBox
+		expected *geom.Extent
 	}
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
@@ -124,17 +124,17 @@ func TestBBoxAddPoints(t *testing.T) {
 			expected: nil,
 		},
 		"point expanded zero points": {
-			bb:       &geom.BoundingBox{1.0, 2.0, 1.0, 2.0},
+			bb:       &geom.Extent{1.0, 2.0, 1.0, 2.0},
 			points:   [][2]float64{},
-			expected: &geom.BoundingBox{1.0, 2.0, 1.0, 2.0},
+			expected: &geom.Extent{1.0, 2.0, 1.0, 2.0},
 		},
 		"point expanded by point": {
-			bb: &geom.BoundingBox{1.0, 2.0, 1.0, 2.0},
+			bb: &geom.Extent{1.0, 2.0, 1.0, 2.0},
 			points: [][2]float64{
 				{3.0, 3.0},
 				{1.0, 1.0},
 			},
-			expected: &geom.BoundingBox{1.0, 1.0, 3.0, 3.0},
+			expected: &geom.Extent{1.0, 1.0, 3.0, 3.0},
 		},
 	}
 	for name, tc := range tests {
@@ -146,7 +146,7 @@ func TestBBoxAddPoints(t *testing.T) {
 func TestBBoxContains(t *testing.T) {
 	type tcase struct {
 		mm       geom.MinMaxer
-		bb       *geom.BoundingBox
+		bb       *geom.Extent
 		expected bool
 	}
 	fn := func(t *testing.T, tc tcase) {
@@ -160,31 +160,31 @@ func TestBBoxContains(t *testing.T) {
 			expected: true,
 		},
 		"nil bb non-nil mm": tcase{
-			mm:       geom.NewBBox([2]float64{0, 0}, [2]float64{10, 10}),
+			mm:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			expected: true,
 		},
 		"non-nil bb nil mm": tcase{
-			bb:       geom.NewBBox([2]float64{0, 0}, [2]float64{10, 10}),
+			bb:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			expected: false,
 		},
 		"same": tcase{
-			bb:       geom.NewBBox([2]float64{0, 0}, [2]float64{10, 10}),
-			mm:       geom.NewBBox([2]float64{0, 0}, [2]float64{10, 10}),
+			bb:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
+			mm:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			expected: true,
 		},
 		"contained": tcase{
-			bb:       geom.NewBBox([2]float64{0, 0}, [2]float64{10, 10}),
-			mm:       geom.NewBBox([2]float64{1, 1}, [2]float64{5, 5}),
+			bb:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
+			mm:       geom.NewExtent([2]float64{1, 1}, [2]float64{5, 5}),
 			expected: true,
 		},
 		"same only at 0,0": tcase{
-			bb:       geom.NewBBox([2]float64{0, 0}, [2]float64{10, 10}),
-			mm:       geom.NewBBox([2]float64{0, 0}, [2]float64{-10, -10}),
+			bb:       geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
+			mm:       geom.NewExtent([2]float64{0, 0}, [2]float64{-10, -10}),
 			expected: false,
 		},
 		"overlap not contained": tcase{
-			bb:       geom.NewBBox([2]float64{-1, -1}, [2]float64{10, 10}),
-			mm:       geom.NewBBox([2]float64{0, 0}, [2]float64{-10, -10}),
+			bb:       geom.NewExtent([2]float64{-1, -1}, [2]float64{10, 10}),
+			mm:       geom.NewExtent([2]float64{0, 0}, [2]float64{-10, -10}),
 			expected: false,
 		},
 	}
@@ -196,7 +196,7 @@ func TestBBoxContains(t *testing.T) {
 
 func TestBBoxContainsPoint(t *testing.T) {
 	type tcase struct {
-		bb       *geom.BoundingBox
+		bb       *geom.Extent
 		pt       [2]float64
 		expected bool
 	}
@@ -215,12 +215,12 @@ func TestBBoxContainsPoint(t *testing.T) {
 	}
 	tests := map[string]tcase{
 		"contained point": {
-			bb:       &geom.BoundingBox{0.0, 0.0, 3.0, 3.0},
+			bb:       &geom.Extent{0.0, 0.0, 3.0, 3.0},
 			pt:       [2]float64{1.0, 1.0},
 			expected: true,
 		},
 		"uncontained point": {
-			bb:       &geom.BoundingBox{0.0, 0.0, 3.0, 3.0},
+			bb:       &geom.Extent{0.0, 0.0, 3.0, 3.0},
 			pt:       [2]float64{-1.0, -1.0},
 			expected: false,
 		},
@@ -244,7 +244,7 @@ func TestBBoxAttributes(t *testing.T) {
 	}
 
 	type tcase struct {
-		bb           *geom.BoundingBox
+		bb           *geom.Extent
 		xspan, yspan float64
 	}
 
@@ -354,7 +354,7 @@ func TestBBoxAttributes(t *testing.T) {
 	}
 	tests := map[string]tcase{
 		"std": tcase{
-			bb:    &geom.BoundingBox{0.0, 0.0, 10.0, 10.0},
+			bb:    &geom.Extent{0.0, 0.0, 10.0, 10.0},
 			xspan: 10.0,
 			yspan: 10.0,
 		},
@@ -372,9 +372,9 @@ func TestBBoxAttributes(t *testing.T) {
 
 func TestBBoxScaleBy(t *testing.T) {
 	type tcase struct {
-		bb    *geom.BoundingBox
+		bb    *geom.Extent
 		scale float64
-		ebb   *geom.BoundingBox
+		ebb   *geom.Extent
 	}
 	fn := func(t *testing.T, tc tcase) {
 		sbb := tc.bb.ScaleBy(tc.scale)
@@ -387,18 +387,18 @@ func TestBBoxScaleBy(t *testing.T) {
 			scale: 2.0,
 		},
 		"1.0 scale": tcase{
-			bb:    &geom.BoundingBox{0, 0, 10, 10},
-			ebb:   &geom.BoundingBox{0, 0, 10, 10},
+			bb:    &geom.Extent{0, 0, 10, 10},
+			ebb:   &geom.Extent{0, 0, 10, 10},
 			scale: 1.0,
 		},
 		"2.0 scale": tcase{
-			bb:    &geom.BoundingBox{0, 0, 10, 10},
-			ebb:   &geom.BoundingBox{0, 0, 20, 20},
+			bb:    &geom.Extent{0, 0, 10, 10},
+			ebb:   &geom.Extent{0, 0, 20, 20},
 			scale: 2.0,
 		},
 		"-2.0 scale": tcase{
-			bb:    &geom.BoundingBox{0, 0, 10, 10},
-			ebb:   &geom.BoundingBox{-20, -20, 0, 0},
+			bb:    &geom.Extent{0, 0, 10, 10},
+			ebb:   &geom.Extent{-20, -20, 0, 0},
 			scale: -2.0,
 		},
 	}
@@ -410,9 +410,9 @@ func TestBBoxScaleBy(t *testing.T) {
 
 func TestBBoxExpandBy(t *testing.T) {
 	type tcase struct {
-		bb     *geom.BoundingBox
+		bb     *geom.Extent
 		factor float64
-		ebb    *geom.BoundingBox
+		ebb    *geom.Extent
 	}
 	fn := func(t *testing.T, tc tcase) {
 		sbb := tc.bb.ExpandBy(tc.factor)
@@ -425,13 +425,13 @@ func TestBBoxExpandBy(t *testing.T) {
 			factor: 2.0,
 		},
 		"1.0 factor": tcase{
-			bb:     &geom.BoundingBox{0, 0, 10, 10},
-			ebb:    &geom.BoundingBox{-1, -1, 11, 11},
+			bb:     &geom.Extent{0, 0, 10, 10},
+			ebb:    &geom.Extent{-1, -1, 11, 11},
 			factor: 1.0,
 		},
 		"-20.1 factor": tcase{
-			bb:     &geom.BoundingBox{0, 0, 10, 10},
-			ebb:    &geom.BoundingBox{-10.1, -10.1, 20.1, 20.1},
+			bb:     &geom.Extent{0, 0, 10, 10},
+			ebb:    &geom.Extent{-10.1, -10.1, 20.1, 20.1},
 			factor: -20.1,
 		},
 	}
@@ -443,9 +443,9 @@ func TestBBoxExpandBy(t *testing.T) {
 
 func TestBBoxIntersect(t *testing.T) {
 	type tcase struct {
-		bb   *geom.BoundingBox
-		nbb  *geom.BoundingBox
-		ibb  *geom.BoundingBox
+		bb   *geom.Extent
+		nbb  *geom.Extent
+		ibb  *geom.Extent
 		does bool
 	}
 	fn := func(t *testing.T, tc tcase) {
@@ -465,32 +465,32 @@ func TestBBoxIntersect(t *testing.T) {
 			does: true,
 		},
 		"bb not nil": tcase{
-			bb:   &geom.BoundingBox{10, 10, 20, 20},
+			bb:   &geom.Extent{10, 10, 20, 20},
 			nbb:  nil,
-			ibb:  &geom.BoundingBox{10, 10, 20, 20},
+			ibb:  &geom.Extent{10, 10, 20, 20},
 			does: true,
 		},
 		"1": tcase{
-			bb:   &geom.BoundingBox{10, 10, 20, 20},
-			nbb:  &geom.BoundingBox{10, 10, 15, 15},
-			ibb:  &geom.BoundingBox{10, 10, 15, 15},
+			bb:   &geom.Extent{10, 10, 20, 20},
+			nbb:  &geom.Extent{10, 10, 15, 15},
+			ibb:  &geom.Extent{10, 10, 15, 15},
 			does: true,
 		},
 		"2": tcase{
-			bb:   &geom.BoundingBox{10, 10, 15, 15},
-			nbb:  &geom.BoundingBox{10, 10, 20, 20},
-			ibb:  &geom.BoundingBox{10, 10, 15, 15},
+			bb:   &geom.Extent{10, 10, 15, 15},
+			nbb:  &geom.Extent{10, 10, 20, 20},
+			ibb:  &geom.Extent{10, 10, 15, 15},
 			does: true,
 		},
 		"3": tcase{
-			bb:   &geom.BoundingBox{10, 10, 15, 15},
-			nbb:  &geom.BoundingBox{15, 15, 20, 20},
+			bb:   &geom.Extent{10, 10, 15, 15},
+			nbb:  &geom.Extent{15, 15, 20, 20},
 			ibb:  nil,
 			does: false,
 		},
 		"4": tcase{
-			bb:   &geom.BoundingBox{10, 10, 15, 15},
-			nbb:  &geom.BoundingBox{10, 15, 20, 20},
+			bb:   &geom.Extent{10, 10, 15, 15},
+			nbb:  &geom.Extent{10, 15, 20, 20},
 			ibb:  nil,
 			does: false,
 		},
@@ -504,7 +504,7 @@ func TestBBoxIntersect(t *testing.T) {
 func TestBBoxArea(t *testing.T) {
 	maxarea := math.Inf(1)
 	type tcase struct {
-		bb   *geom.BoundingBox
+		bb   *geom.Extent
 		area float64
 	}
 	fn := func(t *testing.T, tc tcase) {
@@ -519,7 +519,7 @@ func TestBBoxArea(t *testing.T) {
 			area: maxarea,
 		},
 		"simple 10x10": tcase{
-			bb:   geom.NewBBox([2]float64{0, 0}, [2]float64{10, 10}),
+			bb:   geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
 			area: 100,
 		},
 	}
@@ -531,7 +531,7 @@ func TestBBoxArea(t *testing.T) {
 
 func TestBBoxContainsLine(t *testing.T) {
 	type tcase struct {
-		bb *geom.BoundingBox
+		bb *geom.Extent
 		l  [2][2]float64
 		e  bool
 	}
@@ -546,7 +546,7 @@ func TestBBoxContainsLine(t *testing.T) {
 			e: true,
 		},
 		"contained": tcase{
-			bb: &geom.BoundingBox{-1, -1, 20, 20},
+			bb: &geom.Extent{-1, -1, 20, 20},
 			l:  [2][2]float64{[2]float64{0, 0}, [2]float64{10, 10}},
 			e:  true,
 		},

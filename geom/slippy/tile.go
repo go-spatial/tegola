@@ -96,14 +96,14 @@ func (t *Tile) Bounds() [4]float64 {
 
 // TODO(arolek): support alternative SRIDs. Currently this assumes 3857
 // Extent will return the tile extent excluding the tile's buffer and the Extent's SRID
-func (t *Tile) Extent() (extent *geom.BoundingBox, srid uint64) {
+func (t *Tile) Extent() (extent *geom.Extent, srid uint64) {
 	max := 20037508.34
 
 	//	resolution
 	res := (max * 2) / math.Exp2(float64(t.z))
 
 	//	unbuffered extent
-	return geom.NewBBox(
+	return geom.NewExtent(
 		[2]float64{
 			-max + (float64(t.x) * res), // MinX
 			max - (float64(t.y) * res),  // Miny
@@ -116,7 +116,7 @@ func (t *Tile) Extent() (extent *geom.BoundingBox, srid uint64) {
 }
 
 // BufferedExtent will return the tile extent including the tile's buffer and the Extent's SRID
-func (t *Tile) BufferedExtent() (bufferedExtent *geom.BoundingBox, srid uint64) {
+func (t *Tile) BufferedExtent() (bufferedExtent *geom.Extent, srid uint64) {
 	extent, _ := t.Extent()
 
 	// TODO(arolek): the following value is hard coded for MVT, but this concept needs to be abstracted to support different projections
@@ -130,7 +130,7 @@ func (t *Tile) BufferedExtent() (bufferedExtent *geom.BoundingBox, srid uint64) 
 	xspan := extent.MaxX() - extent.MinX()
 	yspan := extent.MaxY() - extent.MinY()
 
-	bufferedExtent = geom.NewBBox(
+	bufferedExtent = geom.NewExtent(
 		[2]float64{
 			(mvtTileExtent[0] * xspan / mvtTileWidthHeight) + extent.MinX(),
 			(mvtTileExtent[1] * yspan / mvtTileWidthHeight) + extent.MinY(),

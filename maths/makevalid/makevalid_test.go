@@ -19,7 +19,7 @@ import (
 
 const TileBuffer = 16
 
-var extent = geom.NewBBox(
+var extent = geom.NewExtent(
 	[2]float64{0.0 - TileBuffer, 0.0 - TileBuffer},
 	[2]float64{4096.0 + TileBuffer, 4096.0 + TileBuffer},
 )

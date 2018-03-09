@@ -9,27 +9,27 @@ import (
 	"github.com/go-spatial/tegola/geom/cmp"
 )
 
-var testExtents = []geom.BoundingBox{
-	/* 00 */ geom.BoundingBox{0, 0, 10, 10},
-	/* 01 */ geom.BoundingBox{2, 2, 9, 9},
-	/* 02 */ geom.BoundingBox{-1, -1, 11, 11},
-	/* 03 */ geom.BoundingBox{-2, -2, 12, 12},
-	/* 04 */ geom.BoundingBox{-3, -3, 13, 13},
+var testExtents = []geom.Extent{
+	/* 00 */ geom.Extent{0, 0, 10, 10},
+	/* 01 */ geom.Extent{2, 2, 9, 9},
+	/* 02 */ geom.Extent{-1, -1, 11, 11},
+	/* 03 */ geom.Extent{-2, -2, 12, 12},
+	/* 04 */ geom.Extent{-3, -3, 13, 13},
 
-	/* 05 */ geom.BoundingBox{-4, -4, 14, 14},
-	/* 06 */ geom.BoundingBox{5, 1, 7, 3},
-	/* 07 */ geom.BoundingBox{0, 5, 2, 7},
-	/* 08 */ geom.BoundingBox{0, 5, 2, 7},
-	/* 09 */ geom.BoundingBox{5, 2, 11, 9},
+	/* 05 */ geom.Extent{-4, -4, 14, 14},
+	/* 06 */ geom.Extent{5, 1, 7, 3},
+	/* 07 */ geom.Extent{0, 5, 2, 7},
+	/* 08 */ geom.Extent{0, 5, 2, 7},
+	/* 09 */ geom.Extent{5, 2, 11, 9},
 
-	/* 10 */ geom.BoundingBox{-1, -1, 11, 11},
-	/* 11 */ geom.BoundingBox{0, 0, 4096, 4096},
+	/* 10 */ geom.Extent{-1, -1, 11, 11},
+	/* 11 */ geom.Extent{0, 0, 4096, 4096},
 }
 
 func TestLineString(t *testing.T) {
 
 	type tcase struct {
-		extent   *geom.BoundingBox
+		extent   *geom.Extent
 		linestr  tegola.LineString
 		expected []basic.Line
 		err      error
@@ -103,7 +103,7 @@ func TestLineString(t *testing.T) {
 			},
 		},
 		"4": tcase{
-			extent:  &geom.BoundingBox{0, 0, 11, 11},
+			extent:  &geom.Extent{0, 0, 11, 11},
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
 				basic.NewLine(0, 9, 11, 9, 11, 2, 5, 2, 5, 8, 0, 8),

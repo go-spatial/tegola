@@ -81,8 +81,8 @@ func TestNewTile(t *testing.T) {
 		buffer   float64
 		srid     uint64
 		eBounds  [4]float64
-		eExtent  *geom.BoundingBox
-		eBExtent *geom.BoundingBox
+		eExtent  *geom.Extent
+		eBExtent *geom.Extent
 	}
 	fn := func(t *testing.T, tc tcase) {
 
@@ -144,11 +144,11 @@ func TestNewTile(t *testing.T) {
 			y:      1,
 			buffer: 64,
 			srid:   tegola.WebMercator,
-			eExtent: geom.NewBBox(
+			eExtent: geom.NewExtent(
 				[2]float64{-10018754.17, 10018754.17},
 				[2]float64{0, 0},
 			),
-			eBExtent: geom.NewBBox(
+			eBExtent: geom.NewExtent(
 				[2]float64{-1.017529720390625e+07, 1.017529720390625e+07},
 				[2]float64{156543.03390624933, -156543.03390624933},
 			),
@@ -160,11 +160,11 @@ func TestNewTile(t *testing.T) {
 			y:      26461,
 			buffer: 64,
 			srid:   tegola.WebMercator,
-			eExtent: geom.NewBBox(
+			eExtent: geom.NewExtent(
 				[2]float64{-13044437.497219238996, 3856706.6986199953},
 				[2]float64{-13043826.000993041, 3856095.202393799},
 			),
-			eBExtent: geom.NewBBox(
+			eBExtent: geom.NewExtent(
 				[2]float64{-1.3044447051847773e+07, 3.8567162532485295e+06},
 				[2]float64{-1.3043816446364507e+07, 3.856085647765265e+06},
 			),

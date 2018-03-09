@@ -69,7 +69,7 @@ func MinF64(vals ...float64) (min float64) {
 */
 
 // destructure2  splits the polygon into a set of segements adding the segments of the clipbox as well.
-func destructure2(polygons [][]maths.Line, clipbox *geom.BoundingBox) []maths.Line {
+func destructure2(polygons [][]maths.Line, clipbox *geom.Extent) []maths.Line {
 	// First we need to combine all the segments.
 	segs := make(map[maths.Line]struct{})
 	for i := range polygons {
@@ -111,7 +111,7 @@ func logOutBuildRings(pt2maxy map[maths.Pt]int64, xs []float64, x2pts map[float6
 	return output
 }
 
-func plygsToBoundingBox(plygs [][]maths.Line) *geom.BoundingBox {
+func plygsToBoundingBox(plygs [][]maths.Line) *geom.Extent {
 	var minx, miny, maxx, maxy float64
 	var init bool
 	for i := range plygs {
@@ -151,10 +151,10 @@ func plygsToBoundingBox(plygs [][]maths.Line) *geom.BoundingBox {
 			}
 		}
 	}
-	return &geom.BoundingBox{minx, miny, maxx, maxy}
+	return &geom.Extent{minx, miny, maxx, maxy}
 }
 
-func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.BoundingBox, plygs [][]maths.Line) ([][][]maths.Pt, error) {
+func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, plygs [][]maths.Line) ([][][]maths.Pt, error) {
 
 	if len(plygs) == 0 {
 		return nil, nil
@@ -301,7 +301,7 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.BoundingB
 	return ploygs, nil
 }
 
-func MakeValid(ctx context.Context, hm hitmap.Interface, extent *geom.BoundingBox, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
+func MakeValid(ctx context.Context, hm hitmap.Interface, extent *geom.Extent, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
 	/*
 		var bb *geom.BoundingBox
 		if extent != nil {

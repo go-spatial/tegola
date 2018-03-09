@@ -88,7 +88,7 @@ func TestSplitSegments(t *testing.T) {
 	type tcase struct {
 		segs    []maths.Line
 		lns     [][2][2]float64
-		clipbox *geom.BoundingBox
+		clipbox *geom.Extent
 		err     error
 	}
 	ctx := context.Background()

@@ -23,7 +23,7 @@ func (b byxy) Less(i, j int) bool {
 }
 
 // IntersectPt returns the intersect point if one exists.
-func intersectPt(clipbox *geom.BoundingBox, ln [2][2]float64) (pts [][2]float64, ok bool) {
+func intersectPt(clipbox *geom.Extent, ln [2][2]float64) (pts [][2]float64, ok bool) {
 	lln := maths.NewLineWith2Float64(ln)
 loop:
 	for _, edge := range clipbox.Edges(nil) {
@@ -47,7 +47,7 @@ loop:
 	return pts, len(pts) > 0
 }
 
-func LineString(linestr tegola.LineString, extent *geom.BoundingBox) (ls []basic.Line, err error) {
+func LineString(linestr tegola.LineString, extent *geom.Extent) (ls []basic.Line, err error) {
 	line := lines.FromTLineString(linestr)
 	if len(line) == 0 {
 		return ls, nil

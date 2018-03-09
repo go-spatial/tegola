@@ -13,7 +13,7 @@ const (
 	zoomToken = "!ZOOM!"
 )
 
-func replaceTokens(qtext string, zoom uint64, extent *geom.BoundingBox) string {
+func replaceTokens(qtext string, zoom uint64, extent *geom.Extent) string {
 	// --- Convert tokens provided to SQL
 	// The ZOOM token requires two parameters, both filled with the current zoom level.
 	//	Until support for named parameters, the ZOOM token must follow the BBOX token.

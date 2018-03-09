@@ -35,8 +35,8 @@ type Tile struct {
 	xspan float64
 	yspan float64
 	// This is the computed bounding box.
-	extent  *geom.BoundingBox
-	bufpext *geom.BoundingBox
+	extent  *geom.Extent
+	bufpext *geom.Extent
 }
 
 // NewTile will return a non-nil tile object.
@@ -75,7 +75,7 @@ func (t *Tile) Init() {
 	//	resolution
 	res := (max * 2) / math.Exp2(float64(t.Z))
 	t.cached = true
-	t.extent = &geom.BoundingBox{
+	t.extent = &geom.Extent{
 		-max + (float64(t.X) * res),       // MinX
 		max - (float64(t.Y) * res),        // Miny
 		-max + (float64(t.X) * res) + res, // MaxX
@@ -97,7 +97,7 @@ func (t *Tile) Init() {
 		bounds[1][0] += t.Buffer
 		bounds[1][1] += t.Buffer
 	*/
-	t.bufpext = &geom.BoundingBox{
+	t.bufpext = &geom.Extent{
 		0 - t.Buffer, 0 - t.Buffer,
 		t.Extent + t.Buffer, t.Extent + t.Buffer,
 	}

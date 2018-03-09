@@ -96,7 +96,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		tileBBox = &geom.BoundingBox{
+		tileBBox = &geom.Extent{
 			minGeo.AsPoint().X(), minGeo.AsPoint().Y(),
 			maxGeo.AsPoint().X(), maxGeo.AsPoint().Y(),
 		}
@@ -234,7 +234,7 @@ type GeomTableDetails struct {
 	geomFieldname string
 	geomType      geom.Geometry
 	srid          uint64
-	bbox          geom.BoundingBox
+	bbox          geom.Extent
 }
 
 type GeomColumn struct {

@@ -84,7 +84,7 @@ func splitPoints(ctx context.Context, segments []maths.Line) (pts [][]maths.Pt, 
 	return pts, nil
 
 }
-func splitSegments(ctx context.Context, segments []maths.Line, clipbox *geom.BoundingBox) (lns [][2][2]float64, err error) {
+func splitSegments(ctx context.Context, segments []maths.Line, clipbox *geom.Extent) (lns [][2][2]float64, err error) {
 	pts, err := splitPoints(ctx, segments)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func allPointsForSegments(segments [][2][2]float64) (pts [][2]float64) {
 }
 
 // splitLines will split the given line segments at intersection points if they intersect at any point other then the end.
-func splitLines(ctx context.Context, segments []maths.Line, clipbox *geom.BoundingBox) ([]maths.Line, error) {
+func splitLines(ctx context.Context, segments []maths.Line, clipbox *geom.Extent) ([]maths.Line, error) {
 	lns, err := splitSegments(ctx, segments, clipbox)
 	if err != nil {
 		return nil, err

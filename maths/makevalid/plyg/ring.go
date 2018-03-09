@@ -25,15 +25,15 @@ type Ring struct {
 	Points []maths.Pt
 	Label  maths.Label
 	hasBB  bool
-	bb     *geom.BoundingBox
+	bb     *geom.Extent
 }
 
-func (r *Ring) initBB() *geom.BoundingBox {
+func (r *Ring) initBB() *geom.Extent {
 	if r.hasBB {
 		return r.bb
 	}
 	pts := convert.FromMathPoint(r.Points...)
-	r.bb = geom.NewBBox(pts...)
+	r.bb = geom.NewExtent(pts...)
 	r.hasBB = true
 	return r.bb
 }
@@ -396,7 +396,7 @@ func (rc *RingCol) MultiPolygon() [][][]maths.Pt {
 
 		for j := len(rings) - 1; j >= 0; j-- {
 			pts := convert.FromMathPoint(rings[j][0]...)
-			ibb := geom.NewBBox(pts...)
+			ibb := geom.NewExtent(pts...)
 
 			if ibb.Area() <= rc.Rings[i].BBArea() {
 				continue

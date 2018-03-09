@@ -2,6 +2,7 @@ package cmp
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	geom "github.com/go-spatial/tegola/geom"
@@ -739,12 +740,12 @@ func TestMultiPolygon(t *testing.T) {
 }
 
 func TestCollection(t *testing.T) {
-	type tc struct {
+	type tcase struct {
 		cl1, cl2 geom.Collection
 		e        bool
 	}
 
-	fn := func(t *testing.T, tc tc) {
+	fn := func(t *testing.T, tc tcase) {
 		if tc.e != CollectionerEqual(tc.cl1, tc.cl2) {
 			t.Errorf("polygoner equal, expected %v got %v", tc.e, !tc.e)
 		}
@@ -754,20 +755,20 @@ func TestCollection(t *testing.T) {
 	}
 
 	/***** TEST CASES ******/
-	tests := map[string]tc{
-		"0": tc{
+	tests := map[string]tcase{
+		"0": tcase{
 			// Simple test.
 			cl1: geom.Collection{geom.Point{0.0, 0.0}},
 			cl2: geom.Collection{geom.Point{0.0, 0.0}},
 			e:   true,
 		},
-		"1": tc{
+		"1": tcase{
 			// Simple test.
 			cl1: geom.Collection{geom.Point{0.0, 0.0}},
 			cl2: geom.Collection{geom.Point{1.0, 0.0}},
 			e:   false,
 		},
-		"2": tc{
+		"2": tcase{
 			// Simple test.
 			cl1: geom.Collection{geom.Point{0.0, 0.0}},
 			cl2: geom.Collection{},
@@ -784,5 +785,77 @@ func TestGeometry(t *testing.T) {
 	// Unknown types of geometries are always unequal.
 	if GeometryEqual(nil, nil) {
 		t.Errorf(" unknown types, expected false, got true")
+	}
+}
+
+func TestFloat64(t *testing.T) {
+	type tcase struct {
+		f1, f2 float64
+		t      float64
+		e      bool
+	}
+	fn := func(t *testing.T, tc tcase) {
+		g := Float64(tc.f1, tc.f2, tc.t)
+		if g != tc.e {
+			t.Errorf(" Float64, expected %v, got %v", tc.e, g)
+		}
+	}
+	tests := map[string]tcase{
+		"t simple .01 ": tcase{
+			f1: 0.11,
+			f2: 0.111,
+			t:  0.01,
+			e:  true,
+		},
+		"f simple .01": tcase{
+			f1: 0.11,
+			f2: 0.121,
+			t:  0.01,
+			e:  false,
+		},
+		"t inf 1 0": tcase{
+			f1: math.Inf(1),
+			f2: math.Inf(1),
+			e:  true,
+		},
+		"f inf 1 1": tcase{
+			f1: math.Inf(1),
+			f2: math.Inf(-1),
+			e:  false,
+		},
+		"f inf 1 2": tcase{
+			f1: math.Inf(1),
+			f2: 1.001,
+			e:  false,
+		},
+		"t inf -1 0": tcase{
+			f1: math.Inf(-1),
+			f2: math.Inf(1),
+			e:  false,
+		},
+		"f inf -1 1": tcase{
+			f1: math.Inf(-1),
+			f2: math.Inf(-1),
+			e:  true,
+		},
+		"f inf -1 2": tcase{
+			f1: math.Inf(-1),
+			f2: 1.001,
+			e:  false,
+		},
+		"t inf 2 0": tcase{
+			f1: 1.001,
+			f2: math.Inf(1),
+			e:  false,
+		},
+		"t inf -2 0": tcase{
+			f1: 1.001,
+			f2: math.Inf(-1),
+			e:  false,
+		},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
 	}
 }

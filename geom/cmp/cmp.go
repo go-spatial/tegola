@@ -117,11 +117,11 @@ func PolygonEqual(ply1, ply2 [][][2]float64) bool {
 	for i := range ply1 {
 		points1 = append(points1, ply1[i]...)
 	}
-	bbox1 := geom.NewBBox(points1...)
+	bbox1 := geom.NewExtent(points1...)
 	for i := range ply2 {
 		points2 = append(points2, ply2[i]...)
 	}
-	bbox2 := geom.NewBBox(points2...)
+	bbox2 := geom.NewExtent(points2...)
 	if !BBox(bbox1, bbox2) {
 		return false
 	}

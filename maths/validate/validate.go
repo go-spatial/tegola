@@ -41,7 +41,7 @@ func LineStringToSegments(l tegola.LineString) ([]maths.Line, error) {
 	ppln := tegola.LineAsPointPairs(l)
 	return maths.NewSegments(ppln)
 }
-func makePolygonValid(ctx context.Context, hm *hitmap.M, extent *geom.BoundingBox, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
+func makePolygonValid(ctx context.Context, hm *hitmap.M, extent *geom.Extent, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
 	var plygLines [][]maths.Line
 	for _, g := range gs {
 		for _, l := range g.Sublines() {
@@ -96,7 +96,7 @@ func scaleMultiPolygon(p tegola.MultiPolygon, factor float64) (bmp basic.MultiPo
 	return bmp
 }
 
-func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.BoundingBox) (geo tegola.Geometry, err error) {
+func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent) (geo tegola.Geometry, err error) {
 	if g == nil {
 		return nil, nil
 	}
