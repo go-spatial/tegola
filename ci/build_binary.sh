@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ################################################################################
 # This script will build the necessary binaries for tegola.
 ################################################################################
@@ -33,7 +33,7 @@ do
 			FILENAME="${FILENAME}.exe"
 		fi
 
-		go build -ldflags "${LDFLAGS}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola
+		GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags "${LDFLAGS}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola
 		chmod a+x ${FILENAME}
 		dir=$(dirname $FILENAME)
 		fn=$(basename $FILENAME)
