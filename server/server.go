@@ -54,6 +54,7 @@ func Start(port string) *http.Server {
 	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapZXY{})))
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", CORSHandler(HandleMapZXY{}))
 	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
+	group.UsingContext().Handler("GET", "/maps/:map_name/metadata.json", CORSHandler(HandleMapCapabilities{}))
 
 	//	map layer tiles
 	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapLayerZXY{})))
