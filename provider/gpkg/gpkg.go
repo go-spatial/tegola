@@ -121,7 +121,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		}
 
 		// l - layer table, si - spatial index
-		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX!", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname)
+		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX! ORDER BY %v", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname, pLayer.idFieldname)
 
 		z, _, _ := tile.ZXY()
 		qtext = replaceTokens(qtext, z, tileBBox)
@@ -234,13 +234,6 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 // Close will close the Provider's database connection
 func (p *Provider) Close() error {
 	return p.db.Close()
-}
-
-type GeomTableDetails struct {
-	geomFieldname string
-	geomType      geom.Geometry
-	srid          uint64
-	bbox          geom.BoundingBox
 }
 
 type GeomColumn struct {
