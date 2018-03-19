@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
+	"sort"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -18,6 +20,162 @@ import (
 
 func init() {
 	provider.Register(Name, NewTileProvider, Cleanup)
+}
+
+// Metadata for feature tables in gpkg database
+type featureTableDetails struct {
+	colNames      []string
+	idFieldname   string
+	geomFieldname string
+	geomType      geom.Geometry
+	srid          uint64
+	bbox          *geom.Extent
+}
+
+// Creates a config instance of the type NewTileProvider() requires including all available feature
+//    tables in the gpkg at 'gpkgPath'.
+func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
+	// Get all feature tables
+	db, err := sql.Open("sqlite3", gpkgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	ftMetaData, err := featureTableMetaData(db)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle table config creation in consistent order to facilitate testing
+	tnames := make([]string, len(ftMetaData))
+	i := 0
+	for tname := range ftMetaData {
+		tnames[i] = tname
+		i++
+	}
+	sort.Strings(tnames)
+
+	conf := make(map[string]interface{})
+	conf["name"] = "autoconfd_gpkg"
+	conf["type"] = "gpkg"
+	conf["filepath"] = gpkgPath
+	conf["layers"] = make([]map[string]interface{}, len(tnames))
+	for i, tablename := range tnames {
+		// Use all columns besides the primary key (id) and geometry columns in "fields"
+		propFields := make([]string, 0, len(ftMetaData[tablename].colNames))
+		for _, colName := range ftMetaData[tablename].colNames {
+			if colName != ftMetaData[tablename].idFieldname && colName != ftMetaData[tablename].geomFieldname {
+				propFields = append(propFields, colName)
+			}
+		}
+
+		lconf := make(map[string]interface{})
+		lconf["name"] = tablename
+		lconf["tablename"] = tablename
+		lconf["id_fieldname"] = ftMetaData[tablename].idFieldname
+		lconf["fields"] = propFields
+		conf["layers"].([]map[string]interface{})[i] = lconf
+	}
+
+	return conf, nil
+}
+
+func extractColsFromSQL(sql string) []string {
+	// Get names of all columns
+	// Extract column definitions from sql.
+	colDefsPattern := `CREATE.*?\(\s+(.*)$`
+	colDefsFinder := regexp.MustCompile(colDefsPattern)
+
+	colPattern := `"(.+?)"`
+	colFinder := regexp.MustCompile(colPattern)
+
+	// Get all column names (drop "CREATE TABLE (" portion)
+	colDefs := colDefsFinder.FindStringSubmatch(sql)[1]
+	colMatches := colFinder.FindAllString(colDefs, -1)
+
+	colNames := make([]string, 0, 10)
+	for i := 0; i < len(colMatches); i++ {
+		// The matches will all have quotes around them at this point, remove them
+		dequoted := colFinder.ReplaceAllString(colMatches[i], "$1")
+		colNames = append(colNames, dequoted)
+	}
+	// Sort colNames for consistent output to facilitate testing
+	sort.Strings(colNames)
+
+	return colNames
+}
+
+// Collect meta data about all feature tables in opened gpkg.
+func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) {
+	//	this query is used to read the metadata from the gpkg_contents, gpkg_geometry_columns, and
+	// sqlite_master tables for tables that store geographic features.
+	qtext := `
+		SELECT
+			c.table_name, c.min_x, c.min_y, c.max_x, c.max_y, c.srs_id, gc.column_name, gc.geometry_type_name, sm.sql
+		FROM
+			gpkg_contents c JOIN gpkg_geometry_columns gc ON c.table_name == gc.table_name JOIN sqlite_master sm ON c.table_name = sm.tbl_name
+		WHERE
+			c.data_type = 'features' AND sm.type = 'table';`
+
+	rows, err := gpkg.Query(qtext)
+	if err != nil {
+		log.Errorf("error during query: %v - %v", qtext, err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	//	container for tracking metadata for each table with a geometry
+	geomTableDetails := make(map[string]featureTableDetails)
+
+	// Find the primary key column name from the table's creation sql.
+	pkPattern := `"(.+)" .*?PRIMARY KEY`
+	pkFinder := regexp.MustCompile(pkPattern)
+
+	//	iterate each row extracting meta data about each table
+	for rows.Next() {
+		var tablename, geomCol, geomType, tableSql sql.NullString
+		var minX, minY, maxX, maxY sql.NullFloat64
+		var srid sql.NullInt64
+
+		if err = rows.Scan(&tablename, &minX, &minY, &maxX, &maxY, &srid, &geomCol, &geomType, &tableSql); err != nil {
+			return nil, err
+		}
+		if !tableSql.Valid {
+			return nil, fmt.Errorf("invalid sql for table '%v'", tablename)
+		}
+
+		// extract the table's primary key from it's creation sql
+		pkMatches := pkFinder.FindStringSubmatch(tableSql.String)
+		// matches[0] is tableSql.String
+		pkCol := pkMatches[1]
+
+		// map the returned geom type to a tegola geom type
+		tg, err := geomNameToGeom(geomType.String)
+		if err != nil {
+			log.Errorf("error mapping geom type (%v): %v", geomType, err)
+			return nil, err
+		}
+
+		bbox := geom.NewExtent(
+			[2]float64{minX.Float64, minY.Float64},
+			[2]float64{maxX.Float64, maxY.Float64},
+		)
+
+		colNames := extractColsFromSQL(tableSql.String)
+
+		geomTableDetails[tablename.String] = featureTableDetails{
+			colNames:      colNames,
+			idFieldname:   pkCol,
+			geomFieldname: geomCol.String,
+			geomType:      tg,
+			srid:          uint64(srid.Int64),
+			//	the extent of the layer's features
+			//bbox: geom.BoundingBox{minX.Float64, minY.Float64, maxX.Float64, maxY.Float64},
+			bbox: bbox,
+		}
+	}
+
+	return geomTableDetails, nil
 }
 
 func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
@@ -37,58 +195,15 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		return nil, err
 	}
 
+	geomTableDetails, err := featureTableMetaData(db)
+	if err != nil {
+		return nil, err
+	}
+
 	p := Provider{
 		Filepath: filepath,
 		layers:   make(map[string]Layer),
 		db:       db,
-	}
-
-	//	this query is used to read the metadata from the gpkg_contents table for tables that have geometry fields
-	qtext := `
-		SELECT
-			c.table_name, c.min_x, c.min_y, c.max_x, c.max_y, c.srs_id, gc.column_name, gc.geometry_type_name
-		FROM
-			gpkg_contents c JOIN gpkg_geometry_columns gc ON c.table_name == gc.table_name
-		WHERE
-			c.data_type = 'features';`
-
-	rows, err := p.db.Query(qtext)
-	if err != nil {
-		log.Errorf("error during query: %v - %v", qtext, err)
-		return nil, err
-	}
-	defer rows.Close()
-
-	//	container for tracking metadata for each table with a geometry
-	geomTableDetails := make(map[string]GeomTableDetails)
-
-	//	iterate each row extracting meta data about each table
-	for rows.Next() {
-		var tablename, geomCol, geomType sql.NullString
-		var minX, minY, maxX, maxY sql.NullFloat64
-		var srid sql.NullInt64
-
-		if err = rows.Scan(&tablename, &minX, &minY, &maxX, &maxY, &srid, &geomCol, &geomType); err != nil {
-			return nil, err
-		}
-
-		// map the returned geom type to a tegola geom type
-		tg, err := geomNameToGeom(geomType.String)
-		if err != nil {
-			log.Errorf("error mapping geom type (%v): %v", geomType, err)
-			return nil, err
-		}
-
-		bbox := geom.NewExtent([2]float64{minX.Float64, minY.Float64}, [2]float64{maxX.Float64, maxX.Float64})
-
-		geomTableDetails[tablename.String] = GeomTableDetails{
-			geomFieldname: geomCol.String,
-			geomType:      tg,
-			srid:          uint64(srid.Int64),
-			//	the extent of the layer's features
-			//bbox: geom.BoundingBox{minX.Float64, minY.Float64, maxX.Float64, maxY.Float64},
-			bbox: *bbox,
-		}
 	}
 
 	layers, ok := config[ConfigKeyLayers].([]map[string]interface{})
@@ -151,7 +266,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			layer.geomType = geomTableDetails[tablename].geomType
 			layer.idFieldname = idFieldname
 			layer.srid = geomTableDetails[tablename].srid
-			layer.bbox = geomTableDetails[tablename].bbox
+			layer.bbox = *geomTableDetails[tablename].bbox
 
 		} else {
 			var customSQL string
