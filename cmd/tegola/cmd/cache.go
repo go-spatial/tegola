@@ -37,6 +37,8 @@ var (
 	cacheConcurrency int
 	//	cache overwrite
 	cacheOverwrite bool
+	// input string format
+	cacheFormat string
 )
 
 var cacheCmd = &cobra.Command{
@@ -92,7 +94,7 @@ var cacheCmd = &cobra.Command{
 		//	single tile caching
 		if cacheZXY != "" {
 			//	convert the input into a tile
-			t, err := parseTileString(cacheZXY)
+			t, err := parseTileString(cacheFormat, cacheZXY)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -132,23 +134,14 @@ var cacheCmd = &cobra.Command{
 			}
 		}
 
-		if len(zooms) == 0 {
-			//	check user input for zoom range
-			if cacheMaxZoom != 0 {
-				if cacheMaxZoom >= cacheMinZoom {
-					for i := cacheMinZoom; i <= cacheMaxZoom; i++ {
-						zooms = append(zooms, i)
-					}
-				} else {
-					log.Fatalf("invalid zoom range. min (%v) is greater than max (%v)", cacheMinZoom, cacheMaxZoom)
-				}
-			} else {
-				//	every zoom
-				for i := uint(0); i <= atlas.MaxZoom; i++ {
-					zooms = append(zooms, i)
-				}
+		if cacheMaxZoom + cacheMinZoom != 0 {
+			if cacheMaxZoom <= cacheMinZoom {
+				log.Fatalf("invalid zoom range. min (%v) is greater than max (%v)", cacheMinZoom, cacheMaxZoom)
 			}
 
+			for i := cacheMinZoom; i <= cacheMaxZoom; i++ {
+				zooms = append(zooms, i)
+			}
 		}
 
 		//	setup a waitgroup
@@ -162,8 +155,7 @@ var cacheCmd = &cobra.Command{
 
 		//	setup our workers based on the amount of concurrency we have
 		for i := 0; i < cacheConcurrency; i++ {
-			//	spin off a worker listening on a channel
-			go func(tiler chan MapTile) {
+			go func() {
 				ctx, cancel := context.WithCancel(context.Background())
 				go func() {
 					<-gdcmd.Cancelled()
@@ -177,84 +169,18 @@ var cacheCmd = &cobra.Command{
 					//	we will only have a single command arg so we can switch on index 0
 					switch args[0] {
 					case "seed":
-						//	track how long the tile generation is taking
-						t := time.Now()
-
-						//	lookup the Map
-						m, err := atlas.GetMap(mt.MapName)
-						if err != nil {
-							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
-						}
-
-						//	filter down the layers we need for this zoom
-						m = m.FilterLayersByZoom(mt.Tile.Z)
-
-						//	check if overwriting the cache is not ok
-						if !cacheOverwrite {
-							//	lookup our cache
-							c := atlas.GetCache()
-							if c == nil {
-								log.Fatalf("error fetching cache: %v", err)
-							}
-
-							//	cache key
-							key := cache.Key{
-								MapName: mt.MapName,
-								Z:       mt.Tile.Z,
-								X:       mt.Tile.X,
-								Y:       mt.Tile.Y,
-							}
-
-							//	read the tile from the cache
-							_, hit, err := c.Get(&key)
-							if err != nil {
-								log.Fatal("error reading from cache: %v", err)
-							}
-							//	if we have a cache hit, then skip processing this tile
-							if hit {
-								log.Infof("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
-								continue
-							}
-						}
-
-						//	set tile buffer if it was configured by the user
-						if conf.TileBuffer > 0 {
-							mt.Tile.Buffer = float64(conf.TileBuffer)
-						}
-
-						//	seed the tile
-						if err = atlas.SeedMapTile(ctx, m, mt.Tile.Z, mt.Tile.X, mt.Tile.Y); err != nil {
-							log.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
-							break
-						}
-
-						//	TODO: this is a hack to get around large arrays not being garbage collected
-						//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
-						runtime.GC()
-
-						log.Infof("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y, time.Now().Sub(t))
-
+						seedWorker(ctx, mt)
 					case "purge":
-						log.Infof("purging map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
-
-						//	lookup the Map
-						m, err := atlas.GetMap(mt.MapName)
-						if err != nil {
-							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
-						}
-
-						//	purge the tile
-						if err = atlas.PurgeMapTile(m, mt.Tile); err != nil {
-							log.Errorf("error purging tile (%+v): %v", mt.Tile, err)
-							break
-						}
+						purgeWorker(mt)
 					}
 				}
 
-				//	Done() will be called after close(channel) is called and the final job this worker is processing completes
 				wg.Done()
-			}(tiler)
+			}()
+
+			//	Done() will be called after close(channel) is called and the final job this seedWorker is processing completes
 		}
+
 		//	iterate our zoom range
 	ZoomLoop:
 		for i := range zooms {
@@ -300,32 +226,114 @@ type MapTile struct {
 	Tile    *tegola.Tile
 }
 
-//parseTileString converts a Z/X/Y formatted string into a tegola tile
-func parseTileString(str string) (*tegola.Tile, error) {
+// parseTileString converts a Z/X/Y formatted string into a tegola tile
+// format string "{delim}{order}" (ex. "/zxy", " zxy", ",zxy"
+func parseTileString(format, str string) (*tegola.Tile, error) {
 	var tile *tegola.Tile
 
-	parts := strings.Split(str, "/")
+	ix := 1
+	iy := strings.Index(format, "y") - 1
+	iz := strings.Index(format, "z") - 1
+
+	parts := strings.Split(str, format[:1])
+	//parts := strings.Split(str, "/")
 	if len(parts) != 3 {
 		return tile, fmt.Errorf("invalid zxy value (%v). expecting the format z/x/y", str)
 	}
 
-	z, err := strconv.ParseUint(parts[0], 10, 64)
+	z, err := strconv.ParseUint(parts[iz], 10, 64)
 	if err != nil || z > tegola.MaxZ {
 		return tile, fmt.Errorf("invalid Z value (%v)", z)
 	}
 
 	maxXYatZ := maths.Exp2(z) - 1
 
-	x, err := strconv.ParseUint(parts[1], 10, 64)
+	x, err := strconv.ParseUint(parts[ix], 10, 64)
 	if err != nil || x > maxXYatZ {
 		return tile, fmt.Errorf("invalid X value (%v)", x)
 	}
 
-	y, err := strconv.ParseUint(parts[2], 10, 64)
+	y, err := strconv.ParseUint(parts[iy], 10, 64)
 	if err != nil || y > maxXYatZ {
 		return tile, fmt.Errorf("invalid Y value (%v)", y)
 	}
+
 	tile = tegola.NewTile(uint(z), uint(x), uint(y))
 
 	return tile, nil
+}
+
+func seedWorker(ctx context.Context, mt MapTile) {
+	//	track how long the tile generation is taking
+	t := time.Now()
+
+	//	lookup the Map
+	m, err := atlas.GetMap(mt.MapName)
+	if err != nil {
+		log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
+	}
+
+	//	filter down the layers we need for this zoom
+	m = m.FilterLayersByZoom(mt.Tile.Z)
+
+	//	check if overwriting the cache is not ok
+	if !cacheOverwrite {
+		//	lookup our cache
+		c := atlas.GetCache()
+		if c == nil {
+			log.Fatalf("error fetching cache: %v", err)
+		}
+
+		//	cache key
+		key := cache.Key{
+			MapName: mt.MapName,
+			Z:       mt.Tile.Z,
+			X:       mt.Tile.X,
+			Y:       mt.Tile.Y,
+		}
+
+		//	read the tile from the cache
+		_, hit, err := c.Get(&key)
+		if err != nil {
+			log.Fatal("error reading from cache: %v", err)
+		}
+		//	if we have a cache hit, then skip processing this tile
+		if hit {
+			log.Infof("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+			return
+		}
+	}
+
+	//	set tile buffer if it was configured by the user
+	if conf.TileBuffer > 0 {
+		mt.Tile.Buffer = float64(conf.TileBuffer)
+	}
+
+	//	seed the tile
+	if err = atlas.SeedMapTile(ctx, m, mt.Tile.Z, mt.Tile.X, mt.Tile.Y); err != nil {
+		log.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
+		return
+	}
+
+	//	TODO: this is a hack to get around large arrays not being garbage collected
+	//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
+	runtime.GC()
+
+	log.Infof("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y, time.Now().Sub(t))
+}
+
+func purgeWorker(mt MapTile) {
+
+	log.Infof("purging map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+
+	//	lookup the Map
+	m, err := atlas.GetMap(mt.MapName)
+	if err != nil {
+		log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
+	}
+
+	//	purge the tile
+	if err = atlas.PurgeMapTile(m, mt.Tile); err != nil {
+		log.Errorf("error purging tile (%+v): %v", mt.Tile, err)
+	}
 }
