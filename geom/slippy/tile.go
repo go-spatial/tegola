@@ -177,6 +177,8 @@ func (t *Tile) BufferedExtent() (bufferedExtent *geom.Extent, srid uint64) {
 	return bufferedExtent, t.SRID
 }
 
+// calls f on every vertically related to t at the specified zoom
+// the method name can be misleading because it also handles parents
 func (t *Tile) RangeChildren(zoom uint, f func(*Tile) error) error {
 	if zoom <= t.z {
 		mag := t.z - zoom
