@@ -18,8 +18,8 @@ import (
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/webmercator"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/geom/slippy"
 )
 
 var (
@@ -65,7 +65,6 @@ var cacheCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		defer gdcmd.New().Complete()
 		gdcmd.OnComplete(provider.Cleanup)
-		var err error
 		var maps []atlas.Map
 
 		initConfig()
@@ -88,53 +87,22 @@ var cacheCmd = &cobra.Command{
 		}
 
 		var zooms []uint
-		var minx, miny, maxx, maxy int
 		var bounds [4]float64
+		var rootTile *slippy.Tile
 
 		//	single tile caching
 		if cacheZXY != "" {
+			var err error
 			//	convert the input into a tile
-			t, err := parseTileString(cacheFormat, cacheZXY)
+			rootTile, err = parseTileString(cacheFormat, cacheZXY)
 			if err != nil {
 				log.Fatal(err)
 			}
-
-			zooms = append(zooms, t.Z)
-			//	read the tile bounds, which will be in web mercator
-			tBounds := t.BoundingBox()
-			//	convert the bounds points to lat lon
-			ul, err := webmercator.PToLonLat(tBounds.Minx, tBounds.Miny)
-			if err != nil {
-				log.Fatal(err)
-			}
-			lr, err := webmercator.PToLonLat(tBounds.Maxx, tBounds.Maxy)
-			if err != nil {
-				log.Fatal(err)
-			}
-			//	use the tile bounds as the bounds for the job.
-			//	the grid flips between web mercator and WGS84 which is why we use must use lat from one point and lon from the other
-			//	TODO: this smells funny. Investigate why the grid is flipping - arolek
-			bounds[0] = ul[0]
-			bounds[1] = lr[1]
-
-			bounds[2] = lr[0]
-			bounds[3] = ul[1]
 		} else {
-			//	bounding box caching
-			boundsParts := strings.Split(cacheBounds, ",")
-			if len(boundsParts) != 4 {
-				log.Fatal("invalid value for bounds. expecting minx, miny, maxx, maxy")
-			}
-
-			for i := range boundsParts {
-				bounds[i], err = strconv.ParseFloat(boundsParts[i], 64)
-				if err != nil {
-					log.Fatalf("invalid value for bounds (%v). must be a float64", boundsParts[i])
-				}
-			}
+			rootTile = slippy.NewTileLatLon(tegola.MaxZ, bounds[1], bounds[0], 0, tegola.WebMercator)
 		}
 
-		if cacheMaxZoom + cacheMinZoom != 0 {
+		if cacheMaxZoom+cacheMinZoom != 0 {
 			if cacheMaxZoom <= cacheMinZoom {
 				log.Fatalf("invalid zoom range. min (%v) is greater than max (%v)", cacheMinZoom, cacheMaxZoom)
 			}
@@ -144,6 +112,7 @@ var cacheCmd = &cobra.Command{
 			}
 		}
 
+		log.Info("zoom list: ", zooms)
 		//	setup a waitgroup
 		var wg sync.WaitGroup
 
@@ -182,34 +151,32 @@ var cacheCmd = &cobra.Command{
 		}
 
 		//	iterate our zoom range
-	ZoomLoop:
-		for i := range zooms {
+		for _, zoom := range zooms {
+			log.Info("zooms: ", zoom, zooms)
 
-			topLeft := *tegola.NewTileLatLong(zooms[i], bounds[1], bounds[0])
-			minx, maxy = topLeft.Deg2Num()
-
-			bottomRight := *tegola.NewTileLatLong(zooms[i], bounds[3], bounds[2])
-			maxx, miny = bottomRight.Deg2Num()
-
-			//	range rows
-			for x := minx; x <= maxx; x++ {
-				//	range columns
-				for y := miny; y <= maxy; y++ {
-					//	range maps
-					for m := range maps {
-						mapTile := MapTile{
-							MapName: maps[m].Name,
-							Tile:    tegola.NewTile(zooms[i], uint(x), uint(y)),
-						}
-						select {
-						case tiler <- mapTile:
-						case <-gdcmd.Cancelled():
-							log.Info("cancel recieved; cleaning up…")
-							break ZoomLoop
-						}
-
+			err := rootTile.RangeChildren(zoom, func(tile *slippy.Tile) error {
+				log.Info("zoom: ", zoom)
+				//	range maps
+				for m := range maps {
+					mapTile := MapTile{
+						MapName: maps[m].Name,
+						Tile:    tile,
 					}
+					select {
+					case tiler <- mapTile:
+					case <-gdcmd.Cancelled():
+						log.Info("cancel recieved; cleaning up…")
+						return fmt.Errorf("stop iteration")
+					}
+
 				}
+
+				return nil
+			})
+
+			if err != nil {
+				log.Fatal("error:", err.Error())
+				break
 			}
 		}
 
@@ -223,13 +190,13 @@ var cacheCmd = &cobra.Command{
 
 type MapTile struct {
 	MapName string
-	Tile    *tegola.Tile
+	Tile    *slippy.Tile
 }
 
 // parseTileString converts a Z/X/Y formatted string into a tegola tile
 // format string "{delim}{order}" (ex. "/zxy", " zxy", ",zxy"
-func parseTileString(format, str string) (*tegola.Tile, error) {
-	var tile *tegola.Tile
+func parseTileString(format, str string) (*slippy.Tile, error) {
+	var tile *slippy.Tile
 
 	ix := 1
 	iy := strings.Index(format, "y") - 1
@@ -258,7 +225,7 @@ func parseTileString(format, str string) (*tegola.Tile, error) {
 		return tile, fmt.Errorf("invalid Y value (%v)", y)
 	}
 
-	tile = tegola.NewTile(uint(z), uint(x), uint(y))
+	tile = slippy.NewTile(uint(z), uint(x), uint(y), 0, tegola.WebMercator)
 
 	return tile, nil
 }
@@ -273,8 +240,10 @@ func seedWorker(ctx context.Context, mt MapTile) {
 		log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 	}
 
+	z, x, y := mt.Tile.ZXY()
+
 	//	filter down the layers we need for this zoom
-	m = m.FilterLayersByZoom(mt.Tile.Z)
+	m = m.FilterLayersByZoom(x)
 
 	//	check if overwriting the cache is not ok
 	if !cacheOverwrite {
@@ -287,9 +256,9 @@ func seedWorker(ctx context.Context, mt MapTile) {
 		//	cache key
 		key := cache.Key{
 			MapName: mt.MapName,
-			Z:       mt.Tile.Z,
-			X:       mt.Tile.X,
-			Y:       mt.Tile.Y,
+			Z:       z,
+			X:       x,
+			Y:       y,
 		}
 
 		//	read the tile from the cache
@@ -299,7 +268,7 @@ func seedWorker(ctx context.Context, mt MapTile) {
 		}
 		//	if we have a cache hit, then skip processing this tile
 		if hit {
-			log.Infof("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+			log.Infof("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, z, x, y)
 			return
 		}
 	}
@@ -310,7 +279,7 @@ func seedWorker(ctx context.Context, mt MapTile) {
 	}
 
 	//	seed the tile
-	if err = atlas.SeedMapTile(ctx, m, mt.Tile.Z, mt.Tile.X, mt.Tile.Y); err != nil {
+	if err = atlas.SeedMapTile(ctx, m, z, x, y); err != nil {
 		log.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
 		return
 	}
@@ -319,12 +288,15 @@ func seedWorker(ctx context.Context, mt MapTile) {
 	//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
 	runtime.GC()
 
-	log.Infof("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y, time.Now().Sub(t))
+	log.Infof("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, z, x, y, time.Now().Sub(t))
 }
 
 func purgeWorker(mt MapTile) {
 
-	log.Infof("purging map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
+	z, x, y := mt.Tile.ZXY()
+
+
+	log.Infof("purging map (%v) tile (%v/%v/%v)", mt.MapName, z, x, y)
 
 	//	lookup the Map
 	m, err := atlas.GetMap(mt.MapName)
@@ -333,7 +305,8 @@ func purgeWorker(mt MapTile) {
 	}
 
 	//	purge the tile
-	if err = atlas.PurgeMapTile(m, mt.Tile); err != nil {
+	ttile := tegola.NewTile(mt.Tile.ZXY())
+	if err = atlas.PurgeMapTile(m, ttile); err != nil {
 		log.Errorf("error purging tile (%+v): %v", mt.Tile, err)
 	}
 }
