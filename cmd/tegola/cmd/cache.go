@@ -296,11 +296,20 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 			log.Fatal(err)
 		}
 
+	ZoomLoop:
 		for _, zoom := range zooms {
-			tile.RangeChildren(zoom, func(t *slippy.Tile) error {
+			err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
+				if gdcmd.IsCancelled() {
+					return fmt.Errorf("stop iteration")
+				}
+
 				c <- t
 				return nil
 			})
+
+			if err != nil {
+				break ZoomLoop
+			}
 		}
 
 		close(c)
@@ -312,7 +321,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 		}
 
 		scanner := bufio.NewScanner(f)
-
+	ScanLoop:
 		for scanner.Scan() {
 			tile, err := parseTileString(cacheFormat, scanner.Text())
 			if err != nil {
@@ -321,12 +330,22 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 
 			// range
 			for _, zoom := range zooms {
-				tile.RangeChildren(zoom, func(t *slippy.Tile) error {
+				err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
+					if gdcmd.IsCancelled() {
+						return fmt.Errorf("stop iteration")
+					}
+
 					c <- t
 					return nil
 				})
+
+				if err != nil {
+					break ScanLoop
+				}
 			}
 		}
+
+		close(c)
 	} else {
 		// bounding box caching
 		boundsParts := strings.Split(cacheBounds, ",")
@@ -353,15 +372,25 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 		_, xf, yf := bottomRight.ZXY()
 
 		// TODO (@ear7h): find a way to keep from doing the same tile twice
+
+	PanLoop:
 		for x := xi; x <= xf; x ++ {
 			for y := yi; y <= yf; y++ {
 				root := slippy.NewTile(maxZoom, x, y, 0, tegola.WebMercator)
 
 				for _, z := range zooms {
-					root.RangeChildren(z, func(t *slippy.Tile) error {
+					err := root.RangeFamilyAt(z, func(t *slippy.Tile) error {
+						if gdcmd.IsCancelled() {
+							return fmt.Errorf("stop iteration")
+						}
+
 						c <- t
 						return nil
 					})
+
+					if err != nil {
+						break PanLoop
+					}
 				}
 			}
 		}
