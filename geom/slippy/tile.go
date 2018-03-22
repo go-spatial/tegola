@@ -4,9 +4,35 @@ import (
 	"math"
 
 	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {
+	return &Tile{
+		z:      z,
+		x:      x,
+		y:      y,
+		Buffer: buffer,
+		SRID:   srid,
+	}
+}
+
+func DegToNum(zoom uint, lat, lon float64) (x, y uint) {
+	lat_rad := maths.RadToDeg(lat)
+	n := float64(maths.Exp2(uint64(zoom)))
+
+	x = uint(n * (lon + 180.0) / 360.0)
+	y = uint(n *
+		(1.0 - math.Log(
+			math.Tan(lat_rad)+(1/math.Cos(lat_rad))) / 2.0))
+
+	return
+}
+
+func NewTileLatLon(z uint, lat, lon, buffer float64, srid uint64) *Tile {
+	x, y := DegToNum(z, lat, lon)
 	return &Tile{
 		z:      z,
 		x:      x,
@@ -152,4 +178,31 @@ func (t *Tile) BufferedExtent() (bufferedExtent *geom.Extent, srid uint64) {
 		},
 	)
 	return bufferedExtent, t.SRID
+}
+
+func (t *Tile) RangeChildren(zoom uint, f func(*Tile) error) error {
+	if zoom <= t.z {
+		mag := t.z - zoom
+		arg := NewTile(zoom, t.x>>mag, t.y>>mag, t.Buffer, t.SRID)
+		return f(arg)
+	}
+
+	mag := zoom - t.z
+	delta := uint(maths.Exp2(uint64(mag)))
+
+	leastX := t.x << mag
+	leastY := t.y << mag
+
+	log.Info("info: ", mag, delta, leastY, leastY)
+
+	for x := leastX; x < leastX+delta; x++ {
+		for y := leastY; y < leastY+delta; y++ {
+			err := f(NewTile(zoom, x, y, 0, tegola.WebMercator))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
