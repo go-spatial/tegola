@@ -1,8 +1,36 @@
 package slippy
 
-import "math"
+import (
+	"math"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/log"
+)
 
 func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {
+	return &Tile{
+		z:      z,
+		x:      x,
+		y:      y,
+		Buffer: buffer,
+		SRID:   srid,
+	}
+}
+
+func DegToNum(zoom uint, lat, lon float64) (x, y uint) {
+	lat_rad := maths.RadToDeg(lat)
+	n := float64(maths.Exp2(uint64(zoom)))
+
+	x = uint(n * (lon + 180.0) / 360.0)
+	y = uint(n *
+		(1.0 - math.Log(
+			math.Tan(lat_rad)+(1/math.Cos(lat_rad))) / 2.0))
+
+	return
+}
+
+func NewTileLatLon(z uint, lat, lon, buffer float64, srid uint64) *Tile {
+	x, y := DegToNum(z, lat, lon)
 	return &Tile{
 		z:      z,
 		x:      x,
@@ -48,7 +76,6 @@ func (t *Tile) Extent() (extent [2][2]float64, srid uint64) {
 		{
 			-max + (float64(t.x) * res) + res, // MaxX
 			max - (float64(t.y) * res) - res,  // MaxY
-
 		},
 	}, t.SRID
 }
@@ -71,4 +98,31 @@ func (t *Tile) BufferedExtent() (bufferedExtent [2][2]float64, srid uint64) {
 	bufferedExtent[1][1] = (mvtTileExtent[1][1] * yspan / mvtTileWidthHeight) + extent[0][1]
 
 	return bufferedExtent, t.SRID
+}
+
+func (t *Tile) RangeChildren(zoom uint, f func(*Tile) error) error {
+	if zoom <= t.z {
+		mag := t.z - zoom
+		arg := NewTile(zoom, t.x>>mag, t.y>>mag, t.Buffer, t.SRID)
+		return f(arg)
+	}
+
+	mag := zoom - t.z
+	delta := uint(maths.Exp2(uint64(mag)))
+
+	leastX := t.x << mag
+	leastY := t.y << mag
+
+	log.Info("info: ", mag, delta, leastY, leastY)
+
+	for x := leastX; x < leastX+delta; x++ {
+		for y := leastY; y < leastY+delta; y++ {
+			err := f(NewTile(zoom, x, y, 0, tegola.WebMercator))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
