@@ -3,10 +3,9 @@ package slippy
 import (
 	"math"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/internal/log"
 )
 
 func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {
@@ -178,21 +177,23 @@ func (t *Tile) BufferedExtent() (bufferedExtent *geom.Extent, srid uint64) {
 }
 
 // calls f on every vertically related to t at the specified zoom
-// the method name can be misleading because it also handles parents
-func (t *Tile) RangeChildren(zoom uint, f func(*Tile) error) error {
+// TODO (ear7h): sibling support
+func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
+	// handle ancestors and self
 	if zoom <= t.z {
 		mag := t.z - zoom
 		arg := NewTile(zoom, t.x>>mag, t.y>>mag, t.Buffer, t.SRID)
 		return f(arg)
 	}
 
+	// handle descendants
 	mag := zoom - t.z
 	delta := uint(maths.Exp2(uint64(mag)))
 
 	leastX := t.x << mag
 	leastY := t.y << mag
 
-	log.Info("info: ", mag, delta, leastY, leastY)
+	//log.Info("info: ", mag, delta, leastY, leastY)
 
 	for x := leastX; x < leastX+delta; x++ {
 		for y := leastY; y < leastY+delta; y++ {
