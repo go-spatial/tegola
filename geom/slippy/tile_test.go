@@ -3,6 +3,7 @@ package slippy_test
 import (
 	"strconv"
 	"testing"
+	"fmt"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/geom"
@@ -204,5 +205,59 @@ func TestRangeFamilyAt(t *testing.T) {
 				t.Fatalf("[%v] expected coordinate %v missing from list %v", k, v, coordList)
 			}
 		}
+	}
+}
+
+func TestRangeFamilyAtIterStop(t *testing.T) {
+	testcases := map[string]struct {
+		tile     *slippy.Tile
+	}{
+		"end iter": {
+			tile:   slippy.NewTile(3, 3, 5, 0, tegola.WebMercator),
+		},
+	}
+
+	for k, tc := range testcases {
+		stopIter := fmt.Errorf("stop iter")
+
+		err := tc.tile.RangeFamilyAt(1, func(tile *slippy.Tile) error {
+			return stopIter
+		})
+
+		if err != stopIter {
+			t.Fatalf("[%v] errors should reference same address", k)
+		}
+	}
+}
+
+func TestNewTileLatLon(t *testing.T) {
+	testcases := map[string]struct{
+		tile *slippy.Tile
+	}{
+		"0": {
+			tile: slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
+		},
+		"1": {
+			tile: slippy.NewTile(1, 1, 1, 0, tegola.WebMercator),
+		},
+		"2": {
+			tile: slippy.NewTile(20, 12231, 1235770, 0, tegola.WebMercator),
+		},
+	}
+
+	for k, tc := range testcases {
+		extDeg := tc.tile.ExtentDegrees()
+
+		z, x, y := tc.tile.ZXY()
+		lat := (extDeg[0][0] + extDeg[1][0]) / 2
+		lon := (extDeg[0][1] + extDeg[1][1]) / 2
+
+		testTile := slippy.NewTileLatLon(z, lat, lon, 0, tegola.WebMercator)
+		zt, xt, yt := testTile.ZXY()
+
+		if !(zt == z && xt == x && yt == y) {
+			t.Fatalf("[%v] expected zxy (%d, %d, %d) got (%d, %d, %d)", k, z, x, y, zt, xt, yt)
+		}
+
 	}
 }
