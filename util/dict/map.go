@@ -38,9 +38,6 @@ func (m M) String(key string, def *string) (v string, err error) {
 	case *string:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type string. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -88,9 +85,6 @@ func (m M) Int(key string, def *int) (v int, err error) {
 	case *int:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type int. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -138,9 +132,6 @@ func (m M) Uint(key string, def *uint) (v uint, err error) {
 	case *uint:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type uint. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -188,9 +179,6 @@ func (m M) Int8(key string, def *int8) (v int8, err error) {
 	case *int8:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type int8. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -238,9 +226,6 @@ func (m M) Uint8(key string, def *uint8) (v uint8, err error) {
 	case *uint8:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type uint8. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -288,9 +273,6 @@ func (m M) Int16(key string, def *int16) (v int16, err error) {
 	case *int16:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type int16. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -338,9 +320,6 @@ func (m M) Uint16(key string, def *uint16) (v uint16, err error) {
 	case *uint16:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type uint16. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -388,9 +367,6 @@ func (m M) Int32(key string, def *int32) (v int32, err error) {
 	case *int32:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type int32. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -438,9 +414,6 @@ func (m M) Uint32(key string, def *uint32) (v uint32, err error) {
 	case *uint32:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type uint32. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -488,9 +461,6 @@ func (m M) Int64(key string, def *int64) (v int64, err error) {
 	case *int64:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type int64. Value is of type %T", key, val)
 	}
 	return v, nil
@@ -538,9 +508,6 @@ func (m M) Uint64(key string, def *uint64) (v uint64, err error) {
 	case *uint64:
 		v = *placeholder
 	default:
-		if def != nil {
-			return *def, nil
-		}
 		return v, fmt.Errorf("%v value needs to be of type uint64. Value is of type %T", key, val)
 	}
 	return v, nil

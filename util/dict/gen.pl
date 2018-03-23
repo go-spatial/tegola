@@ -52,9 +52,6 @@ func (m M) $fnName(key string, def $T_ptr)(v $T, err error){
         case $T_ptr:
             v = \*placeholder
         default:
-            if def != nil {
-                return \*def, nil
-            }
             return v, fmt.Errorf("%v value needs to be of type ${T}. Value is of type %T", key, val)
     }
     return v, nil
