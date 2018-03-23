@@ -8,6 +8,10 @@ import (
 	"github.com/go-spatial/tegola/config"
 )
 
+func numToPtr(n uint) *uint {
+	return &n
+}
+
 func TestParse(t *testing.T) {
 	type tcase struct {
 		config   string
@@ -132,8 +136,8 @@ func TestParse(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       10,
-								MaxZoom:       20,
+								MinZoom:       numToPtr(10),
+								MaxZoom:       numToPtr(20),
 								DontSimplify:  true,
 							},
 						},
@@ -244,14 +248,14 @@ func TestParse(t *testing.T) {
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       0,
-								MaxZoom:       5,
+								MinZoom:       numToPtr(0),
+								MaxZoom:       numToPtr(5),
 							},
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_6_10",
-								MinZoom:       6,
-								MaxZoom:       10,
+								MinZoom:       numToPtr(6),
+								MaxZoom:       numToPtr(10),
 							},
 						},
 					},
@@ -264,14 +268,14 @@ func TestParse(t *testing.T) {
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       0,
-								MaxZoom:       5,
+								MinZoom:       numToPtr(0),
+								MaxZoom:       numToPtr(5),
 							},
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_6_10",
-								MinZoom:       6,
-								MaxZoom:       10,
+								MinZoom:       numToPtr(6),
+								MaxZoom:       numToPtr(10),
 							},
 						},
 					},
@@ -356,13 +360,13 @@ func TestValidate(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       10,
-								MaxZoom:       20,
+								MinZoom:       numToPtr(10),
+								MaxZoom:       numToPtr(20),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       10,
-								MaxZoom:       20,
+								MinZoom:       numToPtr(10),
+								MaxZoom:       numToPtr(20),
 							},
 						},
 					},
@@ -421,14 +425,14 @@ func TestValidate(t *testing.T) {
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       0,
-								MaxZoom:       5,
+								MinZoom:       numToPtr(0),
+								MaxZoom:       numToPtr(5),
 							},
 							{
 								Name:          "water",
 								ProviderLayer: "provider2.water_5_10",
-								MinZoom:       5,
-								MaxZoom:       10,
+								MinZoom:       numToPtr(5),
+								MaxZoom:       numToPtr(10),
 							},
 						},
 					},
@@ -490,13 +494,13 @@ func TestValidate(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       10,
-								MaxZoom:       15,
+								MinZoom:       numToPtr(10),
+								MaxZoom:       numToPtr(15),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       16,
-								MaxZoom:       20,
+								MinZoom:       numToPtr(16),
+								MaxZoom:       numToPtr(20),
 							},
 						},
 					},
@@ -508,13 +512,13 @@ func TestValidate(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       10,
-								MaxZoom:       15,
+								MinZoom:       numToPtr(10),
+								MaxZoom:       numToPtr(15),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       16,
-								MaxZoom:       20,
+								MinZoom:       numToPtr(16),
+								MaxZoom:       numToPtr(20),
 							},
 						},
 					},

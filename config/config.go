@@ -54,8 +54,8 @@ type MapLayer struct {
 	//	Name can also be used to group multiple ProviderLayers under the same namespace.
 	Name          string      `toml:"name"`
 	ProviderLayer string      `toml:"provider_layer"`
-	MinZoom       uint        `toml:"min_zoom"`
-	MaxZoom       uint        `toml:"max_zoom"`
+	MinZoom       *uint        `toml:"min_zoom"`
+	MaxZoom       *uint        `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
 	//	DontSimplify indicates wheather feature simplification should be applied.
 	//	We use a negative in the name so the default is to simplify
@@ -93,7 +93,7 @@ func (c *Config) Validate() error {
 			//	check if we already have this layer
 			if val, ok := mapLayers[m.Name][name]; ok {
 				//	we have a hit. check for zoom range overlap
-				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
+				if *val.MinZoom <= *l.MaxZoom && *l.MinZoom <= *val.MaxZoom {
 					return ErrOverlappingLayerZooms{
 						ProviderLayer1: val.ProviderLayer,
 						ProviderLayer2: l.ProviderLayer,
