@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/gpkg"
 )
@@ -29,12 +30,12 @@ func confEqual(t *testing.T, conf, expectedConf map[string]interface{}) bool {
 	equal := true
 
 	confKeys := make([]string, 0, len(conf))
-	for k, _ := range conf {
+	for k := range conf {
 		confKeys = append(confKeys, k)
 	}
 
 	exKeys := make([]string, 0, len(expectedConf))
-	for k, _ := range expectedConf {
+	for k := range expectedConf {
 		exKeys = append(exKeys, k)
 	}
 
@@ -235,25 +236,19 @@ func TestNewTileProvider(t *testing.T) {
 }
 
 type MockTile struct {
-	extent         [2][2]float64
-	bufferedExtent [2][2]float64
+	extent         *geom.Extent
+	bufferedExtent *geom.Extent
 	Z, X, Y        uint
 	srid           uint64
 }
 
 // TODO(arolek): Extent needs to return a geom.Extent
-func (t *MockTile) Extent() ([2][2]float64, uint64) {
-	return t.extent, t.srid
-}
+func (t *MockTile) Extent() (*geom.Extent, uint64) { return t.extent, t.srid }
 
 // TODO(arolek): BufferedExtent needs to return a geom.Extent
-func (t *MockTile) BufferedExtent() ([2][2]float64, uint64) {
-	return t.bufferedExtent, t.srid
-}
+func (t *MockTile) BufferedExtent() (*geom.Extent, uint64) { return t.bufferedExtent, t.srid }
 
-func (t *MockTile) ZXY() (uint, uint, uint) {
-	return t.Z, t.X, t.Y
-}
+func (t *MockTile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
 func TestTileFeatures(t *testing.T) {
 	type tcase struct {
@@ -268,7 +263,7 @@ func TestTileFeatures(t *testing.T) {
 
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			t.Fatalf("err creating NewTileProvider: %v", err)
+			t.Fatalf("new tile, expected nil got %v", err)
 			return
 		}
 
@@ -300,10 +295,10 @@ func TestTileFeatures(t *testing.T) {
 			layerName: "rd_lines",
 			tile: MockTile{
 				srid: tegola.WGS84,
-				bufferedExtent: [2][2]float64{
-					{20.0, 37.85},
-					{23.6, 37.9431},
-				},
+				bufferedExtent: geom.NewExtent(
+					[2]float64{20.0, 37.85},
+					[2]float64{23.6, 37.9431},
+				),
 			},
 			expectedFeatureCount: 0,
 		},
@@ -318,10 +313,14 @@ func TestTileFeatures(t *testing.T) {
 			layerName: "rl_lines",
 			tile: MockTile{
 				srid: tegola.WGS84,
-				bufferedExtent: [2][2]float64{
-					{23.6, 38.0},
-					{23.8, 37.8},
-				},
+				bufferedExtent: geom.NewExtent(
+					/*
+						{23.6, 38.0},
+						{23.8, 37.8},
+					*/
+					[2]float64{23.6, 37.8},
+					[2]float64{23.8, 38.0},
+				),
 			},
 			expectedFeatureCount: 187,
 		},
@@ -345,10 +344,10 @@ func TestTileFeatures(t *testing.T) {
 			tile: MockTile{
 				Z:    1,
 				srid: tegola.WebMercator,
-				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
-				},
+				bufferedExtent: geom.NewExtent(
+					[2]float64{-20026376.39, -20048966.10},
+					[2]float64{20026376.39, 20048966.10},
+				),
 			},
 			expectedFeatureCount: 101,
 		},
@@ -372,10 +371,10 @@ func TestTileFeatures(t *testing.T) {
 			tile: MockTile{
 				Z:    0,
 				srid: tegola.WebMercator,
-				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
-				},
+				bufferedExtent: geom.NewExtent(
+					[2]float64{-20026376.39, -20048966.10},
+					[2]float64{20026376.39, 20048966.10},
+				),
 			},
 			expectedFeatureCount: 44,
 		},
@@ -444,10 +443,10 @@ func TestConfigs(t *testing.T) {
 				},
 			},
 			tile: MockTile{
-				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
-				},
+				bufferedExtent: geom.NewExtent(
+					[2]float64{-20026376.39, -20048966.10},
+					[2]float64{20026376.39, 20048966.10},
+				),
 				srid: tegola.WebMercator,
 			},
 			layerName: "a_points",
@@ -476,10 +475,10 @@ func TestConfigs(t *testing.T) {
 				},
 			},
 			tile: MockTile{
-				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
-				},
+				bufferedExtent: geom.NewExtent(
+					[2]float64{-20026376.39, -20048966.10},
+					[2]float64{20026376.39, 20048966.10},
+				),
 				srid: tegola.WebMercator,
 			},
 			layerName: "rd_lines",
@@ -498,10 +497,10 @@ func TestConfigs(t *testing.T) {
 				},
 			},
 			tile: MockTile{
-				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
-				},
+				bufferedExtent: geom.NewExtent(
+					[2]float64{-20026376.39, -20048966.10},
+					[2]float64{20026376.39, 20048966.10},
+				),
 				srid: tegola.WebMercator,
 			},
 			layerName: "a_points",
@@ -543,10 +542,10 @@ func TestConfigs(t *testing.T) {
 				},
 			},
 			tile: MockTile{
-				bufferedExtent: [2][2]float64{
-					{-20026376.39, -20048966.10},
-					{20026376.39, 20048966.10},
-				},
+				bufferedExtent: geom.NewExtent(
+					[2]float64{-20026376.39, -20048966.10},
+					[2]float64{20026376.39, 20048966.10},
+				),
 				srid: tegola.WebMercator,
 			},
 			layerName: "a_p_points",

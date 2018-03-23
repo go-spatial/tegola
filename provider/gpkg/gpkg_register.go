@@ -29,7 +29,7 @@ type featureTableDetails struct {
 	geomFieldname string
 	geomType      geom.Geometry
 	srid          uint64
-	bbox          geom.BoundingBox
+	bbox          *geom.Extent
 }
 
 // Creates a config instance of the type NewTileProvider() requires including all available feature
@@ -156,6 +156,11 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 			return nil, err
 		}
 
+		bbox := geom.NewExtent(
+			[2]float64{minX.Float64, minY.Float64},
+			[2]float64{maxX.Float64, maxY.Float64},
+		)
+
 		colNames := extractColsFromSQL(tableSql.String)
 
 		geomTableDetails[tablename.String] = featureTableDetails{
@@ -165,7 +170,8 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 			geomType:      tg,
 			srid:          uint64(srid.Int64),
 			//	the extent of the layer's features
-			bbox: geom.BoundingBox{{minX.Float64, minY.Float64}, {maxX.Float64, maxY.Float64}},
+			//bbox: geom.BoundingBox{minX.Float64, minY.Float64, maxX.Float64, maxY.Float64},
+			bbox: bbox,
 		}
 	}
 
@@ -260,7 +266,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			layer.geomType = geomTableDetails[tablename].geomType
 			layer.idFieldname = idFieldname
 			layer.srid = geomTableDetails[tablename].srid
-			layer.bbox = geomTableDetails[tablename].bbox
+			layer.bbox = *geomTableDetails[tablename].bbox
 
 		} else {
 			var customSQL string
@@ -298,7 +304,8 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			customSQL = replaceTokens(customSQL, 0, geom.BoundingBox{{180.0, 85.0511}, {-180.0, -85.0511}})
+			wgs84BB := geom.NewExtent([2]float64{180.0, 85.0551}, [2]float64{-180.0, -85.0511})
+			customSQL = replaceTokens(customSQL, 0, wgs84BB)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
@@ -336,7 +343,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 // reference to all instantiated proivders
 var providers []Provider
 
-// Cleanup will close all database connections and destory all previously instantiated Provider instances
+// Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
 	for i := range providers {
 		if err := providers[i].Close(); err != nil {

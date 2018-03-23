@@ -77,7 +77,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Layers: []style.Layer{},
 	}
 
-	//	determing the min and max zoom for this map
+	//	determining the min and max zoom for this map
 	for _, l := range m.Layers {
 		//	check if the layer already exists in our slice. this can happen if the config
 		//	is using the "name" param for a layer to override the providerLayerName

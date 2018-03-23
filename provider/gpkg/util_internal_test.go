@@ -11,7 +11,7 @@ func TestReplaceTokens(t *testing.T) {
 		qtext string
 		zoom  uint
 		// TODO: replace with geom.Extent once it's ready
-		extent   geom.BoundingBox
+		extent   *geom.Extent
 		expected string
 	}
 
@@ -50,9 +50,9 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX!`,
-			extent: geom.BoundingBox{
-				{180, 85.0511},
-				{-180, -85.0511},
+			extent: &geom.Extent{
+				-180, -85.0511,
+				180, 85.0511,
 			},
 			expected: `
 				SELECT
@@ -70,9 +70,9 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX! AND min_zoom = !ZOOM!`,
-			extent: geom.BoundingBox{
-				{180, 85.0511},
-				{-180, -85.0511},
+			extent: &geom.Extent{
+				-180, -85.0511,
+				180, 85.0511,
 			},
 			zoom: 3,
 			expected: `

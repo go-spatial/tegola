@@ -38,7 +38,7 @@ func NewLineWith2Float64(ln [2][2]float64) Line {
 	}
 }
 
-// InBetween will check to see if the given point lies on the line provided inbetween the endpoints.
+// InBetween will check to see if the given point lies on the line provided between the endpoints.
 func (l Line) InBetween(pt Pt) bool {
 	lx, gx := l[0].X, l[1].X
 	if l[0].X > l[1].X {
@@ -81,7 +81,7 @@ func (l Line) IsHorizontal() bool {
 	return l[0].Y == l[1].Y
 }
 
-//Clamp will return a point that is on the line based on pt. It will do this by restricting each of the coordiantes to the line.
+//Clamp will return a point that is on the line based on pt. It will do this by restricting each of the coordinates to the line.
 func (l Line) Clamp(pt Pt) (p Pt) {
 	p = pt
 	lx, gx := l[0].X, l[1].X

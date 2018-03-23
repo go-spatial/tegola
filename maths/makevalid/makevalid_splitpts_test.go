@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/internal/assert"
-	"github.com/go-spatial/tegola/maths/points"
 )
 
 func TestSplitPoints(t *testing.T) {
@@ -88,7 +88,7 @@ func TestSplitSegments(t *testing.T) {
 	type tcase struct {
 		segs    []maths.Line
 		lns     [][2][2]float64
-		clipbox *points.Extent
+		clipbox *geom.Extent
 		err     error
 	}
 	ctx := context.Background()

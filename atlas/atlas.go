@@ -33,7 +33,7 @@ func (a *Atlas) AllMaps() []Map {
 	var maps []Map
 	for i := range a.maps {
 		m := a.maps[i]
-		//	make an explict copy of the layers
+		//	make an explicit copy of the layers
 		layers := make([]Layer, len(m.Layers))
 		copy(layers, m.Layers)
 		m.Layers = layers
@@ -100,7 +100,7 @@ func (a *Atlas) Map(mapName string) (Map, error) {
 		}
 	}
 
-	//	make an explict copy of the layers
+	//	make an explicit copy of the layers
 	layers := make([]Layer, len(m.Layers))
 	copy(layers, m.Layers)
 	m.Layers = layers

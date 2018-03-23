@@ -11,18 +11,18 @@ import (
 
 	"github.com/gdey/tbltest"
 	"github.com/go-spatial/tegola/draw/svg"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/hitmap"
-	"github.com/go-spatial/tegola/maths/points"
 	"github.com/go-test/deep"
 )
 
 const TileBuffer = 16
 
-var extent = points.Extent{
-	{0.0 - TileBuffer, 0.0 - TileBuffer},
-	{4096.0 + TileBuffer, 4096.0 + TileBuffer},
-}
+var extent = geom.NewExtent(
+	[2]float64{0.0 - TileBuffer, 0.0 - TileBuffer},
+	[2]float64{4096.0 + TileBuffer, 4096.0 + TileBuffer},
+)
 
 func TestSortUniqueF64(t *testing.T) {
 	type tcase struct {
@@ -158,61 +158,6 @@ func _drawMakeValidPolygons(w io.Writer, original [][]maths.Line, expectedPolygo
 
 }
 
-func Test_adjustClipBox(t *testing.T) {
-	type testCase struct {
-		cpbx    *points.Extent
-		plygs   [][]maths.Line
-		clipbox *points.Extent
-	}
-	var tests map[string]testCase
-	fn := func() {
-		for name, tc := range tests {
-			tc := tc // make a copy.
-			t.Run(name, func(t *testing.T) {
-				clipbox := _adjustClipBox(tc.cpbx, tc.plygs)
-				if !reflect.DeepEqual(tc.clipbox, clipbox) {
-					t.Errorf("Clipbox do not match, Expected %#v Got %#v", tc.clipbox, clipbox)
-				}
-			})
-		}
-	}
-
-	tests = map[string]testCase{
-		"nil clipbox 1": {
-			plygs: [][]maths.Line{
-				{
-					{{0, 0}, {0, 10}},
-					{{0, 10}, {10, 10}},
-					{{10, 0}, {10, 10}},
-					{{10, 0}, {0, 0}},
-				},
-			},
-			clipbox: &points.Extent{
-				{0, 0},
-				{10, 10},
-			},
-		},
-		"nil clipbox 2": {
-			plygs: [][]maths.Line{
-				{{maths.Pt{X: 2853, Y: 975}, maths.Pt{X: 2856, Y: 975}}, {maths.Pt{X: 2782, Y: 959}, maths.Pt{X: 2785, Y: 953}}, {maths.Pt{X: 2781, Y: 949}, maths.Pt{X: 2786, Y: 938}}, {maths.Pt{X: 2838, Y: 994}, maths.Pt{X: 2853, Y: 975}}, {maths.Pt{X: 2739, Y: 930}, maths.Pt{X: 2782, Y: 959}}, {maths.Pt{X: 2808, Y: 904}, maths.Pt{X: 2809, Y: 907}}, {maths.Pt{X: 2808, Y: 895}, maths.Pt{X: 2811, Y: 894}}, {maths.Pt{X: 2857, Y: 894}, maths.Pt{X: 2857, Y: 994}}, {maths.Pt{X: 2857, Y: 977}, maths.Pt{X: 2857, Y: 980}}, {maths.Pt{X: 2766, Y: 908}, maths.Pt{X: 2770, Y: 911}}, {maths.Pt{X: 2805, Y: 902}, maths.Pt{X: 2808, Y: 904}}, {maths.Pt{X: 2734, Y: 994}, maths.Pt{X: 2857, Y: 994}}, {maths.Pt{X: 2734, Y: 934}, maths.Pt{X: 2735, Y: 936}}, {maths.Pt{X: 2734, Y: 934}, maths.Pt{X: 2739, Y: 930}}, {maths.Pt{X: 2778, Y: 924}, maths.Pt{X: 2792, Y: 933}}, {maths.Pt{X: 2805, Y: 902}, maths.Pt{X: 2808, Y: 895}}, {maths.Pt{X: 2734, Y: 894}, maths.Pt{X: 2857, Y: 894}}, {maths.Pt{X: 2784, Y: 960}, maths.Pt{X: 2838, Y: 994}}, {maths.Pt{X: 2759, Y: 913}, maths.Pt{X: 2786, Y: 938}}, {maths.Pt{X: 2759, Y: 913}, maths.Pt{X: 2763, Y: 908}}, {maths.Pt{X: 2770, Y: 914}, maths.Pt{X: 2778, Y: 924}}, {maths.Pt{X: 2781, Y: 949}, maths.Pt{X: 2785, Y: 953}}, {maths.Pt{X: 2770, Y: 911}, maths.Pt{X: 2770, Y: 914}}, {maths.Pt{X: 2811, Y: 894}, maths.Pt{X: 2818, Y: 910}}, {maths.Pt{X: 2856, Y: 975}, maths.Pt{X: 2857, Y: 977}}, {maths.Pt{X: 2763, Y: 908}, maths.Pt{X: 2766, Y: 908}}, {maths.Pt{X: 2792, Y: 933}, maths.Pt{X: 2800, Y: 919}}, {maths.Pt{X: 2800, Y: 919}, maths.Pt{X: 2809, Y: 907}}, {maths.Pt{X: 2734, Y: 894}, maths.Pt{X: 2734, Y: 994}}, {maths.Pt{X: 2735, Y: 936}, maths.Pt{X: 2857, Y: 980}}, {maths.Pt{X: 2784, Y: 960}, maths.Pt{X: 2818, Y: 910}}}},
-			clipbox: &points.Extent{[2]float64{2734, 894}, [2]float64{2857, 994}},
-		},
-		"nil plygs ": {
-			clipbox: &points.Extent{
-				{0, 0},
-				{10, 10},
-			},
-			cpbx: &points.Extent{
-				{0, 0},
-				{10, 10},
-			},
-		},
-		"nil plygs and clipbox": {},
-	}
-	fn()
-
-}
-
 func drawMakeValidTestCase(basedir string, filename string, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) error {
 	file, err := _createFile(basedir, filename)
 	if err != nil {
@@ -225,18 +170,17 @@ func drawMakeValidTestCase(basedir string, filename string, original [][]maths.L
 
 func TestMakeValid(t *testing.T) {
 
-	type testcase struct {
+	type tcase struct {
 		lines    [][]maths.Line
 		polygons [][][]maths.Pt
 		err      error
 	}
-	//tests.RunOrder = "0"
 	ctx := context.Background()
 
-	fn := func(idx int, test testcase) {
+	fn := func(idx int, test tcase) {
 
 		hm := hitmap.NewFromLines(test.lines)
-		got, err := MakeValid(ctx, &hm, &extent, test.lines...)
+		got, err := MakeValid(ctx, &hm, extent, test.lines...)
 		if err != test.err {
 			t.Errorf("[%v] Unexpected error: Expected: %v, got: %v", idx, test.err, err)
 			return
@@ -273,7 +217,7 @@ func TestMakeValid(t *testing.T) {
 	}
 
 	test := tbltest.Cases(
-		testcase{
+		tcase{
 			lines: [][]maths.Line{
 				{
 					{maths.Pt{3, 1}, maths.Pt{7, 1}},
@@ -294,7 +238,7 @@ func TestMakeValid(t *testing.T) {
 				},
 			},
 		},
-		testcase{
+		tcase{
 			lines: [][]maths.Line{{
 				{maths.Pt{X: 2784, Y: 960}, maths.Pt{X: 2838, Y: 994}},
 				{maths.Pt{X: 2838, Y: 994}, maths.Pt{X: 2853, Y: 975}},
@@ -340,7 +284,7 @@ func TestMakeValid(t *testing.T) {
 				},
 			},
 		},
-		testcase{
+		tcase{
 			lines: [][]maths.Line{{
 				{maths.Pt{50, 66}, maths.Pt{104, 100}},
 				{maths.Pt{104, 100}, maths.Pt{119, 81}},
@@ -390,6 +334,7 @@ func TestMakeValid(t *testing.T) {
 			},
 		},
 	)
+	//	test.RunOrder = "0"
 	test.Run(fn)
 
 }
@@ -470,7 +415,7 @@ func BenchmarkMakeValid5PolyA(b *testing.B) {
 	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
-		MakeValid(ctx, &hm, &extent, lines...)
+		MakeValid(ctx, &hm, extent, lines...)
 	}
 }
 func BenchmarkMakeValid5PolyB(b *testing.B) {
@@ -509,7 +454,7 @@ func BenchmarkMakeValid5PolyB(b *testing.B) {
 	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
-		MakeValid(ctx, &hm, &extent, lines...)
+		MakeValid(ctx, &hm, extent, lines...)
 	}
 }
 
@@ -4062,7 +4007,7 @@ func BenchmarkMakeValid5PolyC(b *testing.B) {
 	var nresultPolygon [][][]maths.Pt
 	ctx := context.Background()
 	for n := 0; n < b.N; n++ {
-		nresultPolygon, _ = MakeValid(ctx, &hm, &extent, lines...)
+		nresultPolygon, _ = MakeValid(ctx, &hm, extent, lines...)
 	}
 
 	resultPolygon = nresultPolygon

@@ -11,7 +11,7 @@ type Layer struct {
 	geomFieldname string
 	geomType      geom.Geometry
 	srid          uint64
-	bbox          geom.BoundingBox
+	bbox          geom.Extent
 	sql           string
 }
 

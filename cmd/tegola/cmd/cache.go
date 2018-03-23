@@ -18,7 +18,6 @@ import (
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/webmercator"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -98,25 +97,8 @@ var cacheCmd = &cobra.Command{
 			}
 
 			zooms = append(zooms, t.Z)
-			//	read the tile bounds, which will be in web mercator
-			tBounds := t.BoundingBox()
-			//	convert the bounds points to lat lon
-			ul, err := webmercator.PToLonLat(tBounds.Minx, tBounds.Miny)
-			if err != nil {
-				log.Fatal(err)
-			}
-			lr, err := webmercator.PToLonLat(tBounds.Maxx, tBounds.Maxy)
-			if err != nil {
-				log.Fatal(err)
-			}
-			//	use the tile bounds as the bounds for the job.
-			//	the grid flips between web mercator and WGS84 which is why we use must use lat from one point and lon from the other
-			//	TODO: this smells funny. Investigate why the grid is flipping - arolek
-			bounds[0] = ul[0]
-			bounds[1] = lr[1]
-
-			bounds[2] = lr[0]
-			bounds[3] = ul[1]
+			// read the tile bounds, which will be in lat, lon, it will be the north, east, south, west.
+			bounds = t.Bounds()
 		} else {
 			//	bounding box caching
 			boundsParts := strings.Split(cacheBounds, ",")
@@ -278,7 +260,7 @@ var cacheCmd = &cobra.Command{
 						select {
 						case tiler <- mapTile:
 						case <-gdcmd.Cancelled():
-							log.Info("cancel recieved; cleaning up…")
+							log.Info("cancel received; cleaning up…")
 							break ZoomLoop
 						}
 

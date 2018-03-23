@@ -57,45 +57,6 @@ func TestTileDeg2Num(t *testing.T) {
 	}
 }
 
-func TestTileBBox(t *testing.T) {
-	testcases := []struct {
-		tile                   tegola.Tile
-		minx, miny, maxx, maxy float64
-	}{
-		{
-			tile: *tegola.NewTile(2, 1, 1),
-			minx: -10018754.17,
-			miny: 10018754.17,
-			maxx: 0,
-			maxy: 0,
-		},
-		{
-			tile: *tegola.NewTile(16, 11436, 26461),
-			minx: -13044437.497219238996,
-			miny: 3856706.6986199953,
-			maxx: -13043826.000993041,
-			maxy: 3856095.202393799,
-		},
-	}
-
-	for i, test := range testcases {
-		bbox := test.tile.BoundingBox()
-
-		if bbox.Minx != test.minx {
-			t.Errorf("Failed test %v. Expected minx (%v), got (%v)", i, test.minx, bbox.Minx)
-		}
-		if bbox.Miny != test.miny {
-			t.Errorf("Failed test %v. Expected miny (%v), got (%v)", i, test.miny, bbox.Miny)
-		}
-		if bbox.Maxx != test.maxx {
-			t.Errorf("Failed test %v. Expected maxx (%v), got (%v)", i, test.maxx, bbox.Maxx)
-		}
-		if bbox.Maxy != test.maxy {
-			t.Errorf("Failed test %v. Expected maxy (%v), got (%v)", i, test.maxy, bbox.Maxy)
-		}
-	}
-}
-
 func TestTileZRes(t *testing.T) {
 	testcases := []struct {
 		tile tegola.Tile

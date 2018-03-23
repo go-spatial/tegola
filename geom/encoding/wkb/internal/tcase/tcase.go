@@ -96,7 +96,7 @@ func ParseFile(filename string) ([]C, error) {
 	return parse(file, filename)
 }
 
-var isolatedFilenames = flag.String("tcase.Files", "", "List of comma seperated file name to grab the test cases from; instead of all the files in the directory.")
+var isolatedFilenames = flag.String("tcase.Files", "", "List of comma separated file name to grab the test cases from; instead of all the files in the directory.")
 
 func GetFiles(dir string) (filenames []string, err error) {
 	files, err := ioutil.ReadDir(dir)

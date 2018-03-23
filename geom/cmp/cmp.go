@@ -10,16 +10,34 @@ import (
 const TOLERANCE = 0.000001
 
 // Float64 compares two floats to see if they are within the given tolerance.
-func Float64(f1, f2, tolerance float64) bool { return math.Abs(f1-f2) < tolerance }
+func Float64(f1, f2, tolerance float64) bool {
+	if math.IsInf(f1, 1) {
+		return math.IsInf(f2, 1)
+	}
+	if math.IsInf(f2, 1) {
+		return math.IsInf(f1, 1)
+	}
+	if math.IsInf(f1, -1) {
+		return math.IsInf(f2, -1)
+	}
+	if math.IsInf(f2, -1) {
+		return math.IsInf(f1, -1)
+	}
+	return math.Abs(f1-f2) < tolerance
+}
 
 // Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.
 func Float(f1, f2 float64) bool { return Float64(f1, f2, TOLERANCE) }
 
-// BoundingBox will check to see if the BoundingBox's are the same.
-func BoundingBox(bbox1, bbox2 [2][2]float64) bool {
+// Extent will check to see if the Extents's are the same.
+func Extent(extent1, extent2 [4]float64) bool {
+	return Float(extent1[0], extent2[0]) && Float(extent1[1], extent2[1]) &&
+		Float(extent1[2], extent2[2]) && Float(extent1[3], extent2[3])
+}
 
-	return Float(bbox1[0][0], bbox2[0][0]) && Float(bbox1[0][1], bbox2[0][1]) &&
-		Float(bbox1[1][0], bbox2[1][0]) && Float(bbox1[1][1], bbox2[1][1])
+// GeomExtent will check to see if geom.BoundingBox's are the same.
+func GeomExtent(extent1, extent2 geom.Extenter) bool {
+	return Extent(extent1.Extent(), extent2.Extent())
 }
 
 func PointLess(p1, p2 [2]float64) bool {
@@ -99,12 +117,12 @@ func PolygonEqual(ply1, ply2 [][][2]float64) bool {
 	for i := range ply1 {
 		points1 = append(points1, ply1[i]...)
 	}
-	bbox1 := geom.NewBBox(points1...)
+	extent1 := geom.NewExtent(points1...)
 	for i := range ply2 {
 		points2 = append(points2, ply2[i]...)
 	}
-	bbox2 := geom.NewBBox(points2...)
-	if !BoundingBox([2][2]float64(bbox1), [2][2]float64(bbox2)) {
+	extent2 := geom.NewExtent(points2...)
+	if !GeomExtent(extent1, extent2) {
 		return false
 	}
 

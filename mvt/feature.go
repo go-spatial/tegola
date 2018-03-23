@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/geom/encoding/wkt"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/internal/log"
@@ -569,9 +570,9 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(ctx context.Context, geom tegola.Geometry, tile *tegola.Tile, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.Tile, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 
-	if geom == nil {
+	if geometry == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
 
@@ -584,23 +585,23 @@ func encodeGeometry(ctx context.Context, geom tegola.Geometry, tile *tegola.Tile
 
 	// TODO: gdey: We need to separate out the transform, simplification, and clipping from the encoding process. #224
 
-	geo := c.ScaleGeo(geom)
+	geo := c.ScaleGeo(geometry)
 	sg := SimplifyGeometry(geo, tile.ZEpislon(), simplify)
 
 	pbb, err := tile.PixelBufferedBounds()
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
-	ext := points.Extent(pbb)
+	ext := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 
-	geom, err = validate.CleanGeometry(ctx, sg, &ext)
+	geometry, err = validate.CleanGeometry(ctx, sg, ext)
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
-	if geom == nil {
+	if geometry == nil {
 		return []uint32{}, -1, nil
 	}
-	switch t := geom.(type) {
+	switch t := geometry.(type) {
 	case tegola.Point:
 		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil

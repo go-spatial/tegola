@@ -67,7 +67,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 
 type Cache struct {
 	Basepath string
-	//	MaxZoom determins the max zoom the cache to persist. Beyond this
+	//	MaxZoom determines the max zoom the cache to persist. Beyond this
 	//	zoom, cache Set() calls will be ignored. This is useful if the cache
 	//	should not be leveraged for higher zooms when data changes often.
 	MaxZoom uint

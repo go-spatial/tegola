@@ -63,7 +63,6 @@ func TestEncodeGeometry(t *testing.T) {
 		desc string `tbltest:"desc"`
 		geo  basic.Geometry
 		typ  vectorTile.Tile_GeomType
-		bbox tegola.BoundingBox
 		egeo []uint32
 		eerr error
 	}
@@ -126,7 +125,7 @@ func TestEncodeGeometry(t *testing.T) {
 		},
 		/*
 				Disabling this for now; Currently it's getting clipped out because the transformation. scaling and clipping are intermingled with the encoding
-				process. Once that is seperated out we can have a better encoding test. Issue #224
+				process. Once that is separated out we can have a better encoding test. Issue #224
 			tc{ // 5
 				geo: basic.MultiLine{
 					basic.Line{*fromPixel(2, 2), *fromPixel(2, 10), *fromPixel(10, 10)},
@@ -172,13 +171,7 @@ func TestEncodeGeometry(t *testing.T) {
 					},
 				},
 			},
-			typ: vectorTile.Tile_POLYGON,
-			bbox: tegola.BoundingBox{
-				Minx: 0,
-				Miny: 0,
-				Maxx: 4096,
-				Maxy: 4096,
-			},
+			typ:  vectorTile.Tile_POLYGON,
 			egeo: []uint32{9, 0, 0, 26, 18, 0, 0, 18, 17, 0, 15, 9, 22, 4, 26, 18, 0, 0, 18, 17, 0, 15, 9, 2, 15, 26, 0, 8, 8, 0, 0, 7, 15},
 		},
 	).Run(fn)

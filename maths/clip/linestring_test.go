@@ -5,31 +5,31 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/geom/cmp"
-	"github.com/go-spatial/tegola/maths/points"
 )
 
-var testExtents = []points.Extent{
-	/* 00 */ {{0, 0}, {10, 10}},
-	/* 01 */ {{2, 2}, {9, 9}},
-	/* 02 */ {{-1, -1}, {11, 11}},
-	/* 03 */ {{-2, -2}, {12, 12}},
-	/* 04 */ {{-3, -3}, {13, 13}},
+var testExtents = []geom.Extent{
+	/* 00 */ {0, 0, 10, 10},
+	/* 01 */ {2, 2, 9, 9},
+	/* 02 */ {-1, -1, 11, 11},
+	/* 03 */ {-2, -2, 12, 12},
+	/* 04 */ {-3, -3, 13, 13},
 
-	/* 05 */ {{-4, -4}, {14, 14}},
-	/* 06 */ {{5, 1}, {7, 3}},
-	/* 07 */ {{0, 5}, {2, 7}},
-	/* 08 */ {{0, 5}, {2, 7}},
-	/* 09 */ {{5, 2}, {11, 9}},
+	/* 05 */ {-4, -4, 14, 14},
+	/* 06 */ {5, 1, 7, 3},
+	/* 07 */ {0, 5, 2, 7},
+	/* 08 */ {0, 5, 2, 7},
+	/* 09 */ {5, 2, 11, 9},
 
-	/* 10 */ {{-1, -1}, {11, 11}},
-	/* 11 */ {{0, 0}, {4096, 4096}},
+	/* 10 */ {-1, -1, 11, 11},
+	/* 11 */ {0, 0, 4096, 4096},
 }
 
 func TestLineString(t *testing.T) {
 
 	type tcase struct {
-		extent   *points.Extent
+		extent   *geom.Extent
 		linestr  tegola.LineString
 		expected []basic.Line
 		err      error
@@ -103,7 +103,7 @@ func TestLineString(t *testing.T) {
 			},
 		},
 		"4": {
-			extent:  &points.Extent{{0, 0}, {11, 11}},
+			extent:  &geom.Extent{0, 0, 11, 11},
 			linestr: basic.NewLine(-3, 1, -3, 9, 11, 9, 11, 2, 5, 2, 5, 8, -1, 8, -1, 4, 3, 4, 3, 1),
 			expected: []basic.Line{
 				basic.NewLine(0, 9, 11, 9, 11, 2, 5, 2, 5, 8, 0, 8),

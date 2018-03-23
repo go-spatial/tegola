@@ -9,6 +9,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/hitmap"
 	"github.com/go-spatial/tegola/maths/makevalid/plyg"
@@ -68,7 +69,7 @@ func MinF64(vals ...float64) (min float64) {
 */
 
 // destructure2  splits the polygon into a set of segements adding the segments of the clipbox as well.
-func destructure2(polygons [][]maths.Line, clipbox *points.Extent) []maths.Line {
+func destructure2(polygons [][]maths.Line, clipbox *geom.Extent) []maths.Line {
 	// First we need to combine all the segments.
 	segs := make(map[maths.Line]struct{})
 	for i := range polygons {
@@ -80,7 +81,8 @@ func destructure2(polygons [][]maths.Line, clipbox *points.Extent) []maths.Line 
 	var segments []maths.Line
 	// Add the clipbox segments to the set of segments.
 	if clipbox != nil {
-		edges := clipbox.LREdges()
+		// TODO (gdey): Take into accound the clockwise and counterclock wise direction?
+		edges := clipbox.Edges(nil)
 		lns := maths.NewLinesFloat64(edges[:]...)
 		for i := range lns {
 			segs[lns[i]] = struct{}{}
@@ -109,16 +111,57 @@ func logOutBuildRings(pt2maxy map[maths.Pt]int64, xs []float64, x2pts map[float6
 	return output
 }
 
-func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent, plygs [][]maths.Line) ([][][]maths.Pt, error) {
+func plygsToBoundingBox(plygs [][]maths.Line) *geom.Extent {
+	var minx, miny, maxx, maxy float64
+	var init bool
+	for i := range plygs {
+		for j := range plygs[i] {
+			l := plygs[i][j]
+			if init {
+				if minx > l[0].X {
+					minx = l[0].X
+				}
+				if miny > l[0].Y {
+					miny = l[0].Y
+				}
+				if maxx < l[0].X {
+					maxx = l[0].X
+				}
+				if maxy < l[0].Y {
+					maxy = l[0].Y
+				}
+			} else {
+				init = true
+				minx = l[0].X
+				miny = l[0].Y
+				maxx = l[0].X
+				maxy = l[0].Y
+			}
+			if minx > l[1].X {
+				minx = l[1].X
+			}
+			if miny > l[1].Y {
+				miny = l[1].Y
+			}
+			if maxx < l[1].X {
+				maxx = l[1].X
+			}
+			if maxy < l[1].Y {
+				maxy = l[1].Y
+			}
+		}
+	}
+	return &geom.Extent{minx, miny, maxx, maxy}
+}
+
+func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, plygs [][]maths.Line) ([][][]maths.Pt, error) {
 
 	if len(plygs) == 0 {
 		return nil, nil
 	}
-
-	// Make copy because we are going to modify the clipbox.
-	clipbox := _adjustClipBox(cpbx, plygs)
-	// Just trying to clip a polygon that is on the border.
-	if clipbox[0][0] == clipbox[1][0] || clipbox[0][1] == clipbox[1][1] {
+	plygsbb := plygsToBoundingBox(plygs)
+	clipbox, intersect := cpbx.Intersect(plygsbb)
+	if !intersect {
 		if debug {
 			log.Println("clip area too small: Clipbox:", cpbx)
 		}
@@ -156,7 +199,7 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 
 	// Add lines at each x going from the miny to maxy.
 	for i := range xs {
-		flines = append(flines, [2][2]float64{{xs[i], clipbox[0][1]}, {xs[i], clipbox[1][1]}})
+		flines = append(flines, [2][2]float64{{xs[i], clipbox.MinY()}, {xs[i], clipbox.MaxY()}})
 	}
 
 	lines = maths.NewLinesFloat64(flines...)
@@ -169,7 +212,7 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 	// each point with the value of their x, and the max y value to the next
 	// x.
 
-	colptmap := _NewColPtMap(splitPts, clipbox[1][1])
+	colptmap := _NewColPtMap(splitPts, clipbox.MaxY())
 
 	x2pts := colptmap.X2Pt
 	pt2MaxY := colptmap.Pt2MaxY
@@ -201,11 +244,11 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 				continue
 			}
 			if clipbox != nil {
-				if xs[i] < clipbox[0][0] || xs[i] > clipbox[1][0] {
+				if xs[i] < clipbox.MinX() || xs[i] > clipbox.MaxX() {
 					// Skip working on this one.
 					continue
 				}
-				if xs[i+1] > clipbox[1][0] {
+				if xs[i+1] > clipbox.MaxX() {
 					continue
 				}
 			}
@@ -258,7 +301,13 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *points.Extent,
 	return ploygs, nil
 }
 
-func MakeValid(ctx context.Context, hm hitmap.Interface, extent *points.Extent, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
+func MakeValid(ctx context.Context, hm hitmap.Interface, extent *geom.Extent, plygs ...[]maths.Line) (polygons [][][]maths.Pt, err error) {
+	/*
+		var bb *geom.BoundingBox
+		if extent != nil {
+			bb = geom.NewBBox(extent[0], extent[1])
+		}
+	*/
 	return destructure5(ctx, hm, extent, insureConnected(plygs...))
 }
 

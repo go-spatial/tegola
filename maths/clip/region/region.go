@@ -40,7 +40,7 @@ type Region struct {
 		1pt     1    2pt
 */
 
-// New creates a new region, initilization paramters as needed.
+// New creates a new region, initilization parameters as needed.
 func New(winding maths.WindingOrder, Min, Max maths.Pt) *Region {
 	return new(Region).Init(winding, Min, Max)
 }

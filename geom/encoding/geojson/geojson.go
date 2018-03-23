@@ -100,7 +100,7 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 }
 
 // featureType allows the GeoJSON type for Feature to be automatically set during json Marshalling
-// which avoids the user from accidenlty setting the incorrect GeoJSON type.
+// which avoids the user from accidentally setting the incorrect GeoJSON type.
 type featureType struct{}
 
 func (_ featureType) MarshalJSON() ([]byte, error) {
@@ -117,7 +117,7 @@ type Feature struct {
 }
 
 // featureCollectionType allows the GeoJSON type for Feature to be automatically set during json Marshalling
-// which avoids the user from accidenlty setting the incorrect GeoJSON type.
+// which avoids the user from accidentally setting the incorrect GeoJSON type.
 type featureCollectionType struct{}
 
 func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
