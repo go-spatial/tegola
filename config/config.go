@@ -17,6 +17,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola"
 )
 
 // Config represents a tegola config file.
@@ -88,6 +89,17 @@ func (c *Config) Validate() error {
 				}
 
 				name = plParts[1]
+			}
+
+			// MaxZoom default
+			if l.MaxZoom == nil {
+				ph := uint(tegola.MaxZ)
+				l.MaxZoom = &ph
+			}
+			// MinZoom default
+			if l.MinZoom == nil {
+				ph := uint(tegola.MaxZ)
+				l.MinZoom = &ph
 			}
 
 			//	check if we already have this layer
