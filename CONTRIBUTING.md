@@ -4,7 +4,7 @@ Thank you for even thinking about contributing! We are excited to have you. This
 
 For sensitive security-related issue please start a conversation with a core contributor on the [#go-spatial](https://invite.slack.golangbridge.org/) channel in the [gophers slack](https://invite.slack.golangbridge.org/) organization.
 
-This project and everyone participating in it is governed by the [Code of Conduct](CODEOFCONDUCT.md).
+This project and everyone participating in it is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior to the [#go-spatial](https://invite.slack.golangbridge.org/) channel in the [gophers slack](https://invite.slack.golangbridge.org/) organization or to one of the Core Contributors.
 
 ## There are several places where you can contribute. 
