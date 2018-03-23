@@ -59,6 +59,11 @@ If however you want to build the latest release candidate you will have to build
 	
 	(`go test ./…`)
  	(`CGO_ENABLED=0 go test ./…`)
+
+ * Make sure tegola can be built and run:
+
+ 	(`cd cmd/tegola`)
+ 	(`go build && ./tegola serve --config=path/to/config.toml`)
 	
 * Commit your changes (`git commit -am ‘Add some feature #XXX\n\nExtened description.'`)
 
@@ -79,9 +84,11 @@ For more information about this work flow, please refer to this [great explanati
 
 ## Conventions
 
-* All code should be formatted using 
+* All code should be formatted using:
 	
 	(`gofmt -s ./…`).
+
+	- if you find that running `gofmt` produces changes across parts of the code base you're not working on, submit the formatting change in a separate Pull Request. This helps decouple engineering changes from formatting changes and focused the code review efforts. 
 	
 * When declaring errors variables they should take the form of:
 	
