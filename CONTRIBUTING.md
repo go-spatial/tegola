@@ -2,12 +2,10 @@
 
 Thank you for even thinking about contributing! We are excited to have you. This document is intended as a guide to help your through the contribution process. This guide assumes a you have a basic understanding of Git and Go.
 
-
-For sensitive security-related issue please start a conversion with a core contribuator on the [#go-spatial](https://invite.slack.golangbridge.org/) channel in the [gophers slack](https://invite.slack.golangbridge.org/) organization.
+For sensitive security-related issue please start a conversation with a core contributor on the [#go-spatial](https://invite.slack.golangbridge.org/) channel in the [gophers slack](https://invite.slack.golangbridge.org/) organization.
 
 This project and everyone participating in it is governed by the [Code of Conduct](CODEOFCONDUCT.md).
-By participating, you are expected to uphold this code.
-Please report unacceptable behavior to the [#go-spatial](https://invite.slack.golangbridge.org/) channel in the [gophers slack](https://invite.slack.golangbridge.org/) organization, or to one of the Core Contributors.
+By participating, you are expected to uphold this code. Please report unacceptable behavior to the [#go-spatial](https://invite.slack.golangbridge.org/) channel in the [gophers slack](https://invite.slack.golangbridge.org/) organization or to one of the Core Contributors.
 
 ## There are several places where you can contribute. 
 
@@ -21,34 +19,33 @@ Everything we do is done through [issues](https://github.com/go-spatial/tegola/i
 * If it is a feature request use the following [template](https://github.com/go-spatial/tegola/issues/new?template=feature.md).
 * If this is a feature request, please include a description of what the feature is, and the use case for the feature.
 
-Once you have filed an issue, we will discuss it in the issue. If we need more information or you have further questions about that issue, this is the place to ask. This is the place, where we will discuss the design of the fix or feature. Pull request that add this feature or fix the issue will reference this issue number.
+Once you have filed an issue, we will discuss it in the issue. If we need more information or you have further questions about that issue, this is the place to ask. This is the place where we will discuss the design of the fix or feature. Any pull request that adds a feature or fixes an issue should reference the issue number.
 
-If you have changes to for the Tegola.io website — documentation on the website,  tutorials, translation, or anything else — the process is similar but on a different [repository](https://github.com/go-spatial/tegola-ui-docs) (https://github.com/go-spatial/tegola-ui-docs).
+If you have changes to for the Tegola.io website — documentation on the website, tutorials, translation or anything else — the process is similar but on a different [repository](https://github.com/go-spatial/tegola-docs) (https://github.com/go-spatial/tegola-docs).
 
-Don’t be afraid to reach out if you have any questions.  You can reach us on the gophers Slack on the channel #tegola, or #go-spatial. You can get an invite into the gophers Slack via (https://invite.slack.golangbridge.org/)
+Don’t be afraid to reach out if you have any questions.  You can reach us on the gophers Slack on the channel #tegola or #go-spatial. You can get an invite into the gophers Slack via (https://invite.slack.golangbridge.org/)
 
 ## Making a Contribution to the code base.
 
-For the Tegola project our master branch is always the most recent stable version of the code base. The current release candidate will be in a branch name for the next version of the software. For example if the current release is v0.6.1 the next release will be v0.7, the release candidate branch will be called “v0.7”. Please, base all of your pull requests of the release candidate branch.
+For the Tegola project our master branch is always the most recent stable version of the code base. The current release candidate will be in a branch name for the next version of the software. For example if the current release is v0.6.1 the next release will be v0.7.0, the release candidate branch will be called “v0.7.0”. Please, base all of your pull requests on the release candidate branch.
 
 ### Discuss your design
 
-All contributions are welcome, but please let everyone know what you are working on. The way to do this is to first file an issue (or claim an existing issue). In this issue, please, discuss what your plan is to fix or add the feature. Also, all design discussion should happen on the issue. Once, your contribution is ready, create a pull request referencing the issue. Once, a pull request is created one or more of the Core Contributors will review the pull request and may request changes. Once the changes are approved, it will be merged into the current release branch.
+All contributions are welcome, but please let everyone know what you are working on. The way to do this is to first file an issue (or claim an existing issue). In this issue, please, discuss what your plan is to fix or add the feature. Also, all design discussions should happen on the issue. If design discussions happen in a channel, reconcile the decisions to the relevant issue(s). Once, your contribution is ready, create a pull request referencing the issue. Once, a pull request is created one or more of the Core Contributors will review the pull request and may request changes. Once the changes are approved, it will be merged into the current release candidate branch.
 
 Be sure to keep the pull request updated as merge conflicts may occur as other things get merged into the release branch before yours.
 
-Please, note that we may push your pull request to the next release candidate at which point you will have to resolve any conflicts that occur from changing the base that pull request will go into.
+Please, note that we may push your pull request to the next release candidate at which point you will have to resolve any conflicts that occur.
 
 ### Not sure where to contribute?
 
-Want to contribute but not sure where? Not a problem, the best thing to do is look through the issues and find one that interests you. If the issue has the label `good first issue`, it means that one of the core contributors thinks this is a good issue to start with. But, this doesn’t mean that you have to start with these issues, it is more important to find an issue that is interesting to you. Go through the issues and see if some is already working on it. If no one is or are willing to let your work on the issue, state that you will be working on the issue, to claim it. If you are unsure where to start on the issue, ask in the issue and one of the Core Contributors will help you out, by providing you pointer and guidance.
-
+Want to contribute but not sure where? Not a problem, the best thing to do is look through the issues and find one that interests you. If the issue has the label `good first issue`, it means that one of the core contributors thinks this is a good issue to start with. But, this doesn’t mean that you have to start with these issues. Go through the issues and see if someone is already working on it. If no one is, state that you will be working on the issue to claim it. If you are unsure where to start on the issue, ask in the issue and one of the Core Contributors will help you out.
 
 ## How to build from source
 
-If you just need to play with the binary the easy way is to get the binary from our releases page (url)  or if a binary for your OS is not there, use `go get -u github.com/go-spatial/tegola/cmd/tegola`.
+If you just need to play with the binary the easy way is to get the binary from our [releases page](https://github.com/go-spatial/tegola/releases), or if a binary for your OS is not there, use `go get -u github.com/go-spatial/tegola/cmd/tegola`.
 
-If however you want to build the latest release candidate you will have to build from source. The first thing to do is to clone the go-spatial/tegola repo to your gopath. The simplest way to do this is to use `go get -u github.com/go-spatial/tegola`.
+If however you want to build the latest release candidate you will have to build from source. The first thing to do is to clone the `go-spatial/tegola` repo to your `GOPATH`. The simplest way to do this is to use `go get -u github.com/go-spatial/tegola`, navigate to the repository root then: 
 
 * Checkout the current release candidate branch, (i.e. v0.7.0)
 	
@@ -63,7 +60,7 @@ If however you want to build the latest release candidate you will have to build
 	(`go test ./…`)
  	(`CGO_ENABLED=0 go test ./…`)
 	
-* Commit your changes (git commit -am ‘Add some feature #XXX\n\nExtened description.’
+* Commit your changes (`git commit -am ‘Add some feature #XXX\n\nExtened description.'`)
 
 ### Contribute upstream:
 
@@ -78,7 +75,7 @@ If however you want to build the latest release candidate you will have to build
 	
 * Create a new Pull Request on GitHub against the Release Candidate branch.
 
-For more information about this workflow, please refer to this [great explanation by Katrina Owen](https://splice.com/blog/contributing-open-source-git-repositories-go/).
+For more information about this work flow, please refer to this [great explanation by Katrina Owen](https://splice.com/blog/contributing-open-source-git-repositories-go/).
 
 ## Conventions
 
