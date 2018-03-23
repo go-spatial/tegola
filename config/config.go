@@ -98,7 +98,7 @@ func (c *Config) Validate() error {
 			}
 			// MinZoom default
 			if l.MinZoom == nil {
-				ph := uint(tegola.MaxZ)
+				ph := uint(0)
 				l.MinZoom = &ph
 			}
 
