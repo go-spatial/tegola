@@ -17,13 +17,23 @@ func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {
 }
 
 func DegToNum(zoom uint, lat, lon float64) (x, y uint) {
-	lat_rad := maths.RadToDeg(lat)
 	n := float64(maths.Exp2(uint64(zoom)))
+	lat_rad := maths.DegToRad(lat)
 
 	x = uint(n * (lon + 180.0) / 360.0)
-	y = uint(n *
+	y = uint(n / 2.0 *
 		(1.0 - math.Log(
-			math.Tan(lat_rad)+(1/math.Cos(lat_rad))) / 2.0))
+			math.Tan(lat_rad)+1.0/math.Cos(lat_rad)) / math.Pi))
+
+	return
+}
+
+func NumToDeg(z, x, y uint) (lat, lon float64) {
+	n := float64(maths.Exp2(uint64(z)))
+
+	lon = float64(x)/n*360.0 - 180.0
+	lat = math.Atan(math.Sinh(math.Pi * (1.0 - 2.0*float64(y)/n)))
+	lat = maths.RadToDeg(lat)
 
 	return
 }
@@ -128,4 +138,15 @@ func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
 	}
 
 	return nil
+}
+
+// [2][2]float{{lat, lon}, {lat, lon}}
+func (t *Tile) ExtentDegrees() [2][2]float64 {
+	top, left := NumToDeg(t.z, t.x, t.y)
+	bottom, right := NumToDeg(t.z, t.x+1, t.y+1)
+
+	return [2][2]float64{
+		{top, left},
+		{bottom, right},
+	}
 }
