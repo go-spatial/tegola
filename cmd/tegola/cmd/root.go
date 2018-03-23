@@ -39,11 +39,13 @@ func init() {
 	// cache seed / purge
 	cacheCmd.Flags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
 	cacheCmd.Flags().StringVarP(&cacheZXY, "zxy", "", "", "tile in z/x/y format")
+	cacheCmd.Flags().StringVarP(&cacheFile, "file", "", "", "name of file with zxy values. values must be separated by newlines.")
 	cacheCmd.Flags().UintVarP(&cacheMinZoom, "minzoom", "", 0, "min zoom to seed cache from")
 	cacheCmd.Flags().UintVarP(&cacheMaxZoom, "maxzoom", "", 0, "max zoom to seed cache to")
 	cacheCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
 	cacheCmd.Flags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
 	cacheCmd.Flags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists")
+	cacheCmd.Flags().StringVarP(&cacheFormat, "format", "", "/zxy", "specify a format for tile zxy values with '{delimiter}{order}' (eg. '/zxy')")
 
 	RootCmd.AddCommand(cacheCmd)
 
