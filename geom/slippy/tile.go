@@ -16,6 +16,7 @@ func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {
 	}
 }
 
+// Tile describes a slippy tile.
 type Tile struct {
 	// zoom
 	z uint
@@ -32,8 +33,10 @@ type Tile struct {
 
 func (t *Tile) ZXY() (uint, uint, uint) { return t.z, t.x, t.y }
 
+// Tile2Lon will return the west most longitude
 func Tile2Lon(x, z uint) float64 { return float64(x)/math.Exp2(float64(z))*360.0 - 180.0 }
 
+// Tile2Lat will return the east most Latitude
 func Tile2Lat(y, z uint) float64 {
 	var n float64 = math.Pi
 	if y != 0 {

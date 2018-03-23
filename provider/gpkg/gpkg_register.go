@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
@@ -304,8 +305,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			wgs84BB := geom.NewExtent([2]float64{180.0, 85.0551}, [2]float64{-180.0, -85.0511})
-			customSQL = replaceTokens(customSQL, 0, wgs84BB)
+			customSQL = replaceTokens(customSQL, 0, tegola.WGS84Bounds)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)

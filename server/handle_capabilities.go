@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/geom"
 )
 
 type Capabilities struct {
@@ -16,7 +17,7 @@ type Capabilities struct {
 type CapabilitiesMap struct {
 	Name         string              `json:"name"`
 	Attribution  string              `json:"attribution"`
-	Bounds       [4]float64          `json:"bounds"`
+	Bounds       *geom.Extent        `json:"bounds"`
 	Center       [3]float64          `json:"center"`
 	Tiles        []string            `json:"tiles"`
 	Capabilities string              `json:"capabilities"`
@@ -45,7 +46,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	for _, m := range atlas.AllMaps() {
 		var debugQuery string
 
-		//	if we have a debug param add it to our URLs
+		// if we have a debug param add it to our URLs
 		if query.Get("debug") == "true" {
 			debugQuery = "?debug=true"
 
@@ -53,7 +54,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			m = m.AddDebugLayers()
 		}
 
-		//	build the map details
+		// build the map details
 		cMap := CapabilitiesMap{
 			Name:        m.Name,
 			Attribution: m.Attribution,
@@ -66,12 +67,12 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 
 		for i := range m.Layers {
-			//	check if the layer already exists in our slice. this can happen if the config
-			//	is using the "name" param for a layer to override the providerLayerName
+			// check if the layer already exists in our slice. this can happen if the config
+			// is using the "name" param for a layer to override the providerLayerName
 			var skip bool
 			for j := range cMap.Layers {
 				if cMap.Layers[j].Name == m.Layers[i].MVTName() {
-					//	we need to use the min and max of all layers with this name
+					// we need to use the min and max of all layers with this name
 					if cMap.Layers[j].MinZoom > m.Layers[i].MinZoom {
 						cMap.Layers[j].MinZoom = m.Layers[i].MinZoom
 					}
@@ -84,12 +85,12 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 					break
 				}
 			}
-			//	entry for layer already exists. move on
+			// entry for layer already exists. move on
 			if skip {
 				continue
 			}
 
-			//	build the layer details
+			// build the layer details
 			cLayer := CapabilitiesLayer{
 				Name: m.Layers[i].MVTName(),
 				Tiles: []string{
@@ -99,22 +100,22 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				MaxZoom: m.Layers[i].MaxZoom,
 			}
 
-			//	add the layer to the map
+			// add the layer to the map
 			cMap.Layers = append(cMap.Layers, cLayer)
 		}
 
-		//	add the map to the capabilities struct
+		// add the map to the capabilities struct
 		capabilities.Maps = append(capabilities.Maps, cMap)
 
-		//	content type
+		// content type
 		w.Header().Add("Content-Type", "application/json")
 
-		//	cache control headers (no-cache)
+		// cache control headers (no-cache)
 		w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Add("Pragma", "no-cache")
 		w.Header().Add("Expires", "0")
 	}
 
-	//	setup a new json encoder and encode our capabilities
+	// setup a new json encoder and encode our capabilities
 	json.NewEncoder(w).Encode(capabilities)
 }

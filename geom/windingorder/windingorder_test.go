@@ -2,10 +2,6 @@ package windingorder
 
 import "testing"
 
-func TestHelloWorld(t *testing.T) {
-	// t.Fatal("not implemented")
-}
-
 func TestAttributeMethods(t *testing.T) {
 
 	fn := func(val WindingOrder, isClockwise bool) {

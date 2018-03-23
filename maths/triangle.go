@@ -1025,7 +1025,7 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 			}
 			if tr1 == nil && tr2 == nil {
 				// zero area triangle.
-				// This can happened if an edge lays on the same line as another edge.
+				// This can happen if an edge lays on the same line as another edge.
 				continue
 			}
 			var trn1, trn2 *TriangleNode

@@ -17,6 +17,7 @@ type MinMaxer interface {
 }
 
 // Extent represents the minx, miny, maxx and maxy
+// A nil extent represents the whole universe.
 type Extent [4]float64
 
 /* ========================= ATTRIBUTES ========================= */
@@ -32,7 +33,7 @@ func (e *Extent) Vertices() [][2]float64 {
 	}
 }
 
-// ClockwiseFunc returns weather the set of points should be considered clockwise or counterclockwise. The last point is not the same as the first point, and the function should connect these poins as needed.
+// ClockwiseFunc returns weather the set of points should be considered clockwise or counterclockwise. The last point is not the same as the first point, and the function should connect these points as needed.
 type ClockwiseFunc func(...[2]float64) bool
 
 // Edges returns the clockwise order of the edges that make up the extent.
@@ -100,7 +101,7 @@ func (e *Extent) Extent() [4]float64 {
 }
 
 /* ========================= EXPANDING BOUNDING BOX ========================= */
-// Add will expand the boundong box to contain the given bounding box.
+// Add will expand the extent to contain the given extent.
 func (e *Extent) Add(extent MinMaxer) {
 	if e == nil {
 		return
@@ -119,7 +120,7 @@ func (e *Extent) Add(extent MinMaxer) {
 	}
 }
 
-// AddPoints will expand the bounding box to contain the given points.
+// AddPoints will expand the extent to contain the given points.
 func (e *Extent) AddPoints(points ...[2]float64) {
 	// A nil extent is all encompassing.
 	if e == nil {
@@ -132,15 +133,15 @@ func (e *Extent) AddPoints(points ...[2]float64) {
 	e.Add(extent)
 }
 
-// AsPolygon will return the bounding box as a Polygon
+// AsPolygon will return the extent as a Polygon
 func (e *Extent) AsPolygon() Polygon { return Polygon{e.Vertices()} }
 
-// Area returns the area of the bounding box, if the bounding box is nil, it will return 0
+// Area returns the area of the extent, if the extent is nil, it will return 0
 func (e *Extent) Area() float64 {
 	return math.Abs((e.MaxY() - e.MinY()) * (e.MaxX() - e.MinX()))
 }
 
-// NewExtent returns MinX, MinY, MaxX, MaxY
+// NewExtent returns an Extent for the provided points; in following format [4]float64{ MinX, MinY, MaxX, MaxY }
 func NewExtent(points ...[2]float64) *Extent {
 	var xy [2]float64
 	if len(points) == 0 {
@@ -171,9 +172,9 @@ func NewExtent(points ...[2]float64) *Extent {
 	return &extent
 }
 
-// Contains will return weather the given bounding box is inside of the bounding box.
+// Contains will return whether the given  extent is inside of the  extent.
 func (e *Extent) Contains(ne MinMaxer) bool {
-	// Nil bounding boxes contains the world.
+	// Nil extent contains the world.
 	if e == nil {
 		return true
 	}
@@ -186,7 +187,7 @@ func (e *Extent) Contains(ne MinMaxer) bool {
 		e.MaxY() >= ne.MaxY()
 }
 
-// ContainsPoint will return weather the given point is inside of the bounding box.
+// ContainsPoint will return whether the given point is inside of the extent.
 func (e *Extent) ContainsPoint(pt [2]float64) bool {
 	if e == nil {
 		return true
@@ -195,7 +196,7 @@ func (e *Extent) ContainsPoint(pt [2]float64) bool {
 		e.MinY() <= pt[1] && pt[1] <= e.MaxY()
 }
 
-// ContainsLine will return weather the given line completely inside of the bounding box.
+// ContainsLine will return weather the given line completely inside of the extent.
 func (e *Extent) ContainsLine(l [2][2]float64) bool {
 	if e == nil {
 		return true
@@ -203,7 +204,7 @@ func (e *Extent) ContainsLine(l [2][2]float64) bool {
 	return e.ContainsPoint(l[0]) && e.ContainsPoint(l[1])
 }
 
-// ScaleBy will scale the points in the bounding box by the given scale factor.
+// ScaleBy will scale the points in the extent by the given scale factor.
 func (e *Extent) ScaleBy(s float64) *Extent {
 	if e == nil {
 		return nil
@@ -214,7 +215,7 @@ func (e *Extent) ScaleBy(s float64) *Extent {
 	)
 }
 
-// ExpandBy will expand bounding box by the given factor.
+// ExpandBy will expand extent by the given factor.
 func (e *Extent) ExpandBy(s float64) *Extent {
 	if e == nil {
 		return nil
@@ -232,7 +233,7 @@ func (e *Extent) Clone() *Extent {
 	return &Extent{e[0], e[1], e[2], e[3]}
 }
 
-// Intersect will returns a new bounding box that is the intersect of the two bounding boxes.
+// Intersect will return a new extent that is the intersect of the two extents.
 //
 //	+-------------------------+
 //	|                         |
@@ -247,10 +248,11 @@ func (e *Extent) Clone() *Extent {
 //
 // If the Boxes don't intersect does will be false, otherwise ibb will be the intersect.
 func (e *Extent) Intersect(ne *Extent) (*Extent, bool) {
-	// if e in nil, then the intersect is nbb.
+	// if e in nil, then the intersect is ne. As a nil extent is the whole universe.
 	if e == nil {
 		return ne.Clone(), true
 	}
+	// if ne is nil, then the intersect is e. As a nil extent is the whole universe.
 	if ne == nil {
 		return e.Clone(), true
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/provider"
 	_ "github.com/go-spatial/tegola/provider/debug"
 	_ "github.com/go-spatial/tegola/provider/gpkg"
@@ -95,7 +96,7 @@ func initConfig() {
 }
 
 func initCache(config map[string]interface{}) (cache.Interface, error) {
-	//	lookup our cache type
+	// lookup our cache type
 	t, ok := config["type"]
 	if !ok {
 		return nil, fmt.Errorf("missing 'type' parameter for cache")
@@ -106,53 +107,56 @@ func initCache(config map[string]interface{}) (cache.Interface, error) {
 		return nil, fmt.Errorf("'type' parameter for cache must be of type string")
 	}
 
-	//	register the provider
+	// register the provider
 	return cache.For(cType, config)
 }
 
-//	initMaps registers maps with our server
+// initMaps registers maps with our server
 func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 
-	//	iterate our maps
+	// iterate our maps
 	for _, m := range maps {
 		newMap := atlas.NewWebMercatorMap(m.Name)
 		newMap.Attribution = html.EscapeString(m.Attribution)
 		newMap.Center = m.Center
 
 		if len(m.Bounds) == 4 {
-			newMap.Bounds = [4]float64{m.Bounds[0], m.Bounds[1], m.Bounds[2], m.Bounds[3]}
+			newMap.Bounds = geom.NewExtent(
+				[2]float64{m.Bounds[0], m.Bounds[1]},
+				[2]float64{m.Bounds[2], m.Bounds[3]},
+			)
 		}
 
-		//	iterate our layers
+		// iterate our layers
 		for _, l := range m.Layers {
-			//	split our provider name (provider.layer) into [provider,layer]
+			// split our provider name (provider.layer) into [provider,layer]
 			providerLayer := strings.Split(l.ProviderLayer, ".")
 
-			//	we're expecting two params in the provider layer definition
+			// we're expecting two params in the provider layer definition
 			if len(providerLayer) != 2 {
 				return fmt.Errorf("invalid provider layer (%v) for map (%v)", l.ProviderLayer, m)
 			}
 
-			//	lookup our proivder
+			// lookup our proivder
 			provider, ok := providers[providerLayer[0]]
 			if !ok {
 				return fmt.Errorf("provider (%v) not defined", providerLayer[0])
 			}
 
-			//	read the provider's layer names
+			// read the provider's layer names
 			layerInfos, err := provider.Layers()
 			if err != nil {
 				return fmt.Errorf("error fetching layer info from provider (%v)", providerLayer[0])
 			}
 
-			//	confirm our providerLayer name is registered
+			// confirm our providerLayer name is registered
 			var found bool
 			var layerGeomType tegola.Geometry
 			for i := range layerInfos {
 				if layerInfos[i].Name() == providerLayer[1] {
 					found = true
 
-					//	read the layerGeomType
+					// read the layerGeomType
 					layerGeomType = layerInfos[i].GeomType()
 				}
 			}
@@ -169,7 +173,7 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 				}
 			}
 
-			//	add our layer to our layers slice
+			// add our layer to our layers slice
 			newMap.Layers = append(newMap.Layers, atlas.Layer{
 				Name:              l.Name,
 				ProviderLayerName: providerLayer[1],
@@ -182,7 +186,7 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 			})
 		}
 
-		//	register map
+		// register map
 		atlas.AddMap(newMap)
 	}
 
@@ -192,12 +196,12 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 func initProviders(providers []map[string]interface{}) (map[string]provider.Tiler, error) {
 	var err error
 
-	//	holder for registered providers
+	// holder for registered providers
 	registeredProviders := map[string]provider.Tiler{}
 
-	//	iterate providers
+	// iterate providers
 	for _, p := range providers {
-		//	lookup our proivder name
+		// lookup our proivder name
 		n, ok := p["name"]
 		if !ok {
 			return registeredProviders, errors.New("missing 'name' parameter for provider")
@@ -208,13 +212,13 @@ func initProviders(providers []map[string]interface{}) (map[string]provider.Tile
 			return registeredProviders, fmt.Errorf("'name' or provider must be of type string")
 		}
 
-		//	check if a proivder with this name is alrady registered
+		// check if a proivder with this name is alrady registered
 		_, ok = registeredProviders[pname]
 		if ok {
 			return registeredProviders, fmt.Errorf("provider (%v) already registered!", pname)
 		}
 
-		//	lookup our provider type
+		// lookup our provider type
 		t, ok := p["type"]
 		if !ok {
 			return registeredProviders, fmt.Errorf("missing 'type' parameter for provider (%v)", pname)
@@ -225,13 +229,13 @@ func initProviders(providers []map[string]interface{}) (map[string]provider.Tile
 			return registeredProviders, fmt.Errorf("'type' for provider (%v) must be a string", pname)
 		}
 
-		//	register the provider
+		// register the provider
 		prov, err := provider.For(ptype, p)
 		if err != nil {
 			return registeredProviders, err
 		}
 
-		//	add the provider to our map of registered providers
+		// add the provider to our map of registered providers
 		registeredProviders[pname] = prov
 	}
 

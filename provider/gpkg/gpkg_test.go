@@ -314,10 +314,6 @@ func TestTileFeatures(t *testing.T) {
 			tile: MockTile{
 				srid: tegola.WGS84,
 				bufferedExtent: geom.NewExtent(
-					/*
-						{23.6, 38.0},
-						{23.8, 37.8},
-					*/
 					[2]float64{23.6, 37.8},
 					[2]float64{23.8, 38.0},
 				),
