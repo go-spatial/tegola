@@ -102,9 +102,9 @@ var cacheCmd = &cobra.Command{
 			}
 		}
 
-		tiles := make(chan *slippy.Tile)
+		tileChan := make(chan *slippy.Tile)
 		go func() {
-			err := sendTiles(zooms, tiles)
+			err := sendTiles(zooms, tileChan)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -153,7 +153,7 @@ var cacheCmd = &cobra.Command{
 			//	Done() will be called after close(channel) is called and the final job this seedWorker is processing completes
 		}
 
-		for tile := range tiles {
+		for tile := range tileChan {
 			for m := range maps {
 				mapTile := MapTile{
 					MapName: maps[m].Name,
