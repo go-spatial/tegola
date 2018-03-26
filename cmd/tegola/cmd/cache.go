@@ -103,7 +103,12 @@ var cacheCmd = &cobra.Command{
 		}
 
 		tiles := make(chan *slippy.Tile)
-		go sendTiles(zooms, tiles)
+		go func() {
+			err := sendTiles(zooms, tiles)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 
 		log.Info("zoom list: ", zooms)
 		//	setup a waitgroup
@@ -129,11 +134,16 @@ var cacheCmd = &cobra.Command{
 						continue
 					}
 					//	we will only have a single command arg so we can switch on index 0
+					var err error
 					switch args[0] {
 					case "seed":
-						seedWorker(ctx, mt)
+						err = seedWorker(ctx, mt)
 					case "purge":
-						purgeWorker(mt)
+						err = purgeWorker(mt)
+					}
+
+					if err != nil {
+						log.Fatal(err)
 					}
 				}
 
@@ -279,14 +289,14 @@ func parseTileString(format, str string) (*slippy.Tile, error) {
 	return tile, nil
 }
 
-func seedWorker(ctx context.Context, mt MapTile) {
+func seedWorker(ctx context.Context, mt MapTile) error {
 	//	track how long the tile generation is taking
 	t := time.Now()
 
 	//	lookup the Map
 	m, err := atlas.GetMap(mt.MapName)
 	if err != nil {
-		log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
+		return fmt.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
 	}
 
 	z, x, y := mt.Tile.ZXY()
@@ -299,7 +309,7 @@ func seedWorker(ctx context.Context, mt MapTile) {
 		//	lookup our cache
 		c := atlas.GetCache()
 		if c == nil {
-			log.Fatalf("error fetching cache: %v", err)
+			return fmt.Errorf("error fetching cache: %v", err)
 		}
 
 		//	cache key
@@ -313,12 +323,12 @@ func seedWorker(ctx context.Context, mt MapTile) {
 		//	read the tile from the cache
 		_, hit, err := c.Get(&key)
 		if err != nil {
-			log.Fatal("error reading from cache: %v", err)
+			return fmt.Errorf("error reading from cache: %v", err)
 		}
 		//	if we have a cache hit, then skip processing this tile
 		if hit {
 			log.Infof("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, z, x, y)
-			return
+			return nil
 		}
 	}
 
@@ -329,8 +339,7 @@ func seedWorker(ctx context.Context, mt MapTile) {
 
 	//	seed the tile
 	if err = atlas.SeedMapTile(ctx, m, z, x, y); err != nil {
-		log.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
-		return
+		return fmt.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
 	}
 
 	//	TODO: this is a hack to get around large arrays not being garbage collected
@@ -338,9 +347,11 @@ func seedWorker(ctx context.Context, mt MapTile) {
 	runtime.GC()
 
 	log.Infof("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, z, x, y, time.Now().Sub(t))
+
+	return nil
 }
 
-func purgeWorker(mt MapTile) {
+func purgeWorker(mt MapTile) error {
 
 	z, x, y := mt.Tile.ZXY()
 
@@ -349,22 +360,24 @@ func purgeWorker(mt MapTile) {
 	//	lookup the Map
 	m, err := atlas.GetMap(mt.MapName)
 	if err != nil {
-		log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
+		return fmt.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
 	}
 
 	//	purge the tile
 	ttile := tegola.NewTile(mt.Tile.ZXY())
 	if err = atlas.PurgeMapTile(m, ttile); err != nil {
-		log.Errorf("error purging tile (%+v): %v", mt.Tile, err)
+		return fmt.Errorf("error purging tile (%+v): %v", mt.Tile, err)
 	}
+
+	return nil
 }
 
-func sendTiles(zooms []uint, c chan *slippy.Tile) {
+func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 	defer close(c)
 
 	format, err := NewFormat(cacheFormat)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if cacheZXY != "" {
@@ -372,12 +385,11 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 		//	convert the input into a tile
 		z, x, y, err := format.Parse(cacheZXY)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		tile := slippy.NewTile(z, x, y, 0, tegola.WebMercator)
 
-	ZoomLoop:
 		for _, zoom := range zooms {
 			err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
 				if gdcmd.IsCancelled() {
@@ -388,23 +400,24 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 				return nil
 			})
 
+			// graceful stop if cancelled
 			if err != nil {
-				break ZoomLoop
+				return nil
 			}
 		}
 	} else if cacheFile != "" {
 		// read xyz from a file
 		f, err := os.Open(cacheFile)
 		if err != nil {
-			log.Fatal("could not open file")
+			return fmt.Errorf("could not open file")
 		}
 
 		scanner := bufio.NewScanner(f)
-	ScanLoop:
+
 		for scanner.Scan() {
 			z, x, y, err := format.Parse(scanner.Text())
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			tile := slippy.NewTile(z, x, y, 0, tegola.WebMercator)
 
@@ -419,8 +432,9 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 					return nil
 				})
 
+				// graceful stop if cancelled
 				if err != nil {
-					break ScanLoop
+					return nil
 				}
 			}
 		}
@@ -428,7 +442,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 		// bounding box caching
 		boundsParts := strings.Split(cacheBounds, ",")
 		if len(boundsParts) != 4 {
-			log.Fatal("invalid value for bounds. expecting minx, miny, maxx, maxy")
+			return fmt.Errorf("invalid value for bounds. expecting minx, miny, maxx, maxy")
 		}
 
 		var err error
@@ -437,7 +451,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 		for i := range boundsParts {
 			bounds[i], err = strconv.ParseFloat(boundsParts[i], 64)
 			if err != nil {
-				log.Fatalf("invalid value for bounds (%v). must be a float64", boundsParts[i])
+				return fmt.Errorf("invalid value for bounds (%v). must be a float64", boundsParts[i])
 			}
 		}
 
@@ -450,8 +464,6 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 		_, xf, yf := bottomRight.ZXY()
 
 		// TODO (@ear7h): find a way to keep from doing the same tile twice
-
-	PanLoop:
 		for x := xi; x <= xf; x ++ {
 			for y := yi; y <= yf; y++ {
 				root := slippy.NewTile(maxZoom, x, y, 0, tegola.WebMercator)
@@ -466,11 +478,15 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 						return nil
 					})
 
+					// graceful stop if cancelled
 					if err != nil {
-						break PanLoop
+						return nil
 					}
 				}
 			}
 		}
 	}
+
+	// no returns within the if blocks so it must be done here
+	return nil
 }
