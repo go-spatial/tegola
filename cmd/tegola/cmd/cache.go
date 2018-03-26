@@ -22,6 +22,7 @@ import (
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/geom/slippy"
+	"errors"
 )
 
 var (
@@ -170,6 +171,78 @@ type MapTile struct {
 	Tile    *slippy.Tile
 }
 
+type Format struct {
+	X, Y, Z uint
+	Sep     string
+}
+
+var ErrFormat = errors.New("Invalid format")
+var df = Format{
+	X:   0,
+	Y:   1,
+	Z:   2,
+	Sep: "/",
+}
+
+func NewFormat(format string) (Format, error) {
+	// if empty return default
+	if format == "" {
+		return df, nil
+	}
+
+	// assert length of format string is 4
+	if len(format) != 4 {
+		return df, ErrFormat
+	}
+
+	// check separator
+	sep := format[0:1]
+	if strings.ContainsAny(sep, "0123456789") {
+		return df, ErrFormat
+	}
+
+	format = format[1:]
+
+	ix := strings.Index(format, "x")
+	iy := strings.Index(format, "y")
+	iz := strings.Index(format, "z")
+
+	return Format{uint(ix), uint(iy), uint(iz), sep}, nil
+}
+
+func (f Format) String() string {
+	var v [3]string
+	v[f.X], v[f.Y], v[f.Z] = "x", "y", "z"
+	return fmt.Sprintf("%[2]s%[1]s%[3]s%[1]s%[4]s", f.Sep, v[0], v[1], v[2])
+}
+
+func (f Format) Parse(val string) (z, x, y uint, err error) {
+	parts := strings.Split(val, f.Sep)
+	if len(parts) != 3 {
+		return 0, 0, 0, fmt.Errorf("invalid zxy value (%v). expecting the format %v", val, f)
+	}
+
+	zi, err := strconv.ParseUint(parts[f.Z], 10, 64)
+	if err != nil || zi > tegola.MaxZ {
+		return 0, 0, 0, fmt.Errorf("invalid Z value (%v)", zi)
+	}
+
+	maxXYatZ := maths.Exp2(zi) - 1
+
+	xi, err := strconv.ParseUint(parts[f.X], 10, 64)
+	if err != nil || xi > maxXYatZ {
+		return 0, 0, 0, fmt.Errorf("invalid X value (%v)", xi)
+	}
+
+	yi, err := strconv.ParseUint(parts[f.Y], 10, 64)
+	if err != nil || yi > maxXYatZ {
+		return 0, 0, 0, fmt.Errorf("invalid Y value (%v)", yi)
+	}
+
+	return uint(zi), uint(xi), uint(yi), nil
+
+}
+
 // parseTileString converts a Z/X/Y formatted string into a tegola tile
 // format string "{delim}{order}" (ex. "/zxy", " zxy", ",zxy"
 func parseTileString(format, str string) (*slippy.Tile, error) {
@@ -287,13 +360,22 @@ func purgeWorker(mt MapTile) {
 }
 
 func sendTiles(zooms []uint, c chan *slippy.Tile) {
+	defer close(c)
+
+	format, err := NewFormat(cacheFormat)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if cacheZXY != "" {
 		// single xyz
 		//	convert the input into a tile
-		tile, err := parseTileString(cacheFormat, cacheZXY)
+		z, x, y, err := format.Parse(cacheZXY)
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		tile := slippy.NewTile(z, x, y, 0, tegola.WebMercator)
 
 	ZoomLoop:
 		for _, zoom := range zooms {
@@ -310,8 +392,6 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 				break ZoomLoop
 			}
 		}
-
-		close(c)
 	} else if cacheFile != "" {
 		// read xyz from a file
 		f, err := os.Open(cacheFile)
@@ -322,10 +402,11 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 		scanner := bufio.NewScanner(f)
 	ScanLoop:
 		for scanner.Scan() {
-			tile, err := parseTileString(cacheFormat, scanner.Text())
+			z, x, y, err := format.Parse(scanner.Text())
 			if err != nil {
 				log.Fatal(err)
 			}
+			tile := slippy.NewTile(z, x, y, 0, tegola.WebMercator)
 
 			// range
 			for _, zoom := range zooms {
@@ -343,8 +424,6 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 				}
 			}
 		}
-
-		close(c)
 	} else {
 		// bounding box caching
 		boundsParts := strings.Split(cacheBounds, ",")
@@ -393,7 +472,5 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) {
 				}
 			}
 		}
-
-		close(c)
 	}
 }
