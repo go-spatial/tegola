@@ -1,15 +1,16 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"os"
-	"bufio"
 
 	"github.com/spf13/cobra"
 
@@ -18,11 +19,10 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/go-spatial/tegola/geom/slippy"
-	"errors"
 )
 
 var (
@@ -464,7 +464,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		_, xf, yf := bottomRight.ZXY()
 
 		// TODO (@ear7h): find a way to keep from doing the same tile twice
-		for x := xi; x <= xf; x ++ {
+		for x := xi; x <= xf; x++ {
 			for y := yi; y <= yf; y++ {
 				root := slippy.NewTile(maxZoom, x, y, 0, tegola.WebMercator)
 
