@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"os"
+	"bufio"
 
 	"github.com/spf13/cobra"
 
@@ -20,8 +22,6 @@ import (
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/geom/slippy"
-	"os"
-	"bufio"
 )
 
 var (
@@ -180,7 +180,6 @@ func parseTileString(format, str string) (*slippy.Tile, error) {
 	iz := strings.Index(format, "z") - 1
 
 	parts := strings.Split(str, format[:1])
-	//parts := strings.Split(str, "/")
 	if len(parts) != 3 {
 		return tile, fmt.Errorf("invalid zxy value (%v). expecting the format z/x/y", str)
 	}
