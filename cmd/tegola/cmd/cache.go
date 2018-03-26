@@ -250,43 +250,6 @@ func (f Format) Parse(val string) (z, x, y uint, err error) {
 	}
 
 	return uint(zi), uint(xi), uint(yi), nil
-
-}
-
-// parseTileString converts a Z/X/Y formatted string into a tegola tile
-// format string "{delim}{order}" (ex. "/zxy", " zxy", ",zxy"
-func parseTileString(format, str string) (*slippy.Tile, error) {
-	var tile *slippy.Tile
-
-	ix := 1
-	iy := strings.Index(format, "y") - 1
-	iz := strings.Index(format, "z") - 1
-
-	parts := strings.Split(str, format[:1])
-	if len(parts) != 3 {
-		return tile, fmt.Errorf("invalid zxy value (%v). expecting the format z/x/y", str)
-	}
-
-	z, err := strconv.ParseUint(parts[iz], 10, 64)
-	if err != nil || z > tegola.MaxZ {
-		return tile, fmt.Errorf("invalid Z value (%v)", z)
-	}
-
-	maxXYatZ := maths.Exp2(z) - 1
-
-	x, err := strconv.ParseUint(parts[ix], 10, 64)
-	if err != nil || x > maxXYatZ {
-		return tile, fmt.Errorf("invalid X value (%v)", x)
-	}
-
-	y, err := strconv.ParseUint(parts[iy], 10, 64)
-	if err != nil || y > maxXYatZ {
-		return tile, fmt.Errorf("invalid Y value (%v)", y)
-	}
-
-	tile = slippy.NewTile(uint(z), uint(x), uint(y), 0, tegola.WebMercator)
-
-	return tile, nil
 }
 
 func seedWorker(ctx context.Context, mt MapTile) error {
