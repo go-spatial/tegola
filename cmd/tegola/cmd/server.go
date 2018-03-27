@@ -21,28 +21,28 @@ var serverCmd = &cobra.Command{
 		initConfig()
 		gdcmd.OnComplete(provider.Cleanup)
 
-		//	check config for server port setting
-		//	if you set the port via the comand line it will override the port setting in the config
+		// check config for server port setting
+		// if you set the port via the comand line it will override the port setting in the config
 		if serverPort == defaultHTTPPort && conf.Webserver.Port != "" {
 			serverPort = conf.Webserver.Port
 		}
 
-		//	set our server version
+		// set our server version
 		server.Version = Version
 		server.HostName = conf.Webserver.HostName
 
-		//	set the CORSAllowedOrigin if a value is provided
+		// set the CORSAllowedOrigin if a value is provided
 		if conf.Webserver.CORSAllowedOrigin != "" {
 			server.CORSAllowedOrigin = conf.Webserver.CORSAllowedOrigin
 		}
 
-		//	set tile buffer
+		// set tile buffer
 		if conf.TileBuffer > 0 {
 			server.TileBuffer = float64(conf.TileBuffer)
 		}
 
-		//	start our webserver
 		srv := server.Start(serverPort)
+		// start our webserver
 		shutdown(srv)
 		<-gdcmd.Cancelled()
 		gdcmd.Complete()

@@ -17,21 +17,23 @@ import (
 )
 
 type HandleMapLayerZXY struct {
-	//	required
+	// required
 	mapName string
-	//	optional
+	// optional
 	layerName string
-	//	zoom
+	// zoom
 	z uint
-	//	row
+	// row
 	x uint
-	//	column
+	// column
 	y uint
-	//	the requests extension (i.e. pbf or json)
-	//	defaults to "pbf"
+	// the requests extension (i.e. pbf or json)
+	// defaults to "pbf"
 	extension string
-	//	debug
+	// debug
 	debug bool
+	// the Atlas to use, nil (default) is the default atlas
+	Atlas *atlas.Atlas
 }
 
 //	parseURI reads the request URI and extracts the various values for the request
