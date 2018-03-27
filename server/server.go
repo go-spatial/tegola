@@ -32,8 +32,8 @@ var (
 	TileBuffer float64 = tegola.DefaultTileBuffer
 )
 
-func Start(port string) *http.Server {
 // Start starts the tile server binding to the provided port
+func Start(a *atlas.Atlas, port string) *http.Server {
 
 	// notify the user the server is starting
 	log.Infof("starting tegola server on port %v", port)
@@ -47,18 +47,39 @@ func Start(port string) *http.Server {
 	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
 	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
 
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapZXY{})))
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", CORSHandler(HandleMapZXY{}))
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
-	// map tiles
+	{ // map tiles
 
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapLayerZXY{})))
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(HandleMapLayerZXY{}))
-	 // map layer tiles
+		hmzxy := HandleMapZXY{Atlas: a}
+		group.UsingContext().Handler(
+			"GET", hmzxy.Scheme(),
+			CORSHandler(TileCacheHandler(a, hmzxy)),
+		)
+		group.UsingContext().Handler(
+			"OPTIONS", hmzxy.Scheme(),
+			CORSHandler(hmzxy),
+		)
+		group.UsingContext().Handler(
+			"GET", "/maps/:map_name/style.json",
+			CORSHandler(hmzxy),
+		)
+	}
 
-	group.UsingContext().Handler("GET", "/", http.FileServer(assetFS()))
-	group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
-	 // static convenience routes
+	{ // map layer tiles
+		hmlzxy := HandleMapLayerZXY{Atlas: a}
+		group.UsingContext().Handler(
+			"GET", hmlzxy.Scheme(),
+			CORSHandler(TileCacheHandler(a, hmlzxy)),
+		)
+		group.UsingContext().Handler(
+			"OPTIONS", hmlzxy.Scheme(),
+			CORSHandler(hmlzxy),
+		)
+	}
+
+	{ // static convenience routes
+		group.UsingContext().Handler("GET", "/", http.FileServer(assetFS()))
+		group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
+	}
 
 	// start our server
 	srv := &http.Server{Addr: port, Handler: r}

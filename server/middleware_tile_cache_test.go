@@ -37,7 +37,11 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 		router := httptreemux.New()
 		//	setup a new router group
 		group := router.NewGroup("/")
-		group.UsingContext().Handler("GET", test.uriPattern, server.TileCacheHandler(test.reqHandler))
+		group.UsingContext().Handler(
+			"GET",
+			test.uriPattern,
+			server.TileCacheHandler(nil, test.reqHandler),
+		)
 
 		r, err := http.NewRequest("GET", test.uri, nil)
 		if err != nil {

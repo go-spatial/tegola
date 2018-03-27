@@ -41,8 +41,8 @@ var serverCmd = &cobra.Command{
 			server.TileBuffer = float64(conf.TileBuffer)
 		}
 
-		srv := server.Start(serverPort)
 		// start our webserver
+		srv := server.Start(nil, serverPort)
 		shutdown(srv)
 		<-gdcmd.Cancelled()
 		gdcmd.Complete()

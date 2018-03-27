@@ -55,6 +55,20 @@ var testLayer3 = atlas.Layer{
 	DefaultTags:       map[string]interface{}{},
 }
 
+func newTestMapWithLayers(layers ...atlas.Layer) *atlas.Atlas {
+
+	testMap := atlas.NewWebMercatorMap(testMapName)
+	testMap.Attribution = testMapAttribution
+	testMap.Center = testMapCenter
+	testMap.Layers = append(testMap.Layers, layers...)
+
+	a := &atlas.Atlas{}
+	a.SetCache(memory.New())
+	a.AddMap(testMap)
+
+	return a
+}
+
 // pre test setup phase
 func init() {
 	server.Version = serverVersion
@@ -63,16 +77,14 @@ func init() {
 	testMap := atlas.NewWebMercatorMap(testMapName)
 	testMap.Attribution = testMapAttribution
 	testMap.Center = testMapCenter
-	testMap.Layers = append(testMap.Layers, []atlas.Layer{
+	testMap.Layers = append(testMap.Layers,
 		testLayer1,
 		testLayer2,
 		testLayer3,
-	}...)
+	)
 
 	atlas.SetCache(memory.New())
 
 	// register a map with atlas
 	atlas.AddMap(testMap)
-
-	server.Atlas = atlas.DefaultAtlas
 }

@@ -92,6 +92,8 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	return nil
 }
 
+func (req HandleMapLayerZXY) Scheme() string { return "/maps/:map_name/:layer_name/:z/:x/:y" }
+
 //	URI scheme: /maps/:map_name/:layer_name/:z/:x/:y
 //	map_name - map name in the config file
 //	layer_name - name of the single map layer to render
@@ -107,7 +109,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//	lookup our Map
-	m, err := atlas.GetMap(req.mapName)
+	m, err := req.Atlas.Map(req.mapName)
 	if err != nil {
 		errMsg := fmt.Sprintf("map (%v) not configured. check your config file", req.mapName)
 		log.Errorf(errMsg)
