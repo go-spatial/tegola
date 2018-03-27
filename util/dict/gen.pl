@@ -39,17 +39,20 @@ for my $T ( @types ) {
 func (m M) $fnName(key string, def $T_ptr)(v $T, err error){
     var val interface{}
     var ok bool
-    if val, ok = m[key]; !ok {
+    if val, ok = m[key]; !ok || val == nil{
         if def != nil {
             return \*def, nil
         }
-        return v, fmt.Errorf("%v value is required.",key)
+        return v, fmt.Errorf("%v value is required.", key)
     }
-    if v, ok = val.($T); !ok {
-        if def == nil {
-              return v, nil
-        }
-        return \*def, fmt.Errorf("%v value needs to be of type ${T}. Value is of type %T", key, val)
+
+    switch placeholder := val.(type) {
+        case $T:
+            v = placeholder
+        case $T_ptr:
+            v = \*placeholder
+        default:
+            return v, fmt.Errorf("%v value needs to be of type ${T}. Value is of type %T", key, val)
     }
     return v, nil
 }

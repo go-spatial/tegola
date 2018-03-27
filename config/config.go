@@ -55,8 +55,8 @@ type MapLayer struct {
 	// Name can also be used to group multiple ProviderLayers under the same namespace.
 	Name          string      `toml:"name"`
 	ProviderLayer string      `toml:"provider_layer"`
-	MinZoom       uint        `toml:"min_zoom"`
-	MaxZoom       uint        `toml:"max_zoom"`
+	MinZoom       *uint       `toml:"min_zoom"`
+	MaxZoom       *uint       `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
 	// DontSimplify indicates wheather feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify
@@ -93,18 +93,30 @@ func (c *Config) Validate() error {
 			if err != nil {
 				return err
 			}
-			if l.MaxZoom > tegola.MaxZ {
+
+			// MaxZoom default
+			if l.MaxZoom == nil {
+				ph := uint(tegola.MaxZ)
+				l.MaxZoom = &ph
+			}
+			// MinZoom default
+			if l.MinZoom == nil {
+				ph := uint(0)
+				l.MinZoom = &ph
+			}
+
+			if *l.MaxZoom > tegola.MaxZ {
 				return ErrInvalidLayerZoom{
 					ProviderLayer: l.ProviderLayer,
-					Zoom:          int(l.MaxZoom),
+					Zoom:          int(*l.MaxZoom),
 					ZoomLimit:     tegola.MaxZ,
 				}
 			}
 
-			// check if we already have this layer
+			//	check if we already have this layer
 			if val, ok := mapLayers[m.Name][name]; ok {
-				// we have a hit. check for zoom range overlap
-				if val.MinZoom <= l.MaxZoom && l.MinZoom <= val.MaxZoom {
+				//	we have a hit. check for zoom range overlap
+				if *val.MinZoom <= *l.MaxZoom && *l.MinZoom <= *val.MaxZoom {
 					return ErrOverlappingLayerZooms{
 						ProviderLayer1: val.ProviderLayer,
 						ProviderLayer2: l.ProviderLayer,

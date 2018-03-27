@@ -11,7 +11,7 @@ By participating, you are expected to uphold this code. Please report unacceptab
 
 ### Found a bug or something doesn’t feel right?
 
-Everything we do is done through [issues](https://github.com/go-spatial/tegola/issues)(https://github.com/go-spatial/tegola/issues). The first thing to do is to search the current issues to see if it is something that has been reported or requested already. If you are unable to find an issue that is similar or are unsure just file a new issue. If you find one that is similar, you can add a comment to add additional details, or if you have nothing new to add you can “+1” the issue.
+Everything we do is done through [issues](https://github.com/go-spatial/tegola/issues). The first thing to do is to search the current issues to see if it is something that has been reported or requested already. If you are unable to find an issue that is similar or are unsure just file a new issue. If you find one that is similar, you can add a comment to add additional details, or if you have nothing new to add you can “+1” the issue.
 
 * If you are unable to find an issue that is similar or are unsure go ahead and file a new one. 
 * If it is a bug your can use the following [template](https://github.com/go-spatial/tegola/issues/new?template=bug.md). 

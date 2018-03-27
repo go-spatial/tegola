@@ -177,8 +177,8 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 			newMap.Layers = append(newMap.Layers, atlas.Layer{
 				Name:              l.Name,
 				ProviderLayerName: providerLayer[1],
-				MinZoom:           l.MinZoom,
-				MaxZoom:           l.MaxZoom,
+				MinZoom:           *l.MinZoom,
+				MaxZoom:           *l.MaxZoom,
 				Provider:          provider,
 				DefaultTags:       defaultTags,
 				GeomType:          layerGeomType,
