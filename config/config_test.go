@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/config"
 )
 
@@ -521,6 +522,52 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			expectedErr: nil,
+		},
+		"4": {
+			config: config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					Port: ":8080",
+				},
+				Providers: []map[string]interface{}{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water",
+								MaxZoom:       34,
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrInvalidLayerZoom{
+				ProviderLayer: "provider1.water",
+				Zoom:          34,
+				ZoomLimit:     tegola.MaxZ,
+			},
 		},
 	}
 

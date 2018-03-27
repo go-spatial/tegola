@@ -16,6 +16,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
@@ -62,6 +63,20 @@ type MapLayer struct {
 	DontSimplify bool `toml:"dont_simplify"`
 }
 
+// GetName helper to get the name we care about.
+func (ml MapLayer) GetName() (string, error) {
+	if ml.Name != "" {
+		return ml.Name, nil
+	}
+	// split the provider layer (syntax is provider.layer)
+	plParts := strings.Split(ml.ProviderLayer, ".")
+	if len(plParts) != 2 {
+		return "", ErrInvalidProviderLayerName{ProviderLayerName: ml.ProviderLayer}
+	}
+
+	return plParts[1], nil
+}
+
 // checks the config for issues
 func (c *Config) Validate() error {
 
@@ -74,20 +89,16 @@ func (c *Config) Validate() error {
 		}
 
 		for _, l := range m.Layers {
-			var name string
-
-			if l.Name != "" {
-				name = l.Name
-			} else {
-				//	split the provider layer (syntax is provider.layer)
-				plParts := strings.Split(l.ProviderLayer, ".")
-				if len(plParts) != 2 {
-					return ErrInvalidProviderLayerName{
-						ProviderLayerName: l.ProviderLayer,
-					}
+			name, err := l.GetName()
+			if err != nil {
+				return err
+			}
+			if l.MaxZoom > tegola.MaxZ {
+				return ErrInvalidLayerZoom{
+					ProviderLayer: l.ProviderLayer,
+					Zoom:          int(l.MaxZoom),
+					ZoomLimit:     tegola.MaxZ,
 				}
-
-				name = plParts[1]
 			}
 
 			// check if we already have this layer

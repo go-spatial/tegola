@@ -120,6 +120,13 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// filter down the layers we need for this zoom
 	m = m.FilterLayersByZoom(req.z)
 
+	// We filtered out all the layers.
+	if len(m.Layers) == 0 {
+		log.Infof("map (%v) has no layers, at zoom %v", req.mapName, req.z)
+		http.Error(w, fmt.Sprintf("map (%v) has no layers, at zoom %v", req.mapName, req.z), http.StatusBadRequest)
+		return
+	}
+
 	// check for the debug query string
 	if req.debug {
 		m = m.AddDebugLayers()
