@@ -25,7 +25,7 @@ type HandleMapCapabilities struct {
 // tileJSON spec (https://github.com/mapbox/tilejson-spec/tree/master/2.1.0)
 //
 // URI scheme: /capabilities/:map_name.json
-//	map_name - map name in the config file
+// map_name - map name in the config file
 func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	params := httptreemux.ContextParams(r.Context())

@@ -48,7 +48,7 @@ func TestHostName(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		//	set the package variable
+		// set the package variable
 		HostName = tc.hostName
 		Port = tc.port
 

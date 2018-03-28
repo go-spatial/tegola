@@ -16,13 +16,13 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 // Config represents a tegola config file.
 type Config struct {
-	//	the tile buffer to use
+	// the tile buffer to use
 	TileBuffer int64 `toml:"tile_buffer"`
 	// LocationName is the file name or http server that the config was read from.
 	// If this is an empty string, it means that the location was unknown. This is the case if
@@ -51,23 +51,23 @@ type Map struct {
 }
 
 type MapLayer struct {
-	//	Name is optional. If it's not defined the name of the ProviderLayer will be used.
-	//	Name can also be used to group multiple ProviderLayers under the same namespace.
+	// Name is optional. If it's not defined the name of the ProviderLayer will be used.
+	// Name can also be used to group multiple ProviderLayers under the same namespace.
 	Name          string      `toml:"name"`
 	ProviderLayer string      `toml:"provider_layer"`
-	MinZoom       *uint        `toml:"min_zoom"`
-	MaxZoom       *uint        `toml:"max_zoom"`
+	MinZoom       *uint       `toml:"min_zoom"`
+	MaxZoom       *uint       `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
-	//	DontSimplify indicates wheather feature simplification should be applied.
-	//	We use a negative in the name so the default is to simplify
+	// DontSimplify indicates wheather feature simplification should be applied.
+	// We use a negative in the name so the default is to simplify
 	DontSimplify bool `toml:"dont_simplify"`
 }
 
-//	checks the config for issues
+// checks the config for issues
 func (c *Config) Validate() error {
 
-	//	check for map layer name / zoom collisions
-	//	map of layers to providers
+	// check for map layer name / zoom collisions
+	// map of layers to providers
 	mapLayers := map[string]map[string]MapLayer{}
 	for _, m := range c.Maps {
 		if _, ok := mapLayers[m.Name]; !ok {
@@ -80,7 +80,7 @@ func (c *Config) Validate() error {
 			if l.Name != "" {
 				name = l.Name
 			} else {
-				//	split the provider layer (syntax is provider.layer)
+				// split the provider layer (syntax is provider.layer)
 				plParts := strings.Split(l.ProviderLayer, ".")
 				if len(plParts) != 2 {
 					return ErrInvalidProviderLayerName{
@@ -102,9 +102,9 @@ func (c *Config) Validate() error {
 				l.MinZoom = &ph
 			}
 
-			//	check if we already have this layer
+			// check if we already have this layer
 			if val, ok := mapLayers[m.Name][name]; ok {
-				//	we have a hit. check for zoom range overlap
+				// we have a hit. check for zoom range overlap
 				if *val.MinZoom <= *l.MaxZoom && *l.MinZoom <= *val.MaxZoom {
 					return ErrOverlappingLayerZooms{
 						ProviderLayer1: val.ProviderLayer,
@@ -114,7 +114,7 @@ func (c *Config) Validate() error {
 				continue
 			}
 
-			//	add the MapLayer to our map
+			// add the MapLayer to our map
 			mapLayers[m.Name][name] = l
 		}
 	}
@@ -124,7 +124,7 @@ func (c *Config) Validate() error {
 
 // Parse will parse the Tegola config file provided by the io.Reader.
 func Parse(reader io.Reader, location string) (conf Config, err error) {
-	//	decode conf file, don't care about the meta data.
+	// decode conf file, don't care about the meta data.
 	_, err = toml.DecodeReader(reader, &conf)
 	conf.LocationName = location
 
@@ -182,31 +182,31 @@ func replaceEnvVars(reader io.Reader) (io.Reader, error) {
 func Load(location string) (conf Config, err error) {
 	var reader io.Reader
 
-	//	check for http prefix
+	// check for http prefix
 	if strings.HasPrefix(location, "http") {
 		log.Infof("loading remote config (%v)", location)
 
-		//	setup http client with a timeout
+		// setup http client with a timeout
 		var httpClient = &http.Client{
 			Timeout: time.Second * 10,
 		}
 
-		//	make the http request
+		// make the http request
 		res, err := httpClient.Get(location)
 		if err != nil {
 			return conf, fmt.Errorf("error fetching remote config file (%v): %v ", location, err)
 		}
 
-		//	set the reader to the response body
+		// set the reader to the response body
 		reader = res.Body
 	} else {
 		log.Infof("loading local config (%v)", location)
 
-		//	check the conf file exists
+		// check the conf file exists
 		if _, err := os.Stat(location); os.IsNotExist(err) {
 			return conf, fmt.Errorf("config file at location (%v) not found!", location)
 		}
-		//	open the confi file
+		// open the confi file
 		reader, err = os.Open(location)
 		if err != nil {
 			return conf, fmt.Errorf("error opening local config file (%v): %v ", location, err)

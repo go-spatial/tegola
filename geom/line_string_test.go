@@ -39,7 +39,7 @@ func TestLineStringSetter(t *testing.T) {
 			continue
 		}
 
-		//	compare the results
+		// compare the results
 		if !reflect.DeepEqual(tc.expected, tc.setter) {
 			t.Errorf("[%v] set verticies, expected %v got %v", i, tc.expected, tc.setter)
 		}

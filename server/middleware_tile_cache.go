@@ -9,22 +9,22 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 )
 
-//	TileCacheHandler implements a request cache for tiles on requests when the URLs
-//	have a /:z/:x/:y scheme suffix (i.e. /osm/1/3/4.pbf)
+// TileCacheHandler implements a request cache for tiles on requests when the URLs
+// have a /:z/:x/:y scheme suffix (i.e. /osm/1/3/4.pbf)
 func TileCacheHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
 
-		//	check if a cache backend exists
+		// check if a cache backend exists
 		cacher := Atlas.GetCache()
 		if cacher == nil {
-			//	nope. move on
+			// nope. move on
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		//	parse our URI into a cache key structure (pop off the "maps/" prefix)
-		//	5 is the value of len("maps/")
+		// parse our URI into a cache key structure (pop off the "maps/" prefix)
+		// 5 is the value of len("maps/")
 		key, err := cache.ParseKey(r.URL.Path[5:])
 		if err != nil {
 			log.Errorf("cache middleware: ParseKey err: %v", err)
@@ -32,7 +32,7 @@ func TileCacheHandler(next http.Handler) http.Handler {
 			return
 		}
 
-		//	use the URL path as the key
+		// use the URL path as the key
 		cachedTile, hit, err := cacher.Get(key)
 		if err != nil {
 			log.Errorf("cache middleware: error reading from cache: %v", err)
@@ -40,22 +40,22 @@ func TileCacheHandler(next http.Handler) http.Handler {
 			return
 		}
 
-		//	cache miss
+		// cache miss
 		if !hit {
-			//	buffer which will hold a copy of the response for writing to the cache
+			// buffer which will hold a copy of the response for writing to the cache
 			var buff bytes.Buffer
 
-			//	ovewrite our current responseWriter with a tileCacheResponseWriter
+			// ovewrite our current responseWriter with a tileCacheResponseWriter
 			w = newTileCacheResponseWriter(w, &buff)
 
 			next.ServeHTTP(w, r)
 
-			//	check if our request context has been canceled
+			// check if our request context has been canceled
 			if r.Context().Err() != nil {
 				return
 			}
 
-			//	if nothing has been written to the buffer, don't write to the cache
+			// if nothing has been written to the buffer, don't write to the cache
 			if buff.Len() == 0 {
 				return
 			}
@@ -66,10 +66,10 @@ func TileCacheHandler(next http.Handler) http.Handler {
 			return
 		}
 
-		//	mimetype for protocol buffers
+		// mimetype for protocol buffers
 		w.Header().Add("Content-Type", "application/x-protobuf")
 
-		//	communicate the cache is being used
+		// communicate the cache is being used
 		w.Header().Add("Tegola-Cache", "HIT")
 
 		w.Write(cachedTile)
@@ -84,31 +84,31 @@ func newTileCacheResponseWriter(resp http.ResponseWriter, w io.Writer) http.Resp
 	}
 }
 
-//	tileCacheResponsWriter wraps http.ResponseWriter (https://golang.org/pkg/net/http/#ResponseWriter)
-//	to additionally write the response to a cache when there is a cache MISS
+// tileCacheResponsWriter wraps http.ResponseWriter (https://golang.org/pkg/net/http/#ResponseWriter)
+// to additionally write the response to a cache when there is a cache MISS
 type tileCacheResponseWriter struct {
-	//	status response code
+	// status response code
 	status int
 	resp   http.ResponseWriter
 	multi  io.Writer
 }
 
 func (w *tileCacheResponseWriter) Header() http.Header {
-	//	communicate the cache is being used
+	// communicate the cache is being used
 	w.resp.Header().Set("Tegola-Cache", "MISS")
 
 	return w.resp.Header()
 }
 
 func (w *tileCacheResponseWriter) Write(b []byte) (int, error) {
-	//	only write to the multi writer when http response == StatusOK
+	// only write to the multi writer when http response == StatusOK
 	if w.status == http.StatusOK {
 
-		//	write to our multi writer
+		// write to our multi writer
 		return w.multi.Write(b)
 	}
 
-	//	write to the original response writer
+	// write to the original response writer
 	return w.resp.Write(b)
 }
 

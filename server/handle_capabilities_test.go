@@ -17,7 +17,7 @@ import (
 )
 
 func TestHandleCapabilities(t *testing.T) {
-	//	setup a new provider
+	// setup a new provider
 	testcases := []struct {
 		handler    http.Handler
 		hostname   string
@@ -52,7 +52,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: testLayer2.MVTName(),
@@ -95,7 +95,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
@@ -150,7 +150,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: testLayer2.MVTName(),
@@ -166,7 +166,7 @@ func TestHandleCapabilities(t *testing.T) {
 			},
 		},
 		// With hostname set in config, port unset in config, and no port in request uri,
-		//	 urls should have host from config and no port: "cdn.tegola.io"
+		//  urls should have host from config and no port: "cdn.tegola.io"
 		{
 			handler:    server.HandleCapabilities{},
 			hostname:   "cdn.tegola.io",
@@ -193,7 +193,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
@@ -251,7 +251,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://cdn.tegola.io:8080/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
@@ -290,9 +290,9 @@ func TestHandleCapabilities(t *testing.T) {
 		server.HostName = test.hostname
 		server.Port = test.port
 
-		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
-		//	setup a new router group
+		// setup a new router group
 		group := router.NewGroup("/")
 		group.UsingContext().Handler(test.reqMethod, test.uriPattern, server.HandleCapabilities{})
 
@@ -317,7 +317,7 @@ func TestHandleCapabilities(t *testing.T) {
 
 		var capabilities server.Capabilities
 
-		//	read the respons body
+		// read the respons body
 		if err := json.Unmarshal(bytes, &capabilities); err != nil {
 			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
 			continue

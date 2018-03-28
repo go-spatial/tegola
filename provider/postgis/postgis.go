@@ -66,30 +66,30 @@ func init() {
 	provider.Register(Name, NewTileProvider, nil)
 }
 
-//	NewTileProvider instantiates and returns a new postgis provider or an error.
-//	The function will validate that the config object looks good before
-//	trying to create a driver. This Provider supports the following fields
-//	in the provided map[string]interface{} map:
+// NewTileProvider instantiates and returns a new postgis provider or an error.
+// The function will validate that the config object looks good before
+// trying to create a driver. This Provider supports the following fields
+// in the provided map[string]interface{} map:
 //
-//		host (string): [Required] postgis database host
-//		port (int): [Required] postgis database port (required)
-//		database (string): [Required] postgis database name
-//		user (string): [Required] postgis database user
-//		password (string): [Required] postgis database password
-//		srid (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
-//		max_connections : [Optional] The max connections to maintain in the connection pool. Default is 100. 0 means no max.
-//		layers (map[string]struct{})  — This is map of layers keyed by the layer name. supports the following properties
+// 	host (string): [Required] postgis database host
+// 	port (int): [Required] postgis database port (required)
+// 	database (string): [Required] postgis database name
+// 	user (string): [Required] postgis database user
+// 	password (string): [Required] postgis database password
+// 	srid (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
+// 	max_connections : [Optional] The max connections to maintain in the connection pool. Default is 100. 0 means no max.
+// 	layers (map[string]struct{})  — This is map of layers keyed by the layer name. supports the following properties
 //
-//			name (string): [Required] the name of the layer. This is used to reference this layer from map layers.
-//			tablename (string): [*Required] the name of the database table to query against. Required if sql is not defined.
-//			geometry_fieldname (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to geom
-//			id_fieldname (string): [Optional] the name of the feature id field. defaults to gid
-//			fields ([]string): [Optional] a list of fields to include alongside the feature. Can be used if sql is not defined.
-//			srid (int): [Optional] the SRID of the layer. Supports 3857 (WebMercator) or 4326 (WGS84).
-//			sql (string): [*Required] custom SQL to use use. Required if tablename is not defined. Supports the following tokens:
+// 		name (string): [Required] the name of the layer. This is used to reference this layer from map layers.
+// 		tablename (string): [*Required] the name of the database table to query against. Required if sql is not defined.
+// 		geometry_fieldname (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to geom
+// 		id_fieldname (string): [Optional] the name of the feature id field. defaults to gid
+// 		fields ([]string): [Optional] a list of fields to include alongside the feature. Can be used if sql is not defined.
+// 		srid (int): [Optional] the SRID of the layer. Supports 3857 (WebMercator) or 4326 (WGS84).
+// 		sql (string): [*Required] custom SQL to use use. Required if tablename is not defined. Supports the following tokens:
 //
-//				!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
-//				!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
+// 			!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
+// 			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
 func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 	// Validate the config to make sure it has the values I care about and the types for those values.
@@ -246,7 +246,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.sql)
 		}
 
-		//	set the layer geom type
+		// set the layer geom type
 		if err = p.layerGeomType(&l); err != nil {
 			return nil, fmt.Errorf("error fetching geometry type for layer (%v): %v", l.name, err)
 		}
@@ -258,7 +258,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 	return p, nil
 }
 
-//	layerGeomType sets the geomType field on the layer by running the SQL and reading the geom type in the result set
+// layerGeomType sets the geomType field on the layer by running the SQL and reading the geom type in the result set
 func (p Provider) layerGeomType(l *Layer) error {
 	var err error
 
@@ -271,17 +271,17 @@ func (p Provider) layerGeomType(l *Layer) error {
 	re := regexp.MustCompile(`(?i)ST_AsBinary`)
 	sql := re.ReplaceAllString(l.sql, "ST_GeometryType")
 
-	//	we only need a single result set to sniff out the geometry type
+	// we only need a single result set to sniff out the geometry type
 	sql = fmt.Sprintf("%v LIMIT 1", sql)
 
 	// if a !ZOOM! token exists, all features could be filtered out so we don't have a geometry to inspect it's type.
 	// address this by replacing the !ZOOM! token with an ANY statement which includes all zooms
 	sql = strings.Replace(sql, "!ZOOM!", "ANY('{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}')", 1)
 
-	//	we need a tile to run our sql through the replacer
+	// we need a tile to run our sql through the replacer
 	tile := slippy.NewTile(0, 0, 0, 64, tegola.WebMercator)
 
-	//	normal replacer
+	// normal replacer
 	sql, err = replaceTokens(sql, l.srid, tile)
 	if err != nil {
 		return err
@@ -293,7 +293,7 @@ func (p Provider) layerGeomType(l *Layer) error {
 	}
 	defer rows.Close()
 
-	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
+	// fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 	for rows.Next() {
 
@@ -302,7 +302,7 @@ func (p Provider) layerGeomType(l *Layer) error {
 			return fmt.Errorf("error running SQL: %v ; %v", sql, err)
 		}
 
-		//	iterate the values returned from our row, sniffing for the geomField or st_geometrytype field name
+		// iterate the values returned from our row, sniffing for the geomField or st_geometrytype field name
 		for i, v := range vals {
 			switch fdescs[i].Name {
 			case l.geomField, "st_geometrytype":
@@ -353,9 +353,9 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 	return ls, nil
 }
 
-//	TileFeatures adheres to the provider.Tiler interface
+// TileFeatures adheres to the provider.Tiler interface
 func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
-	//	fetch the provider layer
+	// fetch the provider layer
 	plyr, ok := p.Layer(layer)
 	if !ok {
 		return ErrLayerNotFound{layer}
@@ -381,16 +381,16 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	}
 	defer rows.Close()
 
-	//	fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
+	// fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 
 	for rows.Next() {
-		//	context check
+		// context check
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
-		//	fetch row values
+		// fetch row values
 		vals, err := rows.Values()
 		if err != nil {
 			return fmt.Errorf("error running layer (%v) SQL (%v): %v", layer, sql, err)
@@ -406,7 +406,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			}
 		}
 
-		//	decode our WKB
+		// decode our WKB
 		geom, err := wkb.DecodeBytes(geobytes)
 		if err != nil {
 			return fmt.Errorf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %v", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
@@ -419,7 +419,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			Tags:     tags,
 		}
 
-		//	pass the feature to the provided callback
+		// pass the feature to the provided callback
 		if err = fn(&feature); err != nil {
 			return err
 		}
