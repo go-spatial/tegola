@@ -1,8 +1,12 @@
 package server_test
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/cache/memory"
 	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/provider/test"
 	"github.com/go-spatial/tegola/server"
@@ -63,10 +67,27 @@ func newTestMapWithLayers(layers ...atlas.Layer) *atlas.Atlas {
 	testMap.Layers = append(testMap.Layers, layers...)
 
 	a := &atlas.Atlas{}
-	a.SetCache(memory.New())
 	a.AddMap(testMap)
 
 	return a
+}
+
+func doRequest(a *atlas.Atlas, method string, uri string, body io.Reader) (w *httptest.ResponseRecorder, router *httptreemux.TreeMux, err error) {
+
+	router = server.NewRouter(a)
+
+	// Default Method to GET
+	if method == "" {
+		method = "GET"
+	}
+
+	r, err := http.NewRequest(method, uri, body)
+	if err != nil {
+		return nil, nil, err
+	}
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	return w, router, nil
 }
 
 // pre test setup phase
@@ -82,8 +103,6 @@ func init() {
 		testLayer2,
 		testLayer3,
 	)
-
-	atlas.SetCache(memory.New())
 
 	// register a map with atlas
 	atlas.AddMap(testMap)

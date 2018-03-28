@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
@@ -71,8 +72,8 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	yParts := strings.Split(y, ".")
 	placeholder, err = strconv.ParseUint(yParts[0], 10, 32)
 	if err != nil || placeholder > maxXYatZ {
-		log.Warnf("invalid Y value (%v)", y)
-		return fmt.Errorf("invalid Y value (%v)", y)
+		log.Warnf("invalid Y value (%v)", yParts[0])
+		return fmt.Errorf("invalid Y value (%v)", yParts[0])
 	}
 
 	req.y = uint(placeholder)
@@ -111,14 +112,39 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errMsg := fmt.Sprintf("map (%v) not configured. check your config file", req.mapName)
 		log.Errorf(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
+		http.Error(w, errMsg, http.StatusNotFound)
 		return
+	}
+
+	// filter down the layers we need for this zoom
+	m = m.FilterLayersByZoom(req.z)
+	if len(m.Layers) == 0 {
+		log.Infof("map (%v) has no layers, at zoom %v", req.mapName, req.z)
+		http.Error(w, fmt.Sprintf("map (%v) has no layers, at zoom %v", req.mapName, req.z), http.StatusNotFound)
+		return
+	}
+
+	if req.layerName != "" {
+		m = m.FilterLayersByName(req.layerName)
+		if len(m.Layers) == 0 {
+			log.Infof("map (%v) has no layers, for LayerName %v at zoom %v", req.mapName, req.layerName, req.z)
+			http.Error(w, fmt.Sprintf("map (%v) has no layers, for LayerName %v at zoom %v", req.mapName, req.layerName, req.z), http.StatusNotFound)
+			return
+		}
 	}
 
 	tile := slippy.NewTile(req.z, req.x, req.y, TileBuffer, tegola.WebMercator)
 
-	m = m.FilterLayersByZoom(req.z).FilterLayersByName(req.layerName)
-	// filter down the layers we need for this zoom
+	{
+		// Check to see that the zxy is within the bounds of the map.
+		textent := geom.Extent(tile.Bounds())
+		if !m.Bounds.Contains(&textent) {
+			msg := fmt.Sprintf("map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
+			log.Info(msg)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+	}
 
 	// check for the debug query string
 	if req.debug {

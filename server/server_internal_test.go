@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -48,21 +49,24 @@ func TestHostName(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		// set the package variable
-		HostName = tc.hostName
-		Port = tc.port
+		tc := tc
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			// set the package variable
+			HostName = tc.hostName
+			Port = tc.port
 
-		url, err := url.Parse(tc.url)
-		if err != nil {
-			t.Errorf("testcase (%v) failed. could not create url.URL from (%v): %v", i, tc.url, err)
-		}
+			url, err := url.Parse(tc.url)
+			if err != nil {
+				t.Errorf("url(%v) parse error, expected nil got %v", tc.url, err)
+			}
 
-		req := http.Request{URL: url, Host: url.Host}
+			req := http.Request{URL: url, Host: url.Host}
 
-		output := hostName(&req)
-		if output != tc.expected {
-			t.Errorf("testcase (%v) failed. expected (%v) does not match result (%v)", i, tc.expected, output)
-		}
+			output := hostName(&req)
+			if output != tc.expected {
+				t.Errorf("hostname, expected (%v) got (%v)", tc.expected, output)
+			}
+		})
 	}
 }
 
@@ -95,9 +99,12 @@ func TestScheme(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		output := scheme(&tc.request)
-		if output != tc.expected {
-			t.Errorf("testcase (%v) failed. expected (%v) does not match result (%v)", i, tc.expected, output)
-		}
+		tc := tc
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			output := scheme(&tc.request)
+			if output != tc.expected {
+				t.Errorf("scheme, expected (%v) got (%v)", tc.expected, output)
+			}
+		})
 	}
 }

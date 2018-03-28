@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dimfeld/httptreemux"
-
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/mapbox/tilejson"
 	"github.com/go-spatial/tegola/server"
@@ -19,20 +17,18 @@ import (
 func TestHandleMapCapabilities(t *testing.T) {
 	// setup a new provider
 	testcases := []struct {
-		handler    http.Handler
-		hostName   string
-		port       string
-		uri        string
-		uriPattern string
-		reqMethod  string
-		expected   tilejson.TileJSON
+		handler   http.Handler
+		hostName  string
+		port      string
+		uri       string
+		reqMethod string
+		expected  tilejson.TileJSON
 	}{
 		{
-			handler:    server.HandleCapabilities{},
-			hostName:   "",
-			uri:        "http://localhost:8080/capabilities/test-map.json",
-			uriPattern: "/capabilities/:map_name",
-			reqMethod:  "GET",
+			handler:   server.HandleCapabilities{},
+			hostName:  "",
+			uri:       "http://localhost:8080/capabilities/test-map.json",
+			reqMethod: "GET",
 			expected: tilejson.TileJSON{
 				Attribution: &testMapAttribution,
 				Bounds:      [4]float64{-180.0, -85.0511, 180.0, 85.0511},
@@ -81,12 +77,11 @@ func TestHandleMapCapabilities(t *testing.T) {
 			},
 		},
 		{
-			handler:    server.HandleCapabilities{},
-			hostName:   "cdn.tegola.io",
-			port:       "none",
-			uri:        "http://localhost:8080/capabilities/test-map.json?debug=true",
-			uriPattern: "/capabilities/:map_name",
-			reqMethod:  "GET",
+			handler:   server.HandleCapabilities{},
+			hostName:  "cdn.tegola.io",
+			port:      "none",
+			uri:       "http://localhost:8080/capabilities/test-map.json?debug=true",
+			reqMethod: "GET",
 			expected: tilejson.TileJSON{
 				Attribution: &testMapAttribution,
 				Bounds:      [4]float64{-180.0, -85.0511, 180.0, 85.0511},
@@ -166,12 +161,8 @@ func TestHandleMapCapabilities(t *testing.T) {
 		server.HostName = test.hostName
 		server.Port = test.port
 
-		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
-		router := httptreemux.New()
-
-		//	setup a new router group
-		group := router.NewGroup("/")
-		group.UsingContext().Handler(test.reqMethod, test.uriPattern, server.HandleMapCapabilities{})
+		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		router := server.NewRouter(nil)
 
 		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
 		if err != nil {
