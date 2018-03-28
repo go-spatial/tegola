@@ -52,7 +52,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: testLayer2.MVTName(),
@@ -95,7 +95,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
@@ -150,7 +150,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: testLayer2.MVTName(),
@@ -193,7 +193,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
@@ -251,7 +251,7 @@ func TestHandleCapabilities(t *testing.T) {
 									fmt.Sprintf("http://cdn.tegola.io:8080/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",

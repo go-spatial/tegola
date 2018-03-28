@@ -17,7 +17,7 @@ import (
 )
 
 func TestHandleMapCapabilities(t *testing.T) {
-	//	setup a new provider
+	// setup a new provider
 	testcases := []struct {
 		handler    http.Handler
 		hostName   string
@@ -39,7 +39,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				Center:      testMapCenter,
 				Format:      "pbf",
 				MinZoom:     4,
-				MaxZoom:     testLayer3.MaxZoom, //	the max zoom for the test group is in layer 3
+				MaxZoom:     testLayer3.MaxZoom, // the max zoom for the test group is in layer 3
 				Name:        &testMapName,
 				Description: nil,
 				Scheme:      tilejson.SchemeXYZ,
@@ -60,7 +60,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+						MaxZoom:      testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
 							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 						},
@@ -114,7 +114,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+						MaxZoom:      testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
 							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 						},
@@ -194,7 +194,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 		}
 
 		var tileJSON tilejson.TileJSON
-		//	read the response body
+		// read the response body
 		if err := json.Unmarshal(bytes, &tileJSON); err != nil {
 			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
 			continue

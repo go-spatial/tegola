@@ -15,7 +15,7 @@ import (
 )
 
 func TestHandleMapStyle(t *testing.T) {
-	//	config params this test relies on
+	// config params this test relies on
 	server.HostName = serverHostName
 
 	testcases := []struct {
@@ -104,7 +104,7 @@ func TestHandleMapStyle(t *testing.T) {
 		}
 
 		var output style.Root
-		//	read the response body
+		// read the response body
 		if err := json.Unmarshal(bytes, &output); err != nil {
 			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
 			continue
