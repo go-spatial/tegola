@@ -60,7 +60,7 @@ func TestLayerAddFeatures(t *testing.T) {
 	}
 	newID := func(id uint64) *uint64 { return &id }
 	tbltest.Cases(
-		//	nil id test 1
+		// nil id test 1
 		tc{
 			features: []Feature{
 				{
@@ -74,7 +74,7 @@ func TestLayerAddFeatures(t *testing.T) {
 				},
 			},
 		},
-		//	nil id test 2
+		// nil id test 2
 		tc{
 			features: []Feature{
 				{
@@ -88,7 +88,7 @@ func TestLayerAddFeatures(t *testing.T) {
 				},
 			},
 		},
-		//	same feature test
+		// same feature test
 		tc{
 			features: []Feature{
 				{
@@ -111,7 +111,7 @@ func TestLayerAddFeatures(t *testing.T) {
 			},
 			skipped: true,
 		},
-		//	different feature test
+		// different feature test
 		tc{
 			features: []Feature{
 				{

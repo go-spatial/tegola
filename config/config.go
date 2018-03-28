@@ -115,7 +115,7 @@ func (c *Config) Validate() error {
 
 			//	check if we already have this layer
 			if val, ok := mapLayers[m.Name][name]; ok {
-				//	we have a hit. check for zoom range overlap
+				// we have a hit. check for zoom range overlap
 				if *val.MinZoom <= *l.MaxZoom && *l.MinZoom <= *val.MaxZoom {
 					return ErrOverlappingLayerZooms{
 						ProviderLayer1: val.ProviderLayer,

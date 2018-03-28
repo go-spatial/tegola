@@ -64,14 +64,14 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 
 		return json.Marshal(coordinates{
 			Type: PolygonType,
-			//	make sure our rings are closed
+			// make sure our rings are closed
 			Coords: ps,
 		})
 
 	case geom.MultiPolygoner:
 		ps := g.Polygons()
 
-		//	iterate through the polygons making sure they're closed
+		// iterate through the polygons making sure they're closed
 		for i := range ps {
 			closePolygon(geom.Polygon(ps[i]))
 		}
@@ -135,8 +135,8 @@ func closePolygon(p geom.Polygon) {
 			continue
 		}
 
-		//	check if the first point and the last point are the same
-		//	if they're not, make a copy of the first point and add it as the last position
+		// check if the first point and the last point are the same
+		// if they're not, make a copy of the first point and add it as the last position
 		if p[i][0] != p[i][len(p[i])-1] {
 			p[i] = append(p[i], p[i][0])
 		}

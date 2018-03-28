@@ -111,7 +111,7 @@ func (ib *Inbound) Walk(fn func(idx int, pt maths.Pt) bool) {
 				if count > 10 {
 			*/
 			return
-			//			}
+			// 		}
 		}
 
 		ib.seen[p] = true

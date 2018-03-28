@@ -33,7 +33,7 @@ func (p *Point) AsRegionPoint() *RegionPoint   { return (*RegionPoint)(p) }
 
 func (p *Point) NextWalk() list.Elementer {
 	if p.Inward {
-		//	log.Println("Selecting Subject...")
+		// log.Println("Selecting Subject...")
 		return p.subject.Next()
 	}
 	//log.Println("Selecting Region...")

@@ -1,5 +1,5 @@
 //Package wkb is for decoding ESRI's Well Known Binary (WKB) format for OGC geometry (WKBGeometry)
-//	sepcification at http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm
+// sepcification at http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm
 // There are a few types supported by the specification. Each general type is in it's own file.
 // So, to find the implementation of Point (and MultiPoint) it will be located in the point.go
 // file. Each of the basic type here adhere to the tegola.Geometry interface. So, a wkb point

@@ -47,7 +47,7 @@ func TestLayerGeomType(t *testing.T) {
 			layerName: "land",
 			geom:      geom.MultiPolygon{},
 		},
-		//	zoom token replacement
+		// zoom token replacement
 		{
 			config: map[string]interface{}{
 				ConfigKeyHost:     os.Getenv("PGHOST"),

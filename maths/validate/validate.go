@@ -125,7 +125,7 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent) 
 		var ml basic.MultiLine
 		lns := gg.Lines()
 		for i := range lns {
-			//	log.Println("Clip MultiLine Buff", buff)
+			// log.Println("Clip MultiLine Buff", buff)
 			nls, err := clip.LineString(lns[i], extent)
 			if err != nil {
 				return ml, err
@@ -134,7 +134,7 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent) 
 		}
 		return ml, nil
 	case tegola.LineString:
-		//		log.Println("Clip LineString Buff", buff)
+		// 	log.Println("Clip LineString Buff", buff)
 		nls, err := clip.LineString(gg, extent)
 		return basic.MultiLine(nls), err
 	}
