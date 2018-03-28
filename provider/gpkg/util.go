@@ -16,7 +16,7 @@ const (
 func replaceTokens(qtext string, zoom uint, extent *geom.Extent) string {
 	// --- Convert tokens provided to SQL
 	// The ZOOM token requires two parameters, both filled with the current zoom level.
-	//	Until support for named parameters, the ZOOM token must follow the BBOX token.
+	// Until support for named parameters, the ZOOM token must follow the BBOX token.
 	/*
 		tokensPresent := make(map[string]bool)
 

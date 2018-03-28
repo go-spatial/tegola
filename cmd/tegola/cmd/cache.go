@@ -22,19 +22,19 @@ import (
 )
 
 var (
-	//	specify a tile to cache. ignored by default
+	// specify a tile to cache. ignored by default
 	cacheZXY string
-	//	filter which maps to process. default will operate on all mapps
+	// filter which maps to process. default will operate on all mapps
 	cacheMap string
-	//	the min zoom to cache from
+	// the min zoom to cache from
 	cacheMinZoom uint
-	//	the max zoom to cache to
+	// the max zoom to cache to
 	cacheMaxZoom uint
-	//	bounds to cache within. default -180, -85.0511, 180, 85.0511
+	// bounds to cache within. default -180, -85.0511, 180, 85.0511
 	cacheBounds string
-	//	the amount of concurrency to use. defaults to the number of CPUs on the machine
+	// the amount of concurrency to use. defaults to the number of CPUs on the machine
 	cacheConcurrency int
-	//	cache overwrite
+	// cache overwrite
 	cacheOverwrite bool
 )
 
@@ -67,7 +67,7 @@ var cacheCmd = &cobra.Command{
 
 		initConfig()
 
-		//	check if the user defined a single map to work on
+		// check if the user defined a single map to work on
 		if cacheMap != "" {
 			m, err := atlas.GetMap(cacheMap)
 			if err != nil {
@@ -79,7 +79,7 @@ var cacheCmd = &cobra.Command{
 			maps = atlas.AllMaps()
 		}
 
-		//	check for a cache backend
+		// check for a cache backend
 		if atlas.GetCache() == nil {
 			log.Fatalf("mising cache backend. check your config (%v)", configFile)
 		}
@@ -88,9 +88,9 @@ var cacheCmd = &cobra.Command{
 		var minx, miny, maxx, maxy int
 		var bounds [4]float64
 
-		//	single tile caching
+		// single tile caching
 		if cacheZXY != "" {
-			//	convert the input into a tile
+			// convert the input into a tile
 			t, err := parseTileString(cacheZXY)
 			if err != nil {
 				log.Fatal(err)
@@ -100,7 +100,7 @@ var cacheCmd = &cobra.Command{
 			// read the tile bounds, which will be in lat, lon, it will be the north, east, south, west.
 			bounds = t.Bounds()
 		} else {
-			//	bounding box caching
+			// bounding box caching
 			boundsParts := strings.Split(cacheBounds, ",")
 			if len(boundsParts) != 4 {
 				log.Fatal("invalid value for bounds. expecting minx, miny, maxx, maxy")
@@ -115,7 +115,7 @@ var cacheCmd = &cobra.Command{
 		}
 
 		if len(zooms) == 0 {
-			//	check user input for zoom range
+			// check user input for zoom range
 			if cacheMaxZoom != 0 {
 				if cacheMaxZoom >= cacheMinZoom {
 					for i := cacheMinZoom; i <= cacheMaxZoom; i++ {
@@ -125,7 +125,7 @@ var cacheCmd = &cobra.Command{
 					log.Fatalf("invalid zoom range. min (%v) is greater than max (%v)", cacheMinZoom, cacheMaxZoom)
 				}
 			} else {
-				//	every zoom
+				// every zoom
 				for i := uint(0); i <= atlas.MaxZoom; i++ {
 					zooms = append(zooms, i)
 				}
@@ -133,53 +133,53 @@ var cacheCmd = &cobra.Command{
 
 		}
 
-		//	setup a waitgroup
+		// setup a waitgroup
 		var wg sync.WaitGroup
 
-		//	TODO: check for tile count. if tile count < concurrency, use tile count
+		// TODO: check for tile count. if tile count < concurrency, use tile count
 		wg.Add(cacheConcurrency)
 
-		//	new channel for the workers
+		// new channel for the workers
 		tiler := make(chan MapTile)
 
-		//	setup our workers based on the amount of concurrency we have
+		// setup our workers based on the amount of concurrency we have
 		for i := 0; i < cacheConcurrency; i++ {
-			//	spin off a worker listening on a channel
+			// spin off a worker listening on a channel
 			go func(tiler chan MapTile) {
 				ctx, cancel := context.WithCancel(context.Background())
 				go func() {
 					<-gdcmd.Cancelled()
 					cancel()
 				}()
-				//	range our channel to listen for jobs
+				// range our channel to listen for jobs
 				for mt := range tiler {
 					if gdcmd.IsCancelled() {
 						continue
 					}
-					//	we will only have a single command arg so we can switch on index 0
+					// we will only have a single command arg so we can switch on index 0
 					switch args[0] {
 					case "seed":
-						//	track how long the tile generation is taking
+						// track how long the tile generation is taking
 						t := time.Now()
 
-						//	lookup the Map
+						// lookup the Map
 						m, err := atlas.GetMap(mt.MapName)
 						if err != nil {
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 						}
 
-						//	filter down the layers we need for this zoom
+						// filter down the layers we need for this zoom
 						m = m.FilterLayersByZoom(mt.Tile.Z)
 
-						//	check if overwriting the cache is not ok
+						// check if overwriting the cache is not ok
 						if !cacheOverwrite {
-							//	lookup our cache
+							// lookup our cache
 							c := atlas.GetCache()
 							if c == nil {
 								log.Fatalf("error fetching cache: %v", err)
 							}
 
-							//	cache key
+							// cache key
 							key := cache.Key{
 								MapName: mt.MapName,
 								Z:       mt.Tile.Z,
@@ -187,31 +187,31 @@ var cacheCmd = &cobra.Command{
 								Y:       mt.Tile.Y,
 							}
 
-							//	read the tile from the cache
+							// read the tile from the cache
 							_, hit, err := c.Get(&key)
 							if err != nil {
 								log.Fatal("error reading from cache: %v", err)
 							}
-							//	if we have a cache hit, then skip processing this tile
+							// if we have a cache hit, then skip processing this tile
 							if hit {
 								log.Infof("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
 								continue
 							}
 						}
 
-						//	set tile buffer if it was configured by the user
+						// set tile buffer if it was configured by the user
 						if conf.TileBuffer > 0 {
 							mt.Tile.Buffer = float64(conf.TileBuffer)
 						}
 
-						//	seed the tile
+						// seed the tile
 						if err = atlas.SeedMapTile(ctx, m, mt.Tile.Z, mt.Tile.X, mt.Tile.Y); err != nil {
 							log.Errorf("error seeding tile (%+v): %v", mt.Tile, err)
 							break
 						}
 
-						//	TODO: this is a hack to get around large arrays not being garbage collected
-						//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
+						// TODO: this is a hack to get around large arrays not being garbage collected
+						// https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
 						runtime.GC()
 
 						log.Infof("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y, time.Now().Sub(t))
@@ -219,13 +219,13 @@ var cacheCmd = &cobra.Command{
 					case "purge":
 						log.Infof("purging map (%v) tile (%v/%v/%v)", mt.MapName, mt.Tile.Z, mt.Tile.X, mt.Tile.Y)
 
-						//	lookup the Map
+						// lookup the Map
 						m, err := atlas.GetMap(mt.MapName)
 						if err != nil {
 							log.Fatalf("error seeding tile (%+v): %v", mt.Tile, err)
 						}
 
-						//	purge the tile
+						// purge the tile
 						if err = atlas.PurgeMapTile(m, mt.Tile); err != nil {
 							log.Errorf("error purging tile (%+v): %v", mt.Tile, err)
 							break
@@ -233,11 +233,11 @@ var cacheCmd = &cobra.Command{
 					}
 				}
 
-				//	Done() will be called after close(channel) is called and the final job this worker is processing completes
+				// Done() will be called after close(channel) is called and the final job this worker is processing completes
 				wg.Done()
 			}(tiler)
 		}
-		//	iterate our zoom range
+		// iterate our zoom range
 	ZoomLoop:
 		for i := range zooms {
 
@@ -247,11 +247,11 @@ var cacheCmd = &cobra.Command{
 			bottomRight := *tegola.NewTileLatLong(zooms[i], bounds[3], bounds[2])
 			maxx, miny = bottomRight.Deg2Num()
 
-			//	range rows
+			// range rows
 			for x := minx; x <= maxx; x++ {
-				//	range columns
+				// range columns
 				for y := miny; y <= maxy; y++ {
-					//	range maps
+					// range maps
 					for m := range maps {
 						mapTile := MapTile{
 							MapName: maps[m].Name,
@@ -269,10 +269,10 @@ var cacheCmd = &cobra.Command{
 			}
 		}
 
-		//	close the channel to notify the workers all jobs have been dispatched
+		// close the channel to notify the workers all jobs have been dispatched
 		close(tiler)
 
-		//	wait for the workers to complete any remaining jobs
+		// wait for the workers to complete any remaining jobs
 		wg.Wait()
 	},
 }

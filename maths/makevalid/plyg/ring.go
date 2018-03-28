@@ -798,7 +798,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 						return true
 					}
 					// We have found our canidate. Need to switch over to it.
-					//	log.Println("Found edge (", pt, "-", npt, ") in our col", ocoli, idx, pidx)
+					// log.Println("Found edge (", pt, "-", npt, ") in our col", ocoli, idx, pidx)
 					ptid = pidx
 					nptid = ptid + 1
 					// swap columns

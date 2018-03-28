@@ -12,7 +12,7 @@ func New() *MemoryCache {
 	}
 }
 
-//	test cacher, implements the cache.Interface
+// test cacher, implements the cache.Interface
 type MemoryCache struct {
 	keyVals map[string][]byte
 	sync.RWMutex

@@ -8,7 +8,6 @@ import (
 	"github.com/arolek/p"
 
 	"github.com/go-spatial/tegola/config"
-
 )
 
 func TestParse(t *testing.T) {
@@ -28,7 +27,7 @@ func TestParse(t *testing.T) {
 			return
 		}
 
-		//	compare the various parts fo the config
+		// compare the various parts fo the config
 		if !reflect.DeepEqual(conf.LocationName, tc.expected.LocationName) {
 			t.Errorf("expected LocationName \n\n %+v \n\n got \n\n %+v ", tc.expected.LocationName, conf.LocationName)
 			return

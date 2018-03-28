@@ -544,15 +544,15 @@ func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
 	if len(points) == 0 {
 		return []uint32{}
 	}
-	//	new slice to hold our encode bytes. 2 bytes for each point pluse a command byte.
+	// new slice to hold our encode bytes. 2 bytes for each point pluse a command byte.
 	g := make([]uint32, 0, (2*len(points))+1)
-	//	add the command integer
+	// add the command integer
 	g = append(g, cmd)
 
-	//	range through our points
+	// range through our points
 	for _, p := range points {
 		dx, dy := c.GetDeltaPointAndUpdate(p)
-		//	encode our delta point
+		// encode our delta point
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
 	}
 	return g
@@ -576,7 +576,7 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
 
-	//	new cursor
+	// new cursor
 	c := NewCursor(tile)
 	// We are scaling separately, no need to scale in cursor.
 	c.DisableScaling = true

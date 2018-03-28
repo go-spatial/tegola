@@ -27,7 +27,7 @@ func TestPointSetter(t *testing.T) {
 			continue
 		}
 
-		//	compare the results
+		// compare the results
 		if !reflect.DeepEqual(tc.expected, tc.setter) {
 			t.Errorf("test case (%v) failed. Expected (%v) does not match result (%v)", i, tc.expected, tc.setter)
 		}

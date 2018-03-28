@@ -110,10 +110,10 @@ func (t *Tile) Bounds() [4]float64 {
 func (t *Tile) Extent() (extent *geom.Extent, srid uint64) {
 	max := 20037508.34
 
-	//	resolution
+	// resolution
 	res := (max * 2) / math.Exp2(float64(t.z))
 
-	//	unbuffered extent
+	// unbuffered extent
 	return geom.NewExtent(
 		[2]float64{
 			-max + (float64(t.x) * res), // MinX

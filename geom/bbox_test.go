@@ -237,7 +237,7 @@ func TestExtentContainsPoint(t *testing.T) {
 }
 
 // TestExtentAttributes check that the extent is returning the correct values for the different
-//	attributes that a extent can have.
+// attributes that a extent can have.
 func TestExtentAttributes(t *testing.T) {
 	bblncmp := func(pt [2]float64, x, y float64) bool {
 		return pt[0] == x && pt[1] == y
