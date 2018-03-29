@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bytes"
 	"github.com/dvyukov/go-fuzz/gen"
 
 	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/tcase"
@@ -14,24 +13,14 @@ func main() {
 	createFromTestData()
 }
 
-func createFromTestData() []byte {
-	fnames, err := tcase.GetFiles("testdata")
-	if err != nil {
-		t.Fatalf("error getting files: %v", err)
-	}
+func createFromTestData() {
+	fnames, _ := tcase.GetFiles("testdata")
 	var fname string
 
-	fn := func(idx int, tc tcase.C) {
-		gen.Emit(tc.Expected, nil, true)
-	}
-
 	for _, fname = range fnames {
-		cases, err := tcase.ParseFile(fname)
-		if err != nil {
-			t.Fatalf("error parsing file: %v : %v ", fname, err)
-		}
+		cases, _ := tcase.ParseFile(fname)
 		for i := range cases {
-			gen.Emit(cases[i].Expected, nil, true)
+			gen.Emit(cases[i].Bytes, nil, true)
 		}
 	}
 
