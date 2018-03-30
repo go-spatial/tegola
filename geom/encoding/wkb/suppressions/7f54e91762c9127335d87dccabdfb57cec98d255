@@ -1,0 +1,12 @@
+fatal error: runtime: out of memory
+runtime.systemstack_switch
+runtime.mallocgc
+runtime.makeslice
+github.com/go-spatial/tegola/geom/encoding/wkb/internal/decode.Collection
+github.com/go-spatial/tegola/geom/encoding/wkb.Decode
+github.com/go-spatial/tegola/geom/encoding/wkb.DecodeBytes
+github.com/go-spatial/tegola/geom/encoding/wkb.Fuzz
+go-fuzz-dep.Main
+main.main
+runtime.main
+runtime.goexit

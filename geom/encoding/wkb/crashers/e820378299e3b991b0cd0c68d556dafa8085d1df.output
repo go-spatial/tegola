@@ -1,0 +1,10 @@
+panic: geom != nil on error
+
+goroutine 1 [running]:
+github.com/go-spatial/tegola/geom/encoding/wkb.Fuzz(0x7f5ee1b39000, 0x5, 0x200000, 0x3)
+	/tmp/go-fuzz-build646632917/gopath/src/github.com/go-spatial/tegola/geom/encoding/wkb/fuzz.go:9 +0x26a
+go-fuzz-dep.Main(0x4f68a0)
+	/tmp/go-fuzz-build646632917/goroot/src/go-fuzz-dep/main.go:49 +0xad
+main.main()
+	/tmp/go-fuzz-build646632917/gopath/src/github.com/go-spatial/tegola/geom/encoding/wkb/go.fuzz.main/main.go:10 +0x2d
+exit status 2

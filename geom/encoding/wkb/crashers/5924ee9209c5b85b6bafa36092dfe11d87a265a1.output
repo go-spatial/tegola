@@ -1,0 +1,56 @@
+fatal error: runtime: out of memory
+
+runtime stack:
+runtime.throw(0x4f118e, 0x16)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/panic.go:605 +0x95
+runtime.sysMap(0xc420100000, 0x4076e0000, 0x44e900, 0x597df8)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/mem_linux.go:216 +0x1d0
+runtime.(*mheap).sysAlloc(0x57f7e0, 0x4076e0000, 0x7fa26eaa6000)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/malloc.go:470 +0xd7
+runtime.(*mheap).grow(0x57f7e0, 0x203b6e, 0x0)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/mheap.go:887 +0x60
+runtime.(*mheap).allocSpanLocked(0x57f7e0, 0x203b6e, 0x597e08, 0x100000001)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/mheap.go:800 +0x334
+runtime.(*mheap).alloc_m(0x57f7e0, 0x203b6e, 0x430101, 0x100578f60)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/mheap.go:666 +0x118
+runtime.(*mheap).alloc.func1()
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/mheap.go:733 +0x4d
+runtime.systemstack(0x7ffd42e7a408)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/asm_amd64.s:360 +0xab
+runtime.(*mheap).alloc(0x57f7e0, 0x203b6e, 0x10101, 0x1)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/mheap.go:732 +0xa1
+runtime.largeAlloc(0x4076db190, 0x101, 0x579020)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/malloc.go:827 +0x98
+runtime.mallocgc.func1()
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/malloc.go:722 +0x46
+runtime.systemstack(0x579000)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/asm_amd64.s:344 +0x79
+runtime.mstart()
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/proc.go:1135
+
+goroutine 1 [running]:
+runtime.systemstack_switch()
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/asm_amd64.s:298 fp=0xc420039aa8 sp=0xc420039aa0 pc=0x44f1b0
+runtime.mallocgc(0x4076db190, 0x4ceb00, 0x46e801, 0xc420014098)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/malloc.go:721 +0x7ae fp=0xc420039b50 sp=0xc420039aa8 pc=0x40edbe
+runtime.makeslice(0x4ceb00, 0x4076db19, 0x4076db19, 0x596fd8, 0x4c9880, 0xc420014098)
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/slice.go:54 +0x77 fp=0xc420039b80 sp=0xc420039b50 pc=0x43b5b7
+github.com/go-spatial/tegola/geom/encoding/wkb/internal/decode.LineString(0x567160, 0xc42006c150, 0x568440, 0x596fd8, 0x2, 0x0, 0x0, 0x0, 0x4b558b)
+	/tmp/go-fuzz-build519499832/gopath/src/github.com/go-spatial/tegola/geom/encoding/wkb/internal/decode/decode.go:64 +0x10d fp=0xc420039c08 sp=0xc420039b80 pc=0x4b5d6d
+github.com/go-spatial/tegola/geom/encoding/wkb/internal/decode.MultiLineString(0x567160, 0xc42006c150, 0x568440, 0x596fd8, 0xc400000005, 0x0, 0x0, 0x300000002, 0xc420000180)
+	/tmp/go-fuzz-build519499832/gopath/src/github.com/go-spatial/tegola/geom/encoding/wkb/internal/decode/decode.go:87 +0x268 fp=0xc420039cc0 sp=0xc420039c08 pc=0x4b61d8
+github.com/go-spatial/tegola/geom/encoding/wkb.Decode(0x567160, 0xc42006c150, 0xc420039e90, 0x4528d6, 0xc420039ee8, 0x4528d6)
+	/tmp/go-fuzz-build519499832/gopath/src/github.com/go-spatial/tegola/geom/encoding/wkb/wkb.go:72 +0x535 fp=0xc420039e50 sp=0xc420039cc0 pc=0x4ba1d5
+github.com/go-spatial/tegola/geom/encoding/wkb.DecodeBytes(0x7fa26eaf6000, 0x12, 0x200000, 0x302f980d00000000, 0x5abd917d, 0xc420039ee8, 0x461656)
+	/tmp/go-fuzz-build519499832/gopath/src/github.com/go-spatial/tegola/geom/encoding/wkb/wkb.go:51 +0xaf fp=0xc420039e98 sp=0xc420039e50 pc=0x4b9c3f
+github.com/go-spatial/tegola/geom/encoding/wkb.Fuzz(0x7fa26eaf6000, 0x12, 0x200000, 0xc420039f70)
+	/tmp/go-fuzz-build519499832/gopath/src/github.com/go-spatial/tegola/geom/encoding/wkb/fuzz.go:7 +0x5b fp=0xc420039ef8 sp=0xc420039e98 pc=0x4b97eb
+go-fuzz-dep.Main(0x4f58a0)
+	/tmp/go-fuzz-build519499832/goroot/src/go-fuzz-dep/main.go:49 +0xad fp=0xc420039f68 sp=0xc420039ef8 pc=0x4651cd
+main.main()
+	/tmp/go-fuzz-build519499832/gopath/src/github.com/go-spatial/tegola/geom/encoding/wkb/go.fuzz.main/main.go:10 +0x2d fp=0xc420039f80 sp=0xc420039f68 pc=0x4baf3d
+runtime.main()
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/proc.go:195 +0x226 fp=0xc420039fe0 sp=0xc420039f80 pc=0x428f96
+runtime.goexit()
+	/tmp/go-fuzz-build519499832/goroot/src/runtime/asm_amd64.s:2337 +0x1 fp=0xc420039fe8 sp=0xc420039fe0 pc=0x451801
+exit status 2
