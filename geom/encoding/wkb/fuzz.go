@@ -8,7 +8,7 @@ func Fuzz(data []byte) int {
 		if geom != nil {
 			panic("geom != nil on error")
 		}
-		return 0
+		//return 0
 	}
 
 	if bs, err := EncodeBytes(data); err != nil {
