@@ -1,4 +1,0 @@
-panic: geom != nil on error
-github.com/go-spatial/tegola/geom/encoding/wkb.Fuzz
-go-fuzz-dep.Main
-main.main
