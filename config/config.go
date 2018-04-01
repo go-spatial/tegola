@@ -69,12 +69,12 @@ func (c *Config) Validate() error {
 	// check for map layer name / zoom collisions
 	// map of layers to providers
 	mapLayers := map[string]map[string]MapLayer{}
-	for _, m := range c.Maps {
+	for mapKey, m := range c.Maps {
 		if _, ok := mapLayers[m.Name]; !ok {
 			mapLayers[m.Name] = map[string]MapLayer{}
 		}
 
-		for _, l := range m.Layers {
+		for layerKey, l := range m.Layers {
 			var name string
 
 			if l.Name != "" {
@@ -94,12 +94,12 @@ func (c *Config) Validate() error {
 			// MaxZoom default
 			if l.MaxZoom == nil {
 				ph := uint(tegola.MaxZ)
-				l.MaxZoom = &ph
+				c.Maps[mapKey].Layers[layerKey].MaxZoom = &ph
 			}
 			// MinZoom default
 			if l.MinZoom == nil {
 				ph := uint(0)
-				l.MinZoom = &ph
+				c.Maps[mapKey].Layers[layerKey].MinZoom = &ph
 			}
 
 			// check if we already have this layer
