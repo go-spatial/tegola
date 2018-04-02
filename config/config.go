@@ -94,11 +94,17 @@ func (c *Config) Validate() error {
 			// MaxZoom default
 			if l.MaxZoom == nil {
 				ph := uint(tegola.MaxZ)
+				// set in iterated value
+				l.MaxZoom = &ph
+				// set in underlying config struct
 				c.Maps[mapKey].Layers[layerKey].MaxZoom = &ph
 			}
 			// MinZoom default
 			if l.MinZoom == nil {
 				ph := uint(0)
+				// set in iterated value
+				l.MinZoom = &ph
+				// set in underlying config struct
 				c.Maps[mapKey].Layers[layerKey].MinZoom = &ph
 			}
 
