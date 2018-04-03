@@ -343,7 +343,8 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		return err
 	}
 
-	if cacheZXY != "" {
+	switch {
+	case cacheZXY != "":
 		// single xyz
 		//	convert the input into a tile
 		z, x, y, err := format.Parse(cacheZXY)
@@ -368,7 +369,8 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 				return nil
 			}
 		}
-	} else if cacheFile != "" {
+		return nil
+	case cacheFile != "" :
 		// read xyz from a file
 		f, err := os.Open(cacheFile)
 		if err != nil {
@@ -401,7 +403,8 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 				}
 			}
 		}
-	} else {
+		return nil
+	default:
 		// bounding box caching
 		boundsParts := strings.Split(cacheBounds, ",")
 		if len(boundsParts) != 4 {
@@ -448,8 +451,6 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 				}
 			}
 		}
+		return nil
 	}
-
-	// no returns within the if blocks so it must be done here
-	return nil
 }
