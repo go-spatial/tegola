@@ -2,6 +2,10 @@
 
 package fuzz
 
+import (
+	"github.com/go-spatial/tegola/geom/encoding/wkb"
+)
+
 func Fuzz(data []byte) int {
 	
 	if geom, err := DecodeBytes(data); err != nil {
