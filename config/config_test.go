@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/arolek/p"
+
 	"github.com/go-spatial/tegola/config"
 )
 
@@ -25,7 +27,7 @@ func TestParse(t *testing.T) {
 			return
 		}
 
-		//	compare the various parts fo the config
+		// compare the various parts fo the config
 		if !reflect.DeepEqual(conf.LocationName, tc.expected.LocationName) {
 			t.Errorf("expected LocationName \n\n %+v \n\n got \n\n %+v ", tc.expected.LocationName, conf.LocationName)
 			return
@@ -132,8 +134,8 @@ func TestParse(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       10,
-								MaxZoom:       20,
+								MinZoom:       p.Uint(10),
+								MaxZoom:       p.Uint(20),
 								DontSimplify:  true,
 							},
 						},
@@ -244,14 +246,14 @@ func TestParse(t *testing.T) {
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       0,
-								MaxZoom:       5,
+								MinZoom:       p.Uint(0),
+								MaxZoom:       p.Uint(5),
 							},
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_6_10",
-								MinZoom:       6,
-								MaxZoom:       10,
+								MinZoom:       p.Uint(6),
+								MaxZoom:       p.Uint(10),
 							},
 						},
 					},
@@ -264,14 +266,14 @@ func TestParse(t *testing.T) {
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       0,
-								MaxZoom:       5,
+								MinZoom:       p.Uint(0),
+								MaxZoom:       p.Uint(5),
 							},
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_6_10",
-								MinZoom:       6,
-								MaxZoom:       10,
+								MinZoom:       p.Uint(6),
+								MaxZoom:       p.Uint(10),
 							},
 						},
 					},
@@ -356,13 +358,13 @@ func TestValidate(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       10,
-								MaxZoom:       20,
+								MinZoom:       p.Uint(10),
+								MaxZoom:       p.Uint(20),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       10,
-								MaxZoom:       20,
+								MinZoom:       p.Uint(10),
+								MaxZoom:       p.Uint(20),
 							},
 						},
 					},
@@ -421,14 +423,14 @@ func TestValidate(t *testing.T) {
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       0,
-								MaxZoom:       5,
+								MinZoom:       p.Uint(0),
+								MaxZoom:       p.Uint(5),
 							},
 							{
 								Name:          "water",
 								ProviderLayer: "provider2.water_5_10",
-								MinZoom:       5,
-								MaxZoom:       10,
+								MinZoom:       p.Uint(5),
+								MaxZoom:       p.Uint(10),
 							},
 						},
 					},
@@ -490,13 +492,13 @@ func TestValidate(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       10,
-								MaxZoom:       15,
+								MinZoom:       p.Uint(10),
+								MaxZoom:       p.Uint(15),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       16,
-								MaxZoom:       20,
+								MinZoom:       p.Uint(16),
+								MaxZoom:       p.Uint(20),
 							},
 						},
 					},
@@ -508,13 +510,13 @@ func TestValidate(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       10,
-								MaxZoom:       15,
+								MinZoom:       p.Uint(10),
+								MaxZoom:       p.Uint(15),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       16,
-								MaxZoom:       20,
+								MinZoom:       p.Uint(16),
+								MaxZoom:       p.Uint(20),
 							},
 						},
 					},

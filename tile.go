@@ -18,7 +18,7 @@ const (
 var UnknownConversionError = fmt.Errorf("do not know how to convert value to requested value")
 
 //Tile slippy map tilenames
-//	http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+// http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
 	Z         uint
 	X         uint
@@ -73,7 +73,7 @@ func NewTileLatLong(z uint, lat, lon float64) (t *Tile) {
 func (t *Tile) Init() {
 	max := 20037508.34
 
-	//	resolution
+	// resolution
 	res := (max * 2) / math.Exp2(float64(t.Z))
 	t.cached = true
 	t.extent = &geom.Extent{
@@ -199,8 +199,8 @@ func (t *Tile) ZLevel() uint {
 }
 
 //ZRes takes a web mercator zoom level and returns the pixel resolution for that
-//	scale, assuming t.Extent x t.Extent pixel tiles. Non-integer zoom levels are accepted.
-//	ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
+// scale, assuming t.Extent x t.Extent pixel tiles. Non-integer zoom levels are accepted.
+// ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
 // 40075016.6855785 is the equator in meters for WGS84 at z=0
 func (t *Tile) ZRes() float64 {
 	return 40075016.6855785 / (t.Extent * math.Exp2(float64(t.Z)))

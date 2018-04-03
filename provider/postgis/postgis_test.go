@@ -69,7 +69,7 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 4032,
 		},
-		//	scalerank test
+		// scalerank test
 		{
 			config: map[string]interface{}{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
@@ -87,7 +87,7 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 98,
 		},
-		//	decode numeric(x,x) types
+		// decode numeric(x,x) types
 		{
 			config: map[string]interface{}{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
@@ -116,7 +116,7 @@ func TestTileFeatures(t *testing.T) {
 			continue
 		}
 
-		//	iterate our configured layers
+		// iterate our configured layers
 		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
 			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
 

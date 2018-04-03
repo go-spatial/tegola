@@ -16,7 +16,7 @@ import (
 )
 
 func TestHandleMapLayerZXY(t *testing.T) {
-	//	setup a new provider
+	// setup a new provider
 	testcases := []struct {
 		uri            string
 		uriPattern     string
@@ -79,9 +79,9 @@ func TestHandleMapLayerZXY(t *testing.T) {
 	for i, test := range testcases {
 		var err error
 
-		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
-		//	setup a new router group
+		// setup a new router group
 		group := router.NewGroup("/")
 		group.UsingContext().Handler(test.reqMethod, test.uriPattern, server.HandleMapLayerZXY{})
 
@@ -110,7 +110,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			continue
 		}
 
-		//	success check
+		// success check
 		if len(test.expectedLayers) > 0 {
 			var tile vectorTile.Tile
 			var responseBodyBytes []byte
@@ -127,7 +127,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			}
 
 			var tileLayers []string
-			//	extract all the layers names in the response
+			// extract all the layers names in the response
 			for i := range tile.Layers {
 				tileLayers = append(tileLayers, *tile.Layers[i].Name)
 			}

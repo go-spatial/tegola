@@ -26,21 +26,21 @@ import (
 )
 
 var (
-	//	specify a tile to cache. ignored by default
+	// specify a tile to cache. ignored by default
 	cacheZXY string
 	// read zxy values from a file
 	cacheFile string
 	//	filter which maps to process. default will operate on all mapps
 	cacheMap string
-	//	the min zoom to cache from
+	// the min zoom to cache from
 	cacheMinZoom uint
-	//	the max zoom to cache to
+	// the max zoom to cache to
 	cacheMaxZoom uint
-	//	bounds to cache within. default -180, -85.0511, 180, 85.0511
+	// bounds to cache within. default -180, -85.0511, 180, 85.0511
 	cacheBounds string
-	//	the amount of concurrency to use. defaults to the number of CPUs on the machine
+	// the amount of concurrency to use. defaults to the number of CPUs on the machine
 	cacheConcurrency int
-	//	cache overwrite
+	// cache overwrite
 	cacheOverwrite bool
 	// input string format
 	cacheFormat string
@@ -74,7 +74,7 @@ var cacheCmd = &cobra.Command{
 
 		initConfig()
 
-		//	check if the user defined a single map to work on
+		// check if the user defined a single map to work on
 		if cacheMap != "" {
 			m, err := atlas.GetMap(cacheMap)
 			if err != nil {
@@ -86,7 +86,7 @@ var cacheCmd = &cobra.Command{
 			maps = atlas.AllMaps()
 		}
 
-		//	check for a cache backend
+		// check for a cache backend
 		if atlas.GetCache() == nil {
 			log.Fatalf("mising cache backend. check your config (%v)", configFile)
 		}
@@ -114,13 +114,13 @@ var cacheCmd = &cobra.Command{
 		//	setup a waitgroup
 		var wg sync.WaitGroup
 
-		//	TODO: check for tile count. if tile count < concurrency, use tile count
+		// TODO: check for tile count. if tile count < concurrency, use tile count
 		wg.Add(cacheConcurrency)
 
-		//	new channel for the workers
+		// new channel for the workers
 		tiler := make(chan MapTile)
 
-		//	setup our workers based on the amount of concurrency we have
+		// setup our workers based on the amount of concurrency we have
 		for i := 0; i < cacheConcurrency; i++ {
 			go func() {
 				ctx, cancel := context.WithCancel(context.Background())
@@ -128,7 +128,7 @@ var cacheCmd = &cobra.Command{
 					<-gdcmd.Cancelled()
 					cancel()
 				}()
-				//	range our channel to listen for jobs
+				// range our channel to listen for jobs
 				for mt := range tiler {
 					if gdcmd.IsCancelled() {
 						continue
@@ -168,10 +168,10 @@ var cacheCmd = &cobra.Command{
 			}
 		}
 
-		//	close the channel to notify the workers all jobs have been dispatched
+		// close the channel to notify the workers all jobs have been dispatched
 		close(tiler)
 
-		//	wait for the workers to complete any remaining jobs
+		// wait for the workers to complete any remaining jobs
 		wg.Wait()
 	},
 }

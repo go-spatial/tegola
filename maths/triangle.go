@@ -212,7 +212,7 @@ type TriangleEdge struct {
 
 func (te *TriangleEdge) Dump() {
 	if te == nil || te.Node == nil {
-		//	log.Println("Triangle: nil")
+		// log.Println("Triangle: nil")
 		return
 	}
 	//log.Println("Triangle: ", te.Node.Key(), "Constrained:", te.IsConstrained)

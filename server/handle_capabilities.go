@@ -34,15 +34,15 @@ type CapabilitiesLayer struct {
 type HandleCapabilities struct{}
 
 func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//	new capabilities struct
+	// new capabilities struct
 	capabilities := Capabilities{
 		Version: Version,
 	}
 
-	//	parse our query string
+	// parse our query string
 	var query = r.URL.Query()
 
-	//	iterate our registered maps
+	// iterate our registered maps
 	for _, m := range atlas.AllMaps() {
 		var debugQuery string
 
@@ -50,7 +50,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		if query.Get("debug") == "true" {
 			debugQuery = "?debug=true"
 
-			//	update our map to include the debug layers
+			// update our map to include the debug layers
 			m = m.AddDebugLayers()
 		}
 

@@ -27,8 +27,8 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		if len(fdescs) == 0 {
 			return "", fmt.Errorf("No fields were returned for table %v", tblname)
 		}
-		//	to avoid field names possibly colliding with Postgres keywords,
-		//	we wrap the field names in quotes
+		// to avoid field names possibly colliding with Postgres keywords,
+		// we wrap the field names in quotes
 		for i := range fdescs {
 			flds = append(flds, fdescs[i].Name)
 		}
@@ -48,8 +48,8 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		}
 	}
 
-	//	to avoid field names possibly colliding with Postgres keywords,
-	//	we wrap the field names in quotes
+	// to avoid field names possibly colliding with Postgres keywords,
+	// we wrap the field names in quotes
 	if fgeom == -1 {
 		flds = append(flds, fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField))
 	} else {
@@ -70,16 +70,16 @@ const (
 	zoomToken = "!ZOOM!"
 )
 
-//	replaceTokens replaces tokens in the provided SQL string
+// replaceTokens replaces tokens in the provided SQL string
 //
-//	!BBOX! - the bounding box of the tile
-//	!ZOOM! - the tile Z value
+// !BBOX! - the bounding box of the tile
+// !ZOOM! - the tile Z value
 func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
 	bufferedExtent, _ := tile.BufferedExtent()
 
-	//	TODO: leverage helper functions for minx / miny to make this easier to follow
-	//	TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
+	// TODO: leverage helper functions for minx / miny to make this easier to follow
+	// TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
 	minGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent.MinX(), bufferedExtent.MinY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
@@ -94,7 +94,7 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%g,%g,%g,%g,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
-	//	replace query string tokens
+	// replace query string tokens
 	z, _, _ := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
@@ -180,7 +180,7 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 				for i, k := range keys {
 					// if the value is Valid (i.e. not null) then add it to our tags map.
 					if values[i].Valid {
-						//	we need to check if the key already exists. if it does, then don't overwrite it
+						// we need to check if the key already exists. if it does, then don't overwrite it
 						if _, ok := tags[k]; !ok {
 							tags[k] = values[i].String
 						}

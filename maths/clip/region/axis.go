@@ -165,14 +165,14 @@ const (
 
 // Placement returns where according to the region axis the point is.
 //
-//			                     0010
+// 		                     0010
 //
-//				       pt   ______  pt
-//				           |      |
-//				    1000   | 0000 |    0100
-//				           |______|
-//				       pt           pt
-//				             0001
+// 			       pt   ______  pt
+// 			           |      |
+// 			    1000   | 0000 |    0100
+// 			           |______|
+// 			       pt           pt
+// 			             0001
 //
 func (a *Axis) Placement(pt maths.Pt) PlacementCode {
 

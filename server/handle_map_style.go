@@ -18,35 +18,35 @@ import (
 )
 
 type HandleMapStyle struct {
-	//	required
+	// required
 	mapName string
-	//	the requests extension defaults to "json"
+	// the requests extension defaults to "json"
 	extension string
 }
 
-//	returns details about a map according to the
-//	tileJSON spec (https://github.com/mapbox/tilejson-spec/tree/master/2.1.0)
+// returns details about a map according to the
+// tileJSON spec (https://github.com/mapbox/tilejson-spec/tree/master/2.1.0)
 //
-//	URI scheme: /capabilities/:map_name.json
-//		map_name - map name in the config file
+// URI scheme: /capabilities/:map_name.json
+// 	map_name - map name in the config file
 func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	params := httptreemux.ContextParams(r.Context())
 
-	//	read the map_name value from the request
+	// read the map_name value from the request
 	mapName := params["map_name"]
 	mapNameParts := strings.Split(mapName, ".")
 
 	req.mapName = mapNameParts[0]
-	//	check if we have a provided extension
+	// check if we have a provided extension
 	if len(mapNameParts) > 2 {
 		req.extension = mapNameParts[len(mapNameParts)-1]
 	} else {
 		req.extension = "json"
 	}
 
-	//	lookup our Map
+	// lookup our Map
 	m, err := atlas.GetMap(req.mapName)
 	if err != nil {
 		log.Errorf("map (%v) not configured. check your config file", req.mapName)
@@ -77,10 +77,10 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Layers: []style.Layer{},
 	}
 
-	//	determining the min and max zoom for this map
+	// determining the min and max zoom for this map
 	for _, l := range m.Layers {
-		//	check if the layer already exists in our slice. this can happen if the config
-		//	is using the "name" param for a layer to override the providerLayerName
+		// check if the layer already exists in our slice. this can happen if the config
+		// is using the "name" param for a layer to override the providerLayerName
 		var skip bool
 		for i := range mapboxStyle.Layers {
 			if mapboxStyle.Layers[i].ID == l.MVTName() {
@@ -88,12 +88,12 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		//	entry for layer already exists. move on
+		// entry for layer already exists. move on
 		if skip {
 			continue
 		}
 
-		//	build our vector layer details
+		// build our vector layer details
 		layer := style.Layer{
 			ID:          l.MVTName(),
 			Source:      req.mapName,
@@ -103,7 +103,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 
-		//	chose our paint type based on the geometry type
+		// chose our paint type based on the geometry type
 		switch l.GeomType.(type) {
 		case geom.Point, geom.MultiPoint:
 			layer.Type = style.LayerTypeCircle
@@ -123,11 +123,11 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			hex, err := colors.ParseHEX(hexColor)
 			if err != nil {
 				log.Errorf("error parsing hex color (%v)", hexColor)
-				hex, _ = colors.ParseHEX("#fff") //	default to white on error
+				hex, _ = colors.ParseHEX("#fff") // default to white on error
 			}
 
 			rgba := hex.ToRGBA()
-			//	set the opacity to 10%
+			// set the opacity to 10%
 			rgba.A = 0.10
 
 			layer.Paint = &style.LayerPaint{
@@ -139,14 +139,14 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		//	add our layer to our tile layer response
+		// add our layer to our tile layer response
 		mapboxStyle.Layers = append(mapboxStyle.Layers, layer)
 	}
 
-	//	mimetype for protocol buffers
+	// mimetype for protocol buffers
 	w.Header().Add("Content-Type", "application/json")
 
-	//	cache control headers (no-cache)
+	// cache control headers (no-cache)
 	w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Add("Pragma", "no-cache")
 	w.Header().Add("Expires", "0")
@@ -156,7 +156,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//	port of https://stackoverflow.com/questions/3426404/create-a-hexadecimal-colour-based-on-a-string-with-javascript
+// port of https://stackoverflow.com/questions/3426404/create-a-hexadecimal-colour-based-on-a-string-with-javascript
 func stringToColorHex(str string) string {
 	var hash uint
 	for i := range []rune(str) {

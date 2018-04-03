@@ -62,7 +62,7 @@ func TestNew(t *testing.T) {
 		_, err := redis.New(tc.config)
 		if err != nil {
 			if tc.errMatch != "" && strings.Contains(err.Error(), tc.errMatch) {
-				//	correct error returned
+				// correct error returned
 				continue
 			}
 			t.Errorf("[%v] unexpected err, expected to find %q in %q", i, tc.errMatch, err)
@@ -111,7 +111,7 @@ func TestSetGetPurge(t *testing.T) {
 			continue
 		}
 
-		//	test write
+		// test write
 		if tc.expectedHit {
 			err = rc.Set(&tc.key, tc.expectedData)
 			if err != nil {
@@ -136,7 +136,7 @@ func TestSetGetPurge(t *testing.T) {
 			continue
 		}
 
-		//	test purge
+		// test purge
 		if tc.expectedHit {
 			err = rc.Purge(&tc.key)
 			if err != nil {
@@ -178,19 +178,19 @@ func TestSetOverwrite(t *testing.T) {
 			continue
 		}
 
-		//	test write1
+		// test write1
 		if err = rc.Set(&tc.key, tc.bytes1); err != nil {
 			t.Errorf("[%v] write failed with err, expected %v got %v", k, nil, err)
 			continue
 		}
 
-		//	test write2
+		// test write2
 		if err = rc.Set(&tc.key, tc.bytes2); err != nil {
 			t.Errorf("[%v] write failed with err, expected %v got %v", k, nil, err)
 			continue
 		}
 
-		//	fetch the cache entry
+		// fetch the cache entry
 		output, hit, err := rc.Get(&tc.key)
 		if err != nil {
 			t.Errorf("[%v] read failed with err, expected %v got %v", k, nil, err)
@@ -206,7 +206,7 @@ func TestSetOverwrite(t *testing.T) {
 			continue
 		}
 
-		//	clean up
+		// clean up
 		if err = rc.Purge(&tc.key); err != nil {
 			t.Errorf("[%v] purge failed with err, expected %v got %v", k, nil, err)
 			continue
@@ -231,7 +231,7 @@ func TestMaxZoom(t *testing.T) {
 			t.Fatalf("unexpected err, expected %v got %v", nil, err)
 		}
 
-		//	test write
+		// test write
 		if tc.expectedHit {
 			err = rc.Set(&tc.key, tc.bytes)
 			if err != nil {
@@ -248,7 +248,7 @@ func TestMaxZoom(t *testing.T) {
 			t.Fatalf("read failed, wrong 'hit' value expected %t got %t", tc.expectedHit, hit)
 		}
 
-		//	test purge
+		// test purge
 		if tc.expectedHit {
 			err = rc.Purge(&tc.key)
 			if err != nil {
