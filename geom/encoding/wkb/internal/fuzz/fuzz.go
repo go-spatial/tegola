@@ -1,6 +1,6 @@
 // +build gofuzz
 
-package wkb
+package fuzz
 
 func Fuzz(data []byte) int {
 	
