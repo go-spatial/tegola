@@ -48,10 +48,10 @@ func TestCORSHandler(t *testing.T) {
 
 		server.CORSAllowedOrigin = tc.CORSAllowedOrigin
 
-		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
 
-		//	setup a new router group
+		// setup a new router group
 		group := router.NewGroup("/")
 		group.UsingContext().Handler(tc.reqMethod, tc.uriPattern, server.CORSHandler(server.HandleCapabilities{}))
 

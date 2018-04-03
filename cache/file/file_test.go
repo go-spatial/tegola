@@ -24,7 +24,7 @@ func TestNew(t *testing.T) {
 		if err != nil {
 
 			if tc.err != nil && err.Error() == tc.err.Error() {
-				//	correct error returned
+				// correct error returned
 				return
 			}
 			t.Errorf("%v", err)
@@ -98,7 +98,7 @@ func TestSetGetPurge(t *testing.T) {
 			return
 		}
 
-		//	test write
+		// test write
 		if err = fc.Set(&tc.key, tc.expected); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
@@ -119,7 +119,7 @@ func TestSetGetPurge(t *testing.T) {
 			return
 		}
 
-		//	test purge
+		// test purge
 		if err = fc.Purge(&tc.key); err != nil {
 			t.Errorf("purge failed. err: %v", err)
 			return
@@ -166,19 +166,19 @@ func TestSetOverwrite(t *testing.T) {
 			return
 		}
 
-		//	test write1
+		// test write1
 		if err = fc.Set(&tc.key, tc.bytes1); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
 		}
 
-		//	test write2
+		// test write2
 		if err = fc.Set(&tc.key, tc.bytes2); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
 		}
 
-		//	fetch the cache entry
+		// fetch the cache entry
 		output, hit, err := fc.Get(&tc.key)
 		if err != nil {
 			t.Errorf("read failed. err: %v", err)
@@ -194,7 +194,7 @@ func TestSetOverwrite(t *testing.T) {
 			return
 		}
 
-		//	clean up
+		// clean up
 		if err = fc.Purge(&tc.key); err != nil {
 			t.Errorf("purge failed. err: %v", err)
 			return
@@ -242,13 +242,13 @@ func TestMaxZoom(t *testing.T) {
 			return
 		}
 
-		//	test set
+		// test set
 		if err = fc.Set(&tc.key, tc.bytes); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
 		}
 
-		//	fetch the cache entry
+		// fetch the cache entry
 		_, hit, err := fc.Get(&tc.key)
 		if err != nil {
 			t.Errorf("read failed. err: %v", err)
@@ -259,7 +259,7 @@ func TestMaxZoom(t *testing.T) {
 			return
 		}
 
-		//	clean up
+		// clean up
 		if tc.expectedHit {
 			if err != fc.Purge(&tc.key) {
 				t.Errorf("%v", err)

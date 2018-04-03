@@ -1,8 +1,8 @@
 package dict
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func TestMPrimatives(t *testing.T) {
@@ -10,57 +10,56 @@ func TestMPrimatives(t *testing.T) {
 	fooString := "an eloquent quote"
 	fooInt := 8675309
 
-	
-	testcases := map[string] struct {
-		m M
-		test func(m M) (interface{}, error)
+	testcases := map[string]struct {
+		m        M
+		test     func(m M) (interface{}, error)
 		expected interface{}
-		err error
+		err      error
 	}{
-		"string 1" : {
+		"string 1": {
 			m: M{"key1": "robpike"},
 			test: func(m M) (interface{}, error) {
 				def := "default"
 				return m.String("key1", &def)
 			},
 			expected: "robpike",
-			err: nil,
+			err:      nil,
 		},
-		"string 2" : {
+		"string 2": {
 			m: M{},
 			test: func(m M) (interface{}, error) {
 				def := "default"
 				return m.String("key1", &def)
 			},
 			expected: "default",
-			err: nil,
+			err:      nil,
 		},
-		"string ptr 1" : {
+		"string ptr 1": {
 			m: M{"key1": &fooString},
 			test: func(m M) (interface{}, error) {
 				def := "default"
 				return m.String("key1", &def)
 			},
 			expected: fooString,
-			err: nil,
+			err:      nil,
 		},
-		"int 1" : {
+		"int 1": {
 			m: M{"key1": 1970},
 			test: func(m M) (interface{}, error) {
 				def := 2018
 				return m.Int("key1", &def)
 			},
 			expected: 1970,
-			err: nil,
+			err:      nil,
 		},
-		"int ptr 1" : {
+		"int ptr 1": {
 			m: M{"key1": &fooInt},
 			test: func(m M) (interface{}, error) {
 				def := 2018
 				return m.Int("key1", &def)
 			},
 			expected: fooInt,
-			err: nil,
+			err:      nil,
 		},
 		"error 1": {
 			m: M{"key1": "stringy"},
@@ -69,9 +68,8 @@ func TestMPrimatives(t *testing.T) {
 				return m.Int("key1", &def)
 			},
 			expected: 0,
-			err: fmt.Errorf("key1 value needs to be of type int. Value is of type string"),
+			err:      fmt.Errorf("key1 value needs to be of type int. Value is of type string"),
 		},
-
 	}
 
 	for k, tc := range testcases {

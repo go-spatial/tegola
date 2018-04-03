@@ -108,7 +108,7 @@ func extractColsFromSQL(sql string) []string {
 
 // Collect meta data about all feature tables in opened gpkg.
 func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) {
-	//	this query is used to read the metadata from the gpkg_contents, gpkg_geometry_columns, and
+	// this query is used to read the metadata from the gpkg_contents, gpkg_geometry_columns, and
 	// sqlite_master tables for tables that store geographic features.
 	qtext := `
 		SELECT
@@ -125,14 +125,14 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 	}
 	defer rows.Close()
 
-	//	container for tracking metadata for each table with a geometry
+	// container for tracking metadata for each table with a geometry
 	geomTableDetails := make(map[string]featureTableDetails)
 
 	// Find the primary key column name from the table's creation sql.
 	pkPattern := `"(.+)" .*?PRIMARY KEY`
 	pkFinder := regexp.MustCompile(pkPattern)
 
-	//	iterate each row extracting meta data about each table
+	// iterate each row extracting meta data about each table
 	for rows.Next() {
 		var tablename, geomCol, geomType, tableSql sql.NullString
 		var minX, minY, maxX, maxY sql.NullFloat64
@@ -170,7 +170,7 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 			geomFieldname: geomCol.String,
 			geomType:      tg,
 			srid:          uint64(srid.Int64),
-			//	the extent of the layer's features
+			// the extent of the layer's features
 			//bbox: geom.BoundingBox{minX.Float64, minY.Float64, maxX.Float64, maxY.Float64},
 			bbox: bbox,
 		}
@@ -180,7 +180,7 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 }
 
 func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
-	//	parse our config
+	// parse our config
 	m := dict.M(config)
 
 	filepath, err := m.String(ConfigKeyFilePath, nil)
@@ -225,7 +225,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			return nil, ErrMissingLayerName
 		}
 
-		//	check if we have already seen this layer
+		// check if we have already seen this layer
 		if j, ok := lyrsSeen[layerName]; ok {
 			return nil, fmt.Errorf("layer name (%v) is duplicated in both layer %v and layer %v", layerName, i, j)
 		}
@@ -250,7 +250,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, layerName, ConfigKeyFields, err)
 		}
 
-		//	layer container. will be added to the provider after it's configured
+		// layer container. will be added to the provider after it's configured
 		layer := Layer{
 			name: layerName,
 		}

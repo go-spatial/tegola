@@ -23,7 +23,7 @@ const (
 	DefaultGeomFieldName = "geom"
 )
 
-//	config keys
+// config keys
 const (
 	ConfigKeyFilePath    = "filepath"
 	ConfigKeyLayers      = "layers"
@@ -80,7 +80,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	pLayer := p.layers[layer]
 
-	//	read the tile extent
+	// read the tile extent
 	tileBBox, tileSRID := tile.BufferedExtent()
 
 	// TODO(arolek): reimplement once the geom package has reprojection
@@ -216,7 +216,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			}
 		}
 
-		//	pass the feature to the provided call back
+		// pass the feature to the provided call back
 		if err = fn(&feature); err != nil {
 			return err
 		}

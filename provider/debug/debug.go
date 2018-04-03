@@ -1,6 +1,6 @@
-//	The debug provider returns features that are helpful for debugging a tile
-//	including a box for the tile edges and a point in the middle of the tile
-//	with z,x,y values encoded
+// The debug provider returns features that are helpful for debugging a tile
+// including a box for the tile edges and a point in the middle of the tile
+// with z,x,y values encoded
 package debug
 
 import (
@@ -59,9 +59,9 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		debugTileCenter := provider.Feature{
 			ID: 1,
 			Geometry: geom.Point{
-				//	Minx
+				// Minx
 				ext.MinX() + (xlen / 2),
-				//	Miny
+				// Miny
 				ext.MinY() + (ylen / 2),
 			},
 			SRID: srid,

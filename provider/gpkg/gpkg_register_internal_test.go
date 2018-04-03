@@ -34,14 +34,14 @@ func TestExtractColsFromSQL(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"athens_boundary": tcase{
+		"athens_boundary": {
 			sql: `CREATE TABLE 'boundary' ( "id" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON)`,
 			expectedCols: []string{
 				"geom",
 				"id",
 			},
 		},
-		"athens_harbours_points": tcase{
+		"athens_harbours_points": {
 			sql: `CREATE TABLE 'harbours_points' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" POINT, "osm_id" TEXT, "harbour" TEXT, "name" TEXT, "leisure" TEXT, "landuse" TEXT)`,
 			expectedCols: []string{
 				"fid",
@@ -53,7 +53,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"osm_id",
 			},
 		},
-		"athens_natural_polygons": tcase{
+		"athens_natural_polygons": {
 			sql: `CREATE TABLE 'natural_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "natural" TEXT, "name" TEXT, "hazard_prone" TEXT)`,
 			expectedCols: []string{
 				"fid",
@@ -65,7 +65,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"osm_way_id",
 			},
 		},
-		"athens_leisure_polygons": tcase{
+		"athens_leisure_polygons": {
 			sql: `CREATE TABLE 'leisure_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "leisure" TEXT, "name" TEXT)`,
 			expectedCols: []string{
 				"fid",
@@ -76,7 +76,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"osm_way_id",
 			},
 		},
-		"athens_roads_lines": tcase{
+		"athens_roads_lines": {
 			sql: `CREATE TABLE 'roads_lines' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTILINESTRING, "osm_id" TEXT, "highway" TEXT, "barrier" TEXT, "ford" TEXT, "hazard_prone" TEXT, "name" TEXT, "traffic_calming" TEXT, "tunnel" TEXT, "layer" TEXT, "bicycle_road" TEXT, "z_index" TEXT)`,
 			expectedCols: []string{
 				"barrier",
@@ -94,7 +94,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"z_index",
 			},
 		},
-		"athens_aviation_polygons": tcase{
+		"athens_aviation_polygons": {
 			sql: `CREATE TABLE 'aviation_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "aeroway" TEXT, "name" TEXT, "surface" TEXT, "source" TEXT, "building" TEXT, "icao" TEXT, "iata" TEXT, "type" TEXT)`,
 			expectedCols: []string{
 				"aeroway",
@@ -111,7 +111,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"type",
 			},
 		},
-		"athens_landuse_polygons": tcase{
+		"athens_landuse_polygons": {
 			sql: `CREATE TABLE 'landuse_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "landuse" TEXT, "name" TEXT)`,
 			expectedCols: []string{
 				"fid",
@@ -122,7 +122,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"osm_way_id",
 			},
 		},
-		"athens_land_polygons": tcase{
+		"athens_land_polygons": {
 			sql: `CREATE TABLE 'land_polygons' ( "ogc_fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" POLYGON, "fid" INTEGER)`,
 			expectedCols: []string{
 				"fid",

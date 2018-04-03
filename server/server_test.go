@@ -8,7 +8,7 @@ import (
 	"github.com/go-spatial/tegola/server"
 )
 
-//	test server config
+// test server config
 const (
 	httpPort       = ":8080"
 	serverVersion  = "0.4.0"
@@ -55,7 +55,7 @@ var testLayer3 = atlas.Layer{
 	DefaultTags:       map[string]interface{}{},
 }
 
-//	pre test setup phase
+// pre test setup phase
 func init() {
 	server.Version = serverVersion
 	server.HostName = serverHostName
@@ -71,7 +71,7 @@ func init() {
 
 	atlas.SetCache(memory.New())
 
-	//	register a map with atlas
+	// register a map with atlas
 	atlas.AddMap(testMap)
 
 	server.Atlas = atlas.DefaultAtlas

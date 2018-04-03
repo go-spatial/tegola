@@ -25,12 +25,12 @@ var (
 const CacheType = "s3"
 
 const (
-	//	required
+	// required
 	ConfigKeyBucket = "bucket"
-	//	optional
+	// optional
 	ConfigKeyBasepath       = "basepath"
 	ConfigKeyMaxZoom        = "max_zoom"
-	ConfigKeyRegion         = "region" //	defaults to "us-east-1"
+	ConfigKeyRegion         = "region" // defaults to "us-east-1"
 	ConfigKeyAWSAccessKeyID = "aws_access_key_id"
 	ConfigKeyAWSSecretKey   = "aws_secret_access_key"
 )
@@ -43,24 +43,24 @@ func init() {
 	cache.Register(CacheType, New)
 }
 
-//	New instantiates a S3 cache. The config expects the following params:
+// New instantiates a S3 cache. The config expects the following params:
 //
-//		required:
-//			bucket (string): the name of the s3 bucket to write to
+// 	required:
+// 		bucket (string): the name of the s3 bucket to write to
 //
-//		optional:
-//			region (string): the AWS region the bucket is located. defaults to 'us-east-1'
-//			aws_access_key_id (string): an AWS access key id
-//			aws_secret_access_key (string): an AWS secret access key
-//			basepath (string): a path prefix added to all cache operations inside of the S3 bucket
-//			max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
+// 	optional:
+// 		region (string): the AWS region the bucket is located. defaults to 'us-east-1'
+// 		aws_access_key_id (string): an AWS access key id
+// 		aws_secret_access_key (string): an AWS secret access key
+// 		basepath (string): a path prefix added to all cache operations inside of the S3 bucket
+// 		max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
 
 func New(config map[string]interface{}) (cache.Interface, error) {
 	var err error
 
 	s3cache := Cache{}
 
-	//	parse the config
+	// parse the config
 	c := dict.M(config)
 
 	// the config map's underlying value is int
@@ -80,14 +80,14 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 		return nil, ErrMissingBucket
 	}
 
-	//	basepath
+	// basepath
 	basepath := ""
 	s3cache.Basepath, err = c.String(ConfigKeyBasepath, &basepath)
 	if err != nil {
 		return nil, err
 	}
 
-	//	check for region env var
+	// check for region env var
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		region = DefaultRegion
@@ -112,21 +112,21 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 		Region: aws.String(region),
 	}
 
-	//	support for static credentials, this is not recommended by AWS but
-	//	necessary for some environments
+	// support for static credentials, this is not recommended by AWS but
+	// necessary for some environments
 	if accessKey != "" && secretKey != "" {
 		awsConfig.Credentials = credentials.NewStaticCredentials(accessKey, secretKey, "")
 	}
 
-	//	setup the s3 session.
-	//	if the accessKey and secreteKey are not provided (static creds) then the provider chain is used
-	//	http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html
+	// setup the s3 session.
+	// if the accessKey and secreteKey are not provided (static creds) then the provider chain is used
+	// http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html
 	s3cache.Client = s3.New(
 		session.New(&awsConfig),
 	)
 
-	//	in order to confirm we have the correct permissions on the bucket create a small file
-	//	and test a PUT, GET and DELETE to the bucket
+	// in order to confirm we have the correct permissions on the bucket create a small file
+	// and test a PUT, GET and DELETE to the bucket
 	key := cache.Key{
 		MapName:   "tegola-test-map",
 		LayerName: "test-layer",
@@ -134,7 +134,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 		X:         0,
 		Y:         0,
 	}
-	//	write a test file
+	// write a test file
 	if err := s3cache.Set(&key, []byte("\x53\x69\x6c\x61\x73")); err != nil {
 		e := cache.ErrSettingToCache{
 			CacheType: CacheType,
@@ -144,7 +144,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 		return nil, e
 	}
 
-	//	read the test file
+	// read the test file
 	_, hit, err := s3cache.Get(&key)
 	if err != nil {
 		e := cache.ErrGettingFromCache{
@@ -155,10 +155,10 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 		return nil, e
 	}
 	if !hit {
-		//	return an error?
+		// return an error?
 	}
 
-	//	purge the test file
+	// purge the test file
 	if err := s3cache.Purge(&key); err != nil {
 		e := cache.ErrPurgingCache{
 			CacheType: CacheType,
@@ -172,32 +172,32 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 }
 
 type Cache struct {
-	//	Bucket is the name of the s3 bucket to operate on
+	// Bucket is the name of the s3 bucket to operate on
 	Bucket string
 
-	//	Basepath is a path prefix added to all cache operations inside of the S3 bucket
-	//	helpful so a bucket does not need to be dedicated to only this cache
+	// Basepath is a path prefix added to all cache operations inside of the S3 bucket
+	// helpful so a bucket does not need to be dedicated to only this cache
 	Basepath string
 
-	//	MaxZoom determines the max zoom the cache to persist. Beyond this
-	//	zoom, cache Set() calls will be ignored. This is useful if the cache
-	//	should not be leveraged for higher zooms when data changes often.
+	// MaxZoom determines the max zoom the cache to persist. Beyond this
+	// zoom, cache Set() calls will be ignored. This is useful if the cache
+	// should not be leveraged for higher zooms when data changes often.
 	MaxZoom uint
 
-	//	client holds a reference to the s3 client. it's expected the client
-	//	has an active session and read, write, delete permissions have been checked
+	// client holds a reference to the s3 client. it's expected the client
+	// has an active session and read, write, delete permissions have been checked
 	Client *s3.S3
 }
 
 func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	var err error
 
-	//	check for maxzoom
+	// check for maxzoom
 	if key.Z > s3c.MaxZoom {
 		return nil
 	}
 
-	//	add our basepath
+	// add our basepath
 	k := filepath.Join(s3c.Basepath, key.String())
 
 	input := s3.PutObjectInput{
@@ -217,7 +217,7 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 func (s3c *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	var err error
 
-	//	add our basepath
+	// add our basepath
 	k := filepath.Join(s3c.Basepath, key.String())
 
 	input := s3.GetObjectInput{
@@ -250,7 +250,7 @@ func (s3c *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 func (s3c *Cache) Purge(key *cache.Key) error {
 	var err error
 
-	//	add our basepath
+	// add our basepath
 	k := filepath.Join(s3c.Basepath, key.String())
 
 	input := s3.DeleteObjectInput{

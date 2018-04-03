@@ -10,7 +10,7 @@ import (
 )
 
 func TestMiddlewareTileCacheHandler(t *testing.T) {
-	//	setup a new provider
+	// setup a new provider
 	testcases := []struct {
 		uri          string
 		uriPattern   string
@@ -33,9 +33,9 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 	for i, test := range testcases {
 		var err error
 
-		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
-		//	setup a new router group
+		// setup a new router group
 		group := router.NewGroup("/")
 		group.UsingContext().Handler("GET", test.uriPattern, server.TileCacheHandler(test.reqHandler))
 
@@ -48,13 +48,13 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, r)
 
-		//	first response we expect the cache to MISS
+		// first response we expect the cache to MISS
 		if w.Header().Get("Tegola-Cache") != "MISS" {
 			t.Errorf("[%v] header Tegola-Cache, expected MISS got %v", i, w.Header().Get("Tegola-Cache"))
 			continue
 		}
 
-		//	play the request again to get a HIT
+		// play the request again to get a HIT
 		r, err = http.NewRequest("GET", test.uri, nil)
 		if err != nil {
 			t.Errorf("[%v] error making request, %v", i, err)

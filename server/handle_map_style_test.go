@@ -15,7 +15,7 @@ import (
 )
 
 func TestHandleMapStyle(t *testing.T) {
-	//	config params this test relies on
+	// config params this test relies on
 	server.HostName = serverHostName
 
 	testcases := []struct {
@@ -77,9 +77,9 @@ func TestHandleMapStyle(t *testing.T) {
 	for i, tc := range testcases {
 		var err error
 
-		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 		router := httptreemux.New()
-		//	setup a new router group
+		// setup a new router group
 		group := router.NewGroup("/")
 		group.UsingContext().Handler(tc.reqMethod, tc.uriPattern, tc.handler)
 
@@ -104,7 +104,7 @@ func TestHandleMapStyle(t *testing.T) {
 		}
 
 		var output style.Root
-		//	read the response body
+		// read the response body
 		if err := json.Unmarshal(bytes, &output); err != nil {
 			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
 			continue

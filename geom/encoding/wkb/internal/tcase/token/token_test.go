@@ -447,7 +447,7 @@ func TestParseBinary(t *testing.T) {
 	tbltest.Cases(
 		tcase{
 			input: `
-//	01 02 03 04  05 06 07 08
+// 	01 02 03 04  05 06 07 08
 {{
 	01                       // Byte order Marker little
 	02 00 00 00              // Type 2 LineString
