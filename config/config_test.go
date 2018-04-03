@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/arolek/p"
-	"github.com/go-spatial/tegola"
 
 	"github.com/go-spatial/tegola/config"
 )
@@ -180,8 +179,6 @@ func TestParse(t *testing.T) {
 					[[maps.layers]]
 					name = "water"
 					provider_layer = "provider1.water_0_5"
-					min_zoom = 0
-					max_zoom = 5
 
 					[[maps.layers]]
 					name = "water"
@@ -247,8 +244,8 @@ func TestParse(t *testing.T) {
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       p.Uint(0),
-								MaxZoom:       p.Uint(5),
+								MinZoom:       nil,
+								MaxZoom:       nil,
 							},
 							{
 								Name:          "water",
@@ -525,7 +522,7 @@ func TestValidate(t *testing.T) {
 			},
 			expectedErr: nil,
 		},
-		"4": {
+		"4 default zooms": {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
@@ -534,6 +531,23 @@ func TestValidate(t *testing.T) {
 				Providers: []map[string]interface{}{
 					{
 						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+					{
+						"name":     "provider2",
 						"type":     "postgis",
 						"host":     "localhost",
 						"port":     int64(5432),
@@ -559,16 +573,86 @@ func TestValidate(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MaxZoom:       p.Uint(34),
+							},
+						},
+					},
+					{
+						Name:        "osm_2",
+						Attribution: "Test Attribution",
+						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider2.water",
 							},
 						},
 					},
 				},
 			},
-			expectedErr: config.ErrInvalidLayerZoom{
-				ProviderLayer: "provider1.water",
-				Zoom:          34,
-				ZoomLimit:     tegola.MaxZ,
+			expectedErr: nil,
+		},
+		"5 default zooms fail": {
+			config: config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					Port: ":8080",
+				},
+				Providers: []map[string]interface{}{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+					{
+						"name":     "provider2",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+							{
+								ProviderLayer: "provider2.water_default_z",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrOverlappingLayerZooms{
+				ProviderLayer1: "provider1.water_default_z",
+				ProviderLayer2: "provider2.water_default_z",
 			},
 		},
 	}
