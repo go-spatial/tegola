@@ -1,4 +1,5 @@
 // Generates corpus files from testdata
+// +build
 
 package main
 
@@ -13,7 +14,7 @@ func main() {
 }
 
 func createFromTestData() {
-	fnames, _ := tcase.GetFiles("testdata")
+	fnames, _ := tcase.GetFiles("../../../testdata")
 	var fname string
 
 	for _, fname = range fnames {
