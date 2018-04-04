@@ -173,11 +173,10 @@ var app = new Vue({
 				[e.point.x + bbox.width / 2, e.point.y + bbox.height / 2]
 			]);
 
-			//	everPresent contains the keys that should be "pinned" to the top of the feature inspector. others
+			//	everPresent contains the keys that should be "pinned" to the top of the feature inspector. Others
 			//	will follow and simply be ordered by alpha. See https://github.com/go-spatial/tegola/issues/367
 			var everPresent = ['name', 'type', 'featurecla'];
 			for (var i=0, l=features.length; i<l; i++){
-
 				html += '<h4>'+features[i].layer.id+'</h4>';
 				html += '<ul>';
 				html += '<li>feature id <span class="float-r">'+features[i].id+'</span></li>';
@@ -186,18 +185,18 @@ var app = new Vue({
 						html += '<li>'+key+'<span class="float-r">'+features[i].properties[key]+'</span></li>'
 					}
 				});
-				for (var key in features[i].properties){
+				Object.keys(features[i].properties).sort().forEach(function (key) {
 					if (everPresent.indexOf(key) < 0) {
 						html += '<li>'+key+'<span class="float-r">'+features[i].properties[key]+'</span></li>';
 					}
-				}
+				});
 				html += '</ul>';
 			}
 
 			if (html != '') {
 				me.inspector.setLngLat(e.lngLat)
 					.setHTML(html)
-					.addTo(me.map);					
+					.addTo(me.map);
 			} else {
 				if (me.inspector.isOpen()){
 					me.inspector.remove();
@@ -226,7 +225,6 @@ var app = new Vue({
 				[e.point.x + bbox.width / 2, e.point.y + bbox.height / 2]
 			]);
 
-			console.log(features);
 		}
 	}
 });
