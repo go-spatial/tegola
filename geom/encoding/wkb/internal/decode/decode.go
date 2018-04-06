@@ -16,10 +16,14 @@ func ByteOrderType(r io.Reader) (byteOrder binary.ByteOrder, typ uint32, err err
 		return byteOrder, typ, err
 	}
 
-	if bom[0] == 0 {
+	// the bom should be either 0 or 1
+	switch bom[0] {
+	case 0:
 		byteOrder = binary.BigEndian
-	} else {
+	case 1:
 		byteOrder = binary.LittleEndian
+	default:
+		return byteOrder, typ, fmt.Errorf("Byte Order Marker should be 0 or 1; got %v instead.", bom[0])
 	}
 
 	// Reading the type which is 4 bytes
