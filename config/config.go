@@ -18,6 +18,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/config/env"
 )
 
 // Config represents a tegola config file.
@@ -36,31 +37,31 @@ type Config struct {
 }
 
 type Webserver struct {
-	HostName          string `toml:"hostname"`
-	Port              string `toml:"port"`
-	CORSAllowedOrigin string `toml:"cors_allowed_origin"`
+	HostName          env.String `toml:"hostname"`
+	Port              env.String `toml:"port"`
+	CORSAllowedOrigin env.String `toml:"cors_allowed_origin"`
 }
 
 // A Map represents a map in the Tegola Config file.
 type Map struct {
-	Name        string     `toml:"name"`
-	Attribution string     `toml:"attribution"`
-	Bounds      []float64  `toml:"bounds"`
-	Center      [3]float64 `toml:"center"`
+	Name        env.String     `toml:"name"`
+	Attribution env.String     `toml:"attribution"`
+	Bounds      []env.Float  `toml:"bounds"`
+	Center      [3]env.Float `toml:"center"`
 	Layers      []MapLayer `toml:"layers"`
 }
 
 type MapLayer struct {
 	// Name is optional. If it's not defined the name of the ProviderLayer will be used.
 	// Name can also be used to group multiple ProviderLayers under the same namespace.
-	Name          string      `toml:"name"`
-	ProviderLayer string      `toml:"provider_layer"`
-	MinZoom       *uint       `toml:"min_zoom"`
-	MaxZoom       *uint       `toml:"max_zoom"`
+	Name          env.String      `toml:"name"`
+	ProviderLayer env.String      `toml:"provider_layer"`
+	MinZoom       *env.Uint       `toml:"min_zoom"`
+	MaxZoom       *env.Uint       `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
 	// DontSimplify indicates wheather feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify
-	DontSimplify bool `toml:"dont_simplify"`
+	DontSimplify env.Bool `toml:"dont_simplify"`
 }
 
 // checks the config for issues
@@ -70,21 +71,21 @@ func (c *Config) Validate() error {
 	// map of layers to providers
 	mapLayers := map[string]map[string]MapLayer{}
 	for mapKey, m := range c.Maps {
-		if _, ok := mapLayers[m.Name]; !ok {
-			mapLayers[m.Name] = map[string]MapLayer{}
+		if _, ok := mapLayers[string(m.Name)]; !ok {
+			mapLayers[string(m.Name)] = map[string]MapLayer{}
 		}
 
 		for layerKey, l := range m.Layers {
 			var name string
 
 			if l.Name != "" {
-				name = l.Name
+				name = string(l.Name)
 			} else {
 				// split the provider layer (syntax is provider.layer)
-				plParts := strings.Split(l.ProviderLayer, ".")
+				plParts := strings.Split(string(l.ProviderLayer), ".")
 				if len(plParts) != 2 {
 					return ErrInvalidProviderLayerName{
-						ProviderLayerName: l.ProviderLayer,
+						ProviderLayerName: string(l.ProviderLayer),
 					}
 				}
 
@@ -93,7 +94,7 @@ func (c *Config) Validate() error {
 
 			// MaxZoom default
 			if l.MaxZoom == nil {
-				ph := uint(tegola.MaxZ)
+				ph := env.Uint(tegola.MaxZ)
 				// set in iterated value
 				l.MaxZoom = &ph
 				// set in underlying config struct
@@ -101,7 +102,7 @@ func (c *Config) Validate() error {
 			}
 			// MinZoom default
 			if l.MinZoom == nil {
-				ph := uint(0)
+				ph := env.Uint(0)
 				// set in iterated value
 				l.MinZoom = &ph
 				// set in underlying config struct
@@ -109,19 +110,19 @@ func (c *Config) Validate() error {
 			}
 
 			// check if we already have this layer
-			if val, ok := mapLayers[m.Name][name]; ok {
+			if val, ok := mapLayers[string(m.Name)][name]; ok {
 				// we have a hit. check for zoom range overlap
-				if *val.MinZoom <= *l.MaxZoom && *l.MinZoom <= *val.MaxZoom {
+				if uint(*val.MinZoom) <= uint(*l.MaxZoom) && uint(*l.MinZoom) <= uint(*val.MaxZoom) {
 					return ErrOverlappingLayerZooms{
-						ProviderLayer1: val.ProviderLayer,
-						ProviderLayer2: l.ProviderLayer,
+						ProviderLayer1: string(val.ProviderLayer),
+						ProviderLayer2: string(l.ProviderLayer),
 					}
 				}
 				continue
 			}
 
 			// add the MapLayer to our map
-			mapLayers[m.Name][name] = l
+			mapLayers[string(m.Name)][name] = l
 		}
 	}
 
@@ -219,10 +220,10 @@ func Load(location string) (conf Config, err error) {
 		}
 	}
 
-	reader, err = replaceEnvVars(reader)
-	if err != nil {
-		return conf, err
-	}
+	//reader, err = replaceEnvVars(reader)
+	//if err != nil {
+	//	return conf, err
+	//}
 
 	return Parse(reader, location)
 }
