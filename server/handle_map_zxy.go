@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/dustin/go-humanize"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
@@ -132,6 +131,6 @@ func (req HandleMapZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//	check for tile size warnings
 	if len(pbyte) > MaxTileSize {
-		log.Infof("tile z:%v, x:%v, y:%v is rather large - %v", req.z, req.x, req.y, humanize.Bytes(uint64(len(pbyte))))
+		log.Infof("tile z:%v, x:%v, y:%v is rather large - %v", req.z, req.x, req.y, len(pbyte))
 	}
 }
