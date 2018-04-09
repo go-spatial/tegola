@@ -15,12 +15,6 @@
 			"revisionTime": "2017-05-07T10:33:33Z"
 		},
 		{
-			"checksumSHA1": "c0Z6y+J24+VKgSGO/E4Y+bsHi1g=",
-			"path": "github.com/arolek/p",
-			"revision": "1bc76936aa157179538f1cd815ce99ca3af80ff0",
-			"revisionTime": "2016-11-23T23:30:59Z"
-		},
-		{
 			"checksumSHA1": "nv58S9hV7km2wMcP28T3Fla/7wo=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "00379a7e831f5692265194c84459ac0a0c1a9b58",
@@ -183,12 +177,6 @@
 			"revisionTime": "2016-10-04T02:10:53Z"
 		},
 		{
-			"checksumSHA1": "rhLUtXvcmouYuBwOq9X/nYKzvNg=",
-			"path": "github.com/dustin/go-humanize",
-			"revision": "259d2a102b871d17f30e3cd9881a642961a1e486",
-			"revisionTime": "2017-02-28T07:34:54Z"
-		},
-		{
 			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
 			"path": "github.com/elazarl/go-bindata-assetfs",
 			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
@@ -205,12 +193,6 @@
 			"path": "github.com/gdey/bastet",
 			"revision": "314ac74cee07ff4ca20650990ab63c7f757da5fe",
 			"revisionTime": "2018-02-26T19:53:48Z"
-		},
-		{
-			"checksumSHA1": "elx/c9FcwbSdPa0bqc8LeFzn2zQ=",
-			"path": "github.com/gdey/cmd",
-			"revision": "8f086d11c1e61030ecf6e3ab796c31f478ccefab",
-			"revisionTime": "2018-02-14T20:20:02Z"
 		},
 		{
 			"checksumSHA1": "/TU0r8yAEpNvUWbxosqlXi416Os=",
