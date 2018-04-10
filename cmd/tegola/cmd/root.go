@@ -15,9 +15,6 @@ import (
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/provider"
-	_ "github.com/go-spatial/tegola/provider/debug"
-	_ "github.com/go-spatial/tegola/provider/gpkg"
-	_ "github.com/go-spatial/tegola/provider/postgis"
 )
 
 var (

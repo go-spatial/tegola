@@ -215,10 +215,25 @@ Tegola is written in [Go](https://golang.org/) and requires Go 1.8+ to compile f
 
 ```bash
 cd cmd/tegola/
-go build -o tegola
+go build
 ```
 
 You will now have a binary named `tegola` in the current directory which is [ready for running](#running-tegola).
+
+**Build Flags**
+The following build flags can be used to turn off certain features of tegola:
+
+- `noS3Cache` - turn off the AWS S3 cache backend
+- `noRedisCache` - turn off the Redis cache backend
+- `noPostgisProvider` - turn off the PostGIS data provider
+- `noGpkgProvider` - turn off the GeoPackage data provider. GeoPackage uses CGO and can also be turned off using the environment variable `CGO_ENABLED=0`
+
+Example of using the build flags to turn of the Redis cache backend and the GeoPackage provider
+
+```bash
+go build -tags 'noRedisCache noGpkgProvider'
+```
+
 
 ## License
 See [license](LICENSE.md) file in repo.
