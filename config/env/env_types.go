@@ -69,19 +69,20 @@ func (t *Bool) UnmarshalTOML(v interface{}) error {
 	case string:
 		val, err = replaceEnvVar(val)
 		if err != nil {
-			break
+			return err
 		}
 
 		boolVal, err = strconv.ParseBool(val)
+		if err != nil {
+			return err
+		}
 	case bool:
 		boolVal = val
 	default:
-		err = &TypeError{v}
+		return &TypeError{v}
 	}
 
-	if err != nil {
-		return err
-	}
+
 
 	*t = Bool(boolVal)
 	return nil
@@ -101,14 +102,10 @@ func (t *String) UnmarshalTOML(v interface{}) error {
 	case string:
 		stringVal, err = replaceEnvVar(val)
 		if err != nil {
-			break
+			return err
 		}
 	default:
-		err = &TypeError{v}
-	}
-
-	if err != nil {
-		return err
+		return &TypeError{v}
 	}
 
 	*t = String(stringVal)
@@ -129,9 +126,12 @@ func (t *Uint) UnmarshalTOML(v interface{}) error {
 	case string:
 		val, err = replaceEnvVar(val)
 		if err != nil {
-			break
+			return err
 		}
 		uintVal, err = strconv.ParseUint(val, 10, 64)
+		if err != nil {
+			return err
+		}
 	case int:
 		uintVal = uint64(val)
 	case int64:
@@ -141,11 +141,7 @@ func (t *Uint) UnmarshalTOML(v interface{}) error {
 	case uint64:
 		uintVal = val
 	default:
-		err = &TypeError{v}
-	}
-
-	if err != nil {
-		return err
+		return &TypeError{v}
 	}
 
 	*t = Uint(uintVal)
@@ -165,19 +161,18 @@ func (t *Float) UnmarshalTOML(v interface{}) error {
 	case string:
 		val, err = replaceEnvVar(val)
 		if err != nil {
-			break
+			return err
 		}
 		floatVal, err = strconv.ParseFloat(val, 64)
+		if err != nil {
+			return err
+		}
 	case float64:
 		floatVal = val
 	case float32:
 		floatVal = float64(val)
 	default:
-		err = &TypeError{v}
-	}
-
-	if err != nil {
-		return err
+		return &TypeError{v}
 	}
 
 	*t = Float(floatVal)
