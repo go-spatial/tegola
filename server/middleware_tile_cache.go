@@ -5,18 +5,19 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
 // TileCacheHandler implements a request cache for tiles on requests when the URLs
 // have a /:z/:x/:y scheme suffix (i.e. /osm/1/3/4.pbf)
-func TileCacheHandler(next http.Handler) http.Handler {
+func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
 
 		// check if a cache backend exists
-		cacher := Atlas.GetCache()
+		cacher := a.GetCache()
 		if cacher == nil {
 			// nope. move on
 			next.ServeHTTP(w, r)

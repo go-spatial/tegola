@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
@@ -32,6 +33,8 @@ type HandleMapLayerZXY struct {
 	extension string
 	// debug
 	debug bool
+	// the Atlas to use, nil (default) is the default atlas
+	Atlas *atlas.Atlas
 }
 
 // parseURI reads the request URI and extracts the various values for the request
@@ -69,8 +72,8 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	yParts := strings.Split(y, ".")
 	placeholder, err = strconv.ParseUint(yParts[0], 10, 32)
 	if err != nil || placeholder > maxXYatZ {
-		log.Warnf("invalid Y value (%v)", y)
-		return fmt.Errorf("invalid Y value (%v)", y)
+		log.Warnf("invalid Y value (%v)", yParts[0])
+		return fmt.Errorf("invalid Y value (%v)", yParts[0])
 	}
 
 	req.y = uint(placeholder)
@@ -90,6 +93,12 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	return nil
 }
 
+func logAndError(w http.ResponseWriter, code int, format string, vals ...interface{}) {
+	msg := fmt.Sprintf(format, vals)
+	log.Info(msg)
+	http.Error(w, msg, code)
+}
+
 // URI scheme: /maps/:map_name/:layer_name/:z/:x/:y
 // map_name - map name in the config file
 // layer_name - name of the single map layer to render
@@ -105,18 +114,39 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// lookup our Map
-	m, err := atlas.GetMap(req.mapName)
+	m, err := req.Atlas.Map(req.mapName)
 	if err != nil {
 		errMsg := fmt.Sprintf("map (%v) not configured. check your config file", req.mapName)
 		log.Errorf(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
+		http.Error(w, errMsg, http.StatusNotFound)
 		return
+	}
+
+	// filter down the layers we need for this zoom
+	m = m.FilterLayersByZoom(req.z)
+	if len(m.Layers) == 0 {
+		logAndError(w, http.StatusNotFound, "map (%v) has no layers, at zoom %v", req.mapName, req.z)
+		return
+	}
+
+	if req.layerName != "" {
+		m = m.FilterLayersByName(req.layerName)
+		if len(m.Layers) == 0 {
+			logAndError(w, http.StatusNotFound, "map (%v) has no layers, for LayerName %v at zoom %v", req.mapName, req.layerName, req.z)
+			return
+		}
 	}
 
 	tile := slippy.NewTile(req.z, req.x, req.y, TileBuffer, tegola.WebMercator)
 
-	// filter down the layers we need for this zoom
-	m = m.FilterLayersByZoom(req.z).FilterLayersByName(req.layerName)
+	{
+		// Check to see that the zxy is within the bounds of the map.
+		textent := geom.Extent(tile.Bounds())
+		if !m.Bounds.Contains(&textent) {
+			logAndError(w, http.StatusNotFound, "map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
+			return
+		}
+	}
 
 	// check for the debug query string
 	if req.debug {

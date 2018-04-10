@@ -42,7 +42,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		// start our webserver
-		srv := server.Start(serverPort)
+		srv := server.Start(nil, serverPort)
 		shutdown(srv)
 		<-gdcmd.Cancelled()
 		gdcmd.Complete()

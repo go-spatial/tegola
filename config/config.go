@@ -63,6 +63,20 @@ type MapLayer struct {
 	DontSimplify bool `toml:"dont_simplify"`
 }
 
+// GetName helper to get the name we care about.
+func (ml MapLayer) GetName() (string, error) {
+	if ml.Name != "" {
+		return ml.Name, nil
+	}
+	// split the provider layer (syntax is provider.layer)
+	plParts := strings.Split(ml.ProviderLayer, ".")
+	if len(plParts) != 2 {
+		return "", ErrInvalidProviderLayerName{ProviderLayerName: ml.ProviderLayer}
+	}
+
+	return plParts[1], nil
+}
+
 // checks the config for issues
 func (c *Config) Validate() error {
 
@@ -75,20 +89,9 @@ func (c *Config) Validate() error {
 		}
 
 		for layerKey, l := range m.Layers {
-			var name string
-
-			if l.Name != "" {
-				name = l.Name
-			} else {
-				// split the provider layer (syntax is provider.layer)
-				plParts := strings.Split(l.ProviderLayer, ".")
-				if len(plParts) != 2 {
-					return ErrInvalidProviderLayerName{
-						ProviderLayerName: l.ProviderLayer,
-					}
-				}
-
-				name = plParts[1]
+			name, err := l.GetName()
+			if err != nil {
+				return err
 			}
 
 			// MaxZoom default
@@ -108,7 +111,15 @@ func (c *Config) Validate() error {
 				c.Maps[mapKey].Layers[layerKey].MinZoom = &ph
 			}
 
-			// check if we already have this layer
+			if *l.MaxZoom > tegola.MaxZ {
+				return ErrInvalidLayerZoom{
+					ProviderLayer: l.ProviderLayer,
+					Zoom:          int(*l.MaxZoom),
+					ZoomLimit:     tegola.MaxZ,
+				}
+			}
+
+			//	check if we already have this layer
 			if val, ok := mapLayers[m.Name][name]; ok {
 				// we have a hit. check for zoom range overlap
 				if *val.MinZoom <= *l.MaxZoom && *l.MinZoom <= *val.MaxZoom {
