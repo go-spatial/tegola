@@ -1,11 +1,11 @@
 package env
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"fmt"
 )
 
 // matches a variable surrounded by curly braces with leading dollar sign.
@@ -30,20 +30,16 @@ func (te *TypeError) Error() string {
 	return fmt.Sprintf("type %t could not be converted", te.v)
 }
 
-
 // replaceEnvVars replaces environment variable placeholders in reader stream with values
 func replaceEnvVar(in string) (string, error) {
 	// loop through all environment variable matches
-	for
-	locs := regex.FindStringIndex(in);
-	locs != nil;
-	locs  = regex.FindStringIndex(in) {
+	for locs := regex.FindStringIndex(in); locs != nil; locs = regex.FindStringIndex(in) {
 
 		// extract match from the input string
 		match := in[locs[0]:locs[1]]
 
 		// trim the leading '${' and trailing '}'
-		varName := match[2:len(match)-1]
+		varName := match[2 : len(match)-1]
 
 		// get env var
 		envVar, ok := os.LookupEnv(varName)
@@ -84,8 +80,6 @@ func (t *Bool) UnmarshalTOML(v interface{}) error {
 	default:
 		return &TypeError{v}
 	}
-
-
 
 	*t = Bool(boolVal)
 	return nil

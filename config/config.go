@@ -14,8 +14,8 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/config/env"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 // Config represents a tegola config file.
@@ -41,20 +41,20 @@ type Webserver struct {
 
 // A Map represents a map in the Tegola Config file.
 type Map struct {
-	Name        env.String     `toml:"name"`
-	Attribution env.String     `toml:"attribution"`
+	Name        env.String   `toml:"name"`
+	Attribution env.String   `toml:"attribution"`
 	Bounds      []env.Float  `toml:"bounds"`
 	Center      [3]env.Float `toml:"center"`
-	Layers      []MapLayer `toml:"layers"`
+	Layers      []MapLayer   `toml:"layers"`
 }
 
 type MapLayer struct {
 	// Name is optional. If it's not defined the name of the ProviderLayer will be used.
 	// Name can also be used to group multiple ProviderLayers under the same namespace.
-	Name          env.String      `toml:"name"`
-	ProviderLayer env.String      `toml:"provider_layer"`
-	MinZoom       *env.Uint       `toml:"min_zoom"`
-	MaxZoom       *env.Uint       `toml:"max_zoom"`
+	Name          env.String  `toml:"name"`
+	ProviderLayer env.String  `toml:"provider_layer"`
+	MinZoom       *env.Uint   `toml:"min_zoom"`
+	MaxZoom       *env.Uint   `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
 	// DontSimplify indicates wheather feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify

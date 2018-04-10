@@ -12,21 +12,20 @@ import (
 )
 
 const (
-	ENV_TEST_PORT = ":8888"
-	ENV_TEST_CENTER_X = -76.275329586789
-	ENV_TEST_CENTER_Y = 39.153492567373
-	ENV_TEST_CENTER_Z = 8.0
-	ENV_TEST_HOST_1 = "cdn"
-	ENV_TEST_HOST_2 = "tegola"
-	ENV_TEST_HOST_3 = "io"
-	ENV_TEST_HOST_CONCAT = ENV_TEST_HOST_1 + "." +ENV_TEST_HOST_2 + "." +ENV_TEST_HOST_3
+	ENV_TEST_PORT        = ":8888"
+	ENV_TEST_CENTER_X    = -76.275329586789
+	ENV_TEST_CENTER_Y    = 39.153492567373
+	ENV_TEST_CENTER_Z    = 8.0
+	ENV_TEST_HOST_1      = "cdn"
+	ENV_TEST_HOST_2      = "tegola"
+	ENV_TEST_HOST_3      = "io"
+	ENV_TEST_HOST_CONCAT = ENV_TEST_HOST_1 + "." + ENV_TEST_HOST_2 + "." + ENV_TEST_HOST_3
 )
 
 func setEnv() {
 	x := strconv.FormatFloat(ENV_TEST_CENTER_X, 'f', -1, 64)
 	y := strconv.FormatFloat(ENV_TEST_CENTER_Y, 'f', -1, 64)
 	z := strconv.FormatFloat(ENV_TEST_CENTER_Z, 'f', -1, 64)
-
 
 	os.Setenv("ENV_TEST_PORT", ENV_TEST_PORT)
 	os.Setenv("ENV_TEST_CENTER_X", x)
