@@ -16,11 +16,50 @@ import (
 
 var ErrMissingDesc = fmt.Errorf("missing desc field")
 
+type Type uint8
+
+const (
+	TypeNone   Type = 0
+	TypeEncode      = 1
+	TypeDecode      = 2
+	TypeBoth        = 3
+)
+
+func (ot Type) Is(t Type) bool { return ot&t == t }
+
 type C struct {
-	Desc     string
-	BOM      binary.ByteOrder
-	Expected interface{}
-	Bytes    []byte
+	Desc        string
+	BOM         binary.ByteOrder
+	Skip        Type
+	Expected    interface{}
+	DecodeError string
+	EncodeError string
+	Bytes       []byte
+}
+
+func (c C) HasErrorFor(t Type) bool {
+	switch t {
+	case TypeEncode:
+		return c.EncodeError != ""
+	case TypeDecode:
+		return c.DecodeError != ""
+	}
+	return false
+}
+func (c C) ErrorFor(t Type) string {
+	switch t {
+	case TypeEncode:
+		return c.EncodeError
+	case TypeDecode:
+		return c.DecodeError
+	}
+	return ""
+}
+func (c C) DoesErrorMatch(t Type, e error) bool {
+	if !c.HasErrorFor(t) {
+		return e == nil
+	}
+	return e.Error() == c.ErrorFor(t)
 }
 
 func parse(r io.Reader, filename string) (cases []C, err error) {
@@ -43,6 +82,36 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			}
 			cC = new(C)
 			cC.Desc = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
+		case "skip":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			val := strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
+			strings.ToLower(val)
+			strings.TrimSpace(val)
+			switch val {
+			case "encode":
+				cC.Skip = TypeEncode
+			case "decode":
+				cC.Skip = TypeDecode
+			case "both":
+				cC.Skip = TypeBoth
+			}
+
+			if err != nil {
+				return cases, err
+			}
+
+		case "decode_error":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			cC.DecodeError = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
+		case "encode_error":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			cC.EncodeError = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
 		case "bytes":
 			if cC == nil {
 				return cases, ErrMissingDesc

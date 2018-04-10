@@ -12,6 +12,7 @@ body, html {
 }
 .float-r {
 	float: right;
+	padding-left: 1rem;
 }
 .hide {
 	display: none;
