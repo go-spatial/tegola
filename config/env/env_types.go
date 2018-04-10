@@ -115,6 +115,42 @@ func (t *String) UnmarshalTOML(v interface{}) error {
 	return nil
 }
 
+type Int int
+
+func IntPtr(v Int) *Int {
+	return &v
+}
+
+func (t *Int) UnmarshalTOML(v interface{}) error {
+	var intVal int64
+	var err error
+
+	switch val := v.(type) {
+	case string:
+		val, err = replaceEnvVar(val)
+		if err != nil {
+			return err
+		}
+		intVal, err = strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return err
+		}
+	case int:
+		intVal = int64(val)
+	case int64:
+		intVal = val
+	case uint:
+		intVal = int64(val)
+	case uint64:
+		intVal = int64(val)
+	default:
+		return &TypeError{v}
+	}
+
+	*t = Int(intVal)
+	return nil
+}
+
 type Uint uint
 
 func UintPtr(v Uint) *Uint {
