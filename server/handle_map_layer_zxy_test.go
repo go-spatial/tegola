@@ -36,6 +36,7 @@ func MapHandlerTester(t *testing.T, tc MapHandlerTCase) {
 		wbody := strings.TrimSpace(w.Body.String())
 		t.Log("wbody", wbody)
 		t.Errorf("status code, expected %v got %v", tc.expectedCode, w.Code)
+		return
 	}
 	// Only try and decode as string for errors.
 	if len(tc.expectedBody) > 0 && tc.expectedCode >= 400 {
@@ -43,6 +44,8 @@ func MapHandlerTester(t *testing.T, tc MapHandlerTCase) {
 		if string(tc.expectedBody) != wbody {
 			t.Errorf("body, expected %v got %v", string(tc.expectedBody), wbody)
 		}
+		// Don't process anything else if there is an error.
+		return
 	}
 
 	// success check
