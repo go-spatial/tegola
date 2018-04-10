@@ -239,7 +239,7 @@ go build -tags 'noRedisCache noGpkgProvider'
 Tegola uses CGO for certain functionality (i.e. GeoPackge support). To build tegola without CGO use the following command:
 
 ```bash
-CGO_ENABLED go build
+CGO_ENABLED=0 go build
 ```
 
 
