@@ -8,10 +8,11 @@ import (
 	"fmt"
 )
 
-var regex *regexp.Regexp
+// matches a variable surrounded by curly braces with leading dollar sign.
+// ex: ${MY_VAR}
+var regex = regexp.MustCompile(`\${[A-Z]+[A-Z1-9_]*}`)
 
-func init() { regex = regexp.MustCompile(`\${[A-Z]+[A-Z1-9_]*}`) }
-
+// EnvironmentError corresponds with a missing environment variable
 type EnvironmentError struct {
 	varName string
 }
@@ -20,6 +21,7 @@ func (ee *EnvironmentError) Error() string {
 	return fmt.Sprintf("environment variable %q not found", ee.varName)
 }
 
+// TypeError corresponds with an incorrect type passed to UnmarshalTOML
 type TypeError struct {
 	v interface{}
 }
@@ -29,6 +31,7 @@ func (te *TypeError) Error() string {
 }
 
 
+// replaceEnvVars replaces environment variable placeholders in reader stream with values
 func replaceEnvVar(in string) (string, error) {
 	// loop through all environment variable matches
 	for
