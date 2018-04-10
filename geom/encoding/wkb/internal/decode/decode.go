@@ -9,6 +9,20 @@ import (
 	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/consts"
 )
 
+type ErrBadBOM byte
+
+func (e ErrBadBOM) Error() string { return "decode: bad byte order marker" }
+
+type ErrInvalidType struct {
+	// In which collection type was the invalide type found.
+	Primary string
+	Type    uint32
+}
+
+func (e ErrInvalidType) Error() string {
+	return fmt.Sprintf("decode: invalid type for %v", e.Primary)
+}
+
 func ByteOrderType(r io.Reader) (byteOrder binary.ByteOrder, typ uint32, err error) {
 	var bom = make([]byte, 1, 1)
 	// the bom is the first byte
@@ -23,7 +37,7 @@ func ByteOrderType(r io.Reader) (byteOrder binary.ByteOrder, typ uint32, err err
 	case 1:
 		byteOrder = binary.LittleEndian
 	default:
-		return byteOrder, typ, fmt.Errorf("Byte Order Marker should be 0 or 1; got %v instead.", bom[0])
+		return byteOrder, typ, ErrBadBOM(bom[0])
 	}
 
 	// Reading the type which is 4 bytes
@@ -50,7 +64,7 @@ func MultiPoint(r io.Reader, bom binary.ByteOrder) (pts geom.MultiPoint, err err
 			return pts, err
 		}
 		if typ != consts.Point {
-			return pts, fmt.Errorf("Expected to find a point in MultiPoint; got type %v instead.", typ)
+			return pts, ErrInvalidType{"multipoint", typ}
 		}
 		err = binary.Read(r, bom, &pts[i])
 		if err != nil {
@@ -86,7 +100,7 @@ func MultiLineString(r io.Reader, bom binary.ByteOrder) (lns geom.MultiLineStrin
 			return lns, err
 		}
 		if typ != consts.LineString {
-			return lns, fmt.Errorf("Expected to find a linestring in MultiLineString; got type %v instead.", typ)
+			return lns, ErrInvalidType{"multilinestring", typ}
 		}
 		if lns[i], err = LineString(r, bom); err != nil {
 			return lns, err
@@ -142,7 +156,7 @@ func MultiPolygon(r io.Reader, bom binary.ByteOrder) (plys geom.MultiPolygon, er
 			return plys, err
 		}
 		if typ != consts.Polygon {
-			return plys, fmt.Errorf("Expected to find a polygon in MultiPolygon; got type %v instead.", typ)
+			return plys, ErrInvalidType{"multipolygon", typ}
 		}
 		if plys[i], err = Polygon(r, bom); err != nil {
 			return plys, err
@@ -178,7 +192,7 @@ func Collection(r io.Reader, bom binary.ByteOrder) (col geom.Collection, err err
 		case consts.Collection:
 			col[i], err = Collection(r, bom)
 		default:
-			err = fmt.Errorf("Unknown type (%v) found in collection", typ)
+			err = ErrInvalidType{"collection", typ}
 		}
 		if err != nil {
 			return col, err
