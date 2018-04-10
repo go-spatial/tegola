@@ -16,6 +16,10 @@ const (
 	ENV_TEST_CENTER_X = -76.275329586789
 	ENV_TEST_CENTER_Y = 39.153492567373
 	ENV_TEST_CENTER_Z = 8.0
+	ENV_TEST_HOST_1 = "cdn"
+	ENV_TEST_HOST_2 = "tegola"
+	ENV_TEST_HOST_3 = "io"
+	ENV_TEST_HOST_CONCAT = ENV_TEST_HOST_1 + "." +ENV_TEST_HOST_2 + "." +ENV_TEST_HOST_3
 )
 
 func setEnv() {
@@ -28,6 +32,9 @@ func setEnv() {
 	os.Setenv("ENV_TEST_CENTER_X", x)
 	os.Setenv("ENV_TEST_CENTER_Y", y)
 	os.Setenv("ENV_TEST_CENTER_Z", z)
+	os.Setenv("ENV_TEST_HOST_1", ENV_TEST_HOST_1)
+	os.Setenv("ENV_TEST_HOST_2", ENV_TEST_HOST_2)
+	os.Setenv("ENV_TEST_HOST_3", ENV_TEST_HOST_3)
 }
 
 func unsetEnv() {
@@ -175,7 +182,7 @@ func TestParse(t *testing.T) {
 		"2 test env": {
 			config: `
 				[webserver]
-				hostname = "cdn.tegola.io"
+				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
 				port = "${ENV_TEST_PORT}"
 
 				[[providers]]
@@ -235,7 +242,7 @@ func TestParse(t *testing.T) {
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName: "cdn.tegola.io",
+					HostName: ENV_TEST_HOST_CONCAT,
 					Port:     ENV_TEST_PORT,
 				},
 				Providers: []map[string]interface{}{

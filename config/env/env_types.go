@@ -1,41 +1,62 @@
 package env
 
 import (
-	"errors"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
+	"fmt"
 )
-
-var TypeError = errors.New("type could not be converted")
-var EnvironmentError = errors.New("environment variable not found")
 
 var regex *regexp.Regexp
 
 func init() { regex = regexp.MustCompile(`\${[A-Z]+[A-Z1-9_]*}`) }
 
+type EnvironmentError struct {
+	varName string
+}
+
+func (ee *EnvironmentError) Error() string {
+	return fmt.Sprintf("environment variable %q not found", ee.varName)
+}
+
+type TypeError struct {
+	v interface{}
+}
+
+func (te *TypeError) Error() string {
+	return fmt.Sprintf("type %t could not be converted", te.v)
+}
+
+
 func replaceEnvVar(in string) (string, error) {
+	// loop through all environment variable matches
+	for
+	locs := regex.FindStringIndex(in);
+	locs != nil;
+	locs  = regex.FindStringIndex(in) {
 
-	// TODO(ear7h): FindAllString
-	varName := regex.FindString(in)
-	// no env var
-	if len(varName) == 0 {
-		return in, nil
+		// extract match from the input string
+		match := in[locs[0]:locs[1]]
+
+		// trim the leading '${' and trailing '}'
+		varName := match[2:len(match)-1]
+
+		// get env var
+		envVar, ok := os.LookupEnv(varName)
+		if !ok {
+			return "", &EnvironmentError{varName: varName}
+		}
+
+		// update the input string with the env values
+		in = strings.Replace(in, match, envVar, -1)
 	}
 
-	// trim the leading '${' and trailing '}'
-	varName = varName[2:len(varName)-1]
-
-	// get env var
-	envVar := os.Getenv(varName)
-	if envVar == "" {
-		return "", EnvironmentError
-	}
-
-	return regex.ReplaceAllString(in, envVar), nil
+	return in, nil
 }
 
 type Bool bool
+
 func BoolPtr(v Bool) *Bool {
 	return &v
 }
@@ -55,7 +76,7 @@ func (t *Bool) UnmarshalTOML(v interface{}) error {
 	case bool:
 		boolVal = val
 	default:
-		err = TypeError
+		err = &TypeError{v}
 	}
 
 	if err != nil {
@@ -67,6 +88,7 @@ func (t *Bool) UnmarshalTOML(v interface{}) error {
 }
 
 type String string
+
 func StringPtr(v String) *String {
 	return &v
 }
@@ -82,7 +104,7 @@ func (t *String) UnmarshalTOML(v interface{}) error {
 			break
 		}
 	default:
-		err = TypeError
+		err = &TypeError{v}
 	}
 
 	if err != nil {
@@ -94,6 +116,7 @@ func (t *String) UnmarshalTOML(v interface{}) error {
 }
 
 type Uint uint
+
 func UintPtr(v Uint) *Uint {
 	return &v
 }
@@ -118,7 +141,7 @@ func (t *Uint) UnmarshalTOML(v interface{}) error {
 	case uint64:
 		uintVal = val
 	default:
-		err = TypeError
+		err = &TypeError{v}
 	}
 
 	if err != nil {
@@ -130,6 +153,7 @@ func (t *Uint) UnmarshalTOML(v interface{}) error {
 }
 
 type Float float64
+
 func FloatPtr(v Float) *Float {
 	return &v
 }
@@ -149,7 +173,7 @@ func (t *Float) UnmarshalTOML(v interface{}) error {
 	case float32:
 		floatVal = float64(val)
 	default:
-		err = TypeError
+		err = &TypeError{v}
 	}
 
 	if err != nil {
