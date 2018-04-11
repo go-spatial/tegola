@@ -30,6 +30,8 @@ type ConnPool struct {
 	pgTypes              map[Oid]PgType
 	pgsql_af_inet        *byte
 	pgsql_af_inet6       *byte
+	txAfterClose         func(tx *Tx)
+	rowsAfterClose       func(rows *Rows)
 }
 
 type ConnPoolStat struct {
@@ -66,6 +68,14 @@ func NewConnPool(config ConnPoolConfig) (p *ConnPool, err error) {
 	p.logger = config.Logger
 	if p.logger == nil {
 		p.logLevel = LogLevelNone
+	}
+
+	p.txAfterClose = func(tx *Tx) {
+		p.Release(tx.Conn())
+	}
+
+	p.rowsAfterClose = func(rows *Rows) {
+		p.Release(rows.Conn())
 	}
 
 	p.allConnections = make([]*Conn, 0, p.maxConnections)
@@ -487,10 +497,13 @@ func (p *ConnPool) BeginIso(iso string) (*Tx, error) {
 	}
 }
 
-func (p *ConnPool) txAfterClose(tx *Tx) {
-	p.Release(tx.Conn())
-}
+// CopyTo acquires a connection, delegates the call to that connection, and releases the connection
+func (p *ConnPool) CopyTo(tableName string, columnNames []string, rowSrc CopyToSource) (int, error) {
+	c, err := p.Acquire()
+	if err != nil {
+		return 0, err
+	}
+	defer p.Release(c)
 
-func (p *ConnPool) rowsAfterClose(rows *Rows) {
-	p.Release(rows.Conn())
+	return c.CopyTo(tableName, columnNames, rowSrc)
 }
