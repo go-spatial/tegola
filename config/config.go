@@ -64,12 +64,12 @@ type MapLayer struct {
 // GetName helper to get the name we care about.
 func (ml MapLayer) GetName() (string, error) {
 	if ml.Name != "" {
-		return ml.Name, nil
+		return string(ml.Name), nil
 	}
 	// split the provider layer (syntax is provider.layer)
-	plParts := strings.Split(ml.ProviderLayer, ".")
+	plParts := strings.Split(string(ml.ProviderLayer), ".")
 	if len(plParts) != 2 {
-		return "", ErrInvalidProviderLayerName{ProviderLayerName: ml.ProviderLayer}
+		return "", ErrInvalidProviderLayerName{ProviderLayerName: string(ml.ProviderLayer)}
 	}
 
 	return plParts[1], nil
