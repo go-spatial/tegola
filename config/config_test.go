@@ -5,10 +5,43 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arolek/p"
-
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/config/env"
+	"os"
+	"strconv"
 )
+
+const (
+	ENV_TEST_PORT        = ":8888"
+	ENV_TEST_CENTER_X    = -76.275329586789
+	ENV_TEST_CENTER_Y    = 39.153492567373
+	ENV_TEST_CENTER_Z    = 8.0
+	ENV_TEST_HOST_1      = "cdn"
+	ENV_TEST_HOST_2      = "tegola"
+	ENV_TEST_HOST_3      = "io"
+	ENV_TEST_HOST_CONCAT = ENV_TEST_HOST_1 + "." + ENV_TEST_HOST_2 + "." + ENV_TEST_HOST_3
+)
+
+func setEnv() {
+	x := strconv.FormatFloat(ENV_TEST_CENTER_X, 'f', -1, 64)
+	y := strconv.FormatFloat(ENV_TEST_CENTER_Y, 'f', -1, 64)
+	z := strconv.FormatFloat(ENV_TEST_CENTER_Z, 'f', -1, 64)
+
+	os.Setenv("ENV_TEST_PORT", ENV_TEST_PORT)
+	os.Setenv("ENV_TEST_CENTER_X", x)
+	os.Setenv("ENV_TEST_CENTER_Y", y)
+	os.Setenv("ENV_TEST_CENTER_Z", z)
+	os.Setenv("ENV_TEST_HOST_1", ENV_TEST_HOST_1)
+	os.Setenv("ENV_TEST_HOST_2", ENV_TEST_HOST_2)
+	os.Setenv("ENV_TEST_HOST_3", ENV_TEST_HOST_3)
+}
+
+func unsetEnv() {
+	os.Unsetenv("ENV_TEST_PORT")
+	os.Unsetenv("ENV_TEST_CENTER_X")
+	os.Unsetenv("ENV_TEST_CENTER_Y")
+	os.Unsetenv("ENV_TEST_CENTER_Z")
+}
 
 func TestParse(t *testing.T) {
 	type tcase struct {
@@ -16,8 +49,10 @@ func TestParse(t *testing.T) {
 		expected config.Config
 	}
 
+	setEnv()
+	defer unsetEnv()
+
 	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
 
 		r := strings.NewReader(tc.config)
 
@@ -129,13 +164,13 @@ func TestParse(t *testing.T) {
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       p.Uint(10),
-								MaxZoom:       p.Uint(20),
+								MinZoom:       env.UintPtr(10),
+								MaxZoom:       env.UintPtr(20),
 								DontSimplify:  true,
 							},
 						},
@@ -143,11 +178,11 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-		"2": {
+		"2 test env": {
 			config: `
 				[webserver]
-				hostname = "cdn.tegola.io"
-				port = ":8080"
+				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
+				port = "${ENV_TEST_PORT}"
 
 				[[providers]]
 				name = "provider1"
@@ -174,7 +209,7 @@ func TestParse(t *testing.T) {
 				name = "osm"
 				attribution = "Test Attribution"
 				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = [-76.275329586789, 39.153492567373, 8.0]
+				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
 
 					[[maps.layers]]
 					name = "water"
@@ -206,8 +241,8 @@ func TestParse(t *testing.T) {
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName: "cdn.tegola.io",
-					Port:     ":8080",
+					HostName: ENV_TEST_HOST_CONCAT,
+					Port:     ENV_TEST_PORT,
 				},
 				Providers: []map[string]interface{}{
 					{
@@ -238,8 +273,8 @@ func TestParse(t *testing.T) {
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{ENV_TEST_CENTER_X, ENV_TEST_CENTER_Y, ENV_TEST_CENTER_Z},
 						Layers: []config.MapLayer{
 							{
 								Name:          "water",
@@ -250,28 +285,28 @@ func TestParse(t *testing.T) {
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_6_10",
-								MinZoom:       p.Uint(6),
-								MaxZoom:       p.Uint(10),
+								MinZoom:       env.UintPtr(6),
+								MaxZoom:       env.UintPtr(10),
 							},
 						},
 					},
 					{
 						Name:        "osm_2",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       p.Uint(0),
-								MaxZoom:       p.Uint(5),
+								MinZoom:       env.UintPtr(0),
+								MaxZoom:       env.UintPtr(5),
 							},
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_6_10",
-								MinZoom:       p.Uint(6),
-								MaxZoom:       p.Uint(10),
+								MinZoom:       env.UintPtr(6),
+								MaxZoom:       env.UintPtr(10),
 							},
 						},
 					},
@@ -351,18 +386,18 @@ func TestValidate(t *testing.T) {
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       p.Uint(10),
-								MaxZoom:       p.Uint(20),
+								MinZoom:       env.UintPtr(10),
+								MaxZoom:       env.UintPtr(20),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       p.Uint(10),
-								MaxZoom:       p.Uint(20),
+								MinZoom:       env.UintPtr(10),
+								MaxZoom:       env.UintPtr(20),
 							},
 						},
 					},
@@ -415,20 +450,20 @@ func TestValidate(t *testing.T) {
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
-								MinZoom:       p.Uint(0),
-								MaxZoom:       p.Uint(5),
+								MinZoom:       env.UintPtr(0),
+								MaxZoom:       env.UintPtr(5),
 							},
 							{
 								Name:          "water",
 								ProviderLayer: "provider2.water_5_10",
-								MinZoom:       p.Uint(5),
-								MaxZoom:       p.Uint(10),
+								MinZoom:       env.UintPtr(5),
+								MaxZoom:       env.UintPtr(10),
 							},
 						},
 					},
@@ -485,36 +520,36 @@ func TestValidate(t *testing.T) {
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       p.Uint(10),
-								MaxZoom:       p.Uint(15),
+								MinZoom:       env.UintPtr(10),
+								MaxZoom:       env.UintPtr(15),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       p.Uint(16),
-								MaxZoom:       p.Uint(20),
+								MinZoom:       env.UintPtr(16),
+								MaxZoom:       env.UintPtr(20),
 							},
 						},
 					},
 					{
 						Name:        "osm_2",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
-								MinZoom:       p.Uint(10),
-								MaxZoom:       p.Uint(15),
+								MinZoom:       env.UintPtr(10),
+								MaxZoom:       env.UintPtr(15),
 							},
 							{
 								ProviderLayer: "provider2.water",
-								MinZoom:       p.Uint(16),
-								MaxZoom:       p.Uint(20),
+								MinZoom:       env.UintPtr(16),
+								MaxZoom:       env.UintPtr(20),
 							},
 						},
 					},
@@ -568,8 +603,8 @@ func TestValidate(t *testing.T) {
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
@@ -579,8 +614,8 @@ func TestValidate(t *testing.T) {
 					{
 						Name:        "osm_2",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider2.water",
@@ -637,8 +672,8 @@ func TestValidate(t *testing.T) {
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
-						Bounds:      []float64{-180, -85.05112877980659, 180, 85.0511287798066},
-						Center:      [3]float64{-76.275329586789, 39.153492567373, 8.0},
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",

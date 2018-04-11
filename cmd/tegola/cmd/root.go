@@ -116,21 +116,28 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 
 	// iterate our maps
 	for _, m := range maps {
-		newMap := atlas.NewWebMercatorMap(m.Name)
-		newMap.Attribution = html.EscapeString(m.Attribution)
-		newMap.Center = m.Center
+		newMap := atlas.NewWebMercatorMap(string(m.Name))
+		newMap.Attribution = html.EscapeString(string(m.Attribution))
+
+		// convert from env package
+		centerArr := [3]float64{}
+		for i, v := range m.Center {
+			centerArr[i] = float64(v)
+		}
+
+		newMap.Center = centerArr
 
 		if len(m.Bounds) == 4 {
 			newMap.Bounds = geom.NewExtent(
-				[2]float64{m.Bounds[0], m.Bounds[1]},
-				[2]float64{m.Bounds[2], m.Bounds[3]},
+				[2]float64{float64(m.Bounds[0]), float64(m.Bounds[1])},
+				[2]float64{float64(m.Bounds[2]), float64(m.Bounds[3])},
 			)
 		}
 
 		// iterate our layers
 		for _, l := range m.Layers {
 			// split our provider name (provider.layer) into [provider,layer]
-			providerLayer := strings.Split(l.ProviderLayer, ".")
+			providerLayer := strings.Split(string(l.ProviderLayer), ".")
 
 			// we're expecting two params in the provider layer definition
 			if len(providerLayer) != 2 {
@@ -175,14 +182,14 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 
 			// add our layer to our layers slice
 			newMap.Layers = append(newMap.Layers, atlas.Layer{
-				Name:              l.Name,
+				Name:              string(l.Name),
 				ProviderLayerName: providerLayer[1],
-				MinZoom:           *l.MinZoom,
-				MaxZoom:           *l.MaxZoom,
+				MinZoom:           uint(*l.MinZoom),
+				MaxZoom:           uint(*l.MaxZoom),
 				Provider:          provider,
 				DefaultTags:       defaultTags,
 				GeomType:          layerGeomType,
-				DontSimplify:      l.DontSimplify,
+				DontSimplify:      bool(l.DontSimplify),
 			})
 		}
 
