@@ -24,16 +24,16 @@ var serverCmd = &cobra.Command{
 		// check config for server port setting
 		// if you set the port via the comand line it will override the port setting in the config
 		if serverPort == defaultHTTPPort && conf.Webserver.Port != "" {
-			serverPort = conf.Webserver.Port
+			serverPort = string(conf.Webserver.Port)
 		}
 
 		// set our server version
 		server.Version = Version
-		server.HostName = conf.Webserver.HostName
+		server.HostName = string(conf.Webserver.HostName)
 
 		// set the CORSAllowedOrigin if a value is provided
 		if conf.Webserver.CORSAllowedOrigin != "" {
-			server.CORSAllowedOrigin = conf.Webserver.CORSAllowedOrigin
+			server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
 		}
 
 		// set tile buffer

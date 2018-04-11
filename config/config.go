@@ -6,17 +6,15 @@ package config
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/config/env"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
@@ -36,31 +34,31 @@ type Config struct {
 }
 
 type Webserver struct {
-	HostName          string `toml:"hostname"`
-	Port              string `toml:"port"`
-	CORSAllowedOrigin string `toml:"cors_allowed_origin"`
+	HostName          env.String `toml:"hostname"`
+	Port              env.String `toml:"port"`
+	CORSAllowedOrigin env.String `toml:"cors_allowed_origin"`
 }
 
 // A Map represents a map in the Tegola Config file.
 type Map struct {
-	Name        string     `toml:"name"`
-	Attribution string     `toml:"attribution"`
-	Bounds      []float64  `toml:"bounds"`
-	Center      [3]float64 `toml:"center"`
-	Layers      []MapLayer `toml:"layers"`
+	Name        env.String   `toml:"name"`
+	Attribution env.String   `toml:"attribution"`
+	Bounds      []env.Float  `toml:"bounds"`
+	Center      [3]env.Float `toml:"center"`
+	Layers      []MapLayer   `toml:"layers"`
 }
 
 type MapLayer struct {
 	// Name is optional. If it's not defined the name of the ProviderLayer will be used.
 	// Name can also be used to group multiple ProviderLayers under the same namespace.
-	Name          string      `toml:"name"`
-	ProviderLayer string      `toml:"provider_layer"`
-	MinZoom       *uint       `toml:"min_zoom"`
-	MaxZoom       *uint       `toml:"max_zoom"`
+	Name          env.String  `toml:"name"`
+	ProviderLayer env.String  `toml:"provider_layer"`
+	MinZoom       *env.Uint   `toml:"min_zoom"`
+	MaxZoom       *env.Uint   `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
 	// DontSimplify indicates wheather feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify
-	DontSimplify bool `toml:"dont_simplify"`
+	DontSimplify env.Bool `toml:"dont_simplify"`
 }
 
 // GetName helper to get the name we care about.
@@ -84,8 +82,8 @@ func (c *Config) Validate() error {
 	// map of layers to providers
 	mapLayers := map[string]map[string]MapLayer{}
 	for mapKey, m := range c.Maps {
-		if _, ok := mapLayers[m.Name]; !ok {
-			mapLayers[m.Name] = map[string]MapLayer{}
+		if _, ok := mapLayers[string(m.Name)]; !ok {
+			mapLayers[string(m.Name)] = map[string]MapLayer{}
 		}
 
 		for layerKey, l := range m.Layers {
@@ -96,7 +94,7 @@ func (c *Config) Validate() error {
 
 			// MaxZoom default
 			if l.MaxZoom == nil {
-				ph := uint(tegola.MaxZ)
+				ph := env.Uint(tegola.MaxZ)
 				// set in iterated value
 				l.MaxZoom = &ph
 				// set in underlying config struct
@@ -104,35 +102,27 @@ func (c *Config) Validate() error {
 			}
 			// MinZoom default
 			if l.MinZoom == nil {
-				ph := uint(0)
+				ph := env.Uint(0)
 				// set in iterated value
 				l.MinZoom = &ph
 				// set in underlying config struct
 				c.Maps[mapKey].Layers[layerKey].MinZoom = &ph
 			}
 
-			if *l.MaxZoom > tegola.MaxZ {
-				return ErrInvalidLayerZoom{
-					ProviderLayer: l.ProviderLayer,
-					Zoom:          int(*l.MaxZoom),
-					ZoomLimit:     tegola.MaxZ,
-				}
-			}
-
-			//	check if we already have this layer
-			if val, ok := mapLayers[m.Name][name]; ok {
+			// check if we already have this layer
+			if val, ok := mapLayers[string(m.Name)][name]; ok {
 				// we have a hit. check for zoom range overlap
-				if *val.MinZoom <= *l.MaxZoom && *l.MinZoom <= *val.MaxZoom {
+				if uint(*val.MinZoom) <= uint(*l.MaxZoom) && uint(*l.MinZoom) <= uint(*val.MaxZoom) {
 					return ErrOverlappingLayerZooms{
-						ProviderLayer1: val.ProviderLayer,
-						ProviderLayer2: l.ProviderLayer,
+						ProviderLayer1: string(val.ProviderLayer),
+						ProviderLayer2: string(l.ProviderLayer),
 					}
 				}
 				continue
 			}
 
 			// add the MapLayer to our map
-			mapLayers[m.Name][name] = l
+			mapLayers[string(m.Name)][name] = l
 		}
 	}
 
@@ -146,53 +136,6 @@ func Parse(reader io.Reader, location string) (conf Config, err error) {
 	conf.LocationName = location
 
 	return conf, err
-}
-
-// replaceEnvVars replaces environment variable placeholders in reader stream with values
-// i.e. "val = $VAR" -> "val = 3"
-func replaceEnvVars(reader io.Reader) (io.Reader, error) {
-	// Variable definition follows IEEE Std 1003.1-2001
-	//   A dollar sign ($) followed by an upper-case letter, followed by
-	//   zero or more upper-case letters, digits, or underscores (_).
-	varNameRegexStr := `[A-Z]+[A-Z1-9_]*`
-	// Var prepended by dollar sign ($)
-	// Ex: $MY_VAR7
-	regexStrDS := fmt.Sprintf(`\$%v`, varNameRegexStr)
-	// Additionally, match a variable surrounded by curly braces with leading dollar sign.
-	// Ex: ${MY_VAR7}
-	regexStrBraces := fmt.Sprintf(`\$\{%v\}`, varNameRegexStr)
-
-	// Regex to capture either syntax
-	regexStr := fmt.Sprintf("(%v|%v)", regexStrDS, regexStrBraces)
-	varFinder := regexp.MustCompile(regexStr)
-
-	configBytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	configStr := string(configBytes)
-
-	// Grab the regular & braced placeholders
-	varPlaceHolders := varFinder.FindAllString(configStr, -1)
-
-	varNameFinder := regexp.MustCompile(varNameRegexStr)
-
-	for _, ph := range varPlaceHolders {
-		// Get the environment variable value (drop the leading dollar sign ($) and surrounding braces ({}))
-		varName := varNameFinder.FindString(ph)
-		envVal, found := syscall.Getenv(varName)
-		if !found {
-			return nil, ErrMissingEnvVar{
-				EnvVar: varName,
-			}
-		}
-
-		// Explicit string replacement, no need for regex funny business any longer.
-		configStr = strings.Replace(configStr, ph, envVal, -1)
-	}
-
-	return strings.NewReader(configStr), nil
 }
 
 // Load will load and parse the config file from the given location.
@@ -228,11 +171,6 @@ func Load(location string) (conf Config, err error) {
 		if err != nil {
 			return conf, fmt.Errorf("error opening local config file (%v): %v ", location, err)
 		}
-	}
-
-	reader, err = replaceEnvVars(reader)
-	if err != nil {
-		return conf, err
 	}
 
 	return Parse(reader, location)
