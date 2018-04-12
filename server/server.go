@@ -59,9 +59,8 @@ func Start(port string) *http.Server {
 	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapLayerZXY{})))
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(HandleMapLayerZXY{}))
 
-	//	static convenience routes
-	group.UsingContext().Handler("GET", "/", http.FileServer(assetFS()))
-	group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
+	//	setup viewer routes, which can excluded via build flags
+	setupViewer(group)
 
 	//	start our server
 	srv := &http.Server{Addr: port, Handler: r}

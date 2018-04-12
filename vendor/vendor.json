@@ -255,10 +255,12 @@
 			"revisionTime": "2017-04-29T20:15:29Z"
 		},
 		{
-			"checksumSHA1": "kVJ5YScYaDWw6iotbpZwQJ6xCGM=",
+			"checksumSHA1": "WX1+2gktHcBmE9MGwFSGs7oqexU=",
 			"path": "github.com/golang/protobuf/proto",
-			"revision": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0",
-			"revisionTime": "2016-06-14T22:31:40Z"
+			"revision": "925541529c1fa6821df4e44ce2723319eb2be768",
+			"revisionTime": "2018-01-25T21:43:03Z",
+			"version": "v1.0.0",
+			"versionExact": "v1.0.0"
 		},
 		{
 			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
@@ -267,10 +269,12 @@
 			"revisionTime": "2014-10-17T20:07:13Z"
 		},
 		{
-			"checksumSHA1": "ZCMYdNAc0qTW5e7hWTZBVnYUXDs=",
+			"checksumSHA1": "vCcYMoqdweCNKygpC6MOYAYWNUw=",
 			"path": "github.com/jackc/pgx",
-			"revision": "558d5550cf5c08e7192eb2eb8635f21f4b700ff5",
-			"revisionTime": "2016-07-15T19:51:40Z"
+			"revision": "2508faa9ced29f4bbb3a39483e4b5ac2627a7c48",
+			"revisionTime": "2016-08-26T12:39:15Z",
+			"version": "v2.9.0",
+			"versionExact": "v2.9.0"
 		},
 		{
 			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",

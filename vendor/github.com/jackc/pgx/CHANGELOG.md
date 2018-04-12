@@ -1,4 +1,4 @@
-# Unreleased
+# 2.9.0 (August 26, 2016)
 
 ## Fixes
 
@@ -9,12 +9,13 @@
 
 ## Features
 
+* Add CopyTo
 * Add PrepareEx
 * Add basic record to []interface{} decoding
 * Encode and decode between all Go and PostgreSQL integer types with bounds checking
 * Decode inet/cidr to net.IP
 * Encode/decode [][]byte to/from bytea[]
-* Encode/decode named types whoses underlying types are string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64
+* Encode/decode named types whose underlying types are string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64
 
 ## Performance
 

@@ -10,10 +10,9 @@
 // static/lib/vue/v2.3.0/vue.min.js
 // DO NOT EDIT!
 
-package server
+package bindata
 
 import (
-	"github.com/elazarl/go-bindata-assetfs"
 	"bytes"
 	"compress/gzip"
 	"fmt"
@@ -91,7 +90,7 @@ func staticGitignore() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/.gitignore", size: 3, mode: os.FileMode(420), modTime: time.Unix(1519768054, 0)}
+	info := bindataFileInfo{name: "static/.gitignore", size: 3, mode: os.FileMode(420), modTime: time.Unix(1519689253, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -111,7 +110,7 @@ func staticCssTegolaCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/css/tegola.css", size: 2886, mode: os.FileMode(420), modTime: time.Unix(1519768054, 0)}
+	info := bindataFileInfo{name: "static/css/tegola.css", size: 2886, mode: os.FileMode(420), modTime: time.Unix(1510460395, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -131,7 +130,7 @@ func staticFaviconIco() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/favicon.ico", size: 1150, mode: os.FileMode(420), modTime: time.Unix(1519768054, 0)}
+	info := bindataFileInfo{name: "static/favicon.ico", size: 1150, mode: os.FileMode(420), modTime: time.Unix(1510460395, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -151,7 +150,7 @@ func staticIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/index.html", size: 1719, mode: os.FileMode(420), modTime: time.Unix(1521567499, 0)}
+	info := bindataFileInfo{name: "static/index.html", size: 1719, mode: os.FileMode(420), modTime: time.Unix(1522808163, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -171,7 +170,7 @@ func staticJsTegolaJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/js/tegola.js", size: 6307, mode: os.FileMode(420), modTime: time.Unix(1521567020, 0)}
+	info := bindataFileInfo{name: "static/js/tegola.js", size: 6307, mode: os.FileMode(420), modTime: time.Unix(1522808163, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -191,7 +190,7 @@ func staticLibMapboxGlJsV0410MapboxGlCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/v0.41.0/mapbox-gl.css", size: 39991, mode: os.FileMode(420), modTime: time.Unix(1519768054, 0)}
+	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/v0.41.0/mapbox-gl.css", size: 39991, mode: os.FileMode(420), modTime: time.Unix(1510460395, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -211,7 +210,7 @@ func staticLibMapboxGlJsV0410MapboxGlJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/v0.41.0/mapbox-gl.js", size: 614280, mode: os.FileMode(420), modTime: time.Unix(1519768054, 0)}
+	info := bindataFileInfo{name: "static/lib/mapbox-gl-js/v0.41.0/mapbox-gl.js", size: 614280, mode: os.FileMode(420), modTime: time.Unix(1510460395, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -231,7 +230,7 @@ func staticLibVueV230VueMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "static/lib/vue/v2.3.0/vue.min.js", size: 78479, mode: os.FileMode(420), modTime: time.Unix(1519768054, 0)}
+	info := bindataFileInfo{name: "static/lib/vue/v2.3.0/vue.min.js", size: 78479, mode: os.FileMode(420), modTime: time.Unix(1510460395, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -411,13 +410,3 @@ func _filePath(dir, name string) string {
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
 
-
-func assetFS() *assetfs.AssetFS {
-	assetInfo := func(path string) (os.FileInfo, error) {
-		return os.Stat(path)
-	}
-	for k := range _bintree.Children {
-		return &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: k}
-	}
-	panic("unreachable")
-}
