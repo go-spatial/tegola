@@ -223,15 +223,16 @@ You will now have a binary named `tegola` in the current directory which is [rea
 **Build Flags**
 The following build flags can be used to turn off certain features of tegola:
 
-- `noS3Cache` - turn off the AWS S3 cache back end
-- `noRedisCache` - turn off the Redis cache back end
-- `noPostgisProvider` - turn off the PostGIS data provider
+- `noS3Cache` - turn off the AWS S3 cache back end.
+- `noRedisCache` - turn off the Redis cache back end.
+- `noPostgisProvider` - turn off the PostGIS data provider.
 - `noGpkgProvider` - turn off the GeoPackage data provider. Note, GeoPackage uses CGO and will be turned off if the environment variable `CGO_ENABLED=0` is set prior to building.
+- `noViewer` - turn off the built in viewer.
 
-Example of using the build flags to turn of the Redis cache back end and the GeoPackage provider
+Example of using the build flags to turn of the Redis cache back end, the GeoPackage provider and the built in viewer.
 
 ```bash
-go build -tags 'noRedisCache noGpkgProvider'
+go build -tags 'noRedisCache noGpkgProvider noViewer'
 ```
 
 
