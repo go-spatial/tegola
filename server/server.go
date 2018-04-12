@@ -66,12 +66,10 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
 	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(hMapLayerZXY))
 
-	// static convenience routes
-	group.UsingContext().Handler("GET", "/", http.FileServer(assetFS()))
-	group.UsingContext().Handler("GET", "/*path", http.FileServer(assetFS()))
+	//	setup viewer routes, which can excluded via build flags
+	setupViewer(group)
 
 	return r
-
 }
 
 // Start starts the tile server binding to the provided port

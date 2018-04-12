@@ -15,12 +15,6 @@
 			"revisionTime": "2017-05-07T10:33:33Z"
 		},
 		{
-			"checksumSHA1": "c0Z6y+J24+VKgSGO/E4Y+bsHi1g=",
-			"path": "github.com/arolek/p",
-			"revision": "1bc76936aa157179538f1cd815ce99ca3af80ff0",
-			"revisionTime": "2016-11-23T23:30:59Z"
-		},
-		{
 			"checksumSHA1": "nv58S9hV7km2wMcP28T3Fla/7wo=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "00379a7e831f5692265194c84459ac0a0c1a9b58",
@@ -171,12 +165,6 @@
 			"revisionTime": "2017-12-07T22:17:37Z"
 		},
 		{
-			"checksumSHA1": "ULnk7ggN82JFO0ZdBCmSsQH3Vh8=",
-			"path": "github.com/dchest/safefile",
-			"revision": "855e8d98f1852d48dde521e0522408d1fe7e836a",
-			"revisionTime": "2015-10-22T10:31:44Z"
-		},
-		{
 			"checksumSHA1": "67Ufp7gCzJyjLVW3iW3og8uVtkw=",
 			"path": "github.com/dimfeld/httppath",
 			"revision": "c8e499c3ef3c3e272ed8bdcc1ccf39f73c88debc",
@@ -187,12 +175,6 @@
 			"path": "github.com/dimfeld/httptreemux",
 			"revision": "5684d912938d8ef16b72e9c9dd1ce2117e62bc2a",
 			"revisionTime": "2016-10-04T02:10:53Z"
-		},
-		{
-			"checksumSHA1": "rhLUtXvcmouYuBwOq9X/nYKzvNg=",
-			"path": "github.com/dustin/go-humanize",
-			"revision": "259d2a102b871d17f30e3cd9881a642961a1e486",
-			"revisionTime": "2017-02-28T07:34:54Z"
 		},
 		{
 			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
@@ -211,12 +193,6 @@
 			"path": "github.com/gdey/bastet",
 			"revision": "314ac74cee07ff4ca20650990ab63c7f757da5fe",
 			"revisionTime": "2018-02-26T19:53:48Z"
-		},
-		{
-			"checksumSHA1": "elx/c9FcwbSdPa0bqc8LeFzn2zQ=",
-			"path": "github.com/gdey/cmd",
-			"revision": "8f086d11c1e61030ecf6e3ab796c31f478ccefab",
-			"revisionTime": "2018-02-14T20:20:02Z"
 		},
 		{
 			"checksumSHA1": "/TU0r8yAEpNvUWbxosqlXi416Os=",
@@ -279,16 +255,12 @@
 			"revisionTime": "2017-04-29T20:15:29Z"
 		},
 		{
-			"checksumSHA1": "kVJ5YScYaDWw6iotbpZwQJ6xCGM=",
+			"checksumSHA1": "WX1+2gktHcBmE9MGwFSGs7oqexU=",
 			"path": "github.com/golang/protobuf/proto",
-			"revision": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0",
-			"revisionTime": "2016-06-14T22:31:40Z"
-		},
-		{
-			"checksumSHA1": "e/Kc2UOy1lKAy31xWlK37M1r2e8=",
-			"path": "github.com/google/shlex",
-			"revision": "6f45313302b9c56850fc17f99e40caebce98c716",
-			"revisionTime": "2015-01-27T13:39:51Z"
+			"revision": "925541529c1fa6821df4e44ce2723319eb2be768",
+			"revisionTime": "2018-01-25T21:43:03Z",
+			"version": "v1.0.0",
+			"versionExact": "v1.0.0"
 		},
 		{
 			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
@@ -297,10 +269,12 @@
 			"revisionTime": "2014-10-17T20:07:13Z"
 		},
 		{
-			"checksumSHA1": "ZCMYdNAc0qTW5e7hWTZBVnYUXDs=",
+			"checksumSHA1": "vCcYMoqdweCNKygpC6MOYAYWNUw=",
 			"path": "github.com/jackc/pgx",
-			"revision": "558d5550cf5c08e7192eb2eb8635f21f4b700ff5",
-			"revisionTime": "2016-07-15T19:51:40Z"
+			"revision": "2508faa9ced29f4bbb3a39483e4b5ac2627a7c48",
+			"revisionTime": "2016-08-26T12:39:15Z",
+			"version": "v2.9.0",
+			"versionExact": "v2.9.0"
 		},
 		{
 			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",
@@ -333,18 +307,6 @@
 			"revisionTime": "2017-06-12T15:36:48Z"
 		},
 		{
-			"checksumSHA1": "xCv4GBFyw07vZkVtKF/XrUnkHRk=",
-			"path": "github.com/pkg/errors",
-			"revision": "e881fd58d78e04cf6d0de1217f8707c8cc2249bc",
-			"revisionTime": "2017-12-16T07:03:16Z"
-		},
-		{
-			"checksumSHA1": "C3yiSMdTQxSY3xqKJzMV9T+KnIc=",
-			"path": "github.com/pkg/profile",
-			"revision": "5b67d428864e92711fcbd2f8629456121a56d91f",
-			"revisionTime": "2017-05-09T09:25:25Z"
-		},
-		{
 			"checksumSHA1": "Egby8wsHgh+rW7DphTy/b1dN2cs=",
 			"path": "github.com/spf13/cobra",
 			"revision": "b3426bbac13d7110c4d8fce456ea0012f79f3b8b",
@@ -369,22 +331,10 @@
 			"revisionTime": "2018-01-25T02:48:19Z"
 		},
 		{
-			"checksumSHA1": "ULu8vRll6GP40qFH7OrHVcDSUOc=",
-			"path": "golang.org/x/tools/go/vcs",
-			"revision": "25101aadb97aa42907eee6a238d6d26a6cb3c756",
-			"revisionTime": "2018-01-25T02:48:19Z"
-		},
-		{
 			"checksumSHA1": "a9pyC/XvFSy6/wgxMt9qepohioQ=",
 			"path": "gopkg.in/go-playground/colors.v1",
 			"revision": "b53ecfb396233c24c77594af27dd0f5731fafaf1",
 			"revisionTime": "2015-09-24T11:17:26Z"
-		},
-		{
-			"checksumSHA1": "qOmvuDm+F+2nQQecUZBVkZrTn6Y=",
-			"path": "gopkg.in/yaml.v2",
-			"revision": "d670f9405373e636a5a2765eea47fac0c9bc91a4",
-			"revisionTime": "2018-01-09T11:43:31Z"
 		}
 	],
 	"rootPath": "github.com/go-spatial/tegola"

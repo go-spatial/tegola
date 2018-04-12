@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	gdcmd "github.com/gdey/cmd"
+	"github.com/spf13/cobra"
+
+	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"
-	"github.com/spf13/cobra"
 )
 
 var (

@@ -50,7 +50,7 @@ pgx also implements QueryRow in the same style as database/sql.
         return err
     }
 
-Use exec to execute a query that does not return a result set.
+Use Exec to execute a query that does not return a result set.
 
     commandTag, err := conn.Exec("delete from widgets where id=$1", 42)
     if err != nil {
@@ -104,6 +104,26 @@ creates a transaction with a specified isolation level.
         return err
     }
 
+Copy Protocol
+
+Use CopyTo to efficiently insert multiple rows at a time using the PostgreSQL
+copy protocol. CopyTo accepts a CopyToSource interface. If the data is already
+in a [][]interface{} use CopyToRows to wrap it in a CopyToSource interface. Or
+implement CopyToSource to avoid buffering the entire data set in memory.
+
+    rows := [][]interface{}{
+        {"John", "Smith", int32(36)},
+        {"Jane", "Doe", int32(29)},
+    }
+
+    copyCount, err := conn.CopyTo(
+        "people",
+        []string{"first_name", "last_name", "age"},
+        pgx.CopyToRows(rows),
+    )
+
+CopyTo can be faster than an insert with as few as 5 rows.
+
 Listen and Notify
 
 pgx can listen to the PostgreSQL notification system with the
@@ -136,7 +156,7 @@ Array Mapping
 
 pgx maps between int16, int32, int64, float32, float64, and string Go slices
 and the equivalent PostgreSQL array type. Go slices of native types do not
-support nulls, so if a PostgreSQL array that contains a slice is read into a
+support nulls, so if a PostgreSQL array that contains a null is read into a
 native Go slice an error will occur.
 
 Hstore Mapping
