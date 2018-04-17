@@ -44,27 +44,20 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r := httptreemux.New()
 	group := r.NewGroup("/")
 
-	// capabilities endpoints
-	hCapabilities := HandleCapabilities{}
-	group.UsingContext().Handler("GET", "/capabilities", CORSHandler(hCapabilities))
-	group.UsingContext().Handler("OPTIONS", "/capabilities", CORSHandler(hCapabilities))
+	// one handler to respond to all OPTIONS (CORS) requests for registered routes
+	r.OptionsHandler = corsHandler
 
-	hMapCapabilities := HandleMapCapabilities{}
-	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(hMapCapabilities))
-	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", CORSHandler(hMapCapabilities))
+	// capabilities endpoints
+	group.UsingContext().Handler("GET", "/capabilities", HandleCapabilities{})
+	group.UsingContext().Handler("GET", "/capabilities/:map_name", HandleMapCapabilities{})
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", CORSHandler(hMapLayerZXY))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", TileCacheHandler(a, hMapLayerZXY))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", TileCacheHandler(a, hMapLayerZXY))
 
 	// map style
-	hMapStyle := HandleMapStyle{}
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(hMapStyle))
-
-	// map layer tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(hMapLayerZXY))
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HandleMapStyle{})
 
 	//	setup viewer routes, which can excluded via build flags
 	setupViewer(group)
@@ -128,4 +121,11 @@ func scheme(r *http.Request) string {
 	}
 
 	return "http"
+}
+
+// corsHanlder is used to respond to all OPTIONS requests for registered routes
+func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	return
 }

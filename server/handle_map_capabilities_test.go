@@ -197,3 +197,16 @@ func TestHandleMapCapabilities(t *testing.T) {
 		}
 	}
 }
+
+func TestHandleMapCapabilitiesCORS(t *testing.T) {
+	tests := map[string]CORSTestCase{
+		"1": {
+			uri: "/capabilities/test-map.json",
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
+	}
+}

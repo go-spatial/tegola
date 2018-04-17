@@ -119,6 +119,12 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 			expectedBody: "invalid Y value (4)",
 		},
+		"options": {
+			//  With empty hostname and no port specified in config, urls should have host:port matching request uri.
+			uri:          "/maps/test-map/test-layer/4/2/3.pbf",
+			expectedCode: http.StatusOK,
+			method:       "OPTIONS",
+		},
 	}
 	for name, tc := range tests {
 		tc := tc
@@ -182,5 +188,21 @@ func TestHandleMapZXY(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) { MapHandlerTester(t, tc) })
+	}
+}
+
+func TestHandleMapLayerCORS(t *testing.T) {
+	tests := map[string]CORSTestCase{
+		"map": {
+			uri: "/maps/test-map/10/2/3.pbf",
+		},
+		"map layer": {
+			uri: "/maps/test-map/test-layer/4/2/3.pbf",
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
 	}
 }
