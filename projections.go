@@ -1,6 +1,6 @@
 package tegola
 
-import "github.com/go-spatial/tegola/geom"
+import "github.com/go-spatial/geom"
 
 const (
 	WebMercator = 3857

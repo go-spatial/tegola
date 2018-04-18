@@ -3,9 +3,9 @@ package validate
 import (
 	"context"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/clip"
 	"github.com/go-spatial/tegola/maths/hitmap"

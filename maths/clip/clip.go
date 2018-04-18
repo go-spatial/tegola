@@ -3,10 +3,10 @@ package clip
 import (
 	"sort"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/cmp"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/lines"
 )

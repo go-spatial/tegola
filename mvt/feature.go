@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/encoding/wkt"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"

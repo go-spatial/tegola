@@ -10,11 +10,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/config"
-	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/provider"
 )
 

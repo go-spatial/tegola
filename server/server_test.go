@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/provider/test"
 	"github.com/go-spatial/tegola/server"
 )

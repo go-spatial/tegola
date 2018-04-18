@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/draw/svg"
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt"

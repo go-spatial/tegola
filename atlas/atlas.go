@@ -8,9 +8,9 @@ import (
 	"context"
 	"sync"
 
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/geom/slippy"
 )
 
 // defaultAtlas is instanitated for convenience

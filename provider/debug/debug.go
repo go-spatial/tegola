@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/provider"
 )
 

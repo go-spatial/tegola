@@ -3,10 +3,10 @@ package clip
 import (
 	"testing"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/cmp"
 )
 
 var testExtents = []geom.Extent{
