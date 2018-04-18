@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/draw/svg"
-	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/hitmap"
 	"github.com/go-test/deep"
