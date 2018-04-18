@@ -105,3 +105,16 @@ func TestHandleMapStyle(t *testing.T) {
 		}
 	}
 }
+
+func TestHandleMapStyleCORS(t *testing.T) {
+	tests := map[string]CORSTestCase{
+		"1": {
+			uri: fmt.Sprintf("/maps/%v/style.json", testMapName),
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
+	}
+}

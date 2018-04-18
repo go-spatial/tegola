@@ -20,7 +20,6 @@ func TestHandleCapabilities(t *testing.T) {
 		port     string
 		uri      string
 		method   string
-
 		expected server.Capabilities
 	}
 
@@ -307,5 +306,22 @@ func TestHandleCapabilities(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
+
+func TestHandleCapabilitiesCORS(t *testing.T) {
+	tests := map[string]CORSTestCase{
+		"1": {
+			uri: "/capabilities",
+		},
+		"hostname": {
+			uri:      "/capabilities",
+			hostname: "tegola.io",
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
 	}
 }
