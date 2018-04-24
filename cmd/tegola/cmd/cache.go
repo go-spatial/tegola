@@ -129,7 +129,7 @@ var cacheCmd = &cobra.Command{
 				// range our channel to listen for jobs
 				for mt := range tiler {
 					if gdcmd.IsCancelled() {
-						continue
+						break
 					}
 					//	we will only have a single command arg so we can switch on index 0
 					var err error
@@ -138,6 +138,8 @@ var cacheCmd = &cobra.Command{
 						err = seedWorker(ctx, mt)
 					case "purge":
 						err = purgeWorker(mt)
+					default:
+						log.Fatalf("sub-command %q not recognized", args[0])
 					}
 
 					if err != nil {
