@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 
-	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/tegola/mapbox/style"
 	"github.com/go-spatial/tegola/server"
 )
@@ -77,20 +75,11 @@ func TestHandleMapStyle(t *testing.T) {
 	for i, tc := range testcases {
 		var err error
 
-		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
-		router := httptreemux.New()
-		// setup a new router group
-		group := router.NewGroup("/")
-		group.UsingContext().Handler(tc.reqMethod, tc.uriPattern, tc.handler)
-
-		r, err := http.NewRequest(tc.reqMethod, tc.uri, nil)
+		w, _, err := doRequest(nil, tc.reqMethod, tc.uri, nil)
 		if err != nil {
 			t.Errorf("[%v] failed: %v", i, err)
 			continue
 		}
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, r)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("[%v] handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
@@ -114,5 +103,18 @@ func TestHandleMapStyle(t *testing.T) {
 			t.Errorf("[%v] failed. output \n\n %+v \n\n does not match expected \n\n %+v", i, output, tc.expected)
 			continue
 		}
+	}
+}
+
+func TestHandleMapStyleCORS(t *testing.T) {
+	tests := map[string]CORSTestCase{
+		"1": {
+			uri: fmt.Sprintf("/maps/%v/style.json", testMapName),
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
 	}
 }

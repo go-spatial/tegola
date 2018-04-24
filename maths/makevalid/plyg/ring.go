@@ -12,7 +12,7 @@ import (
 	"time"
 
 	svg "github.com/ajstarks/svgo"
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/hitmap"

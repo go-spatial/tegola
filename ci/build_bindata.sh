@@ -20,7 +20,7 @@ build_bindata() {
 	cd ../server
 
 	#	build bindata
-	go-bindata-assetfs -pkg=server -ignore=.DS_Store static/...
+	go generate
 }
 
 build_bindata

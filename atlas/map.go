@@ -9,10 +9,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"

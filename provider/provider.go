@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/internal/log"
 )
 

@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	gdcmd "github.com/gdey/cmd"
+	"github.com/spf13/cobra"
+
+	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -24,16 +25,16 @@ var serverCmd = &cobra.Command{
 		// check config for server port setting
 		// if you set the port via the comand line it will override the port setting in the config
 		if serverPort == defaultHTTPPort && conf.Webserver.Port != "" {
-			serverPort = conf.Webserver.Port
+			serverPort = string(conf.Webserver.Port)
 		}
 
 		// set our server version
 		server.Version = Version
-		server.HostName = conf.Webserver.HostName
+		server.HostName = string(conf.Webserver.HostName)
 
 		// set the CORSAllowedOrigin if a value is provided
 		if conf.Webserver.CORSAllowedOrigin != "" {
-			server.CORSAllowedOrigin = conf.Webserver.CORSAllowedOrigin
+			server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
 		}
 
 		// set tile buffer
@@ -42,7 +43,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		// start our webserver
-		srv := server.Start(serverPort)
+		srv := server.Start(nil, serverPort)
 		shutdown(srv)
 		<-gdcmd.Cancelled()
 		gdcmd.Complete()

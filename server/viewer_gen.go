@@ -1,0 +1,3 @@
+//go:generate go-bindata -pkg=bindata -o=bindata/bindata.go -ignore=.DS_Store static/...
+
+package server

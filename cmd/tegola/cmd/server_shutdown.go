@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	gdcmd "github.com/gdey/cmd"
+	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 )
 
 func shutdown(srv *http.Server) {

@@ -3,7 +3,7 @@ package provider
 import (
 	"strconv"
 
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 )
 
 type Feature struct {

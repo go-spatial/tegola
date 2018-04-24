@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/geom"
 )
 
 type Capabilities struct {

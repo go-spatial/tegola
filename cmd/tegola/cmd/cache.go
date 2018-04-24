@@ -13,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	gdcmd "github.com/gdey/cmd"
+	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"

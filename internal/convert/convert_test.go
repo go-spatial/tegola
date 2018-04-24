@@ -3,8 +3,8 @@ package convert
 import (
 	"testing"
 
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/cmp"
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func TestToTegolaToGeom(t *testing.T) {

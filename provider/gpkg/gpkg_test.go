@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/gpkg"
 )

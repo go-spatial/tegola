@@ -1,7 +1,7 @@
 package atlas
 
 import (
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/provider"
 )
 
