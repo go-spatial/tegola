@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/internal/log"
@@ -26,10 +27,52 @@ type Tiler interface {
 	Layers() ([]LayerInfo, error)
 }
 
+type TimeExtent interface {
+	StartTime() *time.Time
+	EndTime() *time.Time
+}
+
+type IndexExtent interface {
+	StartIndex() uint
+	EndIndex() uint
+}
+
+type Bounder interface {
+	TimeExtent() *TimeExtent
+	GeomExtent() *geom.Extent
+	IndexExtent() *IndexExtent
+}
+
+type FeatureConsumer func(f *Feature) error
+
+// Returns features in a consistent order.
+
+// Limits features to those contained within the time, geometrical, and index bounds.
+// Features w/o time data will be considered to be within all time bounds.
+// Features w/o goemetry data will be considered to be within all geometrical extents.
+// A nil value returned from any of the Bounder methods indicates no filtering for that dimension.
+type Filterer interface {
+	StreamFeatures(
+		ctx context.Context, layer string, // Nothing new here
+		bounds Bounder, // Combine Time, Space, and index bounding
+		properties map[string]string, // Properties to filter on.
+		// If the feature has any of the properties named,
+		//	the property values must match (fuzzily, i.e. conversion
+		//	from string to native type then match) for the
+		//	feature to be returned.  nil indicates no property
+		//	filtering.
+		fn FeatureConsumer, // The "Feature" type this takes as an argument has been modified
+	) error
+	Layers() ([]LayerInfo, error)
+}
+
 type LayerInfo interface {
 	Name() string
 	GeomType() geom.Geometry
 	SRID() uint64
+	// To support caching, a value that only changes if data in the layer has changed.
+	//	nil indicates the provider doesn't support or is unable to provide this
+	ModificationTag() *string
 }
 
 // InitFunc initilize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
