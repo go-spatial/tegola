@@ -18,7 +18,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 )
@@ -192,7 +192,7 @@ func seedWorker(ctx context.Context, mt MapTile) error {
 	z, x, y := mt.Tile.ZXY()
 
 	//	filter down the layers we need for this zoom
-	m = m.FilterLayersByZoom(x)
+	m = m.FilterLayersByZoom(z)
 
 	//	check if overwriting the cache is not ok
 	if !cacheOverwrite {
