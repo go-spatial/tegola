@@ -10,6 +10,7 @@ import (
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
@@ -104,7 +105,7 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 	return tokenReplacer.Replace(sql), nil
 }
 
-func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
+func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 	switch valType {
 	default:
 		switch vt := val.(type) {
@@ -116,9 +117,9 @@ func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 		case string:
 			return vt, nil
 		}
-	case pgx.BoolOid, pgx.ByteaOid, pgx.TextOid, pgx.OidOid, pgx.VarcharOid, pgx.JsonbOid:
+	case pgtype.BoolOID, pgtype.ByteaOID, pgtype.TextOID, pgtype.OIDOID, pgtype.VarcharOID, pgtype.JSONBOID:
 		return val, nil
-	case pgx.Int8Oid, pgx.Int2Oid, pgx.Int4Oid, pgx.Float4Oid, pgx.Float8Oid:
+	case pgtype.Int8OID, pgtype.Int2OID, pgtype.Int4OID, pgtype.Float4OID, pgtype.Float8OID:
 		switch vt := val.(type) {
 		case int8:
 			return int64(vt), nil
@@ -141,7 +142,7 @@ func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 		default: // should never happen.
 			return nil, fmt.Errorf("%v type is not supported. (should never happen)", valType)
 		}
-	case pgx.DateOid, pgx.TimestampOid, pgx.TimestampTzOid:
+	case pgtype.DateOID, pgtype.TimestampOID, pgtype.TimestamptzOID:
 		return fmt.Sprintf("%v", val), nil
 	}
 }
@@ -173,17 +174,24 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 			// hstore is a special case
 			case "hstore":
 				// parse our Hstore values into keys and values
-				keys, values, err := pgx.ParseHstore(v.(string))
-				if err != nil {
-					return gid, geom, tags, fmt.Errorf("Unable to parse Hstore err: %v", err)
+
+				// keys, values, err := pgx.ParseHstore(v.(string))
+				// if err != nil {
+				// 	return gid, geom, tags, fmt.Errorf("Unable to parse Hstore err: %v", err)
+				// }
+				hs, ok := v.(pgtype.Hstore)
+				if !ok {
+					return 0, nil, nil, fmt.Errorf("problem collecting hstore")
 				}
-				for i, k := range keys {
-					// if the value is Valid (i.e. not null) then add it to our tags map.
-					if values[i].Valid {
-						// we need to check if the key already exists. if it does, then don't overwrite it
-						if _, ok := tags[k]; !ok {
-							tags[k] = values[i].String
-						}
+
+				m, ok := hs.Get().(map[string]pgtype.Text)
+				if !ok {
+					return 0, nil, nil, fmt.Errorf("problem collecting hstore")
+				}
+				for k, v := range m {
+					// we need to check if the key already exists. if it does, then don't overwrite it
+					if _, ok := tags[k]; !ok {
+						tags[k] = v
 					}
 				}
 				continue
