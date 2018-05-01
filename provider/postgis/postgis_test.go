@@ -105,7 +105,7 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
-			expectedFeatureCount: 101,
+			expectedFeatureCount: 202,
 		},
 	}
 

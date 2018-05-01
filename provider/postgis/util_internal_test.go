@@ -1,10 +1,15 @@
 package postgis
 
 import (
+	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/ttools"
+	"github.com/jackc/pgx"
 )
 
 func TestReplaceTokens(t *testing.T) {
@@ -44,6 +49,70 @@ func TestReplaceTokens(t *testing.T) {
 
 		if sql != tc.expected {
 			t.Errorf("[%v] incorrect sql,\n Expected \n \t%v\n Got \n \t%v", i, tc.expected, sql)
+		}
+	}
+}
+
+func TestDecipherFields(t *testing.T) {
+	ttools.ShouldSkip(t, TESTENV)
+	cc := pgx.ConnConfig{
+		Host:     os.Getenv("PGHOST"),
+		Port:     5432,
+		Database: os.Getenv("PGDATABASE"),
+		User:     os.Getenv("PGUSER"),
+		Password: os.Getenv("PGPASSWORD"),
+	}
+
+	type TestCase struct {
+		id           int32
+		expectedTags map[string]interface{}
+	}
+
+	testCases := []TestCase{
+		{
+			id:           1,
+			expectedTags: map[string]interface{}{"height": "9", "int8_test": int64(1000888)},
+		},
+		{
+			id:           2,
+			expectedTags: map[string]interface{}{"hello": "there", "good": "day", "int8_test": int64(8880001)},
+		},
+	}
+
+	conn, err := pgx.Connect(cc)
+	if err != nil {
+		t.Errorf("Unable to connect to database: %v", err)
+	}
+	defer conn.Close()
+
+	for _, tc := range testCases {
+		sql := fmt.Sprintf("SELECT id, tags, int8_test FROM hstore_test WHERE id = %v;", tc.id)
+		rows, err := conn.Query(sql)
+		if err != nil {
+			t.Errorf("Error performing query: %v", err)
+		}
+		defer rows.Close()
+
+		i := 0
+		for rows.Next() {
+			geoFieldname := "geom"
+			idFieldname := "id"
+			descriptions := rows.FieldDescriptions()
+			vals, err := rows.Values()
+			if err != nil {
+				t.Errorf("[%v] Problem collecting row values", i)
+			}
+
+			_, _, tags, err := decipherFields(context.TODO(), geoFieldname, idFieldname, descriptions, vals)
+			if len(tags) != len(tc.expectedTags) {
+				t.Errorf("[%v] Got %v tags, was expecting %v: %#v, %#v", i, len(tags), len(tc.expectedTags), tags, tc.expectedTags)
+			}
+			for k, v := range tags {
+				if tc.expectedTags[k] != v {
+					t.Errorf("[%v] Missing or bad value for tag %v: %v (%T) != %v (%T)", i, k, v, v, tc.expectedTags[k], tc.expectedTags[k])
+				}
+			}
+			i++
 		}
 	}
 }
