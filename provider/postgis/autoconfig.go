@@ -8,7 +8,7 @@ import (
 
 type featureTableMetaData struct {
 	geomColname string
-	geomSrid    int
+	geomSrid    int64
 	primaryKey  string
 	propCols    []string
 }
@@ -51,7 +51,7 @@ func metadata(conn *pgx.Conn) (md map[string]*featureTableMetaData, err error) {
 	for rows.Next() {
 		var tablename string
 		var geomcol string
-		var srid int
+		var srid int64
 		err = rows.Scan(&tablename, &geomcol, &srid)
 		if err != nil {
 			return nil, fmt.Errorf("error running SQL: %v ; %v", sql, err)
@@ -112,17 +112,17 @@ func AutoConfig(connstr string) (map[string]interface{}, error) {
 	conf["name"] = "autoconfd_postgis"
 	conf["type"] = Name
 	conf[ConfigKeyHost] = cc.Host
-	conf[ConfigKeyPort] = cc.Port
+	conf[ConfigKeyPort] = int64(cc.Port)
 	conf[ConfigKeyDB] = cc.Database
 	conf[ConfigKeyUser] = cc.User
 	conf[ConfigKeyPassword] = cc.Password
 
 	conf[ConfigKeyLayers] = make([]map[string]interface{}, 0, len(md))
 	for tablename, tablemd := range md {
-		// *** TODO: Delete this output
-		// fmt.Printf("Building config for layer: %v\n", tablename)
-		// fmt.Printf("---\n")
-
+		// *** TODO: Currently can't handle zeroes in srid field, like in the osm database.
+		if tablemd.geomSrid == 0 {
+			continue
+		}
 		// layer config
 		lconf := make(map[string]interface{})
 		lconf[ConfigKeyLayerName] = tablename
@@ -135,8 +135,15 @@ func AutoConfig(connstr string) (map[string]interface{}, error) {
 		lconf[ConfigKeyFields] = tablemd.propCols
 
 		conf[ConfigKeyLayers] = append(conf["layers"].([]map[string]interface{}), lconf)
-		// *** TODO: Delete this output
-		// fmt.Printf("Layer config: %#v\n", lconf)
+	}
+
+	// TODO: Setting the srid at this level doesn't make sense, as it can be different for different layers
+	clayers := conf[ConfigKeyLayers].([]map[string]interface{})
+	if len(clayers) == 0 {
+		conf[ConfigKeySRID] = int64(0)
+	} else {
+		// Use the SRID of the first layer
+		conf[ConfigKeySRID] = clayers[0][ConfigKeySRID]
 	}
 	return conf, nil
 }
