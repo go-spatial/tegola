@@ -15,6 +15,24 @@
 			"revisionTime": "2017-05-07T10:33:33Z"
 		},
 		{
+			"checksumSHA1": "52yky33tRrIw0DUvHMcrEWx2OfE=",
+			"path": "github.com/akrylysov/algnhsa",
+			"revision": "6b0effb2a8105690435d472b180c4cc1ba6b2dc8",
+			"revisionTime": "2018-05-02T23:46:33Z"
+		},
+		{
+			"checksumSHA1": "H+nuubKZtdEPryI/ZiaF3W+hnus=",
+			"path": "github.com/aws/aws-lambda-go/events",
+			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
+			"revisionTime": "2018-04-08T23:25:24Z"
+		},
+		{
+			"checksumSHA1": "Atnv24CtEnB8ZLGDqFevLMfzLtQ=",
+			"path": "github.com/aws/aws-lambda-go/lambda",
+			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
+			"revisionTime": "2018-04-08T23:25:24Z"
+		},
+		{
 			"checksumSHA1": "nv58S9hV7km2wMcP28T3Fla/7wo=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "00379a7e831f5692265194c84459ac0a0c1a9b58",
@@ -165,16 +183,10 @@
 			"revisionTime": "2017-12-07T22:17:37Z"
 		},
 		{
-			"checksumSHA1": "67Ufp7gCzJyjLVW3iW3og8uVtkw=",
-			"path": "github.com/dimfeld/httppath",
-			"revision": "c8e499c3ef3c3e272ed8bdcc1ccf39f73c88debc",
-			"revisionTime": "2014-05-15T16:47:37Z"
-		},
-		{
-			"checksumSHA1": "pvSASUV9ePhHWwO/c0DIfI0zX58=",
+			"checksumSHA1": "JOJJUSMwStEk5H8WAKuX7s3zrA4=",
 			"path": "github.com/dimfeld/httptreemux",
-			"revision": "5684d912938d8ef16b72e9c9dd1ce2117e62bc2a",
-			"revisionTime": "2016-10-04T02:10:53Z"
+			"revision": "7f532489e7739b3d49df5c602bf63549881fe753",
+			"revisionTime": "2018-02-13T07:44:14Z"
 		},
 		{
 			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",

@@ -44,6 +44,19 @@ do
 		cd ${cdir}
 	done
 done
+
+# build tegola_lambda
+FILENAME="${TRAVIS_BUILD_DIR}/releases/tegola_lambda"
+GOOS=linux go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola-lambda.Version=${VERSION_TAG}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola_lambda
+chmod a+x ${FILENAME}
+dir=$(dirname $FILENAME)
+fn=$(basename $FILENAME)
+cdir=$(pwd)
+cd $dir
+zip -9 -D ${fn}.zip ${fn}
+rm ${fn}
+cd ${cdir}
+
 cd $OLDDIR
 
 

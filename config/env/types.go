@@ -17,7 +17,7 @@ type EnvironmentError struct {
 	varName string
 }
 
-func (ee *EnvironmentError) Error() string {
+func (ee EnvironmentError) Error() string {
 	return fmt.Sprintf("environment variable %q not found", ee.varName)
 }
 

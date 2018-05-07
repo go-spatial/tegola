@@ -9,16 +9,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/draw/svg"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/spf13/cobra"
 )
 
 var drawCmd = &cobra.Command{
@@ -93,7 +95,7 @@ func drawCommand(cmd *cobra.Command, args []string) {
 		format:  drawOutputFilenameFormat,
 		basedir: drawOutputBaseDir,
 	}
-	providers, err := initProviders(config.Providers)
+	providers, err := register.Providers(config.Providers)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading providers in config(%v): %v\n", configFilename, err)
 		os.Exit(1)
@@ -207,5 +209,4 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 		fmt.Printf("// Number of geometries drawn for %v.%v : %v\n", pname, name, count)
 	}
 	return nil
-
 }

@@ -89,6 +89,9 @@ func (g *Group) NewGroup(path string) *Group {
 // 	GET /posts/ will match normally.
 // 	POST /posts will redirect to /posts/, because the GET method used a trailing slash.
 func (g *Group) Handle(method string, path string, handler HandlerFunc) {
+	g.mux.mutex.Lock()
+	defer g.mux.mutex.Unlock()
+
 	addSlash := false
 	addOne := func(thePath string) {
 		node := g.mux.root.addPath(thePath[1:], nil, false)
