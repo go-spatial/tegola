@@ -33,6 +33,18 @@
 			"revisionTime": "2018-04-08T23:25:24Z"
 		},
 		{
+			"checksumSHA1": "d4ehJWLS4YsqFG825pgwdvKDB6A=",
+			"path": "github.com/aws/aws-lambda-go/lambda/messages",
+			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
+			"revisionTime": "2018-04-08T23:25:24Z"
+		},
+		{
+			"checksumSHA1": "f9MhOwQHveaPVWO6trwfqHa+W0M=",
+			"path": "github.com/aws/aws-lambda-go/lambdacontext",
+			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
+			"revisionTime": "2018-04-08T23:25:24Z"
+		},
+		{
 			"checksumSHA1": "nv58S9hV7km2wMcP28T3Fla/7wo=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "00379a7e831f5692265194c84459ac0a0c1a9b58",
