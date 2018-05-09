@@ -114,6 +114,7 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 
 					// read the layerGeomType
 					layerGeomType = layerInfos[i].GeomType()
+					break
 				}
 			}
 			if !found {
@@ -158,12 +159,7 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			})
 		}
 
-		// register the map. if an atlas is provided then use it, else use the default atlas
-		if a != nil {
-			a.AddMap(newMap)
-		} else {
-			atlas.AddMap(newMap)
-		}
+		a.AddMap(newMap)
 	}
 
 	return nil
