@@ -15,10 +15,20 @@ import (
 func TestNewTileProvider(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
-	testcases := []struct {
+	type tcase struct {
 		config map[string]interface{}
-	}{
-		{
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		_, err := postgis.NewTileProvider(tc.config)
+		if err != nil {
+			t.Errorf("unable to create a new provider. err: %v", err)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		"1": {
 			config: map[string]interface{}{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
@@ -35,24 +45,52 @@ func TestNewTileProvider(t *testing.T) {
 		},
 	}
 
-	for i, tc := range testcases {
-		_, err := postgis.NewTileProvider(tc.config)
-		if err != nil {
-			t.Errorf("Failed test %v. Unable to create a new provider. err: %v", i, err)
-			return
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
 	}
 }
 
 func TestTileFeatures(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
-	testcases := []struct {
+	type tcase struct {
 		config               map[string]interface{}
 		tile                 *slippy.Tile
 		expectedFeatureCount int
-	}{
-		{
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		p, err := postgis.NewTileProvider(tc.config)
+		if err != nil {
+			t.Errorf("unexpected error; unable to create a new provider, expected: nil Got %v", err)
+			return
+		}
+
+		// iterate our configured layers
+		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
+			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
+
+			var featureCount int
+			err := p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
+				featureCount++
+
+				return nil
+			})
+			if err != nil {
+				t.Errorf("unexpected error; failed to create mvt layer, expected nil got %v", err)
+				return
+			}
+
+			if featureCount != tc.expectedFeatureCount {
+				t.Errorf("feature count, expected %v got %v", tc.expectedFeatureCount, featureCount)
+				return
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"land query": {
 			config: map[string]interface{}{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
@@ -69,8 +107,7 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 4032,
 		},
-		// scalerank test
-		{
+		"scalerank test": {
 			config: map[string]interface{}{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
@@ -87,8 +124,7 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 98,
 		},
-		// decode numeric(x,x) types
-		{
+		"decode numeric(x,x) types": {
 			config: map[string]interface{}{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
@@ -105,35 +141,12 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
-			expectedFeatureCount: 202,
+			expectedFeatureCount: 101,
 		},
 	}
 
-	for i, tc := range testcases {
-		p, err := postgis.NewTileProvider(tc.config)
-		if err != nil {
-			t.Errorf("[%v] unexpected error; unable to create a new provider, expected: nil Got %v", i, err)
-			continue
-		}
-
-		// iterate our configured layers
-		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
-			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
-
-			var featureCount int
-			err := p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
-				featureCount++
-
-				return nil
-			})
-			if err != nil {
-				t.Errorf("[%v] unexpected error; failed to create mvt layer, expected nil got %v", i, err)
-				continue
-			}
-
-			if featureCount != tc.expectedFeatureCount {
-				t.Errorf("[%v] feature count, expected %v got %v", i, tc.expectedFeatureCount, featureCount)
-			}
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
 	}
 }

@@ -148,29 +148,31 @@ func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 }
 
 func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descriptions []pgx.FieldDescription, values []interface{}) (gid uint64, geom []byte, tags map[string]interface{}, err error) {
-	tags = make(map[string]interface{})
-	var desc pgx.FieldDescription
 	var ok bool
+	tags = make(map[string]interface{})
 
-	for i, v := range values {
-		// Do a quick check
+	for i := range values {
+		// do a quick check
 		if err := ctx.Err(); err != nil {
 			return 0, nil, nil, err
 		}
-		// Skip nil values.
+
+		// skip nil values.
 		if values[i] == nil {
 			continue
 		}
-		desc = descriptions[i]
+
+		desc := descriptions[i]
+
 		switch desc.Name {
 		case geoFieldname:
-			if geom, ok = v.([]byte); !ok {
-				return 0, nil, nil, fmt.Errorf("Unable to convert geometry field (%v) into bytes.", geoFieldname)
+			if geom, ok = values[i].([]byte); !ok {
+				return 0, nil, nil, fmt.Errorf("unable to convert geometry field (%v) into bytes.", geoFieldname)
 			}
 		case idFieldname:
-			gid, err = gId(v)
+			gid, err = gId(values[i])
 		default:
-			switch vex := v.(type) {
+			switch vex := values[i].(type) {
 			case map[string]pgtype.Text:
 				for k, v := range vex {
 					// we need to check if the key already exists. if it does, then don't overwrite it
@@ -178,21 +180,22 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 						tags[k] = v.String
 					}
 				}
-				continue
 			case *pgtype.Numeric:
 				var num float64
-				v.(*pgtype.Numeric).AssignTo(&num)
+				values[i].(*pgtype.Numeric).AssignTo(&num)
+
 				tags[desc.Name] = num
-				continue
 			default:
-				value, err := transformVal(desc.DataType, v)
+				value, err := transformVal(desc.DataType, values[i])
 				if err != nil {
-					return gid, geom, tags, fmt.Errorf("Unable to convert field[%v] (%v) of type (%v - %v) to a suitable value.: [[ %T  :: %[5]t ]]", i, desc.Name, desc.DataType, desc.DataTypeName, v)
+					return gid, geom, tags, fmt.Errorf("unable to convert field [%v] (%v) of type (%v - %v) to a suitable value: %+v", i, desc.Name, desc.DataType, desc.DataTypeName, values[i])
 				}
+
 				tags[desc.Name] = value
 			}
 		}
 	}
+
 	return gid, geom, tags, err
 }
 
@@ -219,6 +222,6 @@ func gId(v interface{}) (gid uint64, err error) {
 	case string:
 		return strconv.ParseUint(aval, 10, 64)
 	default:
-		return gid, fmt.Errorf("Unable to convert field into a uint64.")
+		return gid, fmt.Errorf("unable to convert field into a uint64.")
 	}
 }

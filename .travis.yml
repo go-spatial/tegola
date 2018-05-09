@@ -13,7 +13,7 @@ env:
     - RUN_POSTGIS_TESTS=yes
     - PGHOST="localhost"
     - PGPORT=5432
-    - PGDATABASE="tegola-test-data"
+    - PGDATABASE="tegola"
     - PGUSER="postgres"
     - DOCKERHUB_ORG="gospatial"
     - DOCKERHUB_REPO="tegola"
@@ -45,9 +45,6 @@ addons:
   apt:
     packages:
     - postgresql-9.4-postgis-2.3
-
-# before_install:
-#   - apt-get install postgresql-9.4-postgis-2.3
 
 install:
   - echo $TRAVIS_GO_VERSION
