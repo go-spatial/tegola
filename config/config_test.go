@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/go-spatial/tegola/config"
-	"github.com/go-spatial/tegola/config/env"
 	"os"
 	"strconv"
+
+	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/dict/env"
 )
 
 const (
@@ -137,11 +137,11 @@ func TestParse(t *testing.T) {
 					Port:              ":8080",
 					CORSAllowedOrigin: "tegola.io",
 				},
-				Cache: map[string]interface{}{
+				Cache: env.Map{
 					"type":     "file",
 					"basepath": "/tmp/tegola-cache",
 				},
-				Providers: []map[string]interface{}{
+				Providers: []env.Map{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -244,7 +244,7 @@ func TestParse(t *testing.T) {
 					HostName: ENV_TEST_HOST_CONCAT,
 					Port:     ENV_TEST_PORT,
 				},
-				Providers: []map[string]interface{}{
+				Providers: []env.Map{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -346,7 +346,7 @@ func TestValidate(t *testing.T) {
 				Webserver: config.Webserver{
 					Port: ":8080",
 				},
-				Providers: []map[string]interface{}{
+				Providers: []env.Map{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -410,7 +410,7 @@ func TestValidate(t *testing.T) {
 		},
 		"2": {
 			config: config.Config{
-				Providers: []map[string]interface{}{
+				Providers: []env.Map{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -480,7 +480,7 @@ func TestValidate(t *testing.T) {
 				Webserver: config.Webserver{
 					Port: ":8080",
 				},
-				Providers: []map[string]interface{}{
+				Providers: []env.Map{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -563,7 +563,7 @@ func TestValidate(t *testing.T) {
 				Webserver: config.Webserver{
 					Port: ":8080",
 				},
-				Providers: []map[string]interface{}{
+				Providers: []env.Map{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -632,7 +632,7 @@ func TestValidate(t *testing.T) {
 				Webserver: config.Webserver{
 					Port: ":8080",
 				},
-				Providers: []map[string]interface{}{
+				Providers: []env.Map{
 					{
 						"name":     "provider1",
 						"type":     "postgis",

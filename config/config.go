@@ -14,7 +14,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/config/env"
+	"github.com/go-spatial/tegola/internal/dict/env"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
@@ -27,9 +27,9 @@ type Config struct {
 	// the Parse() function is used directly.
 	LocationName string
 	Webserver    Webserver              `toml:"webserver"`
-	Cache        map[string]interface{} `toml:"cache"`
+	Cache        env.Map `toml:"cache"`
 	// Map of providers.
-	Providers []map[string]interface{}
+	Providers []env.Map
 	Maps      []Map
 }
 
