@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/redis"
-	"github.com/go-spatial/tegola/internal/ttools"
 	"github.com/go-spatial/tegola/internal/dict/dict"
+	"github.com/go-spatial/tegola/internal/ttools"
 )
 
 // TESTENV is the environment variable that must be set to "yes" to run the redis tests.

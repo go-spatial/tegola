@@ -71,8 +71,8 @@ func initConfig() {
 
 	// init our providers
 	// but first convert []env.Map -> []dict.Dicter
-	provArr := make([]dict.Dicter, len(conf.Providers ))
-	for i := range provArr{
+	provArr := make([]dict.Dicter, len(conf.Providers))
+	for i := range provArr {
 		provArr[i] = conf.Providers[i]
 	}
 	providers, err := initProviders(provArr)
@@ -100,7 +100,7 @@ func initConfig() {
 func initCache(config dict.Dicter) (cache.Interface, error) {
 	// lookup our cache type
 	cType, err := config.String("type", nil)
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("missing 'type' parameter for cache")
 	}
 
@@ -222,7 +222,6 @@ func initProviders(providers []dict.Dicter) (map[string]provider.Tiler, error) {
 		if err != nil {
 			return registeredProviders, err
 		}
-
 
 		// register the provider
 		prov, err := provider.For(ptype, p)

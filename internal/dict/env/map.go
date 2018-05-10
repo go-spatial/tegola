@@ -288,7 +288,7 @@ func (d Map) Map(key string) (r dict.Dicter, err error) {
 
 	r, ok = v.(Map)
 	if !ok {
-		return r, dict.ErrKeyType{key, v,reflect.TypeOf(r)}
+		return r, dict.ErrKeyType{key, v, reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -303,7 +303,7 @@ func (d Map) MapSlice(key string) (r []dict.Dicter, err error) {
 
 	arr, ok := v.([]map[string]interface{})
 	if !ok {
-		return r, dict.ErrKeyType{key, v,reflect.TypeOf(arr)}
+		return r, dict.ErrKeyType{key, v, reflect.TypeOf(arr)}
 	}
 
 	r = make([]dict.Dicter, len(arr))

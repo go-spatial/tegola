@@ -1,11 +1,11 @@
 package config_test
 
 import (
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
-	"os"
-	"strconv"
 
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/dict/env"

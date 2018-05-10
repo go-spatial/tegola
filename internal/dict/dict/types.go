@@ -49,4 +49,3 @@ type ErrKeyType struct {
 func (err ErrKeyType) Error() string {
 	return fmt.Sprintf("config: value mapped to %q is %T not %s", err.Key, err.Value, err.T.String())
 }
-

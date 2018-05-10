@@ -1,15 +1,14 @@
 package cmd
 
 import (
-
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/internal/dict/env"
+	"github.com/go-spatial/tegola/provider"
 
 	_ "github.com/go-spatial/tegola/provider/postgis"
 )

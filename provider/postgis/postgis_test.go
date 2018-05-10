@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/dict/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
-	"github.com/go-spatial/tegola/internal/dict/dict"
 )
 
 func TestNewTileProvider(t *testing.T) {

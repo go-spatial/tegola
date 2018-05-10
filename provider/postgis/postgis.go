@@ -1,12 +1,12 @@
 package postgis
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"regexp"
 	"strings"
-	"context"
 
 	"github.com/jackc/pgx"
 

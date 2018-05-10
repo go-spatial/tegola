@@ -26,8 +26,8 @@ type Config struct {
 	// If this is an empty string, it means that the location was unknown. This is the case if
 	// the Parse() function is used directly.
 	LocationName string
-	Webserver    Webserver              `toml:"webserver"`
-	Cache        env.Map `toml:"cache"`
+	Webserver    Webserver `toml:"webserver"`
+	Cache        env.Map   `toml:"cache"`
 	// Map of providers.
 	Providers []env.Map
 	Maps      []Map
