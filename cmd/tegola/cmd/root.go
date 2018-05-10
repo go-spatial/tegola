@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"html"
 	"log"
@@ -15,6 +14,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/dict/dict"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -70,7 +70,12 @@ func initConfig() {
 	}
 
 	// init our providers
-	providers, err := initProviders(conf.Providers)
+	// but first convert []env.Map -> []dict.Dicter
+	provArr := make([]dict.Dicter, len(conf.Providers ))
+	for i := range provArr{
+		provArr[i] = conf.Providers[i]
+	}
+	providers, err := initProviders(provArr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,16 +97,11 @@ func initConfig() {
 	}
 }
 
-func initCache(config map[string]interface{}) (cache.Interface, error) {
+func initCache(config dict.Dicter) (cache.Interface, error) {
 	// lookup our cache type
-	t, ok := config["type"]
-	if !ok {
+	cType, err := config.String("type", nil)
+	if err != nil{
 		return nil, fmt.Errorf("missing 'type' parameter for cache")
-	}
-
-	cType, ok := t.(string)
-	if !ok {
-		return nil, fmt.Errorf("'type' parameter for cache must be of type string")
 	}
 
 	// register the provider
@@ -197,7 +197,7 @@ func initMaps(maps []config.Map, providers map[string]provider.Tiler) error {
 	return nil
 }
 
-func initProviders(providers []map[string]interface{}) (map[string]provider.Tiler, error) {
+func initProviders(providers []dict.Dicter) (map[string]provider.Tiler, error) {
 	var err error
 
 	// holder for registered providers
@@ -206,32 +206,23 @@ func initProviders(providers []map[string]interface{}) (map[string]provider.Tile
 	// iterate providers
 	for _, p := range providers {
 		// lookup our proivder name
-		n, ok := p["name"]
-		if !ok {
-			return registeredProviders, errors.New("missing 'name' parameter for provider")
-		}
-
-		pname, found := n.(string)
-		if !found {
-			return registeredProviders, fmt.Errorf("'name' or provider must be of type string")
+		pname, err := p.String("name", nil)
+		if err != nil {
+			return registeredProviders, err
 		}
 
 		// check if a proivder with this name is alrady registered
-		_, ok = registeredProviders[pname]
+		_, ok := registeredProviders[pname]
 		if ok {
 			return registeredProviders, fmt.Errorf("provider (%v) already registered!", pname)
 		}
 
 		// lookup our provider type
-		t, ok := p["type"]
-		if !ok {
-			return registeredProviders, fmt.Errorf("missing 'type' parameter for provider (%v)", pname)
+		ptype, err := p.String("type", nil)
+		if err != nil {
+			return registeredProviders, err
 		}
 
-		ptype, found := t.(string)
-		if !found {
-			return registeredProviders, fmt.Errorf("'type' for provider (%v) must be a string", pname)
-		}
 
 		// register the provider
 		prov, err := provider.For(ptype, p)

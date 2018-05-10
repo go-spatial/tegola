@@ -1,13 +1,15 @@
 package cmd
 
 import (
-	"errors"
+
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/go-spatial/tegola/provider"
 	"github.com/spf13/cobra"
+
+	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/internal/dict/env"
 
 	_ "github.com/go-spatial/tegola/provider/postgis"
 )
@@ -45,21 +47,16 @@ func init() {
 }
 
 //initProviders will return a map of registered providers in the config file.
-func initProviders(providers []map[string]interface{}) (prvs map[string]provider.Tiler, err error) {
+func initProviders(providers []env.Map) (prvs map[string]provider.Tiler, err error) {
 
 	prvs = make(map[string]provider.Tiler)
 
 	// iterate providers
 	for _, p := range providers {
 		// lookup our provider name
-		n, ok := p["name"]
-		if !ok {
-			return prvs, errors.New("missing 'name' parameter for provider")
-		}
-
-		pname, found := n.(string)
-		if !found {
-			return prvs, fmt.Errorf("'name' or provider must be of type string")
+		pname, err := p.String("name", nil)
+		if err != nil {
+			return prvs, err
 		}
 
 		// check if a proivder with this name is alrady registered
