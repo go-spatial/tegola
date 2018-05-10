@@ -14,24 +14,46 @@ import (
 // TESTENV is the environment variable that must be set to "yes" to run postgis tests.
 const TESTENV = "RUN_POSTGIS_TESTS"
 
-func GetTestPort(t *testing.T) int64 {
+func GetTestPort(t *testing.T) int {
 	ttools.ShouldSkip(t, TESTENV)
-	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
+	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 32)
 	if err != nil {
 		t.Skipf("err parsing PGPORT: %v", err)
 	}
-	return port
+	return int(port)
 }
 
 func TestLayerGeomType(t *testing.T) {
 	port := GetTestPort(t)
 
-	testcases := []struct {
+	type tcase struct {
 		config    dict.Dict
 		layerName string
 		geom      geom.Geometry
-	}{
-		{
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		provider, err := NewTileProvider(tc.config)
+		if err != nil {
+			t.Errorf("NewProvider unexpected error: %v", err)
+			return
+		}
+
+		p := provider.(Provider)
+		layer := p.layers[tc.layerName]
+		if err := p.layerGeomType(&layer); err != nil {
+			t.Errorf("layerGeomType unexpected error: %v", err)
+			return
+		}
+
+		if !reflect.DeepEqual(tc.geom, layer.geomType) {
+			t.Errorf("geom type, expected %v got %v", tc.geom, layer.geomType)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		"1": {
 			config: map[string]interface{}{
 				ConfigKeyHost:     os.Getenv("PGHOST"),
 				ConfigKeyPort:     port,
@@ -48,8 +70,7 @@ func TestLayerGeomType(t *testing.T) {
 			layerName: "land",
 			geom:      geom.MultiPolygon{},
 		},
-		// zoom token replacement
-		{
+		"zoom token replacement": {
 			config: map[string]interface{}{
 				ConfigKeyHost:     os.Getenv("PGHOST"),
 				ConfigKeyPort:     port,
@@ -68,23 +89,8 @@ func TestLayerGeomType(t *testing.T) {
 		},
 	}
 
-	for i, tc := range testcases {
-		provider, err := NewTileProvider(tc.config)
-		if err != nil {
-			t.Errorf("[%v] NewProvider error, expected nil got %v", i, err)
-			continue
-		}
-
-		p := provider.(Provider)
-		layer := p.layers[tc.layerName]
-		if err := p.layerGeomType(&layer); err != nil {
-			t.Errorf("[%v] layerGeomType error, expected nil got %v", i, err)
-			continue
-		}
-
-		if !reflect.DeepEqual(tc.geom, layer.geomType) {
-			t.Errorf("[%v] geom type, expected %v got %v", i, tc.geom, layer.geomType)
-			continue
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
 	}
 }

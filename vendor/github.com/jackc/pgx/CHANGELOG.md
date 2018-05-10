@@ -1,3 +1,159 @@
+# 3.1.0 (January 15, 2018)
+
+## Features
+
+* Add QueryEx, QueryRowEx, ExecEx, and RollbackEx to Tx
+* Add more ColumnType support (Timothée Peignier)
+* Add UUIDArray type (Kelsey Francis)
+* Add zap log adapter (Kelsey Francis)
+* Add CreateReplicationSlotEx that consistent_point and snapshot_name (Mark Fletcher)
+* Add BeginBatch to Tx (Gaspard Douady)
+* Support CrateDB (Felix Geisendörfer)
+* Allow use of logrus logger with fields configured (André Bierlein)
+* Add array of enum support
+* Add support for bit type
+* Handle timeout parameters (Timothée Peignier)
+* Allow overriding connection info (James Lawrence)
+* Add support for bpchar type (Iurii Krasnoshchok)
+* Add ConnConfig.PreferSimpleProtocol
+
+## Fixes
+
+* Fix numeric EncodeBinary bug (Wei Congrui)
+* Fix logrus updated package name (Damir Vandic)
+* Fix some invalid one round trip execs failing to return non-nil error. (Kelsey Francis)
+* Return ErrClosedPool when Acquire() with closed pool (Mike Graf)
+* Fix decoding row with same type values
+* Always return non-nil \*Rows from Query to fix QueryRow (Kelsey Francis)
+* Fix pgtype types that can Set database/sql/driver.driver.Valuer
+* Prefix types in namespaces other than pg_catalog or public (Kelsey Francis)
+* Fix incomplete selects during batch (Gaspard Douady and Jack Christensen)
+* Support nil pointers to value implementing driver.Valuer
+* Fix time logging for QueryEx
+* Fix ranges with text format where end is unbounded
+* Detect erroneous JSON(B) encoding
+* Fix missing interval mapping
+* ConnPool begin should not retry if ctx is done (Gaspard Douady)
+* Fix reading interrupted messages could break connection
+* Return error on unknown oid while decoding record instead of panic (Iurii Krasnoshchok)
+
+## Changes
+
+* Align sslmode "require" more closely to libpq (Johan Brandhorst)
+
+# 3.0.1 (August 12, 2017)
+
+## Fixes
+
+* Fix compilation on 32-bit platform
+* Fix invalid MarshalJSON of types with status Undefined
+* Fix pid logging
+
+# 3.0.0 (July 24, 2017)
+
+## Changes
+
+* Pid to PID in accordance with Go naming conventions.
+* Conn.Pid changed to accessor method Conn.PID()
+* Conn.SecretKey removed
+* Remove Conn.TxStatus
+* Logger interface reduced to single Log method.
+* Replace BeginIso with BeginEx. BeginEx adds support for read/write mode and deferrable mode.
+* Transaction isolation level constants are now typed strings instead of bare strings.
+* Conn.WaitForNotification now takes context.Context instead of time.Duration for cancellation support.
+* Conn.WaitForNotification no longer automatically pings internally every 15 seconds.
+* ReplicationConn.WaitForReplicationMessage now takes context.Context instead of time.Duration for cancellation support.
+* Reject scanning binary format values into a string (e.g. binary encoded timestamptz to string). See https://github.com/jackc/pgx/issues/219 and https://github.com/jackc/pgx/issues/228
+* No longer can read raw bytes of any value into a []byte. Use pgtype.GenericBinary if this functionality is needed.
+* Remove CopyTo (functionality is now in CopyFrom)
+* OID constants moved from pgx to pgtype package
+* Replaced Scanner, Encoder, and PgxScanner interfaces with pgtype system
+* Removed ValueReader
+* ConnPool.Close no longer waits for all acquired connections to be released. Instead, it immediately closes all available connections, and closes acquired connections when they are released in the same manner as ConnPool.Reset.
+* Removed Rows.Fatal(error)
+* Removed Rows.AfterClose()
+* Removed Rows.Conn()
+* Removed Tx.AfterClose()
+* Removed Tx.Conn()
+* Use Go casing convention for OID, UUID, JSON(B), ACLItem, CID, TID, XID, and CIDR
+* Replaced stdlib.OpenFromConnPool with DriverConfig system
+
+## Features
+
+* Entirely revamped pluggable type system that supports approximately 60 PostgreSQL types.
+* Types support database/sql interfaces and therefore can be used with other drivers
+* Added context methods supporting cancellation where appropriate
+* Added simple query protocol support
+* Added single round-trip query mode
+* Added batch query operations
+* Added OnNotice
+* github.com/pkg/errors used where possible for errors
+* Added stdlib.DriverConfig which directly allows full configuration of underlying pgx connections without needing to use a pgx.ConnPool
+* Added AcquireConn and ReleaseConn to stdlib to allow acquiring a connection from a database/sql connection.
+
+# 2.11.0 (June 5, 2017)
+
+## Fixes
+
+* Fix race with concurrent execution of stdlib.OpenFromConnPool (Terin Stock)
+
+## Features
+
+* .pgpass support (j7b)
+* Add missing CopyFrom delegators to Tx and ConnPool (Jack Christensen)
+* Add ParseConnectionString (James Lawrence)
+
+## Performance
+
+* Optimize HStore encoding (René Kroon)
+
+# 2.10.0 (March 17, 2017)
+
+## Fixes
+
+* database/sql driver created through stdlib.OpenFromConnPool closes connections when requested by database/sql rather than release to underlying connection pool.
+
+# 2.11.0 (June 5, 2017)
+
+## Fixes
+
+* Fix race with concurrent execution of stdlib.OpenFromConnPool (Terin Stock)
+
+## Features
+
+* .pgpass support (j7b)
+* Add missing CopyFrom delegators to Tx and ConnPool (Jack Christensen)
+* Add ParseConnectionString (James Lawrence)
+
+## Performance
+
+* Optimize HStore encoding (René Kroon)
+
+# 2.10.0 (March 17, 2017)
+
+## Fixes
+
+* Oid underlying type changed to uint32, previously it was incorrectly int32 (Manni Wood)
+* Explicitly close checked-in connections on ConnPool.Reset, previously they were closed by GC
+
+## Features
+
+* Add xid type support (Manni Wood)
+* Add cid type support (Manni Wood)
+* Add tid type support (Manni Wood)
+* Add "char" type support (Manni Wood)
+* Add NullOid type (Manni Wood)
+* Add json/jsonb binary support to allow use with CopyTo
+* Add named error ErrAcquireTimeout (Alexander Staubo)
+* Add logical replication decoding (Kris Wehner)
+* Add PgxScanner interface to allow types to simultaneously support database/sql and pgx (Jack Christensen)
+* Add CopyFrom with schema support (Jack Christensen)
+
+## Compatibility
+
+* jsonb now defaults to binary format. This means passing a []byte to a jsonb column will no longer work.
+* CopyTo is now deprecated but will continue to work.
+
 # 2.9.0 (August 26, 2016)
 
 ## Fixes
