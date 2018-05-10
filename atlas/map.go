@@ -17,6 +17,7 @@ import (
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
+	"github.com/go-spatial/tegola/internal/dict/dict"
 )
 
 // NewMap creates a new map with the necessary default values
@@ -60,7 +61,7 @@ func (m Map) AddDebugLayers() Map {
 	m.Layers = layers
 
 	// setup a debug provider
-	debugProvider, _ := debug.NewTileProvider(map[string]interface{}{})
+	debugProvider, _ := debug.NewTileProvider(dict.Dict{})
 
 	m.Layers = append(layers, []Layer{
 		{
