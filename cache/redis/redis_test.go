@@ -49,13 +49,21 @@ func TestNew(t *testing.T) {
 			config: map[string]interface{}{
 				"max_zoom": "2",
 			},
-			errMatch: "max_zoom value needs to be of type uint. Value is of type string",
+			errMatch: dict.ErrKeyType{
+				Key:   "max_zoom",
+				Value: "2",
+				T:     reflect.TypeOf(uint(0)),
+			},
 		},
 		"bad max_zoom 2": {
 			config: map[string]interface{}{
 				"max_zoom": -2,
 			},
-			errMatch: "max_zoom value needs to be of type uint. Value is of type int",
+			errMatch: dict.ErrKeyType{
+				Key:   "max_zoom",
+				Value: -2,
+				T:     reflect.TypeOf(int(-2)),
+			},
 		},
 	}
 
