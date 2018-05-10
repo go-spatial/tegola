@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/util/dict"
+	"github.com/go-spatial/tegola/internal/dict/dict"
 )
 
 const CacheType = "redis"
@@ -25,7 +25,7 @@ func init() {
 	cache.Register(CacheType, New)
 }
 
-func New(config map[string]interface{}) (rcache cache.Interface, err error) {
+func New(config dict.Dicter) (rcache cache.Interface, err error) {
 
 	// default values
 	defaultNetwork := "tcp"
@@ -34,7 +34,7 @@ func New(config map[string]interface{}) (rcache cache.Interface, err error) {
 	defaultDB := 0
 	defaultMaxZoom := uint(tegola.MaxZ)
 
-	c := dict.M(config)
+	c := config
 
 	network, err := c.String(ConfigKeyNetwork, &defaultNetwork)
 	if err != nil {

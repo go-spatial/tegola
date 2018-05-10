@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/internal/dict/dict"
 )
 
 // Interface defines a cache back end
@@ -125,7 +126,7 @@ func (k Key) String() string {
 // InitFunc initilize a cache given a config map.
 // The InitFunc should validate the config map, and report any errors.
 // This is called by the For function.
-type InitFunc func(map[string]interface{}) (Interface, error)
+type InitFunc func(dict.Dicter) (Interface, error)
 
 var cache map[string]InitFunc
 
@@ -154,7 +155,7 @@ func Registered() (c []string) {
 }
 
 // For function returns a configed cache of the given type, provided the correct config map.
-func For(cacheType string, config map[string]interface{}) (Interface, error) {
+func For(cacheType string, config dict.Dicter) (Interface, error) {
 	if cache == nil {
 		return nil, fmt.Errorf("No cache backends registered.")
 	}

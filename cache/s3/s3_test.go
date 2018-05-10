@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/s3"
+	"github.com/go-spatial/tegola/internal/dict/dict"
 )
 
 func TestNew(t *testing.T) {
@@ -16,7 +17,7 @@ func TestNew(t *testing.T) {
 	}
 
 	type tcase struct {
-		config map[string]interface{}
+		config dict.Dict
 		err    error
 	}
 
@@ -83,7 +84,7 @@ func TestSetGetPurge(t *testing.T) {
 	}
 
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		expected []byte
 	}
@@ -156,7 +157,7 @@ func TestSetOverwrite(t *testing.T) {
 	}
 
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		bytes1   []byte
 		bytes2   []byte
@@ -238,7 +239,7 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	type tcase struct {
-		config      map[string]interface{}
+		config      dict.Dict
 		key         cache.Key
 		bytes       []byte
 		expectedHit bool
