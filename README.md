@@ -93,7 +93,7 @@ Return a JSON encoded list of the server's configured maps and layers with vario
 Return [TileJSON](https://github.com/mapbox/tilejson-spec) details about the map.
 
 ```
-/capabilities/:map_name/style.json
+/maps/:map_name/style.json
 ```
 
 Return an auto generated [Mapbox GL Style](https://www.mapbox.com/mapbox-gl-js/style-spec/) for the configured map.
