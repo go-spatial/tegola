@@ -124,7 +124,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			MinZoom: m.Layers[i].MinZoom,
 			MaxZoom: m.Layers[i].MaxZoom,
 			Tiles: []string{
-				fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), req.mapName, m.Layers[i].MVTName(), debugQuery),
+				fmt.Sprintf("%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", URLRoot(r), req.mapName, m.Layers[i].MVTName(), debugQuery),
 			},
 		}
 
@@ -144,7 +144,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 	}
 
-	tileURL := fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), req.mapName, debugQuery)
+	tileURL := fmt.Sprintf("%v/maps/%v/{z}/{x}/{y}.pbf%v", URLRoot(r), req.mapName, debugQuery)
 
 	// build our URL scheme for the tile grid
 	tileJSON.Tiles = append(tileJSON.Tiles, tileURL)

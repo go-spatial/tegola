@@ -61,9 +61,9 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			Bounds:      m.Bounds,
 			Center:      m.Center,
 			Tiles: []string{
-				fmt.Sprintf("%v://%v/maps/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), m.Name, debugQuery),
+				fmt.Sprintf("%v/maps/%v/{z}/{x}/{y}.pbf%v", URLRoot(r), m.Name, debugQuery),
 			},
-			Capabilities: fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), m.Name, debugQuery),
+			Capabilities: fmt.Sprintf("%v/capabilities/%v.json%v", URLRoot(r), m.Name, debugQuery),
 		}
 
 		for i := range m.Layers {
@@ -94,7 +94,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			cLayer := CapabilitiesLayer{
 				Name: m.Layers[i].MVTName(),
 				Tiles: []string{
-					fmt.Sprintf("%v://%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", scheme(r), hostName(r), m.Name, m.Layers[i].MVTName(), debugQuery),
+					fmt.Sprintf("%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", URLRoot(r), m.Name, m.Layers[i].MVTName(), debugQuery),
 				},
 				MinZoom: m.Layers[i].MinZoom,
 				MaxZoom: m.Layers[i].MaxZoom,

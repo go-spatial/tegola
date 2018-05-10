@@ -53,7 +53,7 @@ func Register(name string, init InitFunc, cleanup CleanupFunc) error {
 	}
 
 	if _, ok := providers[name]; ok {
-		return fmt.Errorf("Provider %v already exists", name)
+		return fmt.Errorf("provider %v already exists", name)
 	}
 
 	providers[name] = pfns{
@@ -80,12 +80,12 @@ func Drivers() (l []string) {
 // For function returns a configured provider of the given type, provided the correct config map.
 func For(name string, config map[string]interface{}) (Tiler, error) {
 	if providers == nil {
-		return nil, fmt.Errorf("No providers registered.")
+		return nil, fmt.Errorf("no providers registered")
 	}
 
 	p, ok := providers[name]
 	if !ok {
-		return nil, fmt.Errorf("No providers registered by the name: %v, known providers(%v)", name, strings.Join(Drivers(), ","))
+		return nil, fmt.Errorf("no providers registered by the name: %v, known providers: %v", name, strings.Join(Drivers(), ", "))
 	}
 
 	return p.init(config)
