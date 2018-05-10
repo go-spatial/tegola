@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/tegola/internal/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
 )
 
@@ -26,7 +27,7 @@ func TestLayerGeomType(t *testing.T) {
 	port := GetTestPort(t)
 
 	testcases := []struct {
-		config    map[string]interface{}
+		config    dict.Dict
 		layerName string
 		geom      geom.Geometry
 	}{

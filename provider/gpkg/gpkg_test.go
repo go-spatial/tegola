@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/gpkg"
 )
@@ -173,7 +174,7 @@ func TestAutoConfig(t *testing.T) {
 
 func TestNewTileProvider(t *testing.T) {
 	type tcase struct {
-		config             map[string]interface{}
+		config             dict.Dict
 		expectedLayerCount int
 		expectedErr        error
 	}
@@ -252,7 +253,7 @@ func (t *MockTile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
 func TestTileFeatures(t *testing.T) {
 	type tcase struct {
-		config               map[string]interface{}
+		config               dict.Dict
 		layerName            string
 		tile                 MockTile
 		expectedFeatureCount int
@@ -386,7 +387,7 @@ func TestTileFeatures(t *testing.T) {
 
 func TestConfigs(t *testing.T) {
 	type tcase struct {
-		config       map[string]interface{}
+		config       dict.Dict
 		tile         MockTile
 		layerName    string
 		expectedTags map[uint64]map[string]interface{}

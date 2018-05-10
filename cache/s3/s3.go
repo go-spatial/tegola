@@ -15,7 +15,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/util/dict"
+	"github.com/go-spatial/tegola/internal/dict"
 )
 
 var (
@@ -55,24 +55,21 @@ func init() {
 // 		basepath (string): a path prefix added to all cache operations inside of the S3 bucket
 // 		max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
 
-func New(config map[string]interface{}) (cache.Interface, error) {
+func New(config dict.Dicter) (cache.Interface, error) {
 	var err error
 
 	s3cache := Cache{}
 
-	// parse the config
-	c := dict.M(config)
-
 	// the config map's underlying value is int
 	defaultMaxZoom := uint(tegola.MaxZ)
-	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
+	maxZoom, err := config.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
 
 	s3cache.MaxZoom = maxZoom
 
-	s3cache.Bucket, err = c.String(ConfigKeyBucket, nil)
+	s3cache.Bucket, err = config.String(ConfigKeyBucket, nil)
 	if err != nil {
 		return nil, ErrMissingBucket
 	}
@@ -82,7 +79,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 
 	// basepath
 	basepath := ""
-	s3cache.Basepath, err = c.String(ConfigKeyBasepath, &basepath)
+	s3cache.Basepath, err = config.String(ConfigKeyBasepath, &basepath)
 	if err != nil {
 		return nil, err
 	}
@@ -92,18 +89,18 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	if region == "" {
 		region = DefaultRegion
 	}
-	region, err = c.String(ConfigKeyRegion, &region)
+	region, err = config.String(ConfigKeyRegion, &region)
 	if err != nil {
 		return nil, err
 	}
 
 	accessKey := ""
-	accessKey, err = c.String(ConfigKeyAWSAccessKeyID, &accessKey)
+	accessKey, err = config.String(ConfigKeyAWSAccessKeyID, &accessKey)
 	if err != nil {
 		return nil, err
 	}
 	secretKey := ""
-	secretKey, err = c.String(ConfigKeyAWSSecretKey, &secretKey)
+	secretKey, err = config.String(ConfigKeyAWSSecretKey, &secretKey)
 	if err != nil {
 		return nil, err
 	}

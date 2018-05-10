@@ -6,20 +6,27 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/dict"
 )
 
 func TestMaps(t *testing.T) {
 	type tcase struct {
 		atlas       atlas.Atlas
 		maps        []config.Map
-		providers   []map[string]interface{}
+		providers   []dict.Dict
 		expectedErr error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
 		var err error
 
-		providers, err := register.Providers(tc.providers)
+		// convert []dict.Dict -> []dict.Dicter
+		provArr := make([]dict.Dicter, len(tc.providers))
+		for i := range provArr {
+			provArr[i] = tc.providers[i]
+		}
+
+		providers, err := register.Providers(provArr)
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 			return
@@ -50,7 +57,7 @@ func TestMaps(t *testing.T) {
 					},
 				},
 			},
-			providers: []map[string]interface{}{
+			providers: []dict.Dict{
 				{
 					"name": "test",
 					"type": "debug",
@@ -87,7 +94,7 @@ func TestMaps(t *testing.T) {
 					},
 				},
 			},
-			providers: []map[string]interface{}{
+			providers: []dict.Dict{
 				{
 					"name": "test",
 					"type": "debug",
@@ -111,7 +118,7 @@ func TestMaps(t *testing.T) {
 					},
 				},
 			},
-			providers: []map[string]interface{}{
+			providers: []dict.Dict{
 				{
 					"name": "test",
 					"type": "debug",
@@ -123,7 +130,7 @@ func TestMaps(t *testing.T) {
 		},
 		"success": {
 			maps: []config.Map{},
-			providers: []map[string]interface{}{
+			providers: []dict.Dict{
 				{
 					"name": "test",
 					"type": "debug",

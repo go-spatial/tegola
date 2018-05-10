@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
 )
@@ -16,7 +17,7 @@ func TestNewTileProvider(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
 	testcases := []struct {
-		config map[string]interface{}
+		config dict.Dict
 	}{
 		{
 			config: map[string]interface{}{
@@ -48,7 +49,7 @@ func TestTileFeatures(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
 	testcases := []struct {
-		config               map[string]interface{}
+		config               dict.Dict
 		tile                 *slippy.Tile
 		expectedFeatureCount int
 	}{

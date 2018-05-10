@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/dict"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -24,7 +25,7 @@ func init() {
 }
 
 // NewProvider Setups a debug provider. there are not currently any config params supported
-func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
+func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	return &Provider{}, nil
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/redis"
+	"github.com/go-spatial/tegola/internal/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
 )
 
@@ -19,7 +20,7 @@ func TestNew(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
 	type tc struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		errMatch string
 	}
 
@@ -75,7 +76,7 @@ func TestSetGetPurge(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
 	type tc struct {
-		config       map[string]interface{}
+		config       dict.Dict
 		key          cache.Key
 		expectedData []byte
 		expectedHit  bool
@@ -150,7 +151,7 @@ func TestSetGetPurge(t *testing.T) {
 func TestSetOverwrite(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 	type tc struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		bytes1   []byte
 		bytes2   []byte
@@ -217,7 +218,7 @@ func TestSetOverwrite(t *testing.T) {
 func TestMaxZoom(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 	type tcase struct {
-		config      map[string]interface{}
+		config      dict.Dict
 		key         cache.Key
 		bytes       []byte
 		expectedHit bool

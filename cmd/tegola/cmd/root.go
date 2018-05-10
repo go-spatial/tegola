@@ -10,6 +10,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/dict"
 )
 
 var (
@@ -64,7 +65,13 @@ func initConfig() {
 	}
 
 	// init our providers
-	providers, err := register.Providers(conf.Providers)
+	// but first convert []env.Map -> []dict.Dicter
+	provArr := make([]dict.Dicter, len(conf.Providers))
+	for i := range provArr {
+		provArr[i] = conf.Providers[i]
+	}
+
+	providers, err := register.Providers(provArr)
 	if err != nil {
 		log.Fatal(err)
 	}
