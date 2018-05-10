@@ -10,6 +10,7 @@ import (
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
@@ -104,7 +105,7 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 	return tokenReplacer.Replace(sql), nil
 }
 
-func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
+func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 	switch valType {
 	default:
 		switch vt := val.(type) {
@@ -116,9 +117,9 @@ func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 		case string:
 			return vt, nil
 		}
-	case pgx.BoolOid, pgx.ByteaOid, pgx.TextOid, pgx.OidOid, pgx.VarcharOid, pgx.JsonbOid:
+	case pgtype.BoolOID, pgtype.ByteaOID, pgtype.TextOID, pgtype.OIDOID, pgtype.VarcharOID, pgtype.JSONBOID:
 		return val, nil
-	case pgx.Int8Oid, pgx.Int2Oid, pgx.Int4Oid, pgx.Float4Oid, pgx.Float8Oid:
+	case pgtype.Int8OID, pgtype.Int2OID, pgtype.Int4OID, pgtype.Float4OID, pgtype.Float8OID:
 		switch vt := val.(type) {
 		case int8:
 			return int64(vt), nil
@@ -141,68 +142,60 @@ func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 		default: // should never happen.
 			return nil, fmt.Errorf("%v type is not supported. (should never happen)", valType)
 		}
-	case pgx.DateOid, pgx.TimestampOid, pgx.TimestampTzOid:
+	case pgtype.DateOID, pgtype.TimestampOID, pgtype.TimestamptzOID:
 		return fmt.Sprintf("%v", val), nil
 	}
 }
 
 func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descriptions []pgx.FieldDescription, values []interface{}) (gid uint64, geom []byte, tags map[string]interface{}, err error) {
-	tags = make(map[string]interface{})
-	var desc pgx.FieldDescription
 	var ok bool
+	tags = make(map[string]interface{})
 
-	for i, v := range values {
-		// Do a quick check
+	for i := range values {
+		// do a quick check
 		if err := ctx.Err(); err != nil {
 			return 0, nil, nil, err
 		}
-		// Skip nil values.
+
+		// skip nil values.
 		if values[i] == nil {
 			continue
 		}
-		desc = descriptions[i]
+
+		desc := descriptions[i]
+
 		switch desc.Name {
 		case geoFieldname:
-			if geom, ok = v.([]byte); !ok {
-				return 0, nil, nil, fmt.Errorf("Unable to convert geometry field (%v) into bytes.", geoFieldname)
+			if geom, ok = values[i].([]byte); !ok {
+				return 0, nil, nil, fmt.Errorf("unable to convert geometry field (%v) into bytes.", geoFieldname)
 			}
 		case idFieldname:
-			gid, err = gId(v)
+			gid, err = gId(values[i])
 		default:
-			switch desc.DataTypeName {
-			// hstore is a special case
-			case "hstore":
-				// parse our Hstore values into keys and values
-				keys, values, err := pgx.ParseHstore(v.(string))
-				if err != nil {
-					return gid, geom, tags, fmt.Errorf("Unable to parse Hstore err: %v", err)
-				}
-				for i, k := range keys {
-					// if the value is Valid (i.e. not null) then add it to our tags map.
-					if values[i].Valid {
-						// we need to check if the key already exists. if it does, then don't overwrite it
-						if _, ok := tags[k]; !ok {
-							tags[k] = values[i].String
-						}
+			switch vex := values[i].(type) {
+			case map[string]pgtype.Text:
+				for k, v := range vex {
+					// we need to check if the key already exists. if it does, then don't overwrite it
+					if _, ok := tags[k]; !ok {
+						tags[k] = v.String
 					}
 				}
-				continue
-			case "numeric":
-				num, err := strconv.ParseFloat(v.(string), 64)
-				if err != nil {
-					return 0, nil, nil, fmt.Errorf("Unable to parse numeric (%v) to float64 err: %v", v.(string), err)
-				}
+			case *pgtype.Numeric:
+				var num float64
+				values[i].(*pgtype.Numeric).AssignTo(&num)
+
 				tags[desc.Name] = num
-				continue
 			default:
-				value, err := transformVal(desc.DataType, v)
+				value, err := transformVal(desc.DataType, values[i])
 				if err != nil {
-					return gid, geom, tags, fmt.Errorf("Unable to convert field[%v] (%v) of type (%v - %v) to a suitable value.: [[ %T  :: %[5]t ]]", i, desc.Name, desc.DataType, desc.DataTypeName, v)
+					return gid, geom, tags, fmt.Errorf("unable to convert field [%v] (%v) of type (%v - %v) to a suitable value: %+v", i, desc.Name, desc.DataType, desc.DataTypeName, values[i])
 				}
+
 				tags[desc.Name] = value
 			}
 		}
 	}
+
 	return gid, geom, tags, err
 }
 
@@ -229,6 +222,6 @@ func gId(v interface{}) (gid uint64, err error) {
 	case string:
 		return strconv.ParseUint(aval, 10, 64)
 	default:
-		return gid, fmt.Errorf("Unable to convert field into a uint64.")
+		return gid, fmt.Errorf("unable to convert field into a uint64.")
 	}
 }
