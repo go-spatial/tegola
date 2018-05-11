@@ -2,20 +2,9 @@ package provider
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/go-spatial/geom"
 )
-
-type TimePeriod [2]*time.Time
-
-func (tp *TimePeriod) StartTime() *time.Time {
-	return tp[0]
-}
-
-func (tp *TimePeriod) EndTime() *time.Time {
-	return tp[1]
-}
 
 type Feature struct {
 	ID         uint64
@@ -24,8 +13,8 @@ type Feature struct {
 	Properties map[string]interface{} // Renamed Tags -> Properties
 
 	// Time values for features with time data.  A timestamp would be represented by identical
-	//	values.  For features w/o time data, nil value for both start & stop.
-	Time TimePeriod
+	//	values.  For features w/o time data, nil.
+	Time *TimePeriod
 
 	// This can be generated in a number of ways, for example; hashing the underlying data,
 	//	from a modification timestamp, or from a version number.  For read-only data,

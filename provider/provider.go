@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/internal/log"
@@ -27,42 +26,19 @@ type Tiler interface {
 	Layers() ([]LayerInfo, error)
 }
 
-type TimeExtent interface {
-	StartTime() *time.Time
-	EndTime() *time.Time
-}
-
-type IndexExtent interface {
-	StartIndex() uint
-	EndIndex() uint
-}
-
-type Bounder interface {
-	TimeExtent() *TimeExtent
-	GeomExtent() *geom.Extent
-	IndexExtent() *IndexExtent
-}
-
 type FeatureConsumer func(f *Feature) error
 
-// Returns features in a consistent order.
-
-// Limits features to those contained within the time, geometrical, and index bounds.
-// Features w/o time data will be considered to be within all time bounds.
-// Features w/o goemetry data will be considered to be within all geometrical extents.
-// A nil value returned from any of the Bounder methods indicates no filtering for that dimension.
 type Filterer interface {
 	StreamFeatures(
-		ctx context.Context, layer string, // Nothing new here
-		bounds Bounder, // Combine Time, Space, and index bounding
-		properties map[string]string, // Properties to filter on.
-		// If the feature has any of the properties named,
-		//	the property values must match (fuzzily, i.e. conversion
-		//	from string to native type then match) for the
-		//	feature to be returned.  nil indicates no property
-		//	filtering.
-		fn FeatureConsumer, // The "Feature" type this takes as an argument has been modified
+		ctx context.Context,
+		layer string,
+		fn FeatureConsumer,
+		// Unsupported Filters will be Disgarded.
+		filters ...BaseFilterer,
 	) error
+	// Returns the Filters that This Filter supports.
+	SupportedFilters() []string
+	// Returns a list of layer names this provider supports.
 	Layers() ([]LayerInfo, error)
 }
 
