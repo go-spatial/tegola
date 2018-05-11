@@ -1,8 +1,9 @@
 package redis_test
 
 import (
+	"errors"
+	"net"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/go-spatial/tegola/cache"
@@ -19,12 +20,33 @@ const TESTENV = "RUN_REDIS_TESTS"
 func TestNew(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
-	type tc struct {
-		config   dict.Dict
-		errMatch string
+	type tcase struct {
+		config      dict.Dict
+		expectedErr error
 	}
 
-	testcases := map[string]tc{
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
+		_, err := redis.New(tc.config)
+		if tc.expectedErr != nil {
+			if err == nil {
+				t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+				return
+			}
+			if err.Error() != tc.expectedErr.Error() {
+				//log.Println("typeof ", reflect.TypeOf(err))
+				t.Errorf("invalid error. expected: %v, got %v", tc.expectedErr, err.Error())
+			}
+			return
+		}
+		if err != nil {
+			t.Errorf("unexpected err: %v", err)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
 		"explicit config": {
 			config: map[string]interface{}{
 				"network":  "tcp",
@@ -33,23 +55,29 @@ func TestNew(t *testing.T) {
 				"db":       0,
 				"max_zoom": uint(10),
 			},
-			errMatch: "",
 		},
 		"implicit config": {
-			config:   map[string]interface{}{},
-			errMatch: "",
+			config: map[string]interface{}{},
 		},
 		"bad address": {
 			config: map[string]interface{}{
 				"address": "127.0.0.1:6000",
 			},
-			errMatch: "connection refused",
+			expectedErr: &net.OpError{
+				Op:  "dial",
+				Net: "tcp",
+				Addr: &net.TCPAddr{
+					IP:   net.ParseIP("127.0.0.1"),
+					Port: 6000,
+				},
+				Err: errors.New("getsockopt: connection refused"),
+			},
 		},
 		"bad max_zoom": {
 			config: map[string]interface{}{
 				"max_zoom": "2",
 			},
-			errMatch: dict.ErrKeyType{
+			expectedErr: dict.ErrKeyType{
 				Key:   "max_zoom",
 				Value: "2",
 				T:     reflect.TypeOf(uint(0)),
@@ -59,24 +87,19 @@ func TestNew(t *testing.T) {
 			config: map[string]interface{}{
 				"max_zoom": -2,
 			},
-			errMatch: dict.ErrKeyType{
+			expectedErr: dict.ErrKeyType{
 				Key:   "max_zoom",
 				Value: -2,
-				T:     reflect.TypeOf(int(-2)),
+				T:     reflect.TypeOf(uint(0)),
 			},
 		},
 	}
 
-	for i, tc := range testcases {
-		_, err := redis.New(tc.config)
-		if err != nil {
-			if tc.errMatch != "" && strings.Contains(err.Error(), tc.errMatch) {
-				// correct error returned
-				continue
-			}
-			t.Errorf("[%v] unexpected err, expected to find %q in %q", i, tc.errMatch, err)
-			continue
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
 	}
 }
 

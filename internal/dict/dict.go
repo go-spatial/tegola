@@ -1,9 +1,6 @@
 package dict
 
-import (
-	"fmt"
-	"reflect"
-)
+import "reflect"
 
 // Dict is a pass-through implementation of the Dicter interface
 type Dict map[string]interface{}
@@ -197,8 +194,6 @@ func (d Dict) MapSlice(key string) (r []Dicter, err error) {
 	for k := range darr {
 		r[k] = Dicter(Dict(darr[k]))
 	}
-
-	fmt.Printf("\n\n%v\n\n", r)
 
 	return r, nil
 }
