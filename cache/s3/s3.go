@@ -31,12 +31,17 @@ const (
 	ConfigKeyBasepath       = "basepath"
 	ConfigKeyMaxZoom        = "max_zoom"
 	ConfigKeyRegion         = "region" // defaults to "us-east-1"
+	ConfigKeyEndpoint       = "endpoint" //	defaults to ""
 	ConfigKeyAWSAccessKeyID = "aws_access_key_id"
 	ConfigKeyAWSSecretKey   = "aws_secret_access_key"
 )
 
 const (
 	DefaultRegion = "us-east-1"
+)
+
+const (
+	DefaultEndpoint = ""
 )
 
 func init() {
@@ -54,6 +59,7 @@ func init() {
 // 		aws_secret_access_key (string): an AWS secret access key
 // 		basepath (string): a path prefix added to all cache operations inside of the S3 bucket
 // 		max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
+// 		endpoint (string): the S3 endpoint the bucket is located. defaults to '' and only needed for non-AWS endpoints
 
 func New(config map[string]interface{}) (cache.Interface, error) {
 	var err error
@@ -111,11 +117,26 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	awsConfig := aws.Config{
 		Region: aws.String(region),
 	}
+	// check for endpoint env var
+	endpoint := os.Getenv("AWS_ENDPOINT")
+	if endpoint == "" {
+		endpoint = DefaultEndpoint
+	}
+	endpoint, err = c.String(ConfigKeyEndpoint, &endpoint)
+	if err != nil {
+		return nil, err
+	}
 
 	// support for static credentials, this is not recommended by AWS but
 	// necessary for some environments
 	if accessKey != "" && secretKey != "" {
 		awsConfig.Credentials = credentials.NewStaticCredentials(accessKey, secretKey, "")
+	}
+
+	// if an endpoint is set, add it to the awsConfig
+	// otherwise do not set it and it will automatically use the correct aws-s3 endpoint
+	if endpoint != "" {
+		awsConfig.Endpoint = aws.String(endpoint)
 	}
 
 	// setup the s3 session.
