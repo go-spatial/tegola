@@ -82,6 +82,16 @@ func (e *Extent) MinY() float64 {
 	return e[1]
 }
 
+// Min returns the (MinX, MinY) values
+func (e *Extent) Min() [2]float64 {
+	return [2]float64{e[0], e[1]}
+}
+
+// Max returns the (MaxX, MaxY) values
+func (e *Extent) Max() [2]float64 {
+	return [2]float64{e[2], e[3]}
+}
+
 // TODO (gdey): look at how to have this function take into account the dpi.
 func (e *Extent) XSpan() float64 {
 	if e == nil {
@@ -131,6 +141,25 @@ func (e *Extent) AddPoints(points ...[2]float64) {
 	}
 	extent := NewExtent(points...)
 	e.Add(extent)
+}
+
+func (e *Extent) AddPointers(pts ...Pointer) {
+	for i := range pts {
+		e.AddPoints(pts[i].XY())
+	}
+}
+
+// AddPointer expands the specified envelop to contain p.
+func (e *Extent) AddGeometry(g Geometry) error {
+	points, err := GetCoordinates(g)
+	if err != nil {
+		return err
+	}
+
+	for i := range points {
+		e.AddPointers(points[i])
+	}
+	return nil
 }
 
 // AsPolygon will return the extent as a Polygon

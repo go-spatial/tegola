@@ -2,43 +2,11 @@ package slippy
 
 import (
 	"math"
+
 	"github.com/go-spatial/geom"
 )
 
 func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {
-	return &Tile{
-		z:      z,
-		x:      x,
-		y:      y,
-		Buffer: buffer,
-		SRID:   srid,
-	}
-}
-
-func DegToNum(zoom uint, lat, lon float64) (x, y uint) {
-	n := float64(maths.Exp2(uint64(zoom)))
-	lat_rad := maths.DegToRad(lat)
-
-	x = uint(n * (lon + 180.0) / 360.0)
-	y = uint(n / 2.0 *
-		(1.0 - math.Log(
-			math.Tan(lat_rad)+1.0/math.Cos(lat_rad)) / math.Pi))
-
-	return
-}
-
-func NumToDeg(z, x, y uint) (lat, lon float64) {
-	n := float64(maths.Exp2(uint64(z)))
-
-	lon = float64(x)/n*360.0 - 180.0
-	lat = math.Atan(math.Sinh(math.Pi * (1.0 - 2.0*float64(y)/n)))
-	lat = maths.RadToDeg(lat)
-
-	return
-}
-
-func NewTileLatLon(z uint, lat, lon, buffer float64, srid uint64) *Tile {
-	x, y := DegToNum(z, lat, lon)
 	return &Tile{
 		z:      z,
 		x:      x,
@@ -63,7 +31,36 @@ type Tile struct {
 	SRID uint64
 }
 
+func NewTileLatLon(z uint, lat, lon, buffer float64, srid uint64) *Tile {
+	x := Lon2Tile(z, lon)
+	y := Lat2Tile(z, lat)
+
+	return &Tile{
+		z:      z,
+		x:      x,
+		y:      y,
+		Buffer: buffer,
+		SRID:   srid,
+	}
+}
+
 func (t *Tile) ZXY() (uint, uint, uint) { return t.z, t.x, t.y }
+
+func Lat2Tile(zoom uint, lat float64) (y uint) {
+	lat_rad := lat * math.Pi / 180
+
+	return uint(math.Exp2(float64(zoom))*
+		(1.0-math.Log(
+			math.Tan(lat_rad)+
+				(1/math.Cos(lat_rad)))/math.Pi)) /
+		2.0
+
+}
+
+func Lon2Tile(zoom uint, lon float64) (x uint) {
+
+	return uint(math.Exp2(float64(zoom)) * (lon + 180.0) / 360.0)
+}
 
 // Tile2Lon will return the west most longitude
 func Tile2Lon(x, z uint) float64 { return float64(x)/math.Exp2(float64(z))*360.0 - 180.0 }
@@ -186,8 +183,8 @@ func (t *Tile) BufferedExtent() (bufferedExtent *geom.Extent, srid uint64) {
 	return bufferedExtent, t.SRID
 }
 
-// calls f on every vertically related to t at the specified zoom
 // TODO (ear7h): sibling support
+// RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
 func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
 	// handle ancestors and self
 	if zoom <= t.z {
@@ -198,16 +195,14 @@ func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
 
 	// handle descendants
 	mag := zoom - t.z
-	delta := uint(maths.Exp2(uint64(mag)))
+	delta := uint(math.Exp2(float64(mag)))
 
 	leastX := t.x << mag
 	leastY := t.y << mag
 
-	//log.Info("info: ", mag, delta, leastY, leastY)
-
 	for x := leastX; x < leastX+delta; x++ {
 		for y := leastY; y < leastY+delta; y++ {
-			err := f(NewTile(zoom, x, y, 0, tegola.WebMercator))
+			err := f(NewTile(zoom, x, y, 0, geom.WebMercator))
 			if err != nil {
 				return err
 			}
@@ -215,15 +210,4 @@ func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
 	}
 
 	return nil
-}
-
-// [2][2]float{{lat, lon}, {lat, lon}}
-func (t *Tile) ExtentDegrees() [2][2]float64 {
-	top, left := NumToDeg(t.z, t.x, t.y)
-	bottom, right := NumToDeg(t.z, t.x+1, t.y+1)
-
-	return [2][2]float64{
-		{top, left},
-		{bottom, right},
-	}
 }

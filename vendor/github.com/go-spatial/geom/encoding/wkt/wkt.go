@@ -195,9 +195,9 @@ func Encode(geo geom.Geometry) (string, error) {
 
 	case geom.MultiLineStringer:
 		if isMultiLineStringerEmpty(g) {
-			return "MULTILINE EMPTY", nil
+			return "MULTILINESTRING EMPTY", nil
 		}
-		return "MULTILINE " + _encode(geo), nil
+		return "MULTILINESTRING " + _encode(geo), nil
 
 	case geom.Polygoner:
 		if isPolygonerEmpty(g) {
