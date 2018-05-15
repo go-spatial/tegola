@@ -1,10 +1,10 @@
 package redis_test
 
 import (
-	"errors"
 	"net"
 	"reflect"
 	"testing"
+	"syscall"
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/redis"
@@ -70,7 +70,7 @@ func TestNew(t *testing.T) {
 					IP:   net.ParseIP("127.0.0.1"),
 					Port: 6000,
 				},
-				Err: errors.New("getsockopt: connection refused"),
+				Err: syscall.ECONNREFUSED,
 			},
 		},
 		"bad max_zoom": {
