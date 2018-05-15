@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -29,6 +30,10 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		return nil, err
 	}
 	if filepath == "" {
+		return nil, ErrInvalidFilePath{filepath}
+	}
+
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
 		return nil, ErrInvalidFilePath{filepath}
 	}
 
