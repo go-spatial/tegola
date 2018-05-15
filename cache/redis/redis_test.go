@@ -1,9 +1,10 @@
 package redis_test
 
 import (
-	"errors"
 	"net"
+	"os"
 	"reflect"
+	"syscall"
 	"testing"
 
 	"github.com/go-spatial/tegola/cache"
@@ -34,10 +35,29 @@ func TestNew(t *testing.T) {
 				t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
 				return
 			}
-			if err.Error() != tc.expectedErr.Error() {
-				//log.Println("typeof ", reflect.TypeOf(err))
-				t.Errorf("invalid error. expected: %v, got %v", tc.expectedErr, err.Error())
+
+			// check error types
+			if reflect.TypeOf(err) != reflect.TypeOf(tc.expectedErr) {
+				t.Errorf("invalid error type. expected %T, got %T", tc.expectedErr, err)
+				return
 			}
+
+			switch e := err.(type) {
+			case *net.OpError:
+				expectedErr := tc.expectedErr.(*net.OpError)
+
+				if reflect.TypeOf(e.Err) != reflect.TypeOf(expectedErr.Err) {
+					t.Errorf("invalid error type. expected %T, got %T", expectedErr.Err, e.Err)
+					return
+				}
+			default:
+				// check error messages
+				if err.Error() != tc.expectedErr.Error() {
+					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err.Error())
+					return
+				}
+			}
+
 			return
 		}
 		if err != nil {
@@ -70,7 +90,9 @@ func TestNew(t *testing.T) {
 					IP:   net.ParseIP("127.0.0.1"),
 					Port: 6000,
 				},
-				Err: errors.New("getsockopt: connection refused"),
+				Err: &os.SyscallError{
+					Err: syscall.ECONNREFUSED,
+				},
 			},
 		},
 		"bad max_zoom": {
