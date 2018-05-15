@@ -10,7 +10,8 @@ if [ -z "$VERSION_TAG" ]; then
 fi
 
 LDFLAGS="-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION_TAG}"
-if [[ $CGO_ENABLED == 0 ]]; then
+if [[ "$CGO_ENABLED" == "0" ]]; then
+	echo "Building binaries without CGO."
 	LDFLAGS="${LDFLAGS} -s"
 fi
 
@@ -26,7 +27,8 @@ do
 	for GOOS in darwin linux windows
 	do
 		FILENAME="${TRAVIS_BUILD_DIR}/releases/tegola_${GOOS}_${GOARCH}"
-		if [[ $CGO_ENABLED != 0 ]]; then
+		if [[ "$CGO_ENABLED" != "0" ]]; then
+			echo "CGO_ENABLED: $CGO_ENABLED"
 			FILENAME="${FILENAME}_cgo"
 		fi
 		if [[ $GOOS == windows ]]; then 
