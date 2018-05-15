@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -36,6 +37,10 @@ type featureTableDetails struct {
 // Creates a config instance of the type NewTileProvider() requires including all available feature
 //    tables in the gpkg at 'gpkgPath'.
 func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
+	if _, err := os.Stat(gpkgPath); os.IsNotExist(err) {
+		return nil, ErrInvalidFilePath{gpkgPath}
+	}
+
 	// Get all feature tables
 	db, err := sql.Open("sqlite3", gpkgPath)
 	if err != nil {
@@ -188,6 +193,9 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		return nil, err
 	}
 	if filepath == "" {
+		return nil, ErrInvalidFilePath{filepath}
+	}
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
 		return nil, ErrInvalidFilePath{filepath}
 	}
 
