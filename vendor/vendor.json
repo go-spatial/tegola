@@ -201,18 +201,6 @@
 			"revisionTime": "2018-02-13T07:44:14Z"
 		},
 		{
-			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
-			"path": "github.com/elazarl/go-bindata-assetfs",
-			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
-			"revisionTime": "2017-02-27T21:27:28Z"
-		},
-		{
-			"checksumSHA1": "CaThXbumVxZtNlItiXma5B78PwQ=",
-			"path": "github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs",
-			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
-			"revisionTime": "2017-02-27T21:27:28Z"
-		},
-		{
 			"checksumSHA1": "H5aa/58hIaaMETBYW8rYYBsVOc0=",
 			"path": "github.com/gdey/bastet",
 			"revision": "314ac74cee07ff4ca20650990ab63c7f757da5fe",
