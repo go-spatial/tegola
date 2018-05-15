@@ -2,6 +2,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -26,6 +27,7 @@ var (
 	// HostName is the name of the host to use for construction of URLS.
 	// configurable via the tegola config.toml file (set in main.go)
 	HostName string
+
 	// Port is the port the server is listening on, used for construction of URLS.
 	// configurable via the tegola config.toml file (set in main.go)
 	Port string
@@ -44,20 +46,20 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r := httptreemux.New()
 	group := r.NewGroup("/")
 
-	// one handler to respond to all OPTIONS (CORS) requests for registered routes
+	// one handler to respond to all OPTIONS requests for registered routes with our CORS headers
 	r.OptionsHandler = corsHandler
 
 	// capabilities endpoints
-	group.UsingContext().Handler("GET", "/capabilities", HandleCapabilities{})
-	group.UsingContext().Handler("GET", "/capabilities/:map_name", HandleMapCapabilities{})
+	group.UsingContext().Handler("GET", "/capabilities", CORSHandler(HandleCapabilities{}))
+	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", TileCacheHandler(a, hMapLayerZXY))
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", TileCacheHandler(a, hMapLayerZXY))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
 
 	// map style
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HandleMapStyle{})
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
 
 	//	setup viewer routes, which can excluded via build flags
 	setupViewer(group)
@@ -77,8 +79,8 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 	return srv
 }
 
-// determines the hostname:port to return based on the following hierarchy
-// - HostName / Port vars as configured via the config file
+// hostName determines the hostname:port to return based on the following hierarchy
+// - HostName / Port values as configured via the config file
 // - The request host / port if config HostName or Port is missing
 func hostName(r *http.Request) string {
 	var requestHostname string
@@ -121,6 +123,12 @@ func scheme(r *http.Request) string {
 	}
 
 	return "http"
+}
+
+// URLRoot builds a string containing the scheme, host and port based on a combination of user defined values,
+// headers and request parameters. The function is public so it can be overridden for other implementations.
+var URLRoot = func(r *http.Request) string {
+	return fmt.Sprintf("%v://%v", scheme(r), hostName(r))
 }
 
 // corsHanlder is used to respond to all OPTIONS requests for registered routes

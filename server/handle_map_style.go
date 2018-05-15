@@ -61,7 +61,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m = m.AddDebugLayers()
 	}
 
-	sourceURL := fmt.Sprintf("%v://%v/capabilities/%v.json%v", scheme(r), hostName(r), req.mapName, debugQuery)
+	sourceURL := fmt.Sprintf("%v/capabilities/%v.json%v", URLRoot(r), req.mapName, debugQuery)
 
 	mapboxStyle := style.Root{
 		Name:    m.Name,
