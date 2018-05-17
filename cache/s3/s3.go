@@ -34,6 +34,7 @@ const (
 	ConfigKeyEndpoint       = "endpoint" //	defaults to ""
 	ConfigKeyAWSAccessKeyID = "aws_access_key_id"
 	ConfigKeyAWSSecretKey   = "aws_secret_access_key"
+	ConfigKeyACL      		= "access_control_list" //	defaults to ""
 )
 
 const (
@@ -60,6 +61,7 @@ func init() {
 // 		basepath (string): a path prefix added to all cache operations inside of the S3 bucket
 // 		max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
 // 		endpoint (string): the S3 endpoint the bucket is located. defaults to '' and only needed for non-AWS endpoints
+//  	access_control_list (string) : the S3 access control to set on the file when putting the file. Empty is the default for the bucket.
 
 func New(config map[string]interface{}) (cache.Interface, error) {
 	var err error
@@ -146,6 +148,14 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 		session.New(&awsConfig),
 	)
 
+	// check for control_access_list env var
+	acl := os.Getenv("AWS_ACL")
+	acl, err = c.String(ConfigKeyACL, &acl)
+	if err != nil {
+		return nil, err
+	}
+	s3cache.ACL = acl
+
 	// in order to confirm we have the correct permissions on the bucket create a small file
 	// and test a PUT, GET and DELETE to the bucket
 	key := cache.Key{
@@ -208,6 +218,9 @@ type Cache struct {
 	// client holds a reference to the s3 client. it's expected the client
 	// has an active session and read, write, delete permissions have been checked
 	Client *s3.S3
+
+	// ACL is the aws ACL, if the not set it will use the default value for aws.
+	ACL string
 }
 
 func (s3c *Cache) Set(key *cache.Key, val []byte) error {
@@ -226,6 +239,9 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 		Bucket: aws.String(s3c.Bucket),
 		Key:    aws.String(k),
 	}
+	if s3c.ACL != "" {
+		input.ACL = aws.String(s3c.ACL)
+   	}
 
 	_, err = s3c.Client.PutObject(&input)
 	if err != nil {
