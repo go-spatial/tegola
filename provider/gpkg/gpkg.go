@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
@@ -94,12 +95,16 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	if pLayer.srid != tileSRID {
 		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
 		if err != nil {
-			return fmt.Errorf("error converting point: %v ", err)
+			err = fmt.Errorf("error converting point: %v ", err)
+			log.Errorf("%v", err)
+			return err
 		}
 
 		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
 		if err != nil {
-			return fmt.Errorf("error converting point: %v ", err)
+			err = fmt.Errorf("error converting point: %v ", err)
+			log.Errorf("%v", err)
+			return err
 		}
 
 		tileBBox = geom.BoundingBox{
@@ -108,30 +113,48 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		}
 	}
 
-	var qtext string
+	const selectCountClause = "SELECT COUNT(*)"
+	var selectRowsClause, fromClause, cqtext, qtext string
 
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
 		rtreeTablename := fmt.Sprintf("rtree_%v_geom", pLayer.tablename)
 
-		selectClause := fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", pLayer.idFieldname, pLayer.geomFieldname)
-
+		selectRowsClause = fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", pLayer.idFieldname, pLayer.geomFieldname)
 		for _, tf := range pLayer.tagFieldnames {
-			selectClause += fmt.Sprintf(", `%v`", tf)
+			selectRowsClause += fmt.Sprintf(", `%v`", tf)
 		}
 
 		// l - layer table, si - spatial index
-		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX!", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname)
+		fromClause = fmt.Sprintf("FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX!", pLayer.tablename, rtreeTablename, pLayer.idFieldname)
 
-		z, _, _ := tile.ZXY()
-		qtext = replaceTokens(qtext, z, tileBBox)
+		cqtext = fmt.Sprintf("%v %v", selectCountClause, fromClause)
+		qtext = fmt.Sprintf("%v %v", selectRowsClause, fromClause)
 	} else {
-		// If layer was specified via "sql" in config, collect it
-		z, _, _ := tile.ZXY()
-		qtext = replaceTokens(pLayer.sql, z, tileBBox)
-	}
+		//then we must get row count via an alternative
+		splitsql := strings.Split(pLayer.sql, " FROM ")
 
-	log.Debugf("qtext: %v", qtext)
+		selectRowsClause = splitsql[0]
+		fromClause = fmt.Sprintf("FROM %v", splitsql[1])
+
+		cqtext = fmt.Sprintf("%v %v", selectCountClause, fromClause)
+		qtext = pLayer.sql
+	}
+	z, _, _ := tile.ZXY()
+	cqtext = replaceTokens(cqtext, z, tileBBox)
+	qtext = replaceTokens(qtext, z, tileBBox)
+
+	var rowcount int
+	row := p.db.QueryRow(cqtext)
+	err := row.Scan(&rowcount)
+	if err != nil {
+		log.Errorf("%v - %v", cqtext, err)
+		//return nil
+	}
+	log.Debugf("%d records found: %v", rowcount, qtext)
+	// if rowcount == 0 {
+	// 	return nil
+	// }
 
 	rows, err := p.db.Query(qtext)
 	if err != nil {
@@ -183,7 +206,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 				}
 
 			case pLayer.geomFieldname:
-				log.Debugf("extracting geopackage geometry header.", vals[i])
+				//log.Debugf("extracting geopackage geometry header '%v'", cols[i])
 
 				geomData, ok := vals[i].([]byte)
 				if !ok {
