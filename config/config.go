@@ -27,9 +27,9 @@ type Config struct {
 	// the Parse() function is used directly.
 	LocationName string
 	Webserver    Webserver `toml:"webserver"`
-	Cache        env.Map   `toml:"cache"`
+	Cache        env.Dict  `toml:"cache"`
 	// Map of providers.
-	Providers []env.Map
+	Providers []env.Dict
 	Maps      []Map
 }
 

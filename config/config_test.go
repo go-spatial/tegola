@@ -137,11 +137,11 @@ func TestParse(t *testing.T) {
 					Port:              ":8080",
 					CORSAllowedOrigin: "tegola.io",
 				},
-				Cache: env.Map{
+				Cache: env.Dict{
 					"type":     "file",
 					"basepath": "/tmp/tegola-cache",
 				},
-				Providers: []env.Map{
+				Providers: []env.Dict{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -244,7 +244,7 @@ func TestParse(t *testing.T) {
 					HostName: ENV_TEST_HOST_CONCAT,
 					Port:     ENV_TEST_PORT,
 				},
-				Providers: []env.Map{
+				Providers: []env.Dict{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -346,7 +346,7 @@ func TestValidate(t *testing.T) {
 				Webserver: config.Webserver{
 					Port: ":8080",
 				},
-				Providers: []env.Map{
+				Providers: []env.Dict{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -410,7 +410,7 @@ func TestValidate(t *testing.T) {
 		},
 		"2": {
 			config: config.Config{
-				Providers: []env.Map{
+				Providers: []env.Dict{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -480,7 +480,7 @@ func TestValidate(t *testing.T) {
 				Webserver: config.Webserver{
 					Port: ":8080",
 				},
-				Providers: []env.Map{
+				Providers: []env.Dict{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -563,7 +563,7 @@ func TestValidate(t *testing.T) {
 				Webserver: config.Webserver{
 					Port: ":8080",
 				},
-				Providers: []env.Map{
+				Providers: []env.Dict{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
@@ -632,7 +632,7 @@ func TestValidate(t *testing.T) {
 				Webserver: config.Webserver{
 					Port: ":8080",
 				},
-				Providers: []env.Map{
+				Providers: []env.Dict{
 					{
 						"name":     "provider1",
 						"type":     "postgis",
