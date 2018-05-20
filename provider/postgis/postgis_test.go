@@ -30,7 +30,7 @@ func TestNewTileProvider(t *testing.T) {
 
 	tests := map[string]tcase{
 		"1": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
 				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
@@ -92,7 +92,7 @@ func TestTileFeatures(t *testing.T) {
 
 	tests := map[string]tcase{
 		"land query": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
 				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
@@ -109,7 +109,7 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 4032,
 		},
 		"scalerank test": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
 				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
@@ -126,7 +126,7 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 98,
 		},
 		"decode numeric(x,x) types": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
 				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),

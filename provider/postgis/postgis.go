@@ -215,6 +215,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			geomField: geomfld,
 			srid:      uint64(lsrid),
 		}
+
 		if sql != "" {
 			// make sure that the sql has a !BBOX! token
 			if !strings.Contains(sql, bboxToken) {

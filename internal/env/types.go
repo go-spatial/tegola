@@ -12,12 +12,10 @@ import (
 var regex = regexp.MustCompile(`\${[A-Z]+[A-Z1-9_]*}`)
 
 // ErrEnvVar corresponds with a missing environment variable
-type ErrEnvVar struct {
-	varName string
-}
+type ErrEnvVar string
 
-func (ee *ErrEnvVar) Error() string {
-	return fmt.Sprintf("environment variable %q not found", ee.varName)
+func (e ErrEnvVar) Error() string {
+	return fmt.Sprintf("environment variable %q not found", string(e))
 }
 
 // ErrType corresponds with an incorrect type passed to UnmarshalTOML
@@ -25,7 +23,7 @@ type ErrType struct {
 	v interface{}
 }
 
-func (te *ErrType) Error() string {
+func (te ErrType) Error() string {
 	return fmt.Sprintf("type %t could not be converted", te.v)
 }
 
@@ -43,7 +41,7 @@ func replaceEnvVar(in string) (string, error) {
 		// get env var
 		envVar, ok := os.LookupEnv(varName)
 		if !ok {
-			return "", &ErrEnvVar{varName: varName}
+			return "", ErrEnvVar(varName)
 		}
 
 		// update the input string with the env values

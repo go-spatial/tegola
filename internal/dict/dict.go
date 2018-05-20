@@ -17,7 +17,7 @@ func (d Dict) String(key string, def *string) (r string, err error) {
 
 	r, ok = v.(string)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -31,7 +31,7 @@ func (d Dict) StringSlice(key string) (r []string, err error) {
 
 	r, ok = v.([]string)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -49,7 +49,7 @@ func (d Dict) Bool(key string, def *bool) (r bool, err error) {
 
 	r, ok = v.(bool)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -63,7 +63,7 @@ func (d Dict) BoolSlice(key string) (r []bool, err error) {
 
 	r, ok = v.([]bool)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -81,7 +81,7 @@ func (d Dict) Int(key string, def *int) (r int, err error) {
 
 	r, ok = v.(int)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -95,7 +95,7 @@ func (d Dict) IntSlice(key string) (r []int, err error) {
 
 	r, ok = v.([]int)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -113,7 +113,7 @@ func (d Dict) Uint(key string, def *uint) (r uint, err error) {
 
 	r, ok = v.(uint)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -127,7 +127,7 @@ func (d Dict) UintSlice(key string) (r []uint, err error) {
 
 	r, ok = v.([]uint)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -145,7 +145,7 @@ func (d Dict) Float(key string, def *float64) (r float64, err error) {
 
 	r, ok = v.(float64)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -159,7 +159,7 @@ func (d Dict) FloatSlice(key string) (r []float64, err error) {
 
 	r, ok = v.([]float64)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -173,7 +173,7 @@ func (d Dict) Map(key string) (r Dicter, err error) {
 
 	r, ok = v.(Dict)
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(r)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 
 	return r, nil
@@ -187,7 +187,7 @@ func (d Dict) MapSlice(key string) (r []Dicter, err error) {
 
 	darr, ok := v.([]map[string]interface{})
 	if !ok {
-		return r, ErrKeyType{key, v, reflect.TypeOf(darr)}
+		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(darr)}
 	}
 
 	r = make([]Dicter, len(darr))

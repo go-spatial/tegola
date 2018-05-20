@@ -17,7 +17,7 @@ func ParseString(v interface{}) (*string, error) {
 		}
 		return &val, nil
 	default:
-		return nil, &ErrType{v}
+		return nil, ErrType{v}
 	}
 }
 
@@ -38,7 +38,7 @@ func ParseBool(v interface{}) (*bool, error) {
 		b, err := strconv.ParseBool(val)
 		return &b, err
 	default:
-		return nil, &ErrType{v}
+		return nil, ErrType{v}
 	}
 }
 
@@ -68,7 +68,7 @@ func ParseInt(v interface{}) (*int, error) {
 		i, err := strconv.Atoi(val)
 		return &i, err
 	default:
-		return nil, &ErrType{v}
+		return nil, ErrType{v}
 	}
 }
 
@@ -99,7 +99,7 @@ func ParseUint(v interface{}) (*uint, error) {
 		ui := uint(ui64)
 		return &ui, err
 	default:
-		return nil, &ErrType{v}
+		return nil, ErrType{v}
 	}
 }
 
@@ -123,6 +123,6 @@ func ParseFloat(v interface{}) (*float64, error) {
 		flt, err := strconv.ParseFloat(val, 64)
 		return &flt, err
 	default:
-		return nil, &ErrType{v}
+		return nil, ErrType{v}
 	}
 }

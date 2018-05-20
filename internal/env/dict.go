@@ -41,7 +41,12 @@ func (d Dict) String(key string, def *string) (v string, err error) {
 
 	ptr, err := ParseString(val)
 	if err != nil {
-		return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+		switch err.(type) {
+		case ErrEnvVar:
+			return v, err
+		default:
+			return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+		}
 	}
 	return *ptr, nil
 }
@@ -70,7 +75,12 @@ func (d Dict) StringSlice(key string) (v []string, err error) {
 			} else {
 				ptr, err := ParseString(val)
 				if err != nil {
-					return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+					switch err.(type) {
+					case ErrEnvVar:
+						return v, err
+					default:
+						return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+					}
 				}
 
 				v[k] = *ptr
@@ -94,8 +104,14 @@ func (d Dict) Bool(key string, def *bool) (v bool, err error) {
 
 	ptr, err := ParseBool(val)
 	if err != nil {
-		return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+		switch err.(type) {
+		case ErrEnvVar:
+			return v, err
+		default:
+			return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+		}
 	}
+
 	return *ptr, nil
 }
 
@@ -123,7 +139,12 @@ func (d Dict) BoolSlice(key string) (v []bool, err error) {
 			} else {
 				ptr, err := ParseBool(val)
 				if err != nil {
-					return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+					switch err.(type) {
+					case ErrEnvVar:
+						return v, err
+					default:
+						return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+					}
 				}
 
 				v[k] = *ptr
@@ -146,8 +167,14 @@ func (d Dict) Int(key string, def *int) (v int, err error) {
 
 	ptr, err := ParseInt(val)
 	if err != nil {
-		return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+		switch err.(type) {
+		case ErrEnvVar:
+			return v, err
+		default:
+			return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+		}
 	}
+
 	return *ptr, nil
 }
 
@@ -172,7 +199,12 @@ func (d Dict) IntSlice(key string) (v []int, err error) {
 			} else {
 				ptr, err := ParseInt(val)
 				if err != nil {
-					return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+					switch err.(type) {
+					case ErrEnvVar:
+						return v, err
+					default:
+						return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+					}
 				}
 
 				v[k] = *ptr
@@ -196,8 +228,14 @@ func (d Dict) Uint(key string, def *uint) (v uint, err error) {
 
 	ptr, err := ParseUint(val)
 	if err != nil {
-		return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+		switch err.(type) {
+		case ErrEnvVar:
+			return v, err
+		default:
+			return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+		}
 	}
+
 	return *ptr, nil
 }
 
@@ -221,7 +259,12 @@ func (d Dict) UintSlice(key string) (v []uint, err error) {
 			} else {
 				ptr, err := ParseUint(val)
 				if err != nil {
-					return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+					switch err.(type) {
+					case ErrEnvVar:
+						return v, err
+					default:
+						return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+					}
 				}
 
 				v[k] = *ptr
@@ -244,8 +287,14 @@ func (d Dict) Float(key string, def *float64) (v float64, err error) {
 
 	ptr, err := ParseFloat(val)
 	if err != nil {
-		return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+		switch err.(type) {
+		case ErrEnvVar:
+			return v, err
+		default:
+			return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+		}
 	}
+
 	return *ptr, nil
 }
 
@@ -269,7 +318,12 @@ func (d Dict) FloatSlice(key string) (v []float64, err error) {
 			} else {
 				ptr, err := ParseFloat(val)
 				if err != nil {
-					return v, dict.ErrKeyType{key, val, reflect.TypeOf(v)}
+					switch err.(type) {
+					case ErrEnvVar:
+						return v, err
+					default:
+						return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+					}
 				}
 
 				v[k] = *ptr
@@ -288,7 +342,12 @@ func (d Dict) Map(key string) (r dict.Dicter, err error) {
 
 	r, ok = v.(Dict)
 	if !ok {
-		return r, dict.ErrKeyType{key, v, reflect.TypeOf(r)}
+		switch err.(type) {
+		case ErrEnvVar:
+			return r, err
+		default:
+			return r, dict.ErrKeyType{Key: key, Value: r, T: reflect.TypeOf(v)}
+		}
 	}
 
 	return r, nil
