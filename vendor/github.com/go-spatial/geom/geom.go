@@ -1,11 +1,6 @@
 // Package geom describes geometry interfaces.
 package geom
 
-import "errors"
-
-// ErrUnknownGeometry is returned when the geometry type is unknown or unsupported.
-var ErrUnknownGeometry = errors.New("unknown geometry")
-
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
 type Geometry interface{}
@@ -62,7 +57,7 @@ func getCoordinates(g Geometry, pts *[]Point) error {
 
 	default:
 
-		return ErrUnknownGeometry
+		return ErrUnknownGeometry{g}
 
 	case Pointer:
 

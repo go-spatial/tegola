@@ -58,7 +58,6 @@ func Lat2Tile(zoom uint, lat float64) (y uint) {
 }
 
 func Lon2Tile(zoom uint, lon float64) (x uint) {
-
 	return uint(math.Exp2(float64(zoom)) * (lon + 180.0) / 360.0)
 }
 
