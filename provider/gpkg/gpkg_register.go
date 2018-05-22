@@ -19,7 +19,6 @@ import (
 
 func init() {
 	provider.Register(Name, NewTileProvider, Cleanup)
-	log.SetLogLevel(log.DEBUG)
 }
 
 func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
