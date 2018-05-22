@@ -30,14 +30,16 @@ func Float64(f1, f2, tolerance float64) bool {
 func Float(f1, f2 float64) bool { return Float64(f1, f2, TOLERANCE) }
 
 // Extent will check to see if the Extents's are the same.
-func Extent(extent1, extent2 [4]float64) bool {
-	return Float(extent1[0], extent2[0]) && Float(extent1[1], extent2[1]) &&
-		Float(extent1[2], extent2[2]) && Float(extent1[3], extent2[3])
+func Extent(extent1, extent2 *geom.Extent) bool {
+	return Float(extent1.MinX(), extent2.MinX()) &&
+		Float(extent1.MinY(), extent2.MinY()) &&
+		Float(extent1.MaxX(), extent2.MaxX()) &&
+		Float(extent1.MaxY(), extent2.MaxY())
 }
 
 // GeomExtent will check to see if geom.BoundingBox's are the same.
-func GeomExtent(extent1, extent2 geom.Extenter) bool {
-	return Extent(extent1.Extent(), extent2.Extent())
+func GeomExtent(extent1, extent2 *geom.Extent) bool {
+	return Extent(extent1, extent2)
 }
 
 func PointLess(p1, p2 [2]float64) bool {

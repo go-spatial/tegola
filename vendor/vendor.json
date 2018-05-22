@@ -273,52 +273,52 @@
 			"revisionTime": "2018-02-15T11:00:54Z"
 		},
 		{
-			"checksumSHA1": "VArPKtf4oEk3olzzhAM/YiQ2teU=",
+			"checksumSHA1": "zu+Ta66CLjTjZVTnK+UFUnFyu2Y=",
 			"path": "github.com/go-spatial/geom",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
+			"revisionTime": "2018-05-22T01:09:27Z"
 		},
 		{
-			"checksumSHA1": "o8Raj/QGN30BPBHndQMO++3Qulc=",
+			"checksumSHA1": "ckI8lY77I8Lhr2LosCeltYo/F8A=",
 			"path": "github.com/go-spatial/geom/cmp",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
+			"revisionTime": "2018-05-22T01:09:27Z"
 		},
 		{
-			"checksumSHA1": "qJqMiY0d7h1xYsgJ0s/c9OIcO2M=",
+			"checksumSHA1": "nI30tAnIkEh8ljn+qYsgKmd440E=",
 			"path": "github.com/go-spatial/geom/encoding/wkb",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
+			"revisionTime": "2018-05-22T01:09:27Z"
 		},
 		{
 			"checksumSHA1": "cbxzkF7Qas08G7TBXkv5afpJmkY=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/consts",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
+			"revisionTime": "2018-05-22T01:09:27Z"
 		},
 		{
 			"checksumSHA1": "FwWv3mHOHaWWmlD4A3S34boo2bY=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/decode",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
+			"revisionTime": "2018-05-22T01:09:27Z"
 		},
 		{
 			"checksumSHA1": "52nmbyH1lTE1aJ/jNqOBFCOpazk=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/encode",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
+			"revisionTime": "2018-05-22T01:09:27Z"
 		},
 		{
-			"checksumSHA1": "UGlhFPZERs/pRq/mIE8+GUTRq1U=",
+			"checksumSHA1": "U2JkAfWI5nBagnL/MjN2xCuifxk=",
 			"path": "github.com/go-spatial/geom/encoding/wkt",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
+			"revisionTime": "2018-05-22T01:09:27Z"
 		},
 		{
-			"checksumSHA1": "50agr4g6gwl5wDRAdv/+LCtDWb8=",
+			"checksumSHA1": "IOqvwFC+WfeiH2kqD0/0v1OyROI=",
 			"path": "github.com/go-spatial/geom/slippy",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
+			"revisionTime": "2018-05-22T01:09:27Z"
 		},
 		{
 			"checksumSHA1": "NFd/7OSLQKBzvwufplt4kbokfbA=",

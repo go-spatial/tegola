@@ -17,14 +17,6 @@ import (
 	"github.com/go-spatial/geom/encoding/wkb/internal/encode"
 )
 
-type ErrUnknownGeometry struct {
-	Geom geom.Geometry
-}
-
-func (e ErrUnknownGeometry) Error() string {
-	return fmt.Sprintf("Unknown Geometry! %v", e.Geom)
-}
-
 type ErrUnknownGeometryType struct {
 	Typ uint32
 }
@@ -108,7 +100,7 @@ func _encode(en *encode.Encoder, g geom.Geometry) error {
 			}
 		}
 	default:
-		return ErrUnknownGeometry{g}
+		return geom.ErrUnknownGeometry{g}
 	}
 	return en.Err()
 }
