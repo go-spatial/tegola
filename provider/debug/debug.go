@@ -42,7 +42,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			ID:       0,
 			Geometry: ext.AsPolygon(),
 			SRID:     srid,
-			Tags: map[string]interface{}{
+			Properties: map[string]interface{}{
 				"type": "debug_buffer_outline",
 			},
 		}
@@ -65,7 +65,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 				ext.MinY() + (ylen / 2),
 			},
 			SRID: srid,
-			Tags: map[string]interface{}{
+			Properties: map[string]interface{}{
 				"type": "debug_text",
 				"zxy":  fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
 			},
@@ -86,11 +86,13 @@ func (p *Provider) Layers() ([]provider.LayerInfo, error) {
 			name:     "debug-tile-outline",
 			geomType: geom.Line{},
 			srid:     tegola.WebMercator,
+			mtag:     "notmodified",
 		},
 		{
 			name:     "debug-tile-center",
 			geomType: geom.Point{},
 			srid:     tegola.WebMercator,
+			mtag:     "notmodified",
 		},
 	}
 

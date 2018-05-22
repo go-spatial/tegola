@@ -46,7 +46,7 @@ func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provid
 		ID:       0,
 		Geometry: ext.AsPolygon(),
 		SRID:     srid,
-		Tags: map[string]interface{}{
+		Properties: map[string]interface{}{
 			"type": "debug_buffer_outline",
 		},
 	}

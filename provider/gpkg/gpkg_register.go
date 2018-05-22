@@ -305,7 +305,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			customSQL = replaceTokens(customSQL, 0, tegola.WGS84Bounds)
+			customSQL = replaceTokens(customSQL, nil, tegola.WGS84Bounds)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
