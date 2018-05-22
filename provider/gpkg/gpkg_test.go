@@ -386,10 +386,10 @@ func TestTileFeatures(t *testing.T) {
 
 func TestConfigs(t *testing.T) {
 	type tcase struct {
-		config       map[string]interface{}
-		tile         MockTile
-		layerName    string
-		expectedTags map[uint64]map[string]interface{}
+		config             map[string]interface{}
+		tile               MockTile
+		layerName          string
+		expectedProperties map[uint64]map[string]interface{}
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -401,20 +401,20 @@ func TestConfigs(t *testing.T) {
 
 		err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
 			// check if the feature is part of the test
-			if _, ok := tc.expectedTags[f.ID]; !ok {
+			if _, ok := tc.expectedProperties[f.ID]; !ok {
 				return nil
 			}
 
-			expectedTagCount := len(tc.expectedTags[f.ID])
-			actualTagCount := len(f.Tags)
+			expectedTagCount := len(tc.expectedProperties[f.ID])
+			actualTagCount := len(f.Properties)
 
 			if actualTagCount != expectedTagCount {
 				return fmt.Errorf("expected %v tags, got %v", expectedTagCount, actualTagCount)
 			}
 
 			// Check that expected tags are present and their values match expected values.
-			for tName, tValue := range f.Tags {
-				exTagValue := tc.expectedTags[f.ID][tName]
+			for tName, tValue := range f.Properties {
+				exTagValue := tc.expectedProperties[f.ID][tName]
 				if exTagValue != nil && exTagValue != tValue {
 					return fmt.Errorf("feature ID: %v - %v: %v != %v", f.ID, tName, tValue, exTagValue)
 				}
@@ -446,7 +446,7 @@ func TestConfigs(t *testing.T) {
 				srid: tegola.WebMercator,
 			},
 			layerName: "a_points",
-			expectedTags: map[uint64]map[string]interface{}{
+			expectedProperties: map[uint64]map[string]interface{}{
 				515: {
 					"amenity": "boat_rental",
 					"shop":    "yachts",
@@ -478,7 +478,7 @@ func TestConfigs(t *testing.T) {
 				srid: tegola.WebMercator,
 			},
 			layerName: "rd_lines",
-			expectedTags: map[uint64]map[string]interface{}{
+			expectedProperties: map[uint64]map[string]interface{}{
 				1: {},
 			},
 		},
@@ -500,7 +500,7 @@ func TestConfigs(t *testing.T) {
 				srid: tegola.WebMercator,
 			},
 			layerName: "a_points",
-			expectedTags: map[uint64]map[string]interface{}{
+			expectedProperties: map[uint64]map[string]interface{}{
 				515: {
 					"amenity": "boat_rental",
 					"shop":    "yachts",
@@ -545,7 +545,7 @@ func TestConfigs(t *testing.T) {
 				srid: tegola.WebMercator,
 			},
 			layerName: "a_p_points",
-			expectedTags: map[uint64]map[string]interface{}{
+			expectedProperties: map[uint64]map[string]interface{}{
 				255: {
 					"amenity":  "place_of_worship",
 					"religion": "christian",

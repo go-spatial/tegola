@@ -6,11 +6,14 @@ import (
 	"github.com/go-spatial/geom"
 )
 
+func uiptr(ui uint) *uint {
+	return &ui
+}
+
 func TestReplaceTokens(t *testing.T) {
 	type tcase struct {
-		qtext string
-		zoom  uint
-		// TODO: replace with geom.Extent once it's ready
+		qtext    string
+		zoom     *uint
 		extent   *geom.Extent
 		expected string
 	}
@@ -33,7 +36,7 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					min_zoom <= !ZOOM! AND max_zoom >= !ZOOM!`,
-			zoom: 9,
+			zoom: uiptr(9),
 			expected: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
@@ -74,7 +77,7 @@ func TestReplaceTokens(t *testing.T) {
 				-180, -85.0511,
 				180, 85.0511,
 			},
-			zoom: 3,
+			zoom: uiptr(3),
 			expected: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy

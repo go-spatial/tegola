@@ -413,10 +413,10 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		}
 
 		feature := provider.Feature{
-			ID:       gid,
-			Geometry: geom,
-			SRID:     plyr.SRID(),
-			Tags:     tags,
+			ID:         gid,
+			Geometry:   geom,
+			SRID:       plyr.SRID(),
+			Properties: tags,
 		}
 
 		// pass the feature to the provided callback

@@ -13,7 +13,7 @@ const (
 	zoomToken = "!ZOOM!"
 )
 
-func replaceTokens(qtext string, zoom uint, extent *geom.Extent) string {
+func replaceTokens(qtext string, zoom *uint, extent geom.MinMaxer) string {
 	// --- Convert tokens provided to SQL
 	// The ZOOM token requires two parameters, both filled with the current zoom level.
 	// Until support for named parameters, the ZOOM token must follow the BBOX token.
@@ -30,13 +30,23 @@ func replaceTokens(qtext string, zoom uint, extent *geom.Extent) string {
 			qtext = strings.Replace(qtext, "!ZOOM!", "min_zoom <= ? AND max_zoom >= ?", 1)
 		}
 	*/
+	// Replacement Pairs
+	rps := []string{}
+	if extent != nil {
+		rps = append(rps, bboxToken)
+		rps = append(rps,
+			fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY()),
+		)
+	} else {
 
-	tokenReplacer := strings.NewReplacer(
-		// The BBOX token requires parameters ordered as [maxx, minx, maxy, miny] and checks for overlap.
-		// 	Until support for named parameters, we'll only support one BBOX token per query.
-		bboxToken, fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY()),
-		zoomToken, strconv.FormatUint(uint64(zoom), 10),
-	)
+	}
+
+	if zoom != nil {
+		rps = append(rps, zoomToken)
+		rps = append(rps, strconv.FormatUint(uint64(*zoom), 10))
+	}
+
+	tokenReplacer := strings.NewReplacer(rps...)
 
 	return tokenReplacer.Replace(qtext)
 }

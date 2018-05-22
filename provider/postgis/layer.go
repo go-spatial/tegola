@@ -16,6 +16,7 @@ type Layer struct {
 	geomType geom.Geometry
 	// The SRID that the data in the table is stored in. This will default to WebMercator
 	srid uint64
+	mtag *string
 }
 
 func (l Layer) Name() string {
@@ -36,4 +37,8 @@ func (l Layer) GeomFieldName() string {
 
 func (l Layer) IDFieldName() string {
 	return l.idField
+}
+
+func (l Layer) ModificationTag() *string {
+	return l.mtag
 }
