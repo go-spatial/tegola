@@ -52,14 +52,27 @@ func (d Dict) String(key string, def *string) (v string, err error) {
 }
 
 func (d Dict) StringSlice(key string) (v []string, err error) {
-	var val interface{}
-	var ok bool
 
-	if val, ok = d[key]; !ok {
-		return v, nil
+	val, ok := d[key]
+	if !ok {
+		return v, dict.ErrKeyRequired(key)
 	}
 
-	if v, ok = val.([]string); !ok {
+	switch val.(type) {
+	case string:
+		v, err = ParseStringSlice(val.(string))
+		if err != nil {
+			switch err.(type) {
+			case ErrEnvVar:
+				return v, err
+			default:
+				return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+			}
+		}
+
+	case []string:
+		v = val.([]string)
+	case []interface{}:
 		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
 		// type first, and then into the this type.
 		var iv []interface{}
@@ -87,6 +100,7 @@ func (d Dict) StringSlice(key string) (v []string, err error) {
 			}
 		}
 	}
+
 	return v, nil
 }
 
@@ -116,14 +130,26 @@ func (d Dict) Bool(key string, def *bool) (v bool, err error) {
 }
 
 func (d Dict) BoolSlice(key string) (v []bool, err error) {
-	var val interface{}
-	var ok bool
 
-	if val, ok = d[key]; !ok {
-		return v, nil
+	val, ok := d[key]
+	if !ok {
+		return v, dict.ErrKeyRequired(key)
 	}
 
-	if v, ok = val.([]bool); !ok {
+	switch val.(type) {
+	case string:
+		v, err = ParseBoolSlice(val.(string))
+		if err != nil {
+			switch err.(type) {
+			case ErrEnvVar:
+				return v, err
+			default:
+				return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+			}
+		}
+	case []bool:
+		v = val.([]bool)
+	case []interface{}:
 		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
 		// type first, and then into the this type.
 		var iv []interface{}
@@ -151,6 +177,7 @@ func (d Dict) BoolSlice(key string) (v []bool, err error) {
 			}
 		}
 	}
+
 	return v, nil
 }
 
@@ -179,12 +206,26 @@ func (d Dict) Int(key string, def *int) (v int, err error) {
 }
 
 func (d Dict) IntSlice(key string) (v []int, err error) {
-	var val interface{}
-	var ok bool
-	if val, ok = d[key]; !ok {
-		return v, nil
+
+	val, ok := d[key]
+	if !ok {
+		return v, dict.ErrKeyRequired(key)
 	}
-	if v, ok = val.([]int); !ok {
+
+	switch val.(type) {
+	case string:
+		v, err = ParseIntSlice(val.(string))
+		if err != nil {
+			switch err.(type) {
+			case ErrEnvVar:
+				return v, err
+			default:
+				return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+			}
+		}
+	case []int:
+		v = val.([]int)
+	case []interface{}:
 		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
 		// type first, and then into the this type.
 		var iv []interface{}
@@ -212,6 +253,7 @@ func (d Dict) IntSlice(key string) (v []int, err error) {
 
 		}
 	}
+
 	return v, nil
 }
 
@@ -240,12 +282,26 @@ func (d Dict) Uint(key string, def *uint) (v uint, err error) {
 }
 
 func (d Dict) UintSlice(key string) (v []uint, err error) {
-	var val interface{}
-	var ok bool
-	if val, ok = d[key]; !ok {
-		return v, nil
+
+	val, ok := d[key]
+	if !ok {
+		return v, dict.ErrKeyRequired(key)
 	}
-	if v, ok = val.([]uint); !ok {
+
+	switch val.(type) {
+	case string:
+		v, err = ParseUintSlice(val.(string))
+		if err != nil {
+			switch err.(type) {
+			case ErrEnvVar:
+				return v, err
+			default:
+				return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+			}
+		}
+	case []int:
+		v = val.([]uint)
+	case []interface{}:
 		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
 		// type first, and then into the this type.
 		var iv []interface{}
@@ -271,6 +327,7 @@ func (d Dict) UintSlice(key string) (v []uint, err error) {
 			}
 		}
 	}
+
 	return v, nil
 }
 
@@ -299,12 +356,25 @@ func (d Dict) Float(key string, def *float64) (v float64, err error) {
 }
 
 func (d Dict) FloatSlice(key string) (v []float64, err error) {
-	var val interface{}
-	var ok bool
-	if val, ok = d[key]; !ok {
-		return v, nil
+	val, ok := d[key]
+	if !ok {
+		return v, dict.ErrKeyRequired(key)
 	}
-	if v, ok = val.([]float64); !ok {
+
+	switch val.(type) {
+	case string:
+		v, err = ParseFloatSlice(val.(string))
+		if err != nil {
+			switch err.(type) {
+			case ErrEnvVar:
+				return v, err
+			default:
+				return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
+			}
+		}
+	case []float64:
+		v = val.([]float64)
+	case []interface{}:
 		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
 		// type first, and then into the this type.
 		var iv []interface{}
@@ -330,6 +400,7 @@ func (d Dict) FloatSlice(key string) (v []float64, err error) {
 			}
 		}
 	}
+
 	return v, nil
 }
 

@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-// matches a variable surrounded by curly braces with leading dollar sign.
+// evnVarRegex matches a variable surrounded by curly braces with leading dollar sign.
 // ex: ${MY_VAR}
-var regex = regexp.MustCompile(`\${[A-Z]+[A-Z1-9_]*}`)
+var envVarRegex = regexp.MustCompile(`\${[A-Z]+[A-Z1-9_]*}`)
 
 // ErrEnvVar corresponds with a missing environment variable
 type ErrEnvVar string
@@ -30,7 +30,7 @@ func (te ErrType) Error() string {
 // replaceEnvVars replaces environment variable placeholders in reader stream with values
 func replaceEnvVar(in string) (string, error) {
 	// loop through all environment variable matches
-	for locs := regex.FindStringIndex(in); locs != nil; locs = regex.FindStringIndex(in) {
+	for locs := envVarRegex.FindStringIndex(in); locs != nil; locs = envVarRegex.FindStringIndex(in) {
 
 		// extract match from the input string
 		match := in[locs[0]:locs[1]]
@@ -134,6 +134,7 @@ type Float float64
 func FloatPtr(v Float) *Float {
 	return &v
 }
+
 func (t *Float) UnmarshalTOML(v interface{}) error {
 	var f *float64
 	var err error
