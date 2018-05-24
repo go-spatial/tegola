@@ -3,6 +3,8 @@ package env
 import (
 	"strconv"
 	"strings"
+
+	"github.com/arolek/p"
 )
 
 func ParseString(v interface{}) (*string, error) {
@@ -141,6 +143,16 @@ func ParseUint(v interface{}) (*uint, error) {
 	case uint64:
 		ui := uint(val)
 		return &ui, nil
+	case int:
+		if val < 0 {
+			return nil, ErrType{v}
+		}
+		return p.Uint(uint(val)), nil
+	case int64:
+		if val < 0 {
+			return nil, ErrType{v}
+		}
+		return p.Uint(uint(val)), nil
 	case string:
 		val, err := replaceEnvVar(val)
 		if err != nil {
