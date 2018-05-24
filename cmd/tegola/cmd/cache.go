@@ -315,6 +315,8 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			}
 			tile := slippy.NewTile(z, x, y, 0, tegola.WebMercator)
 
+			c <- tile
+
 			// range
 			for _, zoom := range zooms {
 				err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
@@ -322,7 +324,10 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 						return fmt.Errorf("stop iteration")
 					}
 
-					c <- t
+					if z1, x1, y1 := t.ZXY(); z == z1 && x == x1 && y == y1 {
+						c <- t
+					}
+
 					return nil
 				})
 
