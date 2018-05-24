@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"reflect"
 	"testing"
 
@@ -560,4 +561,45 @@ func TestConfigs(t *testing.T) {
 			fn(t, tc)
 		})
 	}
+}
+
+// This is just to test that if we open a non-existant file.
+func TestOpenNonExistantFile(t *testing.T) {
+
+	type tcase struct {
+		config map[string]interface{}
+		err    error
+	}
+	const (
+		NONEXISTANTFILE = "testdata/nonexistant.gpkg"
+	)
+
+	os.Remove(NONEXISTANTFILE)
+
+	tests := map[string]tcase{
+		"empty": tcase{
+			config: map[string]interface{}{
+				gpkg.ConfigKeyFilePath: "",
+			},
+			err: gpkg.ErrInvalidFilePath{FilePath: ""},
+		},
+		"nonexistance": tcase{
+			// should not exists
+			config: map[string]interface{}{
+				gpkg.ConfigKeyFilePath: NONEXISTANTFILE,
+			},
+			err: gpkg.ErrInvalidFilePath{FilePath: NONEXISTANTFILE},
+		},
+	}
+
+	for k, tc := range tests {
+		tc := tc
+		t.Run(k, func(t *testing.T) {
+			_, err := gpkg.NewTileProvider(tc.config)
+			if reflect.TypeOf(err) != reflect.TypeOf(tc.err) {
+				t.Errorf("expected error, expected %v got %v", tc.err, err)
+			}
+		})
+	}
+
 }
