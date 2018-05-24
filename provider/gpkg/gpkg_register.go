@@ -199,6 +199,11 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		return nil, ErrInvalidFilePath{filepath}
 	}
 
+	// check the file exists
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		return nil, ErrInvalidFilePath{filepath}
+	}
+
 	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
 		log.Errorf("problem opening sqlite3 file: %v", filepath)
