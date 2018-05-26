@@ -340,6 +340,167 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 	return &p, err
 }
 
+func NewFiltererProvider(config map[string]interface{}) (provider.Filterer, error) {
+	// parse our config
+	m := dict.M(config)
+
+	filepath, err := m.String(ConfigKeyFilePath, nil)
+	if err != nil {
+		return nil, err
+	}
+	if filepath == "" {
+		return nil, ErrInvalidFilePath{filepath}
+	}
+
+	db, err := sql.Open("sqlite3", filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	geomTableDetails, err := featureTableMetaData(db)
+	if err != nil {
+		return nil, err
+	}
+
+	p := Provider{
+		Filepath: filepath,
+		layers:   make(map[string]Layer),
+		db:       db,
+	}
+
+	layers, ok := config[ConfigKeyLayers].([]map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected %v to be a []map[string]interface{}", ConfigKeyLayers)
+	}
+
+	lyrsSeen := make(map[string]int)
+	for i, v := range layers {
+
+		layerConf := dict.M(v)
+
+		layerName, err := layerConf.String(ConfigKeyLayerName, nil)
+		if err != nil {
+			return nil, fmt.Errorf("for layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
+		}
+		if layerName == "" {
+			return nil, ErrMissingLayerName
+		}
+
+		// check if we have already seen this layer
+		if j, ok := lyrsSeen[layerName]; ok {
+			return nil, fmt.Errorf("layer name (%v) is duplicated in both layer %v and layer %v", layerName, i, j)
+		}
+		lyrsSeen[layerName] = i
+
+		if layerConf[ConfigKeyTableName] == nil && layerConf[ConfigKeySQL] == nil {
+			return nil, errors.New("'tablename' or 'sql' is required for a feature's config")
+		}
+
+		if layerConf[ConfigKeyTableName] != nil && layerConf[ConfigKeySQL] != nil {
+			return nil, errors.New("'tablename' or 'sql' is required for a feature's config. you have both")
+		}
+
+		idFieldname := DefaultIDFieldName
+		idFieldname, err = layerConf.String(ConfigKeyGeomIDField, &idFieldname)
+		if err != nil {
+			return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
+		}
+
+		tagFieldnames, err := layerConf.StringSlice(ConfigKeyFields)
+		if err != nil {
+			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, layerName, ConfigKeyFields, err)
+		}
+
+		// layer container. will be added to the provider after it's configured
+		layer := Layer{
+			name: layerName,
+		}
+
+		if layerConf[ConfigKeyTableName] != nil {
+			tablename, err := layerConf.String(ConfigKeyTableName, &idFieldname)
+			if err != nil {
+				return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
+			}
+
+			layer.tablename = tablename
+			layer.tagFieldnames = tagFieldnames
+			layer.geomFieldname = geomTableDetails[tablename].geomFieldname
+			layer.geomType = geomTableDetails[tablename].geomType
+			layer.idFieldname = idFieldname
+			layer.srid = geomTableDetails[tablename].srid
+			layer.bbox = *geomTableDetails[tablename].bbox
+
+		} else {
+			var customSQL string
+			customSQL, err = layerConf.String(ConfigKeySQL, &customSQL)
+			if err != nil {
+				return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, layerName, ConfigKeySQL, err)
+			}
+			layer.sql = customSQL
+
+			// if a !ZOOM! token exists, all features could be filtered out so we don't have a geometry to inspect it's type.
+			// TODO(arolek): implement an SQL parser or figure out a different approach. this is brittle but I can't figure out a better
+			// solution without using an SQL parser on custom SQL statements
+			allZoomsSQL := "IN (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)"
+			tokenReplacer := strings.NewReplacer(
+				">= "+zoomToken, allZoomsSQL,
+				">="+zoomToken, allZoomsSQL,
+				"=> "+zoomToken, allZoomsSQL,
+				"=>"+zoomToken, allZoomsSQL,
+				"=< "+zoomToken, allZoomsSQL,
+				"=<"+zoomToken, allZoomsSQL,
+				"<= "+zoomToken, allZoomsSQL,
+				"<="+zoomToken, allZoomsSQL,
+				"!= "+zoomToken, allZoomsSQL,
+				"!="+zoomToken, allZoomsSQL,
+				"= "+zoomToken, allZoomsSQL,
+				"="+zoomToken, allZoomsSQL,
+				"> "+zoomToken, allZoomsSQL,
+				">"+zoomToken, allZoomsSQL,
+				"< "+zoomToken, allZoomsSQL,
+				"<"+zoomToken, allZoomsSQL,
+			)
+
+			customSQL = tokenReplacer.Replace(customSQL)
+
+			// Set bounds & zoom params to include all layers
+			// Bounds checks need params: maxx, minx, maxy, miny
+			// TODO(arolek): this assumes WGS84. should be more flexible
+			customSQL = replaceTokens(customSQL, nil, tegola.WGS84Bounds)
+
+			// Get geometry type & srid from geometry of first row.
+			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
+
+			log.Debugf("qtext: %v", qtext)
+
+			var geomData []byte
+			err = db.QueryRow(qtext).Scan(&geomData)
+			if err == sql.ErrNoRows {
+				return nil, fmt.Errorf("layer '%v' with custom SQL has 0 rows: %v", layerName, customSQL)
+			} else if err != nil {
+				return nil, fmt.Errorf("layer '%v' problem executing custom SQL: %v", layerName, err)
+			}
+
+			h, geo, err := decodeGeometry(geomData)
+			if err != nil {
+				return nil, err
+			}
+
+			layer.geomType = geo
+			layer.srid = uint64(h.SRSId())
+			layer.geomFieldname = DefaultGeomFieldName
+			layer.idFieldname = DefaultIDFieldName
+		}
+
+		p.layers[layer.name] = layer
+	}
+
+	// track the provider so we can clean it up later
+	providers = append(providers, p)
+
+	return &p, err
+}
+
 // reference to all instantiated proivders
 var providers []Provider
 

@@ -384,6 +384,177 @@ func TestTileFeatures(t *testing.T) {
 	}
 }
 
+// Check equality of string slices
+func equalsa(a1, a2 []string) bool {
+	if len(a1) != len(a2) {
+		return false
+	}
+
+A1_ELEMENT:
+	for _, s1 := range a1 {
+		for _, s2 := range a2 {
+			if s1 == s2 {
+				continue A1_ELEMENT
+			}
+		}
+		return false
+	}
+
+	return true
+}
+
+func TestSupportedFilters(t *testing.T) {
+	expectedFilters := []string{provider.ExtentFiltererType}
+	p, err := gpkg.NewFiltererProvider(
+		map[string]interface{}{
+			"filepath": GPKGAthensFilePath,
+			"layers": []map[string]interface{}{
+				{"name": "rd_lines", "tablename": "roads_lines"},
+			}})
+	if err != nil {
+		t.Error("problem instantiating filterer provider: %v", err)
+	}
+	filters := p.SupportedFilters()
+	if !equalsa(filters, expectedFilters) {
+		t.Errorf("Filters don't match expected: %#v != %#v", filters, expectedFilters)
+	}
+}
+
+func TestStreamFeatures(t *testing.T) {
+	type tcase struct {
+		config               map[string]interface{}
+		layerName            string
+		extent               *geom.Extent
+		zoom                 uint
+		expectedFeatureCount int
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
+		p, err := gpkg.NewFiltererProvider(tc.config)
+		if err != nil {
+			t.Fatalf("NewFiltererProvider() failed, expected nil got '%v'", err)
+			return
+		}
+
+		var featureCount int
+		// Extent Filterer
+		ef := provider.ExtentFilter{}.Init(tc.extent)
+		err = p.StreamFeatures(context.TODO(), tc.layerName, tc.zoom, func(f *provider.Feature) error {
+			featureCount++
+			return nil
+		}, &ef)
+		if err != nil {
+			t.Errorf("err fetching features: %v", err)
+			return
+		}
+
+		if tc.expectedFeatureCount != featureCount {
+			t.Errorf("expected %v got %v", tc.expectedFeatureCount, featureCount)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		// roads_lines bounding box is: [23.6655, 37.85, 23.7958, 37.9431] (see gpkg_contents table)
+		"tile outside layer extent": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "rd_lines", "tablename": "roads_lines"},
+				},
+			},
+			layerName: "rd_lines",
+			extent: geom.NewExtent(
+				[2]float64{20.0, 37.85},
+				[2]float64{23.6, 37.9431},
+			),
+			zoom:                 0,
+			expectedFeatureCount: 0,
+		},
+		// // rail lines bounding box is: [23.6828, 37.8501, 23.7549, 37.9431]
+		// "tile inside layer extent": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{"name": "rl_lines", "tablename": "rail_lines"},
+		// 		},
+		// 	},
+		// 	layerName: "rl_lines",
+		// 	tile: MockTile{
+		// 		srid: tegola.WGS84,
+		// 		bufferedExtent: geom.NewExtent(
+		// 			[2]float64{23.6, 37.8},
+		// 			[2]float64{23.8, 38.0},
+		// 		),
+		// 	},
+		// 	expectedFeatureCount: 187,
+		// },
+		// "zoom token": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGNaturalEarthFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name": "land1",
+		// 				"sql": `
+		// 					SELECT
+		// 						fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
+		// 					FROM
+		// 						ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
+		// 					WHERE
+		// 						!BBOX! AND min_zoom <= !ZOOM!`,
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName: "land1",
+		// 	tile: MockTile{
+		// 		Z:    1,
+		// 		srid: tegola.WebMercator,
+		// 		bufferedExtent: geom.NewExtent(
+		// 			[2]float64{-20026376.39, -20048966.10},
+		// 			[2]float64{20026376.39, 20048966.10},
+		// 		),
+		// 	},
+		// 	expectedFeatureCount: 101,
+		// },
+		// "zoom token 2": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGNaturalEarthFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name": "land2",
+		// 				"sql": `
+		// 					SELECT
+		// 						fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
+		// 					FROM
+		// 						ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
+		// 					WHERE
+		// 						!BBOX! AND min_zoom <= !ZOOM! AND max_zoom >= !ZOOM!`,
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName: "land2",
+		// 	tile: MockTile{
+		// 		Z:    0,
+		// 		srid: tegola.WebMercator,
+		// 		bufferedExtent: geom.NewExtent(
+		// 			[2]float64{-20026376.39, -20048966.10},
+		// 			[2]float64{20026376.39, 20048966.10},
+		// 		),
+		// 	},
+		// 	expectedFeatureCount: 44,
+		// },
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
+	}
+}
+
 func TestConfigs(t *testing.T) {
 	type tcase struct {
 		config             map[string]interface{}

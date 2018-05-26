@@ -32,6 +32,7 @@ type Filterer interface {
 	StreamFeatures(
 		ctx context.Context,
 		layer string,
+		zoom uint,
 		fn FeatureConsumer,
 		// Unsupported Filters will be Disgarded.
 		filters ...BaseFilterer,

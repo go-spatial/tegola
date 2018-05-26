@@ -225,154 +225,153 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	return nil
 }
 
-// func (p *Provider) SupportedFilters() []string {
-// 	return []string{
-// 		// TODO:(jivan) --- Commented-out filterers aren't yet implemented
-// 		// provider.TimeFiltererType,
-// 		provider.ExtentFiltererType,
-// 		// provider.IndexFiltererType,
-// 		// provider.PropertyFiltererType
-// 	}
-// }
-//
-// func (p *Provider) StreamFeatures(ctx context.Context, layer string,
-// 	fn provider.FeatureConsumer, filters ...provider.BaseFilterer) error {
-// 	log.Debugf("fetching layer %v", layer)
-//
-// 	var tileBBox *geom.Extent // geom.MinMaxer
-// 	// supplied filters
-// 	for _, f := range filters {
-// 		switch tf := f.(type) {
-// 		case provider.ExtentFilterer:
-// 			e := tf.Extent()
-// 			tileBBox = &e
-// 		}
-// 	}
-//
-// 	pLayer := p.layers[layer]
-//
-// 	var qtext string
-//
-// 	if pLayer.tablename != "" {
-// 		// If layer was specified via "tablename" in config, construct query.
-// 		rtreeTablename := fmt.Sprintf("rtree_%v_geom", pLayer.tablename)
-//
-// 		selectClause := fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", pLayer.idFieldname, pLayer.geomFieldname)
-//
-// 		for _, tf := range pLayer.tagFieldnames {
-// 			selectClause += fmt.Sprintf(", `%v`", tf)
-// 		}
-//
-// 		// l - layer table, si - spatial index
-// 		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX! ORDER BY %v", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname, pLayer.idFieldname)
-//
-// 		var z *uint
-// 		qtext = replaceTokens(qtext, z, tileBBox)
-// 	} else {
-// 		// If layer was specified via "sql" in config, collect it
-// 		var z *uint
-// 		qtext = replaceTokens(pLayer.sql, z, tileBBox)
-// 	}
-//
-// 	log.Debugf("qtext: %v", qtext)
-//
-// 	rows, err := p.db.Query(qtext)
-// 	if err != nil {
-// 		log.Errorf("err during query: %v - %v", qtext, err)
-// 		return err
-// 	}
-// 	defer rows.Close()
-//
-// 	cols, err := rows.Columns()
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	for rows.Next() {
-// 		// check if the context cancelled or timed out
-// 		if ctx.Err() != nil {
-// 			return ctx.Err()
-// 		}
-//
-// 		vals := make([]interface{}, len(cols))
-// 		valPtrs := make([]interface{}, len(cols))
-// 		for i := 0; i < len(cols); i++ {
-// 			valPtrs[i] = &vals[i]
-// 		}
-//
-// 		if err = rows.Scan(valPtrs...); err != nil {
-// 			log.Errorf("err reading row values: %v", err)
-// 			return err
-// 		}
-//
-// 		feature := provider.Feature{
-// 			Properties: map[string]interface{}{},
-// 		}
-//
-// 		for i := range cols {
-// 			// check if the context cancelled or timed out
-// 			if ctx.Err() != nil {
-// 				return ctx.Err()
-// 			}
-// 			if vals[i] == nil {
-// 				continue
-// 			}
-//
-// 			switch cols[i] {
-// 			case pLayer.idFieldname:
-// 				feature.ID, err = provider.ConvertFeatureID(vals[i])
-// 				if err != nil {
-// 					return err
-// 				}
-//
-// 			case pLayer.geomFieldname:
-// 				log.Debugf("extracting geopackage geometry header.", vals[i])
-//
-// 				geomData, ok := vals[i].([]byte)
-// 				if !ok {
-// 					log.Errorf("unexpected column type for geom field. got %t", vals[i])
-// 					return errors.New("unexpected column type for geom field. expected blob")
-// 				}
-//
-// 				h, geo, err := decodeGeometry(geomData)
-// 				if err != nil {
-// 					return err
-// 				}
-//
-// 				feature.SRID = uint64(h.SRSId())
-// 				feature.Geometry = geo
-//
-// 			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
-// 				// Skip these columns used for bounding box and zoom filtering
-// 				continue
-//
-// 			default:
-// 				// Grab any non-nil, non-id, non-bounding box, & non-geometry column as a tag
-// 				switch v := vals[i].(type) {
-// 				case []uint8:
-// 					asBytes := make([]byte, len(v))
-// 					for j := 0; j < len(v); j++ {
-// 						asBytes[j] = v[j]
-// 					}
-//
-// 					feature.Properties[cols[i]] = string(asBytes)
-// 				case int64:
-// 					feature.Properties[cols[i]] = v
-// 				default:
-// 					// TODO(arolek): return this error?
-// 					log.Errorf("unexpected type for sqlite column data: %v: %T", cols[i], v)
-// 				}
-// 			}
-// 		}
-//
-// 		// pass the feature to the provided call back
-// 		if err = fn(&feature); err != nil {
-// 			return err
-// 		}
-// 	}
-//
-// 	return nil
-// }
+func (p *Provider) SupportedFilters() []string {
+	return []string{
+		// TODO:(jivan) --- Commented-out filterers aren't yet implemented
+		// provider.TimeFiltererType,
+		provider.ExtentFiltererType,
+		// provider.IndexFiltererType,
+		// provider.PropertyFiltererType
+	}
+}
+
+func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
+	fn provider.FeatureConsumer, filters ...provider.BaseFilterer) error {
+	log.Debugf("fetching layer %v", layer)
+
+	var tileBBox *geom.Extent // geom.MinMaxer
+	// supplied filters
+	for _, f := range filters {
+		if tf, ok := f.(provider.ExtentFilterer); ok {
+			e := tf.Extent()
+			tileBBox = &e
+		} else {
+			return fmt.Errorf("unexpected filter: (%T) %v", f, f)
+		}
+	}
+
+	pLayer := p.layers[layer]
+
+	var qtext string
+
+	if pLayer.tablename != "" {
+		// If layer was specified via "tablename" in config, construct query.
+		rtreeTablename := fmt.Sprintf("rtree_%v_geom", pLayer.tablename)
+
+		selectClause := fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", pLayer.idFieldname, pLayer.geomFieldname)
+
+		for _, tf := range pLayer.tagFieldnames {
+			selectClause += fmt.Sprintf(", `%v`", tf)
+		}
+
+		// l - layer table, si - spatial index
+		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX! ORDER BY %v", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname, pLayer.idFieldname)
+
+		qtext = replaceTokens(qtext, &zoom, tileBBox)
+	} else {
+		// If layer was specified via "sql" in config, collect it
+		qtext = replaceTokens(pLayer.sql, &zoom, tileBBox)
+	}
+
+	log.Debugf("qtext: %v", qtext)
+
+	rows, err := p.db.Query(qtext)
+	if err != nil {
+		log.Errorf("err during query: %v - %v", qtext, err)
+		return err
+	}
+	defer rows.Close()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		// check if the context cancelled or timed out
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		vals := make([]interface{}, len(cols))
+		valPtrs := make([]interface{}, len(cols))
+		for i := 0; i < len(cols); i++ {
+			valPtrs[i] = &vals[i]
+		}
+
+		if err = rows.Scan(valPtrs...); err != nil {
+			log.Errorf("err reading row values: %v", err)
+			return err
+		}
+
+		feature := provider.Feature{
+			Properties: map[string]interface{}{},
+		}
+
+		for i := range cols {
+			// check if the context cancelled or timed out
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			if vals[i] == nil {
+				continue
+			}
+
+			switch cols[i] {
+			case pLayer.idFieldname:
+				feature.ID, err = provider.ConvertFeatureID(vals[i])
+				if err != nil {
+					return err
+				}
+
+			case pLayer.geomFieldname:
+				log.Debugf("extracting geopackage geometry header.", vals[i])
+
+				geomData, ok := vals[i].([]byte)
+				if !ok {
+					log.Errorf("unexpected column type for geom field. got %t", vals[i])
+					return errors.New("unexpected column type for geom field. expected blob")
+				}
+
+				h, geo, err := decodeGeometry(geomData)
+				if err != nil {
+					return err
+				}
+
+				feature.SRID = uint64(h.SRSId())
+				feature.Geometry = geo
+
+			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
+				// Skip these columns used for bounding box and zoom filtering
+				continue
+
+			default:
+				// Grab any non-nil, non-id, non-bounding box, & non-geometry column as a tag
+				switch v := vals[i].(type) {
+				case []uint8:
+					asBytes := make([]byte, len(v))
+					for j := 0; j < len(v); j++ {
+						asBytes[j] = v[j]
+					}
+
+					feature.Properties[cols[i]] = string(asBytes)
+				case int64:
+					feature.Properties[cols[i]] = v
+				default:
+					// TODO(arolek): return this error?
+					log.Errorf("unexpected type for sqlite column data: %v: %T", cols[i], v)
+				}
+			}
+		}
+
+		// pass the feature to the provided call back
+		if err = fn(&feature); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 // Close will close the Provider's database connection
 func (p *Provider) Close() error {

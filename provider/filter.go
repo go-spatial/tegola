@@ -47,13 +47,18 @@ type ExtentFilterer interface {
 	geom.Extenter
 }
 
-type Extent struct {
-	ext geom.Extent
+type ExtentFilter struct {
+	ext *geom.Extent
 }
 
-func (e *Extent) Extent() geom.Extent { return e.ext }
+func (e ExtentFilter) Init(ext *geom.Extent) ExtentFilter {
+	e.ext = ext
+	return e
+}
 
-func (_ *Extent) Type() string { return ExtentFiltererType }
+func (e *ExtentFilter) Extent() geom.Extent { return *e.ext }
+
+func (_ *ExtentFilter) Type() string { return ExtentFiltererType }
 
 // --- Index
 type IndexFilterer interface {
