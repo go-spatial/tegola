@@ -120,7 +120,7 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 
 	rows, err := gpkg.Query(qtext)
 	if err != nil {
-		log.Errorf("error during query: %v - %v", qtext, err)
+		log.Errorf("error during query: (%v) - %v", err, qtext)
 		return nil, err
 	}
 	defer rows.Close()
@@ -193,6 +193,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 
 	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
+		log.Errorf("problem opening sqlite3 file: %v", filepath)
 		return nil, err
 	}
 
@@ -354,6 +355,7 @@ func NewFiltererProvider(config map[string]interface{}) (provider.Filterer, erro
 
 	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
+		log.Errorf("Problem opening sqlite3 file: '%v'", filepath)
 		return nil, err
 	}
 

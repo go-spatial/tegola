@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
@@ -230,7 +231,7 @@ func (p *Provider) SupportedFilters() []string {
 		// TODO:(jivan) --- Commented-out filterers aren't yet implemented
 		// provider.TimeFiltererType,
 		provider.ExtentFiltererType,
-		// provider.IndexFiltererType,
+		provider.IndexFiltererType,
 		// provider.PropertyFiltererType
 	}
 }
@@ -240,11 +241,16 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 	log.Debugf("fetching layer %v", layer)
 
 	var tileBBox *geom.Extent // geom.MinMaxer
-	// supplied filters
+	var indices []uint
+	// cast supplied filters to typed filters and collect their values
 	for _, f := range filters {
 		if tf, ok := f.(provider.ExtentFilterer); ok {
 			e := tf.Extent()
 			tileBBox = &e
+		} else if tf, ok := f.(provider.IndexFilterer); ok {
+			indices = make([]uint, 2)
+			indices[0] = tf.Start()
+			indices[1] = tf.End()
 		} else {
 			return fmt.Errorf("unexpected filter: (%T) %v", f, f)
 		}
@@ -253,6 +259,11 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 	pLayer := p.layers[layer]
 
 	var qtext string
+
+	var indexClause string
+	if indices != nil {
+		indexClause = fmt.Sprintf("LIMIT %v OFFSET %v", indices[1]-indices[0], indices[0])
+	}
 
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
@@ -265,16 +276,31 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 		}
 
 		// l - layer table, si - spatial index
-		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX! ORDER BY %v", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname, pLayer.idFieldname)
+		qtext = fmt.Sprintf(`
+			%v
+			FROM %v l JOIN %v si ON l.%v = si.id
+			WHERE geom IS NOT NULL AND !BBOX!
+			ORDER BY %v
+			%v`,
+			selectClause,
+			pLayer.tablename, rtreeTablename, pLayer.idFieldname,
+			pLayer.idFieldname,
+			indexClause)
 
 		qtext = replaceTokens(qtext, &zoom, tileBBox)
 	} else {
 		// If layer was specified via "sql" in config, collect it
 		qtext = replaceTokens(pLayer.sql, &zoom, tileBBox)
+		// Add ORDER BY, LIMIT, OFFSET to query
+		qtext = strings.TrimSpace(qtext)
+		qtlen := len(qtext)
+		if []rune(qtext)[qtlen-1] == ';' {
+			qtext = qtext[:qtlen-1]
+		}
+		qtext = qtext + fmt.Sprintf(" ORDER BY %v %v", pLayer.idFieldname, indexClause)
 	}
 
 	log.Debugf("qtext: %v", qtext)
-
 	rows, err := p.db.Query(qtext)
 	if err != nil {
 		log.Errorf("err during query: %v - %v", qtext, err)

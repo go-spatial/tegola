@@ -68,16 +68,22 @@ type IndexFilterer interface {
 }
 
 type IndexRange struct {
-	StartIdx uint
-	EndIdx   uint
+	startIdx uint
+	endIdx   uint
+}
+
+func (i IndexRange) Init(indices [2]uint) IndexRange {
+	i.startIdx = indices[0]
+	i.endIdx = indices[1]
+	return i
 }
 
 func (i *IndexRange) Start() uint {
-	return i.StartIdx
+	return i.startIdx
 }
 
 func (i *IndexRange) End() uint {
-	return i.EndIdx
+	return i.endIdx
 }
 
 func (_ *IndexRange) Type() string { return ExtentFiltererType }
