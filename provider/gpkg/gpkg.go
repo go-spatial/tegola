@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
@@ -329,6 +330,17 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 		if []rune(qtext)[qtlen-1] == ';' {
 			qtext = qtext[:qtlen-1]
 		}
+		if tp != nil {
+			if strings.Contains(strings.ToUpper(qtext), "WHERE") {
+				if strings.Count(qtext, "WHERE") > 1 {
+					return fmt.Errorf("SQL too complicated for current implementation (multiple WHERE clauses found)")
+				}
+				strings.Replace(qtext, "WHERE", fmt.Sprintf("WHERE %v AND", timePeriodClause), -1)
+			} else {
+				qtext = qtext + fmt.Sprintf(" WHERE %v", timePeriodClause)
+			}
+		}
+
 		qtext = qtext + fmt.Sprintf(" ORDER BY %v %v", pLayer.idFieldname, indexClause)
 	}
 
@@ -414,6 +426,8 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 
 					feature.Properties[cols[i]] = string(asBytes)
 				case int64:
+					feature.Properties[cols[i]] = v
+				case time.Time:
 					feature.Properties[cols[i]] = v
 				default:
 					// TODO(arolek): return this error?

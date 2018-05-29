@@ -504,6 +504,8 @@ func NewFiltererProvider(config map[string]interface{}) (provider.Filterer, erro
 			layer.srid = uint64(h.SRSId())
 			layer.geomFieldname = DefaultGeomFieldName
 			layer.idFieldname = DefaultIDFieldName
+			layer.tstartFieldname = tstartFieldname
+			layer.tendFieldname = tendFieldname
 		}
 
 		p.layers[layer.name] = layer

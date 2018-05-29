@@ -405,7 +405,7 @@ A1_ELEMENT:
 }
 
 func TestSupportedFilters(t *testing.T) {
-	expectedFilters := []string{provider.ExtentFiltererType, provider.IndexFiltererType}
+	expectedFilters := []string{provider.TimeFiltererType, provider.ExtentFiltererType, provider.IndexFiltererType}
 	p, err := gpkg.NewFiltererProvider(
 		map[string]interface{}{
 			"filepath": GPKGAthensFilePath,
@@ -631,6 +631,46 @@ func TestStreamFeatures(t *testing.T) {
 						"tablename": "places_points",
 						"tstart":    "timestamp",
 						"tend":      "timestamp",
+					},
+				},
+			},
+			layerName: "pp",
+			// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
+			timeperiod: &[2]time.Time{
+				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 18:30:00")),
+				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 19:00:00")),
+			},
+			expectedFeatureIds: []uint64{},
+		},
+		"time filterer sql (include rows)": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":   "pp",
+						"sql":    "SELECT * FROM places_points",
+						"tstart": "timestamp",
+						"tend":   "timestamp",
+					},
+				},
+			},
+			layerName: "pp",
+			// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
+			timeperiod: &[2]time.Time{
+				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:30:00")),
+				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:40:00")),
+			},
+			expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
+		},
+		"time filterer sql (exclude rows)": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":   "pp",
+						"sql":    "SELECT * FROM places_points",
+						"tstart": "timestamp",
+						"tend":   "timestamp",
 					},
 				},
 			},
