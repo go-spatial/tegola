@@ -27,16 +27,22 @@ type TimeFilterer interface {
 }
 
 type TimePeriod struct {
-	StartTime time.Time
-	EndTime   time.Time
+	start time.Time
+	end   time.Time
+}
+
+func (tp TimePeriod) Init(itp [2]time.Time) TimePeriod {
+	tp.start = itp[0]
+	tp.end = itp[1]
+	return tp
 }
 
 func (tp *TimePeriod) Start() time.Time {
-	return tp.StartTime
+	return tp.start
 }
 
 func (tp *TimePeriod) End() time.Time {
-	return tp.EndTime
+	return tp.end
 }
 
 func (_ *TimePeriod) Type() string { return TimeFiltererType }
@@ -51,8 +57,8 @@ type ExtentFilter struct {
 	ext *geom.Extent
 }
 
-func (e ExtentFilter) Init(ext *geom.Extent) ExtentFilter {
-	e.ext = ext
+func (e ExtentFilter) Init(ext geom.Extent) ExtentFilter {
+	e.ext = &ext
 	return e
 }
 

@@ -1,19 +1,23 @@
 package gpkg
 
-import "github.com/go-spatial/geom"
+import (
+	"github.com/go-spatial/geom"
+)
 
 type Layer struct {
-	name          string
-	tablename     string
-	features      []string
-	tagFieldnames []string
-	idFieldname   string
-	geomFieldname string
-	geomType      geom.Geometry
-	srid          uint64
-	bbox          geom.Extent
-	sql           string
-	mtag          string
+	name            string
+	tablename       string
+	features        []string
+	tagFieldnames   []string
+	idFieldname     string
+	geomFieldname   string
+	tstartFieldname string
+	tendFieldname   string
+	geomType        geom.Geometry
+	srid            uint64
+	bbox            geom.Extent
+	sql             string
+	mtag            string
 }
 
 func (l Layer) Name() string             { return l.name }

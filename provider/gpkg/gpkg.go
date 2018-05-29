@@ -26,13 +26,15 @@ const (
 
 // config keys
 const (
-	ConfigKeyFilePath    = "filepath"
-	ConfigKeyLayers      = "layers"
-	ConfigKeyLayerName   = "name"
-	ConfigKeyTableName   = "tablename"
-	ConfigKeySQL         = "sql"
-	ConfigKeyGeomIDField = "id_fieldname"
-	ConfigKeyFields      = "fields"
+	ConfigKeyFilePath       = "filepath"
+	ConfigKeyLayers         = "layers"
+	ConfigKeyLayerName      = "name"
+	ConfigKeyTableName      = "tablename"
+	ConfigKeySQL            = "sql"
+	ConfigKeyGeomIDField    = "id_fieldname"
+	ConfigKeyStartTimeField = "tstart"
+	ConfigKeyEndTimeField   = "tend"
+	ConfigKeyFields         = "fields"
 )
 
 func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
@@ -229,7 +231,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 func (p *Provider) SupportedFilters() []string {
 	return []string{
 		// TODO:(jivan) --- Commented-out filterers aren't yet implemented
-		// provider.TimeFiltererType,
+		provider.TimeFiltererType,
 		provider.ExtentFiltererType,
 		provider.IndexFiltererType,
 		// provider.PropertyFiltererType
@@ -242,6 +244,7 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 
 	var tileBBox *geom.Extent // geom.MinMaxer
 	var indices []uint
+	var tp provider.TimeFilterer
 	// cast supplied filters to typed filters and collect their values
 	for _, f := range filters {
 		if tf, ok := f.(provider.ExtentFilterer); ok {
@@ -251,6 +254,8 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 			indices = make([]uint, 2)
 			indices[0] = tf.Start()
 			indices[1] = tf.End()
+		} else if tf, ok := f.(provider.TimeFilterer); ok {
+			tp = tf
 		} else {
 			return fmt.Errorf("unexpected filter: (%T) %v", f, f)
 		}
@@ -265,6 +270,30 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 		indexClause = fmt.Sprintf("LIMIT %v OFFSET %v", indices[1]-indices[0], indices[0])
 	}
 
+	var timePeriodClause string = "NULL IS NULL"
+	if tp != nil && (!tp.Start().IsZero() || !tp.End().IsZero()) {
+		// We'll treat a zero start value as negative infinity & zero end value as infinity
+		// We've got values for both start & end
+		if !tp.Start().IsZero() && !tp.End().IsZero() {
+			// query period contains entire layer period
+			tpclause1 := fmt.Sprintf(
+				"'%v' < %v AND '%v' > %v", tp.Start(), pLayer.tstartFieldname, tp.End(), pLayer.tendFieldname)
+			// query period begins in layer period
+			tpclause2 := fmt.Sprintf(
+				"'%v' >= %v AND '%v' <= %v", tp.Start(), pLayer.tstartFieldname, tp.Start(), pLayer.tendFieldname)
+			// query period ends in layer period
+			tpclause3 := fmt.Sprintf(
+				"'%v' >= %v AND '%v' <= %v", tp.End(), pLayer.tstartFieldname, tp.End(), pLayer.tendFieldname)
+			timePeriodClause = fmt.Sprintf("((%v) OR (%v) OR (%v))", tpclause1, tpclause2, tpclause3)
+		} else if !tp.Start().IsZero() { // We've only got a start for the period
+			// query period starts in or before layer period
+			timePeriodClause = fmt.Sprintf("'%v' <= '%v'", tp.Start(), pLayer.tendFieldname)
+		} else if !tp.End().IsZero() {
+			// query period ends in or after layer period
+			timePeriodClause = fmt.Sprintf("'%v' >= '%v'", tp.End(), pLayer.tstartFieldname)
+		}
+	}
+
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
 		rtreeTablename := fmt.Sprintf("rtree_%v_geom", pLayer.tablename)
@@ -276,14 +305,17 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 		}
 
 		// l - layer table, si - spatial index
+
 		qtext = fmt.Sprintf(`
 			%v
 			FROM %v l JOIN %v si ON l.%v = si.id
 			WHERE geom IS NOT NULL AND !BBOX!
+				AND %v
 			ORDER BY %v
 			%v`,
 			selectClause,
 			pLayer.tablename, rtreeTablename, pLayer.idFieldname,
+			timePeriodClause,
 			pLayer.idFieldname,
 			indexClause)
 

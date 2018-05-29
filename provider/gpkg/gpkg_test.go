@@ -9,6 +9,7 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
@@ -438,6 +439,7 @@ func TestStreamFeatures(t *testing.T) {
 		layerName          string
 		extent             *geom.Extent
 		indices            *[2]uint
+		timeperiod         *[2]time.Time
 		zoom               uint
 		expectedFeatureIds []uint64
 	}
@@ -454,12 +456,19 @@ func TestStreamFeatures(t *testing.T) {
 		var featureCount int
 		filters := []provider.BaseFilterer{}
 		// Extent Filterer
-		ef := provider.ExtentFilter{}.Init(tc.extent)
-		filters = append(filters, &ef)
+		if tc.extent != nil {
+			ef := provider.ExtentFilter{}.Init(*tc.extent)
+			filters = append(filters, &ef)
+		}
 		// Index Filterer
 		if tc.indices != nil {
 			idxf := provider.IndexRange{}.Init(*tc.indices)
 			filters = append(filters, &idxf)
+		}
+		// Time Filterer
+		if tc.timeperiod != nil {
+			tf := provider.TimePeriod{}.Init(*tc.timeperiod)
+			filters = append(filters, &tf)
 		}
 
 		fids := []uint64{}
@@ -473,8 +482,8 @@ func TestStreamFeatures(t *testing.T) {
 			return
 		}
 
-		if len(tc.expectedFeatureIds) != featureCount {
-			t.Logf("feature count mismatch: %v != %v", len(tc.expectedFeatureIds), featureCount)
+		if featureCount != len(tc.expectedFeatureIds) {
+			t.Logf("feature count mismatch: %v != %v", featureCount, len(tc.expectedFeatureIds))
 		}
 		if !equalua(fids, tc.expectedFeatureIds) {
 			t.Errorf("feature ids: %v != %v", fids, tc.expectedFeatureIds)
@@ -592,6 +601,46 @@ func TestStreamFeatures(t *testing.T) {
 			indices:            &[2]uint{10, 20},
 			zoom:               1,
 			expectedFeatureIds: []uint64{11, 12, 13, 14, 15, 16, 20, 21, 22, 25},
+		},
+		"time filterer table (include rows)": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":      "pp",
+						"tablename": "places_points",
+						"tstart":    "timestamp",
+						"tend":      "timestamp",
+					},
+				},
+			},
+			layerName: "pp",
+			// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
+			timeperiod: &[2]time.Time{
+				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:30:00")),
+				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:40:00")),
+			},
+			expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
+		},
+		"time filterer table (exclude rows)": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":      "pp",
+						"tablename": "places_points",
+						"tstart":    "timestamp",
+						"tend":      "timestamp",
+					},
+				},
+			},
+			layerName: "pp",
+			// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
+			timeperiod: &[2]time.Time{
+				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 18:30:00")),
+				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 19:00:00")),
+			},
+			expectedFeatureIds: []uint64{},
 		},
 	}
 

@@ -344,7 +344,6 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 func NewFiltererProvider(config map[string]interface{}) (provider.Filterer, error) {
 	// parse our config
 	m := dict.M(config)
-
 	filepath, err := m.String(ConfigKeyFilePath, nil)
 	if err != nil {
 		return nil, err
@@ -408,6 +407,17 @@ func NewFiltererProvider(config map[string]interface{}) (provider.Filterer, erro
 			return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
 		}
 
+		var tstartFieldname string
+		var tendFieldname string
+		tstartFieldname, err = layerConf.String(ConfigKeyStartTimeField, &tstartFieldname)
+		if err != nil {
+			return nil, fmt.Errorf("Problem collecting start time field for layer (%v) %v: %v", i, layerName, err)
+		}
+		tendFieldname, err = layerConf.String(ConfigKeyEndTimeField, &tendFieldname)
+		if err != nil {
+			return nil, fmt.Errorf("Problem collecting end time field for layer (%v) %v: %v", i, layerName, err)
+		}
+
 		tagFieldnames, err := layerConf.StringSlice(ConfigKeyFields)
 		if err != nil {
 			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, layerName, ConfigKeyFields, err)
@@ -429,6 +439,8 @@ func NewFiltererProvider(config map[string]interface{}) (provider.Filterer, erro
 			layer.geomFieldname = geomTableDetails[tablename].geomFieldname
 			layer.geomType = geomTableDetails[tablename].geomType
 			layer.idFieldname = idFieldname
+			layer.tstartFieldname = tstartFieldname
+			layer.tendFieldname = tendFieldname
 			layer.srid = geomTableDetails[tablename].srid
 			layer.bbox = *geomTableDetails[tablename].bbox
 
