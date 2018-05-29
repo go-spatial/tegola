@@ -235,7 +235,7 @@ func (p *Provider) SupportedFilters() []string {
 		provider.TimeFiltererType,
 		provider.ExtentFiltererType,
 		provider.IndexFiltererType,
-		// provider.PropertyFiltererType
+		provider.PropertyFiltererType,
 	}
 }
 
@@ -246,6 +246,7 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 	var tileBBox *geom.Extent // geom.MinMaxer
 	var indices []uint
 	var tp provider.TimeFilterer
+	var props map[string]interface{}
 	// cast supplied filters to typed filters and collect their values
 	for _, f := range filters {
 		if tf, ok := f.(provider.ExtentFilterer); ok {
@@ -257,6 +258,8 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 			indices[1] = tf.End()
 		} else if tf, ok := f.(provider.TimeFilterer); ok {
 			tp = tf
+		} else if tf, ok := f.(provider.PropertyFilterer); ok {
+			props = tf.Map()
 		} else {
 			return fmt.Errorf("unexpected filter: (%T) %v", f, f)
 		}
@@ -295,6 +298,19 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 		}
 	}
 
+	var propertyClause string = "NULL IS NULL"
+	if props != nil {
+		pcs := []string{}
+		for k, v := range props {
+			switch v.(type) {
+			case string:
+				v = fmt.Sprintf("'%v'", v)
+			}
+			pcs = append(pcs, fmt.Sprintf("`%v` = %v", k, v))
+		}
+		propertyClause = "(" + strings.Join(pcs, " AND ") + ")"
+	}
+
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
 		rtreeTablename := fmt.Sprintf("rtree_%v_geom", pLayer.tablename)
@@ -311,12 +327,12 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 			%v
 			FROM %v l JOIN %v si ON l.%v = si.id
 			WHERE geom IS NOT NULL AND !BBOX!
-				AND %v
+				AND %v AND %v
 			ORDER BY %v
 			%v`,
 			selectClause,
 			pLayer.tablename, rtreeTablename, pLayer.idFieldname,
-			timePeriodClause,
+			timePeriodClause, propertyClause,
 			pLayer.idFieldname,
 			indexClause)
 
@@ -330,15 +346,14 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 		if []rune(qtext)[qtlen-1] == ';' {
 			qtext = qtext[:qtlen-1]
 		}
-		if tp != nil {
-			if strings.Contains(strings.ToUpper(qtext), "WHERE") {
-				if strings.Count(qtext, "WHERE") > 1 {
-					return fmt.Errorf("SQL too complicated for current implementation (multiple WHERE clauses found)")
-				}
-				strings.Replace(qtext, "WHERE", fmt.Sprintf("WHERE %v AND", timePeriodClause), -1)
-			} else {
-				qtext = qtext + fmt.Sprintf(" WHERE %v", timePeriodClause)
+
+		if strings.Contains(strings.ToUpper(qtext), "WHERE") {
+			if strings.Count(qtext, "WHERE") > 1 {
+				return fmt.Errorf("SQL too complicated for current implementation (multiple WHERE clauses found)")
 			}
+			strings.Replace(qtext, "WHERE", fmt.Sprintf("WHERE %v AND %v AND", timePeriodClause, propertyClause), -1)
+		} else {
+			qtext = qtext + fmt.Sprintf(" WHERE %v AND %v", timePeriodClause, propertyClause)
 		}
 
 		qtext = qtext + fmt.Sprintf(" ORDER BY %v %v", pLayer.idFieldname, indexClause)

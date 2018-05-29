@@ -405,7 +405,8 @@ A1_ELEMENT:
 }
 
 func TestSupportedFilters(t *testing.T) {
-	expectedFilters := []string{provider.TimeFiltererType, provider.ExtentFiltererType, provider.IndexFiltererType}
+	expectedFilters := []string{
+		provider.TimeFiltererType, provider.ExtentFiltererType, provider.IndexFiltererType, provider.PropertyFiltererType}
 	p, err := gpkg.NewFiltererProvider(
 		map[string]interface{}{
 			"filepath": GPKGAthensFilePath,
@@ -440,6 +441,7 @@ func TestStreamFeatures(t *testing.T) {
 		extent             *geom.Extent
 		indices            *[2]uint
 		timeperiod         *[2]time.Time
+		properties         map[string]interface{}
 		zoom               uint
 		expectedFeatureIds []uint64
 	}
@@ -470,7 +472,11 @@ func TestStreamFeatures(t *testing.T) {
 			tf := provider.TimePeriod{}.Init(*tc.timeperiod)
 			filters = append(filters, &tf)
 		}
-
+		// Property Filter
+		if tc.properties != nil {
+			pf := provider.Properties{}.Init(tc.properties)
+			filters = append(filters, &pf)
+		}
 		fids := []uint64{}
 		err = p.StreamFeatures(context.TODO(), tc.layerName, tc.zoom, func(f *provider.Feature) error {
 			featureCount++
@@ -491,196 +497,229 @@ func TestStreamFeatures(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		// roads_lines bounding box is: [23.6655, 37.85, 23.7958, 37.9431] (see gpkg_contents table)
-		"tile outside layer extent": {
+		// // roads_lines bounding box is: [23.6655, 37.85, 23.7958, 37.9431] (see gpkg_contents table)
+		// "tile outside layer extent": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{"name": "rd_lines", "tablename": "roads_lines"},
+		// 		},
+		// 	},
+		// 	layerName: "rd_lines",
+		// 	extent: geom.NewExtent(
+		// 		[2]float64{20.0, 37.85},
+		// 		[2]float64{23.6, 37.9431},
+		// 	),
+		// 	zoom:               0,
+		// 	expectedFeatureIds: []uint64{},
+		// },
+		// // rail lines bounding box is: [23.6828, 37.8501, 23.7549, 37.9431]
+		// "tile inside layer extent": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{"name": "rl_lines", "tablename": "rail_lines"},
+		// 		},
+		// 	},
+		// 	layerName:          "rl_lines",
+		// 	extent:             geom.NewExtent([2]float64{23.6, 37.8}, [2]float64{23.8, 38.0}),
+		// 	zoom:               0,
+		// 	expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187},
+		// },
+		// "zoom token": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGNaturalEarthFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name": "land1",
+		// 				"sql": `
+		// 					SELECT
+		// 						fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
+		// 					FROM
+		// 						ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
+		// 					WHERE
+		// 						!BBOX! AND min_zoom <= !ZOOM!`,
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName:          "land1",
+		// 	extent:             geom.NewExtent([2]float64{-20026376.39, -20048966.10}, [2]float64{20026376.39, 20048966.10}),
+		// 	zoom:               1,
+		// 	expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 21, 22, 25, 27, 28, 29, 30, 32, 34, 35, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 52, 53, 54, 55, 56, 57, 60, 62, 63, 64, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 89, 90, 91, 92, 94, 95, 96, 97, 99, 100, 101, 102, 103, 104, 105, 107, 108, 109, 110, 111, 112, 113, 115, 116, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127},
+		// },
+		// "zoom token 2": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGNaturalEarthFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name": "land2",
+		// 				"sql": `
+		// 					SELECT
+		// 						fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
+		// 					FROM
+		// 						ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
+		// 					WHERE
+		// 						!BBOX! AND min_zoom <= !ZOOM! AND max_zoom >= !ZOOM!`,
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName:          "land2",
+		// 	extent:             geom.NewExtent([2]float64{-20026376.39, -20048966.10}, [2]float64{20026376.39, 20048966.10}),
+		// 	zoom:               0,
+		// 	expectedFeatureIds: []uint64{3, 8, 9, 12, 13, 14, 21, 22, 32, 39, 40, 42, 43, 44, 50, 52, 55, 62, 72, 74, 78, 80, 81, 84, 90, 92, 95, 96, 97, 100, 101, 104, 107, 108, 109, 110, 111, 113, 121, 122, 124, 125, 126, 127},
+		// },
+		// "index filterer table": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name":      "land1",
+		// 				"tablename": "roads_lines",
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName: "land1",
+		// 	extent: geom.NewExtent(
+		// 		[2]float64{23.6655, 37.85},
+		// 		[2]float64{23.7958, 37.9431}),
+		// 	indices:            &[2]uint{10, 20},
+		// 	zoom:               1,
+		// 	expectedFeatureIds: []uint64{11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
+		// },
+		// "index filterer sql": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGNaturalEarthFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name": "land1",
+		// 				"sql": `
+		// 					SELECT
+		// 						fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
+		// 					FROM
+		// 						ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
+		// 					WHERE
+		// 						!BBOX! AND min_zoom <= !ZOOM!`,
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName:          "land1",
+		// 	extent:             geom.NewExtent([2]float64{-20026376.39, -20048966.10}, [2]float64{20026376.39, 20048966.10}),
+		// 	indices:            &[2]uint{10, 20},
+		// 	zoom:               1,
+		// 	expectedFeatureIds: []uint64{11, 12, 13, 14, 15, 16, 20, 21, 22, 25},
+		// },
+		// "time filterer table (include rows)": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name":      "pp",
+		// 				"tablename": "places_points",
+		// 				"tstart":    "timestamp",
+		// 				"tend":      "timestamp",
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName: "pp",
+		// 	// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
+		// 	timeperiod: &[2]time.Time{
+		// 		func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:30:00")),
+		// 		func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:40:00")),
+		// 	},
+		// 	expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
+		// },
+		// "time filterer table (exclude rows)": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name":      "pp",
+		// 				"tablename": "places_points",
+		// 				"tstart":    "timestamp",
+		// 				"tend":      "timestamp",
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName: "pp",
+		// 	// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
+		// 	timeperiod: &[2]time.Time{
+		// 		func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 18:30:00")),
+		// 		func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 19:00:00")),
+		// 	},
+		// 	expectedFeatureIds: []uint64{},
+		// },
+		// "time filterer sql (include rows)": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name":   "pp",
+		// 				"sql":    "SELECT * FROM places_points",
+		// 				"tstart": "timestamp",
+		// 				"tend":   "timestamp",
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName: "pp",
+		// 	// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
+		// 	timeperiod: &[2]time.Time{
+		// 		func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:30:00")),
+		// 		func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:40:00")),
+		// 	},
+		// 	expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
+		// },
+		// "time filterer sql (exclude rows)": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name":   "pp",
+		// 				"sql":    "SELECT * FROM places_points",
+		// 				"tstart": "timestamp",
+		// 				"tend":   "timestamp",
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName: "pp",
+		// 	// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
+		// 	timeperiod: &[2]time.Time{
+		// 		func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 18:30:00")),
+		// 		func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 19:00:00")),
+		// 	},
+		// 	expectedFeatureIds: []uint64{},
+		// },
+		// "property filterer table": {
+		// 	config: map[string]interface{}{
+		// 		"filepath": GPKGAthensFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{
+		// 				"name":      "bp",
+		// 				"tablename": "buildings_polygons",
+		// 			},
+		// 		},
+		// 	},
+		// 	layerName: "bp",
+		// 	properties: map[string]interface{}{
+		// 		"building":         "house",
+		// 		"addr:housenumber": 8,
+		// 	},
+		// 	expectedFeatureIds: []uint64{16648},
+		// },
+		"property filterer sql": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
-					{"name": "rd_lines", "tablename": "roads_lines"},
-				},
-			},
-			layerName: "rd_lines",
-			extent: geom.NewExtent(
-				[2]float64{20.0, 37.85},
-				[2]float64{23.6, 37.9431},
-			),
-			zoom:               0,
-			expectedFeatureIds: []uint64{},
-		},
-		// rail lines bounding box is: [23.6828, 37.8501, 23.7549, 37.9431]
-		"tile inside layer extent": {
-			config: map[string]interface{}{
-				"filepath": GPKGAthensFilePath,
-				"layers": []map[string]interface{}{
-					{"name": "rl_lines", "tablename": "rail_lines"},
-				},
-			},
-			layerName:          "rl_lines",
-			extent:             geom.NewExtent([2]float64{23.6, 37.8}, [2]float64{23.8, 38.0}),
-			zoom:               0,
-			expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187},
-		},
-		"zoom token": {
-			config: map[string]interface{}{
-				"filepath": GPKGNaturalEarthFilePath,
-				"layers": []map[string]interface{}{
 					{
-						"name": "land1",
-						"sql": `
-							SELECT
-								fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
-							FROM
-								ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
-							WHERE
-								!BBOX! AND min_zoom <= !ZOOM!`,
+						"name": "bp",
+						"sql":  "SELECT * FROM buildings_polygons",
 					},
 				},
 			},
-			layerName:          "land1",
-			extent:             geom.NewExtent([2]float64{-20026376.39, -20048966.10}, [2]float64{20026376.39, 20048966.10}),
-			zoom:               1,
-			expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 21, 22, 25, 27, 28, 29, 30, 32, 34, 35, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 52, 53, 54, 55, 56, 57, 60, 62, 63, 64, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 89, 90, 91, 92, 94, 95, 96, 97, 99, 100, 101, 102, 103, 104, 105, 107, 108, 109, 110, 111, 112, 113, 115, 116, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127},
-		},
-		"zoom token 2": {
-			config: map[string]interface{}{
-				"filepath": GPKGNaturalEarthFilePath,
-				"layers": []map[string]interface{}{
-					{
-						"name": "land2",
-						"sql": `
-							SELECT
-								fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
-							FROM
-								ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
-							WHERE
-								!BBOX! AND min_zoom <= !ZOOM! AND max_zoom >= !ZOOM!`,
-					},
-				},
+			layerName: "bp",
+			properties: map[string]interface{}{
+				"addr:housenumber": 13,
 			},
-			layerName:          "land2",
-			extent:             geom.NewExtent([2]float64{-20026376.39, -20048966.10}, [2]float64{20026376.39, 20048966.10}),
-			zoom:               0,
-			expectedFeatureIds: []uint64{3, 8, 9, 12, 13, 14, 21, 22, 32, 39, 40, 42, 43, 44, 50, 52, 55, 62, 72, 74, 78, 80, 81, 84, 90, 92, 95, 96, 97, 100, 101, 104, 107, 108, 109, 110, 111, 113, 121, 122, 124, 125, 126, 127},
-		},
-		"index filterer table": {
-			config: map[string]interface{}{
-				"filepath": GPKGAthensFilePath,
-				"layers": []map[string]interface{}{
-					{
-						"name":      "land1",
-						"tablename": "roads_lines",
-					},
-				},
-			},
-			layerName: "land1",
-			extent: geom.NewExtent(
-				[2]float64{23.6655, 37.85},
-				[2]float64{23.7958, 37.9431}),
-			indices:            &[2]uint{10, 20},
-			zoom:               1,
-			expectedFeatureIds: []uint64{11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
-		},
-		"index filterer sql": {
-			config: map[string]interface{}{
-				"filepath": GPKGNaturalEarthFilePath,
-				"layers": []map[string]interface{}{
-					{
-						"name": "land1",
-						"sql": `
-							SELECT
-								fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
-							FROM
-								ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
-							WHERE
-								!BBOX! AND min_zoom <= !ZOOM!`,
-					},
-				},
-			},
-			layerName:          "land1",
-			extent:             geom.NewExtent([2]float64{-20026376.39, -20048966.10}, [2]float64{20026376.39, 20048966.10}),
-			indices:            &[2]uint{10, 20},
-			zoom:               1,
-			expectedFeatureIds: []uint64{11, 12, 13, 14, 15, 16, 20, 21, 22, 25},
-		},
-		"time filterer table (include rows)": {
-			config: map[string]interface{}{
-				"filepath": GPKGAthensFilePath,
-				"layers": []map[string]interface{}{
-					{
-						"name":      "pp",
-						"tablename": "places_points",
-						"tstart":    "timestamp",
-						"tend":      "timestamp",
-					},
-				},
-			},
-			layerName: "pp",
-			// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
-			timeperiod: &[2]time.Time{
-				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:30:00")),
-				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:40:00")),
-			},
-			expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
-		},
-		"time filterer table (exclude rows)": {
-			config: map[string]interface{}{
-				"filepath": GPKGAthensFilePath,
-				"layers": []map[string]interface{}{
-					{
-						"name":      "pp",
-						"tablename": "places_points",
-						"tstart":    "timestamp",
-						"tend":      "timestamp",
-					},
-				},
-			},
-			layerName: "pp",
-			// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
-			timeperiod: &[2]time.Time{
-				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 18:30:00")),
-				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 19:00:00")),
-			},
-			expectedFeatureIds: []uint64{},
-		},
-		"time filterer sql (include rows)": {
-			config: map[string]interface{}{
-				"filepath": GPKGAthensFilePath,
-				"layers": []map[string]interface{}{
-					{
-						"name":   "pp",
-						"sql":    "SELECT * FROM places_points",
-						"tstart": "timestamp",
-						"tend":   "timestamp",
-					},
-				},
-			},
-			layerName: "pp",
-			// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
-			timeperiod: &[2]time.Time{
-				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:30:00")),
-				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 17:40:00")),
-			},
-			expectedFeatureIds: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
-		},
-		"time filterer sql (exclude rows)": {
-			config: map[string]interface{}{
-				"filepath": GPKGAthensFilePath,
-				"layers": []map[string]interface{}{
-					{
-						"name":   "pp",
-						"sql":    "SELECT * FROM places_points",
-						"tstart": "timestamp",
-						"tend":   "timestamp",
-					},
-				},
-			},
-			layerName: "pp",
-			// athens table places_points has a timestamp w/ all rows set to "2017-01-25 17:34:07"
-			timeperiod: &[2]time.Time{
-				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 18:30:00")),
-				func(t time.Time, err error) time.Time { return t }(time.Parse("2006-01-02 15:04:05", "2017-01-25 19:00:00")),
-			},
-			expectedFeatureIds: []uint64{},
+			expectedFeatureIds: []uint64{1271, 9251, 16851, 16868, 16980, 16991},
 		},
 	}
 

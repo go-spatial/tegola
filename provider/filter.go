@@ -100,8 +100,20 @@ func (_ *IndexRange) Type() string { return ExtentFiltererType }
 //	from string to native type then match) for the feature to be returned.
 type PropertyFilterer interface {
 	BaseFilterer
+	Map() map[string]interface{}
 }
 
 type Properties map[string]interface{}
 
+func (p Properties) Init(ip map[string]interface{}) Properties {
+	for k, v := range ip {
+		p[k] = v
+	}
+	return p
+}
+
 func (_ Properties) Type() string { return PropertyFiltererType }
+
+func (p Properties) Map() map[string]interface{} {
+	return p
+}
