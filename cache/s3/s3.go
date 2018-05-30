@@ -30,11 +30,11 @@ const (
 	// optional
 	ConfigKeyBasepath       = "basepath"
 	ConfigKeyMaxZoom        = "max_zoom"
-	ConfigKeyRegion         = "region" // defaults to "us-east-1"
+	ConfigKeyRegion         = "region"   // defaults to "us-east-1"
 	ConfigKeyEndpoint       = "endpoint" //	defaults to ""
 	ConfigKeyAWSAccessKeyID = "aws_access_key_id"
 	ConfigKeyAWSSecretKey   = "aws_secret_access_key"
-	ConfigKeyACL      		= "access_control_list" //	defaults to ""
+	ConfigKeyACL            = "access_control_list" //	defaults to ""
 )
 
 const (
@@ -60,8 +60,8 @@ func init() {
 // 		aws_secret_access_key (string): an AWS secret access key
 // 		basepath (string): a path prefix added to all cache operations inside of the S3 bucket
 // 		max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
-// 		endpoint (string): the S3 endpoint the bucket is located. defaults to '' and only needed for non-AWS endpoints
-//  	access_control_list (string) : the S3 access control to set on the file when putting the file. Empty is the default for the bucket.
+// 		endpoint (string): the endpoint where the S3 compliant backend is located. only necessary for non-AWS deployments. defaults to ''
+//  	access_control_list (string): the S3 access control to set on the file when putting the file. defaults to ''.
 
 func New(config map[string]interface{}) (cache.Interface, error) {
 	var err error
@@ -119,6 +119,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	awsConfig := aws.Config{
 		Region: aws.String(region),
 	}
+
 	// check for endpoint env var
 	endpoint := os.Getenv("AWS_ENDPOINT")
 	if endpoint == "" {
@@ -241,7 +242,7 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	}
 	if s3c.ACL != "" {
 		input.ACL = aws.String(s3c.ACL)
-   	}
+	}
 
 	_, err = s3c.Client.PutObject(&input)
 	if err != nil {
