@@ -54,15 +54,15 @@ type ExtentFilterer interface {
 }
 
 type ExtentFilter struct {
-	ext *geom.Extent
+	ext [4]float64
 }
 
-func (e ExtentFilter) Init(ext geom.Extent) ExtentFilter {
-	e.ext = &ext
+func (e ExtentFilter) Init(ext [4]float64) ExtentFilter {
+	e.ext = ext
 	return e
 }
 
-func (e *ExtentFilter) Extent() geom.Extent { return *e.ext }
+func (e *ExtentFilter) Extent() [4]float64 { return e.ext }
 
 func (_ *ExtentFilter) Type() string { return ExtentFiltererType }
 

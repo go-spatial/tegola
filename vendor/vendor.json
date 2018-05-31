@@ -261,10 +261,10 @@
 			"revisionTime": "2018-02-15T11:00:54Z"
 		},
 		{
-			"checksumSHA1": "zu+Ta66CLjTjZVTnK+UFUnFyu2Y=",
+			"checksumSHA1": "aI+j75XA6Z+sWAQdcP3eMmYTj08=",
 			"path": "github.com/go-spatial/geom",
-			"revision": "8b7b8a3226a1e92a23bee9fca621f28b28ece733",
-			"revisionTime": "2018-05-22T01:09:27Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
 			"checksumSHA1": "ckI8lY77I8Lhr2LosCeltYo/F8A=",

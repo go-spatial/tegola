@@ -319,7 +319,8 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			customSQL = replaceTokens(customSQL, nil, tegola.WGS84Bounds)
+			wgs84ext := tegola.WGS84Bounds.Extent()
+			customSQL = replaceTokens(customSQL, nil, &wgs84ext)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
@@ -493,7 +494,8 @@ func NewFiltererProvider(config map[string]interface{}) (provider.Filterer, erro
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			customSQL = replaceTokens(customSQL, nil, tegola.WGS84Bounds)
+			wgs84ext := tegola.WGS84Bounds.Extent()
+			customSQL = replaceTokens(customSQL, nil, &wgs84ext)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)

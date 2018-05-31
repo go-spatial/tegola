@@ -85,24 +85,24 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	pLayer := p.layers[layer]
 
 	// read the tile extent
-	tileBBox, tileSRID := tile.BufferedExtent()
+	be, tileSRID := tile.BufferedExtent()
+	tileBBox := &([4]float64{be.MinX(), be.MinY(), be.MaxX(), be.MaxY()})
 
 	// TODO(arolek): reimplement once the geom package has reprojection
 	// check if the SRID of the layer differs from that of the tile. tileSRID is assumed to always be WebMercator
 	if pLayer.srid != tileSRID {
-		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox.MinX(), tileBBox.MinY()})
+		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox[0], tileBBox[1]})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox.MaxX(), tileBBox.MaxY()})
+		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox[2], tileBBox[3]})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		tileBBox = &geom.Extent{
-			minGeo.AsPoint().X(), minGeo.AsPoint().Y(),
-			maxGeo.AsPoint().X(), maxGeo.AsPoint().Y(),
+		tileBBox = &[4]float64{
+			minGeo.AsPoint().X(), minGeo.AsPoint().Y(), maxGeo.AsPoint().X(), maxGeo.AsPoint().Y(),
 		}
 	}
 
@@ -243,7 +243,7 @@ func (p *Provider) StreamFeatures(ctx context.Context, layer string, zoom uint,
 	fn provider.FeatureConsumer, filters ...provider.BaseFilterer) error {
 	log.Debugf("fetching layer %v", layer)
 
-	var tileBBox *geom.Extent // geom.MinMaxer
+	var tileBBox *[4]float64 // geom.MinMaxer
 	var indices []uint
 	var tp provider.TimeFilterer
 	var props map[string]interface{}

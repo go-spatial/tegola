@@ -2,8 +2,6 @@ package gpkg
 
 import (
 	"testing"
-
-	"github.com/go-spatial/geom"
 )
 
 func uiptr(ui uint) *uint {
@@ -14,7 +12,7 @@ func TestReplaceTokens(t *testing.T) {
 	type tcase struct {
 		qtext    string
 		zoom     *uint
-		extent   *geom.Extent
+		extent   *[4]float64
 		expected string
 	}
 
@@ -53,7 +51,7 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX!`,
-			extent: &geom.Extent{
+			extent: &[4]float64{
 				-180, -85.0511,
 				180, 85.0511,
 			},
@@ -73,7 +71,7 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX! AND min_zoom = !ZOOM!`,
-			extent: &geom.Extent{
+			extent: &[4]float64{
 				-180, -85.0511,
 				180, 85.0511,
 			},

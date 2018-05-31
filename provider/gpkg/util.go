@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/go-spatial/geom"
 )
 
 const (
@@ -13,7 +11,7 @@ const (
 	zoomToken = "!ZOOM!"
 )
 
-func replaceTokens(qtext string, zoom *uint, extent geom.MinMaxer) string {
+func replaceTokens(qtext string, zoom *uint, extent *[4]float64) string {
 	// --- Convert tokens provided to SQL
 	// The ZOOM token requires two parameters, both filled with the current zoom level.
 	// Until support for named parameters, the ZOOM token must follow the BBOX token.
@@ -34,8 +32,9 @@ func replaceTokens(qtext string, zoom *uint, extent geom.MinMaxer) string {
 	rps := []string{}
 	if extent != nil {
 		rps = append(rps, bboxToken)
+		minx, miny, maxx, maxy := extent[0], extent[1], extent[2], extent[3]
 		rps = append(rps,
-			fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY()),
+			fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", maxx, minx, maxy, miny),
 		)
 	} else {
 
