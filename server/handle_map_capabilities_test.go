@@ -38,7 +38,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				Bounds:      [4]float64{-180.0, -85.0511, 180.0, 85.0511},
 				Center:      testMapCenter,
 				Format:      "pbf",
-				MinZoom:     4,
+				MinZoom:     testLayer1.MinZoom,
 				MaxZoom:     testLayer3.MaxZoom, //	the max zoom for the test group is in layer 3
 				Name:        &testMapName,
 				Description: nil,
