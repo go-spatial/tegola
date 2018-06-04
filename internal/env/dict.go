@@ -299,7 +299,7 @@ func (d Dict) UintSlice(key string) (v []uint, err error) {
 				return v, dict.ErrKeyType{Key: key, Value: val, T: reflect.TypeOf(v)}
 			}
 		}
-	case []int:
+	case []uint:
 		v = val.([]uint)
 	case []interface{}:
 		// It's possible that the value is of type []interface and not of our type, so we need to convert each element to the appropriate
