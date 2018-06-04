@@ -3,6 +3,7 @@ package cmd
 import (
 	"testing"
 	"reflect"
+	"fmt"
 )
 
 // TODO(ear7h): use internal package, currently in maths/internal
@@ -87,7 +88,7 @@ func TestNewFormat(t *testing.T) {
 			continue
 		}
 
-		if !tc.isValidFormat && !reflect.DeepEqual(tc.exepected, f) {
+		if tc.isValidFormat && !reflect.DeepEqual(tc.exepected, f) {
 			t.Errorf("[%v] expected Format %v got %v", k, tc.exepected, f)
 		}
 	}
@@ -113,6 +114,46 @@ func TestFormatParse(t *testing.T) {
 			z:      10,
 			x:      2,
 			y:      2,
+		},
+		"invalid input separators": {
+			format: Format{1, 2, 0, "-"},
+			input:  "102-2",
+			err: fmt.Errorf("invalid zxy value (%v). expecting the formatStr %v", "102-2", Format{1, 2, 0, "-"}),
+		},
+		"invalid input z": {
+			format: Format{1, 2, 0, "-"},
+			input:  "#-2-2",
+			err: fmt.Errorf("invalid Z value (%v)", "#"),
+		},
+		"invalid input z float": {
+			format: Format{1, 2, 0, "-"},
+			input:  "10.1-2-2",
+			err: fmt.Errorf("invalid Z value (%v)", "10.1"),
+		},
+		"invalid input z too high": {
+			format: Format{1, 2, 0, "-"},
+			input:  "1000-2-2",
+			err: fmt.Errorf("invalid Z value (%v)", "10.1"),
+		},
+		"invalid input x": {
+			format: Format{1, 2, 0, "-"},
+			input:  "10-#-2",
+			err: fmt.Errorf("invalid X value (%v)", "#"),
+		},
+		"invalid input x too high": {
+			format: Format{1, 2, 0, "-"},
+			input:  "3-10000-2",
+			err: fmt.Errorf("invalid X value (%v)", "10000"),
+		},
+		"invalid input y": {
+			format: Format{1, 2, 0, "-"},
+			input:  "10-2-#",
+			err: fmt.Errorf("invalid Y value (%v)", "#"),
+		},
+		"invalid input y too high": {
+			format: Format{1, 2, 0, "-"},
+			input:  "3-2-10000",
+			err: fmt.Errorf("invalid Y value (%v)", "10000"),
 		},
 	}
 

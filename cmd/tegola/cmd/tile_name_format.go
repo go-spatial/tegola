@@ -75,19 +75,19 @@ func (f Format) Parse(val string) (z, x, y uint, err error) {
 
 	zi, err := strconv.ParseUint(parts[f.Z], 10, 64)
 	if err != nil || zi > tegola.MaxZ {
-		return 0, 0, 0, fmt.Errorf("invalid Z value (%v)", zi)
+		return 0, 0, 0, fmt.Errorf("invalid Z value (%v)", parts[f.Z])
 	}
 
 	maxXYatZ := maths.Exp2(zi) - 1
 
 	xi, err := strconv.ParseUint(parts[f.X], 10, 64)
 	if err != nil || xi > maxXYatZ {
-		return 0, 0, 0, fmt.Errorf("invalid X value (%v)", xi)
+		return 0, 0, 0, fmt.Errorf("invalid X value (%v)", parts[f.X])
 	}
 
 	yi, err := strconv.ParseUint(parts[f.Y], 10, 64)
 	if err != nil || yi > maxXYatZ {
-		return 0, 0, 0, fmt.Errorf("invalid Y value (%v)", yi)
+		return 0, 0, 0, fmt.Errorf("invalid Y value (%v)", parts[f.Y])
 	}
 
 	return uint(zi), uint(xi), uint(yi), nil
