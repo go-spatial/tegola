@@ -34,15 +34,21 @@ func NewFormat(format string) (Format, error) {
 
 	// check separator
 	sep := format[0:1]
-	if strings.ContainsAny(sep, "0123456789") {
+	if strings.ContainsAny(sep, "0123456789zxy") {
 		return defaultTileNameFormat, fmt.Errorf("invalid formatStr %s", format)
 	}
 
-	format = format[1:]
+	zxy := format[1:4]
 
-	ix := strings.Index(format, "x")
-	iy := strings.Index(format, "y")
-	iz := strings.Index(format, "z")
+	ix := strings.Index(zxy, "x")
+	iy := strings.Index(zxy, "y")
+	iz := strings.Index(zxy, "z")
+
+	// 0 + 1 + 2 = 3
+	// strings.Index returns -1 if the substring is not in the string
+	if ix + iy + iz != 3 {
+		return defaultTileNameFormat, fmt.Errorf("invalid formatStr %s", format)
+	}
 
 	return Format{uint(ix), uint(iy), uint(iz), sep}, nil
 }

@@ -35,13 +35,41 @@ func TestNewFormat(t *testing.T) {
 			exepected: Format{0, 1, 2, " "},
 			err:       nil,
 		},
-		"3 invalid formatStr": {
+		"invalid formatStr 1": {
 			formatStr: "//zxy",
 			err:       fmt.Errorf("invalid formatStr //zxy"),
 		},
-		"4 invalid formatStr": {
+		"invalid formatStr 2": {
 			formatStr: "1zxy",
 			err:       fmt.Errorf("invalid formatStr 1zxy"),
+		},
+		"invalid formatStr 3" : {
+			formatStr: "/1xy",
+			err: fmt.Errorf("invalid formatStr /1xy"),
+		},
+		"invalid formatStr 4" : {
+			formatStr: ",z45",
+			err: fmt.Errorf("invalid formatStr ,z45"),
+		},
+		"invalid formatStr 5" : {
+			formatStr: "zzxy",
+			err: fmt.Errorf("invalid formatStr zzxy"),
+		},
+		"invalid formatStr 6" : {
+			formatStr: "$xxx",
+			err: fmt.Errorf("invalid formatStr $xxx"),
+		},
+		"invalid formatStr 7" : {
+			formatStr: "$xyx",
+			err: fmt.Errorf("invalid formatStr $xyx"),
+		},
+		"invalid formatStr 8" : {
+			formatStr: "$$$$",
+			err: fmt.Errorf("invalid formatStr $$$$"),
+		},
+		"invalid formatStr 9" : {
+			formatStr: ",100",
+			err: fmt.Errorf("invalid formatStr ,100"),
 		},
 	}
 
