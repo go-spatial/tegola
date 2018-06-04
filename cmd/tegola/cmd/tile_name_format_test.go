@@ -133,7 +133,7 @@ func TestFormatParse(t *testing.T) {
 		"invalid input z too high": {
 			format: Format{1, 2, 0, "-"},
 			input:  "1000-2-2",
-			err: fmt.Errorf("invalid Z value (%v)", "10.1"),
+			err: fmt.Errorf("invalid Z value (%v)", "1000"),
 		},
 		"invalid input x": {
 			format: Format{1, 2, 0, "-"},
