@@ -31,11 +31,12 @@ func ParseStringSlice(val string) ([]string, error) {
 		return nil, err
 	}
 
-	var vals []string
+	// split
+	vals := strings.Split(str, ",")
 
-	// split and trim space
-	for _, v := range strings.Split(str, ",") {
-		vals = append(vals, strings.TrimSpace(v))
+	// trim space
+	for i, v := range vals {
+		vals[i] = strings.TrimSpace(v)
 	}
 
 	return vals, nil
@@ -69,9 +70,9 @@ func ParseBoolSlice(val string) ([]bool, error) {
 		return nil, err
 	}
 
-	var bools []bool
 	// break our string up
 	vals := strings.Split(str, ",")
+	bools := make([]bool, 0, len(vals))
 	for i := range vals {
 		// trim space and parse
 		b, err := strconv.ParseBool(strings.TrimSpace(vals[i]))
@@ -116,9 +117,9 @@ func ParseIntSlice(val string) ([]int, error) {
 		return nil, err
 	}
 
-	var ints []int
 	// break our string up
 	vals := strings.Split(str, ",")
+	ints := make([]int, 0, len(vals))
 	for i := range vals {
 		// trim space and parse
 		b, err := strconv.Atoi(strings.TrimSpace(vals[i]))
@@ -174,9 +175,9 @@ func ParseUintSlice(val string) ([]uint, error) {
 		return nil, err
 	}
 
-	var uints []uint
 	// break our string up
 	vals := strings.Split(str, ",")
+	uints := make([]uint, 0, len(vals))
 	for i := range vals {
 		// trim space and parse
 		u, err := strconv.ParseUint(strings.TrimSpace(vals[i]), 10, 64)
@@ -221,9 +222,9 @@ func ParseFloatSlice(val string) ([]float64, error) {
 		return nil, err
 	}
 
-	var floats []float64
 	// break our string up
 	vals := strings.Split(str, ",")
+	floats := make([]float64, 0, len(vals))
 	for i := range vals {
 		// trim space and parse
 		f, err := strconv.ParseFloat(strings.TrimSpace(vals[i]), 64)

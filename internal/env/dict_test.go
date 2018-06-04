@@ -125,6 +125,13 @@ func TestDict(t *testing.T) {
 		},
 		"string slice no env": {
 			dict: env.Dict{
+				"string_slice": []string{"foo", "bar", "baz"},
+			},
+			key:      "string_slice",
+			expected: []string{"foo", "bar", "baz"},
+		},
+		"string slice concat no env": {
+			dict: env.Dict{
 				"string_slice": "foo, bar,  baz",
 			},
 			key:      "string_slice",
@@ -174,6 +181,13 @@ func TestDict(t *testing.T) {
 			expected: []bool{true, false},
 		},
 		"bool slice no env": {
+			dict: env.Dict{
+				"bool_slice": []bool{true, false, true},
+			},
+			key:      "bool_slice",
+			expected: []bool{true, false, true},
+		},
+		"bool slice concat no env": {
 			dict: env.Dict{
 				"bool_slice": "true, false,  true",
 			},
@@ -225,6 +239,13 @@ func TestDict(t *testing.T) {
 		},
 		"int slice no env": {
 			dict: env.Dict{
+				"int_slice": []int{43, -23, 12},
+			},
+			key:      "int_slice",
+			expected: []int{43, -23, 12},
+		},
+		"int slice concat no env": {
+			dict: env.Dict{
 				"int_slice": "43, -23, 12",
 			},
 			key:      "int_slice",
@@ -275,6 +296,13 @@ func TestDict(t *testing.T) {
 		},
 		"uint slice no env": {
 			dict: env.Dict{
+				"uint_slice": []uint{43, 23, 12},
+			},
+			key:      "uint_slice",
+			expected: []uint{43, 23, 12},
+		},
+		"uint slice concat no env": {
+			dict: env.Dict{
 				"uint_slice": "43, 23, 12",
 			},
 			key:      "uint_slice",
@@ -324,6 +352,13 @@ func TestDict(t *testing.T) {
 			expected: []float64{123.0, 324.0},
 		},
 		"float slice no env": {
+			dict: env.Dict{
+				"float_slice": []float64{43.0, 23.0, 12.0},
+			},
+			key:      "float_slice",
+			expected: []float64{43.0, 23.0, 12.0},
+		},
+		"float slice concat no env": {
 			dict: env.Dict{
 				"float_slice": "43.0, 23.0, 12.0",
 			},
