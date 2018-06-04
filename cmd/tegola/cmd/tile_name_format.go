@@ -21,6 +21,14 @@ var defaultTileNameFormat = Format{
 	Sep: "/",
 }
 
+// The variable should
+type ErrTileNameFormat string
+
+func (e ErrTileNameFormat) Error() string {
+	return "invalid formatStr " + string(e)
+}
+
+
 func NewFormat(format string) (Format, error) {
 	// if empty return default
 	if format == "" {
@@ -29,13 +37,13 @@ func NewFormat(format string) (Format, error) {
 
 	// assert length of formatStr string is 4
 	if len(format) != 4 {
-		return defaultTileNameFormat, fmt.Errorf("invalid formatStr %s", format)
+		return defaultTileNameFormat, ErrTileNameFormat(format)
 	}
 
 	// check separator
 	sep := format[0:1]
 	if strings.ContainsAny(sep, "0123456789zxy") {
-		return defaultTileNameFormat, fmt.Errorf("invalid formatStr %s", format)
+		return defaultTileNameFormat, ErrTileNameFormat(format)
 	}
 
 	zxy := format[1:4]
@@ -47,7 +55,7 @@ func NewFormat(format string) (Format, error) {
 	// 0 + 1 + 2 = 3
 	// strings.Index returns -1 if the substring is not in the string
 	if ix + iy + iz != 3 {
-		return defaultTileNameFormat, fmt.Errorf("invalid formatStr %s", format)
+		return defaultTileNameFormat, ErrTileNameFormat(format)
 	}
 
 	return Format{uint(ix), uint(iy), uint(iz), sep}, nil
