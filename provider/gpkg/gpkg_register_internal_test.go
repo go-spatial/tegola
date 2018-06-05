@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/tegola/internal/dict"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -1021,7 +1023,7 @@ func TestFeatureTableMetaData(t *testing.T) {
 
 func TestCleanup(t *testing.T) {
 	type tcase struct {
-		config map[string]interface{}
+		config dict.Dict
 	}
 
 	fn := func(t *testing.T, tc tcase) {

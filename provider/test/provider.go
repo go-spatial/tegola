@@ -6,6 +6,8 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/provider"
+
+	"github.com/go-spatial/tegola/internal/dict"
 )
 
 const Name = "test"
@@ -17,7 +19,7 @@ func init() {
 }
 
 // NewProvider setups a test provider. there are not currently any config params supported
-func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
+func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	Count++
 	return &TileProvider{}, nil
 }
