@@ -432,7 +432,7 @@ func TestConfigs(t *testing.T) {
 
 	tests := map[string]tcase{
 		"expecting tags": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"amenity", "religion", "tourism", "shop"}},
@@ -464,7 +464,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"no tags provided": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"amenity", "religion", "tourism", "shop"}},
@@ -485,7 +485,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"simple sql": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{
@@ -518,7 +518,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"complex sql": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{
@@ -568,7 +568,7 @@ func TestConfigs(t *testing.T) {
 func TestOpenNonExistantFile(t *testing.T) {
 
 	type tcase struct {
-		config map[string]interface{}
+		config dict.Dict
 		err    error
 	}
 	const (
@@ -579,14 +579,14 @@ func TestOpenNonExistantFile(t *testing.T) {
 
 	tests := map[string]tcase{
 		"empty": tcase{
-			config: map[string]interface{}{
+			config: dict.Dict{
 				gpkg.ConfigKeyFilePath: "",
 			},
 			err: gpkg.ErrInvalidFilePath{FilePath: ""},
 		},
 		"nonexistance": tcase{
 			// should not exists
-			config: map[string]interface{}{
+			config: dict.Dict{
 				gpkg.ConfigKeyFilePath: NONEXISTANTFILE,
 			},
 			err: gpkg.ErrInvalidFilePath{FilePath: NONEXISTANTFILE},

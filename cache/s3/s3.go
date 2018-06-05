@@ -122,7 +122,8 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	if endpoint == "" {
 		endpoint = DefaultEndpoint
 	}
-	endpoint, err = c.String(ConfigKeyEndpoint, &endpoint)
+
+	endpoint, err = config.String(ConfigKeyEndpoint, &endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +149,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 
 	// check for control_access_list env var
 	acl := os.Getenv("AWS_ACL")
-	acl, err = c.String(ConfigKeyACL, &acl)
+	acl, err = config.String(ConfigKeyACL, &acl)
 	if err != nil {
 		return nil, err
 	}
