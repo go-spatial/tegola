@@ -41,7 +41,7 @@ var testLayer2 = atlas.Layer{
 	Name:              "test-layer-2-name",
 	ProviderLayerName: "test-layer-2-provider-layer-name",
 	MinZoom:           10,
-	MaxZoom:           20,
+	MaxZoom:           15,
 	Provider:          &test.TileProvider{},
 	GeomType:          geom.Line{},
 	DefaultTags: map[string]interface{}{

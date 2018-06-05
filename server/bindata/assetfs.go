@@ -14,8 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	assetfs "github.com/elazarl/go-bindata-assetfs"
 )
 
 var (
@@ -171,12 +169,12 @@ func (fs *AssetFS) Open(name string) (http.File, error) {
 	}
 }
 
-func AssetFileSystem() *assetfs.AssetFS {
+func AssetFileSystem() *AssetFS {
 	assetInfo := func(path string) (os.FileInfo, error) {
 		return os.Stat(path)
 	}
 	for k := range _bintree.Children {
-		return &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: k}
+		return &AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: k}
 	}
 	panic("unreachable")
 }

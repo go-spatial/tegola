@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -187,6 +188,11 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 	if filepath == "" {
+		return nil, ErrInvalidFilePath{filepath}
+	}
+
+	// check the file exists
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
 		return nil, ErrInvalidFilePath{filepath}
 	}
 
