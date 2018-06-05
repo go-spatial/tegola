@@ -15,7 +15,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/util/dict"
+	"github.com/go-spatial/tegola/internal/dict"
 )
 
 var (
@@ -63,24 +63,21 @@ func init() {
 // 		endpoint (string): the endpoint where the S3 compliant backend is located. only necessary for non-AWS deployments. defaults to ''
 //  	access_control_list (string): the S3 access control to set on the file when putting the file. defaults to ''.
 
-func New(config map[string]interface{}) (cache.Interface, error) {
+func New(config dict.Dicter) (cache.Interface, error) {
 	var err error
 
 	s3cache := Cache{}
 
-	// parse the config
-	c := dict.M(config)
-
 	// the config map's underlying value is int
 	defaultMaxZoom := uint(tegola.MaxZ)
-	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
+	maxZoom, err := config.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
 
 	s3cache.MaxZoom = maxZoom
 
-	s3cache.Bucket, err = c.String(ConfigKeyBucket, nil)
+	s3cache.Bucket, err = config.String(ConfigKeyBucket, nil)
 	if err != nil {
 		return nil, ErrMissingBucket
 	}
@@ -90,7 +87,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 
 	// basepath
 	basepath := ""
-	s3cache.Basepath, err = c.String(ConfigKeyBasepath, &basepath)
+	s3cache.Basepath, err = config.String(ConfigKeyBasepath, &basepath)
 	if err != nil {
 		return nil, err
 	}
@@ -100,18 +97,18 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	if region == "" {
 		region = DefaultRegion
 	}
-	region, err = c.String(ConfigKeyRegion, &region)
+	region, err = config.String(ConfigKeyRegion, &region)
 	if err != nil {
 		return nil, err
 	}
 
 	accessKey := ""
-	accessKey, err = c.String(ConfigKeyAWSAccessKeyID, &accessKey)
+	accessKey, err = config.String(ConfigKeyAWSAccessKeyID, &accessKey)
 	if err != nil {
 		return nil, err
 	}
 	secretKey := ""
-	secretKey, err = c.String(ConfigKeyAWSSecretKey, &secretKey)
+	secretKey, err = config.String(ConfigKeyAWSSecretKey, &secretKey)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +122,8 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	if endpoint == "" {
 		endpoint = DefaultEndpoint
 	}
-	endpoint, err = c.String(ConfigKeyEndpoint, &endpoint)
+
+	endpoint, err = config.String(ConfigKeyEndpoint, &endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +149,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 
 	// check for control_access_list env var
 	acl := os.Getenv("AWS_ACL")
-	acl, err = c.String(ConfigKeyACL, &acl)
+	acl, err = config.String(ConfigKeyACL, &acl)
 	if err != nil {
 		return nil, err
 	}

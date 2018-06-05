@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"github.com/go-spatial/tegola/cmd/internal/register"
+	"github.com/go-spatial/tegola/internal/dict"
 )
 
 func TestCaches(t *testing.T) {
 	type tcase struct {
-		config      map[string]interface{}
+		config      dict.Dict
 		expectedErr error
 	}
 
@@ -30,12 +31,12 @@ func TestCaches(t *testing.T) {
 
 	tests := map[string]tcase{
 		"missing type": {
-			config:      map[string]interface{}{},
+			config:      dict.Dict{},
 			expectedErr: register.ErrCacheTypeMissing,
 		},
 
 		"type is not string": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"type": 1,
 			},
 			expectedErr: register.ErrCacheTypeInvalid,
