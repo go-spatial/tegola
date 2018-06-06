@@ -34,27 +34,47 @@ func TestDict(t *testing.T) {
 		var val interface{}
 		var err error
 
-		switch tc.expected.(type) {
+		switch v := tc.expected.(type) {
 		case string:
 			val, err = tc.dict.String(tc.key, nil)
 		case []string:
 			val, err = tc.dict.StringSlice(tc.key)
+			//	empty slice check, only when err is nil
+			if err == nil && len(v) == 0 && len(val.([]string)) == 0 {
+				return
+			}
 		case bool:
 			val, err = tc.dict.Bool(tc.key, nil)
 		case []bool:
 			val, err = tc.dict.BoolSlice(tc.key)
+			//	empty slice check, only when err is nil
+			if err == nil && len(v) == 0 && len(val.([]bool)) == 0 {
+				return
+			}
 		case int:
 			val, err = tc.dict.Int(tc.key, nil)
 		case []int:
 			val, err = tc.dict.IntSlice(tc.key)
+			//	empty slice check, only when err is nil
+			if err == nil && len(v) == 0 && len(val.([]int)) == 0 {
+				return
+			}
 		case uint:
 			val, err = tc.dict.Uint(tc.key, nil)
 		case []uint:
 			val, err = tc.dict.UintSlice(tc.key)
+			//	empty slice check, only when err is nil
+			if err == nil && len(v) == 0 && len(val.([]uint)) == 0 {
+				return
+			}
 		case float32, float64:
 			val, err = tc.dict.Float(tc.key, nil)
 		case []float64:
 			val, err = tc.dict.FloatSlice(tc.key)
+			//	empty slice check, only when err is nil
+			if err == nil && len(v) == 0 && len(val.([]float64)) == 0 {
+				return
+			}
 		case nil:
 			// ignore, used for checking errors
 		default:
@@ -142,8 +162,13 @@ func TestDict(t *testing.T) {
 				"string_slice": "${TEST_STRING}",
 			},
 			key:         "string_slice",
-			expected:    []string{""},
+			expected:    []string{},
 			expectedErr: env.ErrEnvVar("TEST_STRING"),
+		},
+		"string slice key not set": {
+			dict:     env.Dict{},
+			key:      "string_slice",
+			expected: []string{},
 		},
 		"bool": {
 			dict: env.Dict{
@@ -202,6 +227,11 @@ func TestDict(t *testing.T) {
 			expected:    []bool{true},
 			expectedErr: env.ErrEnvVar("TEST_BOOL"),
 		},
+		"bool slice key not set": {
+			dict:     env.Dict{},
+			key:      "bool_slice",
+			expected: []bool{},
+		},
 		"int": {
 			dict: env.Dict{
 				"int": "${TEST_INT}",
@@ -258,6 +288,11 @@ func TestDict(t *testing.T) {
 			key:         "int_slice",
 			expected:    []int{0},
 			expectedErr: env.ErrEnvVar("TEST_INT_SLICE"),
+		},
+		"int slice key not set": {
+			dict:     env.Dict{},
+			key:      "int_slice",
+			expected: []int{},
 		},
 		"uint": {
 			dict: env.Dict{
@@ -316,6 +351,11 @@ func TestDict(t *testing.T) {
 			expected:    []uint{0},
 			expectedErr: env.ErrEnvVar("TEST_UINT_SLICE"),
 		},
+		"uint slice key not set": {
+			dict:     env.Dict{},
+			key:      "uint_slice",
+			expected: []uint{},
+		},
 		"float": {
 			dict: env.Dict{
 				"float": "${TEST_FLOAT}",
@@ -372,6 +412,11 @@ func TestDict(t *testing.T) {
 			key:         "float_slice",
 			expected:    []float64{0.0},
 			expectedErr: env.ErrEnvVar("TEST_FLOAT_SLICE"),
+		},
+		"float slice key not set": {
+			dict:     env.Dict{},
+			key:      "float_slice",
+			expected: []float64{},
 		},
 	}
 
