@@ -55,7 +55,7 @@ func (d Dict) StringSlice(key string) (v []string, err error) {
 
 	val, ok := d[key]
 	if !ok {
-		return v, dict.ErrKeyRequired(key)
+		return v, nil
 	}
 
 	switch val.(type) {
@@ -133,7 +133,7 @@ func (d Dict) BoolSlice(key string) (v []bool, err error) {
 
 	val, ok := d[key]
 	if !ok {
-		return v, dict.ErrKeyRequired(key)
+		return v, nil
 	}
 
 	switch val.(type) {
@@ -209,7 +209,7 @@ func (d Dict) IntSlice(key string) (v []int, err error) {
 
 	val, ok := d[key]
 	if !ok {
-		return v, dict.ErrKeyRequired(key)
+		return v, nil
 	}
 
 	switch val.(type) {
@@ -285,7 +285,7 @@ func (d Dict) UintSlice(key string) (v []uint, err error) {
 
 	val, ok := d[key]
 	if !ok {
-		return v, dict.ErrKeyRequired(key)
+		return v, nil
 	}
 
 	switch val.(type) {
@@ -358,7 +358,7 @@ func (d Dict) Float(key string, def *float64) (v float64, err error) {
 func (d Dict) FloatSlice(key string) (v []float64, err error) {
 	val, ok := d[key]
 	if !ok {
-		return v, dict.ErrKeyRequired(key)
+		return v, nil
 	}
 
 	switch val.(type) {
