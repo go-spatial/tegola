@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/akrylysov/algnhsa"
+	"github.com/arolek/algnhsa"
 
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
