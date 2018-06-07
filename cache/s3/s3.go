@@ -137,6 +137,17 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, err
 	}
 
+	// check for endpoint env var
+	endpoint := os.Getenv("AWS_ENDPOINT")
+	if endpoint == "" {
+		endpoint = DefaultEndpoint
+	}
+
+	endpoint, err = config.String(ConfigKeyEndpoint, &endpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	// support for static credentials, this is not recommended by AWS but
 	// necessary for some environments
 	if accessKey != "" && secretKey != "" {
