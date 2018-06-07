@@ -3,6 +3,7 @@ package postgis
 import (
 	"fmt"
 
+	"github.com/go-spatial/tegola/dict"
 	"github.com/jackc/pgx"
 )
 
@@ -91,7 +92,7 @@ func metadata(conn *pgx.Conn) (md map[string]*featureTableMetaData, err error) {
 	return md, nil
 }
 
-func AutoConfig(connstr string) (map[string]interface{}, error) {
+func AutoConfig(connstr string) (dict.Dicter, error) {
 	cc, err := pgx.ParseConnectionString(connstr)
 	if err != nil {
 		return nil, err
@@ -145,5 +146,6 @@ func AutoConfig(connstr string) (map[string]interface{}, error) {
 		// Use the SRID of the first layer
 		conf[ConfigKeySRID] = clayers[0][ConfigKeySRID]
 	}
-	return conf, nil
+	dconf := dict.Dict(conf)
+	return dconf, nil
 }
