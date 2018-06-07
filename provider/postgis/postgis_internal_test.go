@@ -7,26 +7,27 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/tegola/internal/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
 )
 
 // TESTENV is the environment variable that must be set to "yes" to run postgis tests.
 const TESTENV = "RUN_POSTGIS_TESTS"
 
-func GetTestPort(t *testing.T) int64 {
+func GetTestPort(t *testing.T) int {
 	ttools.ShouldSkip(t, TESTENV)
-	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 64)
+	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 32)
 	if err != nil {
 		t.Skipf("err parsing PGPORT: %v", err)
 	}
-	return port
+	return int(port)
 }
 
 func TestLayerGeomType(t *testing.T) {
 	port := GetTestPort(t)
 
 	type tcase struct {
-		config    map[string]interface{}
+		config    dict.Dict
 		layerName string
 		geom      geom.Geometry
 	}

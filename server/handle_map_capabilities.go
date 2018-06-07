@@ -94,10 +94,6 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				break
 			}
 		}
-		// entry for layer already exists. move on
-		if skip {
-			continue
-		}
 
 		// the first layer sets the initial min / max otherwise they default to 0/0
 		if len(tileJSON.VectorLayers) == 0 {
@@ -115,7 +111,12 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			tileJSON.MaxZoom = m.Layers[i].MaxZoom
 		}
 
-		// build our vector layer details
+		//	entry for layer already exists. move on
+		if skip {
+			continue
+		}
+
+		//	build our vector layer details
 		layer := tilejson.VectorLayer{
 			Version: 2,
 			Extent:  4096,

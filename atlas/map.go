@@ -14,6 +14,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/internal/convert"
+	"github.com/go-spatial/tegola/internal/dict"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
@@ -60,7 +61,7 @@ func (m Map) AddDebugLayers() Map {
 	m.Layers = layers
 
 	// setup a debug provider
-	debugProvider, _ := debug.NewTileProvider(map[string]interface{}{})
+	debugProvider, _ := debug.NewTileProvider(dict.Dict{})
 
 	m.Layers = append(layers, []Layer{
 		{

@@ -15,10 +15,10 @@
 			"revisionTime": "2017-05-07T10:33:33Z"
 		},
 		{
-			"checksumSHA1": "52yky33tRrIw0DUvHMcrEWx2OfE=",
-			"path": "github.com/akrylysov/algnhsa",
-			"revision": "6b0effb2a8105690435d472b180c4cc1ba6b2dc8",
-			"revisionTime": "2018-05-02T23:46:33Z"
+			"checksumSHA1": "stlCSj5YfHbH1fZvziEZtMTxa8I=",
+			"path": "github.com/arolek/algnhsa",
+			"revision": "c6c22c361ed25a5b441f4d741573385abc72ccd4",
+			"revisionTime": "2018-06-06T22:25:14Z"
 		},
 		{
 			"checksumSHA1": "H+nuubKZtdEPryI/ZiaF3W+hnus=",
@@ -199,18 +199,6 @@
 			"path": "github.com/dimfeld/httptreemux",
 			"revision": "7f532489e7739b3d49df5c602bf63549881fe753",
 			"revisionTime": "2018-02-13T07:44:14Z"
-		},
-		{
-			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
-			"path": "github.com/elazarl/go-bindata-assetfs",
-			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
-			"revisionTime": "2017-02-27T21:27:28Z"
-		},
-		{
-			"checksumSHA1": "CaThXbumVxZtNlItiXma5B78PwQ=",
-			"path": "github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs",
-			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
-			"revisionTime": "2017-02-27T21:27:28Z"
 		},
 		{
 			"checksumSHA1": "H5aa/58hIaaMETBYW8rYYBsVOc0=",

@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/gpkg"
 )
@@ -173,7 +175,7 @@ func TestAutoConfig(t *testing.T) {
 
 func TestNewTileProvider(t *testing.T) {
 	type tcase struct {
-		config             map[string]interface{}
+		config             dict.Dict
 		expectedLayerCount int
 		expectedErr        error
 	}
@@ -252,7 +254,7 @@ func (t *MockTile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
 func TestTileFeatures(t *testing.T) {
 	type tcase struct {
-		config               map[string]interface{}
+		config               dict.Dict
 		layerName            string
 		tile                 MockTile
 		expectedFeatureCount int
@@ -386,7 +388,7 @@ func TestTileFeatures(t *testing.T) {
 
 func TestConfigs(t *testing.T) {
 	type tcase struct {
-		config       map[string]interface{}
+		config       dict.Dict
 		tile         MockTile
 		layerName    string
 		expectedTags map[uint64]map[string]interface{}
@@ -430,7 +432,7 @@ func TestConfigs(t *testing.T) {
 
 	tests := map[string]tcase{
 		"expecting tags": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"amenity", "religion", "tourism", "shop"}},
@@ -462,7 +464,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"no tags provided": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"amenity", "religion", "tourism", "shop"}},
@@ -483,7 +485,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"simple sql": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{
@@ -516,7 +518,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"complex sql": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{
@@ -560,4 +562,45 @@ func TestConfigs(t *testing.T) {
 			fn(t, tc)
 		})
 	}
+}
+
+// This is just to test that if we open a non-existant file.
+func TestOpenNonExistantFile(t *testing.T) {
+
+	type tcase struct {
+		config dict.Dict
+		err    error
+	}
+	const (
+		NONEXISTANTFILE = "testdata/nonexistant.gpkg"
+	)
+
+	os.Remove(NONEXISTANTFILE)
+
+	tests := map[string]tcase{
+		"empty": tcase{
+			config: dict.Dict{
+				gpkg.ConfigKeyFilePath: "",
+			},
+			err: gpkg.ErrInvalidFilePath{FilePath: ""},
+		},
+		"nonexistance": tcase{
+			// should not exists
+			config: dict.Dict{
+				gpkg.ConfigKeyFilePath: NONEXISTANTFILE,
+			},
+			err: gpkg.ErrInvalidFilePath{FilePath: NONEXISTANTFILE},
+		},
+	}
+
+	for k, tc := range tests {
+		tc := tc
+		t.Run(k, func(t *testing.T) {
+			_, err := gpkg.NewTileProvider(tc.config)
+			if reflect.TypeOf(err) != reflect.TypeOf(tc.err) {
+				t.Errorf("expected error, expected %v got %v", tc.err, err)
+			}
+		})
+	}
+
 }
