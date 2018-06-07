@@ -18,7 +18,7 @@ import (
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/draw/svg"
 	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/config/dict"
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"

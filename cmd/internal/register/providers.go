@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/config/dict"
 	"github.com/go-spatial/tegola/provider"
 )
 
