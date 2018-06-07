@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
 )
 
