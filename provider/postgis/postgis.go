@@ -122,14 +122,13 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
+	sslmode, err := config.String(ConfigKeySSLMode, nil)
+	sslkey, err := config.String(ConfigKeySSLKey, nil)
+	sslcert, err := config.String(ConfigKeySSLCert, nil)
+	sslrootcert, err := config.String(ConfigKeySSLRootCert, nil)
+
 	port := DefaultPort
 	if port, err = config.Int(ConfigKeyPort, &port); err != nil {
-	
-	sslmode, err := c.String(ConfigKeySSLMode, nil)
-	sslkey, err := c.String(ConfigKeySSLKey, nil)
-	sslcert, err := c.String(ConfigKeySSLCert, nil)
-	sslrootcert, err := c.String(ConfigKeySSLRootCert, nil)
-
 		return nil, err
 	}
 
