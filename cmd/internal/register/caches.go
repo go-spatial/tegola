@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/config/dict"
 )
 
 var (

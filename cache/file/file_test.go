@@ -8,7 +8,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/file"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/config/dict"
 )
 
 func TestNew(t *testing.T) {

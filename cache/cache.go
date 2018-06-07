@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/config/dict"
 	"github.com/go-spatial/tegola/maths"
 )
 
