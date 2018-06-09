@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/dict"
 )
 
 type Dict map[string]interface{}
@@ -447,4 +447,13 @@ func (d Dict) MapSlice(key string) (r []dict.Dicter, err error) {
 func (d Dict) Interface(key string) (v interface{}, ok bool) {
 	v, ok = d[key]
 	return v, ok
+}
+
+func (d Dict) Keys() []string {
+	keys := make([]string, 0, len(d))
+	for k, _ := range d {
+		keys = append(keys, k)
+	}
+
+	return keys
 }

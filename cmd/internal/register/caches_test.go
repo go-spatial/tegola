@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/tegola/cmd/internal/register"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/dict"
 )
 
 func TestCaches(t *testing.T) {

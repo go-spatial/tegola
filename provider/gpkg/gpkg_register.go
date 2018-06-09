@@ -15,7 +15,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 )
@@ -36,7 +36,7 @@ type featureTableDetails struct {
 
 // Creates a config instance of the type NewTileProvider() requires including all available feature
 //    tables in the gpkg at 'gpkgPath'.
-func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
+func AutoConfig(gpkgPath string) (dict.Dicter, error) {
 	if _, err := os.Stat(gpkgPath); os.IsNotExist(err) {
 		return nil, ErrInvalidFilePath{gpkgPath}
 	}
@@ -80,10 +80,11 @@ func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
 		lconf["tablename"] = tablename
 		lconf["id_fieldname"] = ftMetaData[tablename].idFieldname
 		lconf["fields"] = propFields
-		conf["layers"].([]map[string]interface{})[i] = lconf
+		conf["layers"].([]map[string]interface{})[i] = dict.Dict(lconf)
 	}
 
-	return conf, nil
+	dconf := dict.Dict(conf)
+	return dconf, nil
 }
 
 func extractColsFromSQL(sql string) []string {
@@ -203,6 +204,11 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, ErrInvalidFilePath{filepath}
 	}
 
+	// check the file exists
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		return nil, ErrInvalidFilePath{filepath}
+	}
+
 	db, err := sql.Open("sqlite3", filepath)
 	if err != nil {
 		log.Errorf("problem opening sqlite3 file: %v", filepath)
@@ -241,22 +247,22 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		}
 		lyrsSeen[layerName] = i
 
-		emptyString := ""
-		tablename, err := layerConf.String(ConfigKeyTableName, &emptyString)
-		if err != nil {
-			return nil, fmt.Errorf("unable to collect '%v' from layer config: %v", ConfigKeyTableName, err)
+		// ensure only one of sql or tablename exist
+		tablename, errTable := layerConf.String(ConfigKeyTableName, nil)
+		if _, ok := errTable.(dict.ErrKeyRequired); errTable != nil && !ok {
+			return nil, err
 		}
-		layerSQL, err := layerConf.String(ConfigKeySQL, &emptyString)
-		if err != nil {
-			return nil, fmt.Errorf("unable to collect '%v' from layer config: %v", ConfigKeySQL, err)
+		_, errSQL := layerConf.String(ConfigKeySQL, nil)
+		if _, ok := errSQL.(dict.ErrKeyRequired); errSQL != nil && !ok {
+			return nil, err
 		}
-
-		if tablename == emptyString && layerSQL == emptyString {
-			return nil, fmt.Errorf("'%v' or '%v' is required for a feature's config", ConfigKeyTableName, ConfigKeySQL)
+		// err != nil <-> key != exists
+		if errTable != nil && errSQL != nil {
+			return nil, errors.New("'tablename' or 'sql' is required for a feature's config")
 		}
-
-		if tablename != emptyString && layerSQL != emptyString {
-			return nil, fmt.Errorf("'tablename' or 'sql' is required for a feature's config. you have both")
+		// err == nil <-> key == exists
+		if errTable == nil && errSQL == nil {
+			return nil, errors.New("'tablename' or 'sql' is required for a feature's config")
 		}
 
 		idFieldname := DefaultIDFieldName
@@ -266,8 +272,8 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		}
 
 		tagFieldnames, err := layerConf.StringSlice(ConfigKeyFields)
-		if err != nil {
-			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, layerName, ConfigKeyFields, err)
+		if err != nil { // empty slices are okay
+			return nil, fmt.Errorf("for layer (%v) %v, %q field had the following error: %v", i, layerName, ConfigKeyFields, err)
 		}
 
 		// layer container. will be added to the provider after it's configured
@@ -275,7 +281,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			name: layerName,
 		}
 
-		if tablename != emptyString {
+		if tablename != "" {
 			layer.tablename = tablename
 			layer.tagFieldnames = tagFieldnames
 			layer.geomFieldname = geomTableDetails[tablename].geomFieldname
