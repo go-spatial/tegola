@@ -448,3 +448,12 @@ func (d Dict) Interface(key string) (v interface{}, ok bool) {
 	v, ok = d[key]
 	return v, ok
 }
+
+func (d Dict) Keys() []string {
+	keys := make([]string, 0, len(d))
+	for k, _ := range d {
+		keys = append(keys, k)
+	}
+
+	return keys
+}

@@ -202,3 +202,11 @@ func (d Dict) Interface(key string) (r interface{}, ok bool) {
 	r, ok = d[key]
 	return r, ok
 }
+
+func (d Dict) Keys() []string {
+	keys := make([]string, 0, 20)
+	for k, _ := range d {
+		keys = append(keys, k)
+	}
+	return keys
+}

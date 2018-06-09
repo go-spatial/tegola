@@ -28,6 +28,8 @@ type Dicter interface {
 	MapSlice(key string) ([]Dicter, error)
 
 	Interface(key string) (v interface{}, ok bool)
+
+	Keys() []string
 }
 
 // ErrKeyRequired is used to communicate a map miss and Dicter implementations should set the value as the missed key

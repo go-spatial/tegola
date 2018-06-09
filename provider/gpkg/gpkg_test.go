@@ -6,9 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/go-spatial/geom"
@@ -28,58 +28,78 @@ func init() {
 	//log.SetLogLevel(log.DEBUG)
 }
 
-func confEqual(t *testing.T, conf, expectedConf map[string]interface{}) bool {
-	equal := true
+// Check that dict.Dicter instances are equal.
+// Makes specific notes via t.Errorf() of elements that aren't equal.
+func dicterEqual(t *testing.T, d1, d2 dict.Dicter) bool {
+	d1keys := d1.Keys()
+	d2keys := d2.Keys()
 
-	confKeys := make([]string, 0, len(conf))
-	for k := range conf {
-		confKeys = append(confKeys, k)
+	if len(d1keys) != len(d2keys) {
+		return false
 	}
 
-	exKeys := make([]string, 0, len(expectedConf))
-	for k := range expectedConf {
-		exKeys = append(exKeys, k)
-	}
+	sort.Strings(d1keys)
+	sort.Strings(d2keys)
 
-	if len(confKeys) != len(exKeys) {
-		t.Errorf("Configs have different number of parameters: %v != %v", confKeys, exKeys)
-		equal = false
-	}
+	for i, k := range d1keys {
+		if k != d2keys[i] {
+			t.Errorf("key[%v]: %v != %v", i, k, d2keys[i])
+			return false
+		}
+		d1value, ok := d1.Interface(k)
+		if !ok {
+			t.Errorf("problem collecting actual value for key '%v'", k)
+			return false
+		}
+		d2value, ok := d2.Interface(k)
+		if !ok {
+			t.Errorf("problem collecting expected value for key '%v'", k)
+			return false
+		}
 
-	for k, v := range conf {
-		if k != "layers" {
-			if v != expectedConf[k] {
-				t.Errorf(`"%v": %v != %v`, k, v, expectedConf[k])
-				equal = false
-			}
-		} else {
-			lconf := v.([]map[string]interface{})
-			econf := expectedConf["layers"].([]map[string]interface{})
-
-			// safeLength is the smaller of these two lengths
-			safeLength := len(lconf)
-			if len(lconf) != len(econf) {
-				t.Errorf("Layer configs have different lengths: %v != %v", len(lconf), len(econf))
-				equal = false
-				safeLength = int(math.Min(float64(len(lconf)), float64(len(econf))))
-			}
-
-			for i := 0; i < safeLength; i++ {
-				if !reflect.DeepEqual(lconf[i], econf[i]) {
-					t.Errorf("layer conf [%v]: %v != %v", i, lconf[i], econf[i])
-					equal = false
+		switch v1 := d1value.(type) {
+		case string:
+			v2, ok := d2value.(string)
+			if !ok {
+				t.Errorf("mismatched types for key '%v': %T != %T", k, d1value, d2value)
+				return false
+			} else {
+				if v1 != v2 {
+					return false
 				}
 			}
+		case []string:
+			v2, ok := d2value.([]string)
+			if !ok {
+				t.Errorf("mismatched types for key '%v': %T != %T", k, d1value, d2value)
+				return false
+			}
+			if !reflect.DeepEqual(v1, v2) {
+				t.Errorf("values don't match for key '%v': %#v != %#v", k, v1, v2)
+				return false
+			}
+		case []map[string]interface{}:
+			v2, ok := d2value.([]map[string]interface{})
+			if !ok {
+				t.Errorf("mismatched types for key '%v': %T != %T", k, d1value, d2value)
+			}
+			for a, m1 := range v1 {
+				if !dicterEqual(t, dict.Dict(m1), dict.Dict(v2[a])) {
+					return false
+				}
+			}
+		default:
+			t.Errorf("dict value type not yet supported in testing: %T / %T", d1value, d2value)
+			return false
 		}
 	}
-
-	return equal
+	return true
 }
 
 func TestAutoConfig(t *testing.T) {
 	type tcase struct {
 		gpkgPath     string
-		expectedConf map[string]interface{}
+		expectedConf dict.Dicter
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -88,7 +108,10 @@ func TestAutoConfig(t *testing.T) {
 			t.Errorf("problem getting config for '%v': %v", tc.gpkgPath, err)
 		}
 
-		if !confEqual(t, conf, tc.expectedConf) {
+		lm, _ := conf.Interface("layers")
+		fmt.Printf("Got %T config, %T layer configs\n", conf, lm)
+
+		if !dicterEqual(t, conf, tc.expectedConf) {
 			t.Errorf("config doesn't match expected")
 		}
 	}
@@ -96,7 +119,7 @@ func TestAutoConfig(t *testing.T) {
 	tests := map[string]tcase{
 		"athens": {
 			gpkgPath: GPKGAthensFilePath,
-			expectedConf: map[string]interface{}{
+			expectedConf: dict.Dict{
 				"name":     "autoconfd_gpkg",
 				"type":     "gpkg",
 				"filepath": GPKGAthensFilePath,
@@ -123,46 +146,46 @@ func TestAutoConfig(t *testing.T) {
 				},
 			},
 		},
-		"natural earth": {
-			gpkgPath: GPKGNaturalEarthFilePath,
-			expectedConf: map[string]interface{}{
-				"name":     "autoconfd_gpkg",
-				"type":     "gpkg",
-				"filepath": GPKGNaturalEarthFilePath,
-				"layers": []map[string]interface{}{
-					{"name": "ne_110m_land", "tablename": "ne_110m_land", "id_fieldname": "fid", "fields": []string{"featurecla", "min_zoom", "scalerank"}},
-				},
-			},
-		},
-		"puerto monte": {
-			gpkgPath: GPKGPuertoMontFilePath,
-			expectedConf: map[string]interface{}{
-				"name":     "autoconfd_gpkg",
-				"type":     "gpkg",
-				"filepath": GPKGPuertoMontFilePath,
-				"layers": []map[string]interface{}{
-					{"name": "amenities_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "amenity", "building", "historic", "information", "leisure", "name", "office", "osm_id", "shop", "tourism"}},
-					{"name": "amenities_polygons", "tablename": "amenities_polygons", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "amenity", "building", "historic", "information", "leisure", "name", "office", "osm_id", "osm_way_id", "shop", "tourism"}},
-					{"name": "aviation_lines", "tablename": "aviation_lines", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "source", "surface", "type"}},
-					{"name": "aviation_points", "tablename": "aviation_points", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "source", "surface", "type"}},
-					{"name": "aviation_polygons", "tablename": "aviation_polygons", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "osm_way_id", "source", "surface", "type"}},
-					{"name": "boundary", "fields": []string{}, "tablename": "boundary", "id_fieldname": "id"},
-					{"name": "buildings_polygons", "tablename": "buildings_polygons", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "building", "hazard_prone", "name", "osm_id", "osm_way_id"}},
-					{"name": "harbours_points", "id_fieldname": "fid", "fields": []string{"harbour", "landuse", "leisure", "name", "osm_id"}, "tablename": "harbours_points"},
-					{"name": "land_polygons", "fields": []string{"fid"}, "tablename": "land_polygons", "id_fieldname": "ogc_fid"},
-					{"name": "landuse_polygons", "tablename": "landuse_polygons", "id_fieldname": "fid", "fields": []string{"landuse", "name", "osm_id", "osm_way_id"}},
-					{"name": "leisure_polygons", "tablename": "leisure_polygons", "id_fieldname": "fid", "fields": []string{"leisure", "name", "osm_id", "osm_way_id"}},
-					{"name": "natural_lines", "tablename": "natural_lines", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "natural", "osm_id"}},
-					{"name": "natural_polygons", "tablename": "natural_polygons", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "natural", "osm_id", "osm_way_id"}},
-					{"name": "places_points", "tablename": "places_points", "id_fieldname": "fid", "fields": []string{"is_in", "name", "osm_id", "place"}},
-					{"name": "places_polygons", "id_fieldname": "fid", "fields": []string{"is_in", "name", "osm_id", "osm_way_id", "place"}, "tablename": "places_polygons"},
-					{"name": "rail_lines", "fields": []string{"bridge", "cutting", "embankment", "frequency", "layer", "name", "operator", "osm_id", "railway", "service", "source", "tracks", "tunnel", "usage", "voltage", "z_index"}, "tablename": "rail_lines", "id_fieldname": "fid"},
-					{"name": "roads_lines", "tablename": "roads_lines", "id_fieldname": "fid", "fields": []string{"barrier", "bicycle_road", "ford", "hazard_prone", "highway", "layer", "name", "osm_id", "traffic_calming", "tunnel", "z_index"}},
-					{"name": "towers_antennas_points", "fields": []string{"man_made", "name", "osm_id"}, "tablename": "towers_antennas_points", "id_fieldname": "fid"},
-					{"name": "waterways_lines", "tablename": "waterways_lines", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "osm_id", "waterway"}},
-				},
-			},
-		},
+		// "natural earth": {
+		// 	gpkgPath: GPKGNaturalEarthFilePath,
+		// 	expectedConf: dict.Dict{
+		// 		"name":     "autoconfd_gpkg",
+		// 		"type":     "gpkg",
+		// 		"filepath": GPKGNaturalEarthFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{"name": "ne_110m_land", "tablename": "ne_110m_land", "id_fieldname": "fid", "fields": []string{"featurecla", "min_zoom", "scalerank"}},
+		// 		},
+		// 	},
+		// },
+		// "puerto monte": {
+		// 	gpkgPath: GPKGPuertoMontFilePath,
+		// 	expectedConf: dict.Dict{
+		// 		"name":     "autoconfd_gpkg",
+		// 		"type":     "gpkg",
+		// 		"filepath": GPKGPuertoMontFilePath,
+		// 		"layers": []map[string]interface{}{
+		// 			{"name": "amenities_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "amenity", "building", "historic", "information", "leisure", "name", "office", "osm_id", "shop", "tourism"}},
+		// 			{"name": "amenities_polygons", "tablename": "amenities_polygons", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "amenity", "building", "historic", "information", "leisure", "name", "office", "osm_id", "osm_way_id", "shop", "tourism"}},
+		// 			{"name": "aviation_lines", "tablename": "aviation_lines", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "source", "surface", "type"}},
+		// 			{"name": "aviation_points", "tablename": "aviation_points", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "source", "surface", "type"}},
+		// 			{"name": "aviation_polygons", "tablename": "aviation_polygons", "id_fieldname": "fid", "fields": []string{"aeroway", "building", "iata", "icao", "name", "osm_id", "osm_way_id", "source", "surface", "type"}},
+		// 			{"name": "boundary", "fields": []string{}, "tablename": "boundary", "id_fieldname": "id"},
+		// 			{"name": "buildings_polygons", "tablename": "buildings_polygons", "id_fieldname": "fid", "fields": []string{"addr:housenumber", "addr:street", "building", "hazard_prone", "name", "osm_id", "osm_way_id"}},
+		// 			{"name": "harbours_points", "id_fieldname": "fid", "fields": []string{"harbour", "landuse", "leisure", "name", "osm_id"}, "tablename": "harbours_points"},
+		// 			{"name": "land_polygons", "fields": []string{"fid"}, "tablename": "land_polygons", "id_fieldname": "ogc_fid"},
+		// 			{"name": "landuse_polygons", "tablename": "landuse_polygons", "id_fieldname": "fid", "fields": []string{"landuse", "name", "osm_id", "osm_way_id"}},
+		// 			{"name": "leisure_polygons", "tablename": "leisure_polygons", "id_fieldname": "fid", "fields": []string{"leisure", "name", "osm_id", "osm_way_id"}},
+		// 			{"name": "natural_lines", "tablename": "natural_lines", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "natural", "osm_id"}},
+		// 			{"name": "natural_polygons", "tablename": "natural_polygons", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "natural", "osm_id", "osm_way_id"}},
+		// 			{"name": "places_points", "tablename": "places_points", "id_fieldname": "fid", "fields": []string{"is_in", "name", "osm_id", "place"}},
+		// 			{"name": "places_polygons", "id_fieldname": "fid", "fields": []string{"is_in", "name", "osm_id", "osm_way_id", "place"}, "tablename": "places_polygons"},
+		// 			{"name": "rail_lines", "fields": []string{"bridge", "cutting", "embankment", "frequency", "layer", "name", "operator", "osm_id", "railway", "service", "source", "tracks", "tunnel", "usage", "voltage", "z_index"}, "tablename": "rail_lines", "id_fieldname": "fid"},
+		// 			{"name": "roads_lines", "tablename": "roads_lines", "id_fieldname": "fid", "fields": []string{"barrier", "bicycle_road", "ford", "hazard_prone", "highway", "layer", "name", "osm_id", "traffic_calming", "tunnel", "z_index"}},
+		// 			{"name": "towers_antennas_points", "fields": []string{"man_made", "name", "osm_id"}, "tablename": "towers_antennas_points", "id_fieldname": "fid"},
+		// 			{"name": "waterways_lines", "tablename": "waterways_lines", "id_fieldname": "fid", "fields": []string{"hazard_prone", "name", "osm_id", "waterway"}},
+		// 		},
+		// 	},
+		// },
 	}
 
 	for tname, tc := range tests {
@@ -185,7 +208,8 @@ func TestNewTileProvider(t *testing.T) {
 
 		p, err := gpkg.NewTileProvider(tc.config)
 		if err != nil {
-			if err.Error() != tc.expectedErr.Error() {
+			fmt.Printf("TNTP err/expectedErr: %v / %v\n", err, tc.expectedErr)
+			if tc.expectedErr == nil || (err.Error() != tc.expectedErr.Error()) {
 				t.Errorf("expectedErr %v got %v", tc.expectedErr, err)
 			}
 			return
@@ -205,7 +229,7 @@ func TestNewTileProvider(t *testing.T) {
 
 	tests := map[string]tcase{
 		"duplicate layer name": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "a_points", "tablename": "amenities_points"},
@@ -215,7 +239,7 @@ func TestNewTileProvider(t *testing.T) {
 			expectedErr: errors.New("layer name (a_points) is duplicated in both layer 1 and layer 0"),
 		},
 		"3 layers": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					// explicit id fieldname
@@ -288,7 +312,7 @@ func TestTileFeatures(t *testing.T) {
 	tests := map[string]tcase{
 		// roads_lines bounding box is: [23.6655, 37.85, 23.7958, 37.9431] (see gpkg_contents table)
 		"tile outside layer extent": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "rd_lines", "tablename": "roads_lines"},
@@ -306,7 +330,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		// rail lines bounding box is: [23.6828, 37.8501, 23.7549, 37.9431]
 		"tile inside layer extent": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "rl_lines", "tablename": "rail_lines"},
@@ -323,7 +347,7 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 187,
 		},
 		"zoom token": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGNaturalEarthFilePath,
 				"layers": []map[string]interface{}{
 					{
@@ -350,7 +374,7 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 101,
 		},
 		"zoom token 2": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGNaturalEarthFilePath,
 				"layers": []map[string]interface{}{
 					{

@@ -36,7 +36,7 @@ type featureTableDetails struct {
 
 // Creates a config instance of the type NewTileProvider() requires including all available feature
 //    tables in the gpkg at 'gpkgPath'.
-func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
+func AutoConfig(gpkgPath string) (dict.Dicter, error) {
 	// Get all feature tables
 	db, err := sql.Open("sqlite3", gpkgPath)
 	if err != nil {
@@ -76,10 +76,11 @@ func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
 		lconf["tablename"] = tablename
 		lconf["id_fieldname"] = ftMetaData[tablename].idFieldname
 		lconf["fields"] = propFields
-		conf["layers"].([]map[string]interface{})[i] = lconf
+		conf["layers"].([]map[string]interface{})[i] = dict.Dict(lconf)
 	}
 
-	return conf, nil
+	dconf := dict.Dict(conf)
+	return dconf, nil
 }
 
 func extractColsFromSQL(sql string) []string {
