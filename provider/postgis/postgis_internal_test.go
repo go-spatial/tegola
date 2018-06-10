@@ -55,11 +55,15 @@ func TestLayerGeomType(t *testing.T) {
 	tests := map[string]tcase{
 		"1": {
 			config: map[string]interface{}{
-				ConfigKeyHost:     os.Getenv("PGHOST"),
-				ConfigKeyPort:     port,
-				ConfigKeyDB:       os.Getenv("PGDATABASE"),
-				ConfigKeyUser:     os.Getenv("PGUSER"),
-				ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+				ConfigKeyHost:        os.Getenv("PGHOST"),
+				ConfigKeyPort:        port,
+				ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				ConfigKeyUser:        os.Getenv("PGUSER"),
+				ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 				ConfigKeyLayers: []map[string]interface{}{
 					{
 						ConfigKeyLayerName: "land",
@@ -72,11 +76,15 @@ func TestLayerGeomType(t *testing.T) {
 		},
 		"zoom token replacement": {
 			config: map[string]interface{}{
-				ConfigKeyHost:     os.Getenv("PGHOST"),
-				ConfigKeyPort:     port,
-				ConfigKeyDB:       os.Getenv("PGDATABASE"),
-				ConfigKeyUser:     os.Getenv("PGUSER"),
-				ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+				ConfigKeyHost:        os.Getenv("PGHOST"),
+				ConfigKeyPort:        port,
+				ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				ConfigKeyUser:        os.Getenv("PGUSER"),
+				ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 				ConfigKeyLayers: []map[string]interface{}{
 					{
 						ConfigKeyLayerName: "land",
