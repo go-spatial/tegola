@@ -59,7 +59,6 @@ const (
 	ConfigKeySSLKey      = "ssl_key"
 	ConfigKeySSLCert     = "ssl_cert"
 	ConfigKeySSLRootCert = "ssl_root_cert"
-	ConfigKeyServerName  = "server_name"
 	ConfigKeyMaxConn     = "max_connections"
 	ConfigKeySRID        = "srid"
 	ConfigKeyLayers      = "layers"
@@ -123,9 +122,24 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	}
 
 	sslmode, err := config.String(ConfigKeySSLMode, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	sslkey, err := config.String(ConfigKeySSLKey, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	sslcert, err := config.String(ConfigKeySSLCert, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	sslrootcert, err := config.String(ConfigKeySSLRootCert, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	port := DefaultPort
 	if port, err = config.Int(ConfigKeyPort, &port); err != nil {
@@ -150,7 +164,10 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		Password: password,
 	}
 
-	configTLS(sslmode, sslkey, sslcert, sslrootcert, &connConfig)
+	err = ConfigTLS(sslmode, sslkey, sslcert, sslrootcert, &connConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	p := Provider{
 		srid: uint64(srid),
@@ -274,10 +291,10 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	return p, nil
 }
 
-func configTLS(sslMode string, sslKey string, sslCert string, sslRootCert string, cc *pgx.ConnConfig) error {
+func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string, cc *pgx.ConnConfig) error {
 	// Match libpq default behavior
 	if sslMode == "" {
-		sslMode = "prefer"
+		sslMode = "disable"
 	}
 
 	switch sslMode {
@@ -306,10 +323,9 @@ func configTLS(sslMode string, sslKey string, sslCert string, sslRootCert string
 	if sslRootCert != "" {
 		caCertPool := x509.NewCertPool()
 
-		caPath := sslRootCert
-		caCert, err := ioutil.ReadFile(caPath)
+		caCert, err := ioutil.ReadFile(sslRootCert)
 		if err != nil {
-			return errors.Wrapf(err, "unable to read CA file %q", caPath)
+			return errors.Wrapf(err, "unable to read CA file %q", sslRootCert)
 		}
 
 		if !caCertPool.AppendCertsFromPEM(caCert) {
@@ -320,7 +336,7 @@ func configTLS(sslMode string, sslKey string, sslCert string, sslRootCert string
 		cc.TLSConfig.ClientCAs = caCertPool
 	}
 
-	if (sslCert != "" && sslKey == "") || (sslCert == "" && sslKey != "") {
+	if (sslCert == "") != (sslKey == "") {
 		return fmt.Errorf(`both "sslcert" and "sslkey" are required`)
 	}
 
