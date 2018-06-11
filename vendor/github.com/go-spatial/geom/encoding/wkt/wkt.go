@@ -104,14 +104,6 @@ use to take a tagola.Geometry and convert it to a wkt string. It will, also,
 contain functions to parse a wkt string into a wkb.Geometry.
 */
 
-type ErrUnknownGeometry struct {
-	Geom geom.Geometry
-}
-
-func (e ErrUnknownGeometry) Error() string {
-	return fmt.Sprintf("Unknown Geometry! %v", e.Geom)
-}
-
 func _encode(geo geom.Geometry) string {
 
 	switch g := geo.(type) {
@@ -173,7 +165,7 @@ func _encode(geo geom.Geometry) string {
 func Encode(geo geom.Geometry) (string, error) {
 	switch g := geo.(type) {
 	default:
-		return "", ErrUnknownGeometry{geo}
+		return "", geom.ErrUnknownGeometry{geo}
 	case geom.Pointer:
 		// POINT( 10 10)
 		if isNil(g) {
@@ -195,9 +187,9 @@ func Encode(geo geom.Geometry) (string, error) {
 
 	case geom.MultiLineStringer:
 		if isMultiLineStringerEmpty(g) {
-			return "MULTILINE EMPTY", nil
+			return "MULTILINESTRING EMPTY", nil
 		}
-		return "MULTILINE " + _encode(geo), nil
+		return "MULTILINESTRING " + _encode(geo), nil
 
 	case geom.Polygoner:
 		if isPolygonerEmpty(g) {
