@@ -382,6 +382,18 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	// fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 
+	// find geometry column index
+	geomIndex := -1
+	for i := range fdescs {
+		if fdescs[i].Name == plyr.GeomFieldName() {
+			geomIndex = i
+			break
+		}
+	}
+	if geomIndex == -1 {
+		return fmt.Errorf("error can't find %v field", plyr.GeomFieldName())
+	}
+
 	for rows.Next() {
 		// context check
 		if err := ctx.Err(); err != nil {
@@ -392,6 +404,11 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		vals, err := rows.Values()
 		if err != nil {
 			return fmt.Errorf("error running layer (%v) SQL (%v): %v", layer, sql, err)
+		}
+
+		// skip row if geometry nil values.
+		if vals[geomIndex] == nil {
+			continue
 		}
 
 		gid, geobytes, tags, err := decipherFields(ctx, plyr.GeomFieldName(), plyr.IDFieldName(), fdescs, vals)
