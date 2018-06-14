@@ -155,6 +155,92 @@ func TestSetGetPurge(t *testing.T) {
 	}
 }
 
+func TestSetOverwrite(t *testing.T) {
+	if os.Getenv("RUN_AZBLOB_TESTS") != "yes" {
+		return
+	}
+
+	type tcase struct {
+		config   map[string]interface{}
+		key      cache.Key
+		bytes1   []byte
+		bytes2   []byte
+		expected []byte
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		// This test must be run in series otherwise
+		// there is a race condition in the
+		// initialization routine (the same test file must
+		// be created and destroyed)
+
+		fc, err := azblob.New(tc.config)
+		if err != nil {
+			t.Errorf("%v", err)
+			return
+		}
+
+		// test write1
+		if err = fc.Set(&tc.key, tc.bytes1); err != nil {
+			t.Errorf("write 1 failed. err: %v", err)
+			return
+		}
+
+		// test write2
+		if err = fc.Set(&tc.key, tc.bytes2); err != nil {
+			t.Errorf("write 2 failed. err: %v", err)
+			return
+		}
+
+		// fetch the cache entry
+		output, hit, err := fc.Get(&tc.key)
+		if err != nil {
+			t.Errorf("read failed. err: %v", err)
+			return
+		}
+		if !hit {
+			t.Errorf("read failed. should have been a hit but cache reported a miss")
+			return
+		}
+
+		if !reflect.DeepEqual(output, tc.expected) {
+			t.Errorf("expected %v got %v", tc.expected, output)
+			return
+		}
+
+		// clean up
+		if err = fc.Purge(&tc.key); err != nil {
+			t.Errorf("purge failed. err: %v", err)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		"overwrite": {
+			config: map[string]interface{}{
+				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
+				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
+				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
+			},
+			key: cache.Key{
+				Z: 0,
+				X: 1,
+				Y: 1,
+			},
+			bytes1:   []byte{0x66, 0x6f, 0x6f},
+			bytes2:   []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
+			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
+	}
+}
+
 
 func TestMaxZoom(t *testing.T) {
 	if os.Getenv("RUN_AZBLOB_TESTS") != "yes" {
