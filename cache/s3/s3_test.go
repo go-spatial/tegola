@@ -65,7 +65,7 @@ func TestNew(t *testing.T) {
 				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
 				"max_zoom": "foo",
 			},
-			err: fmt.Errorf("max_zoom value needs to be of type int. Value is of type string"),
+			err: fmt.Errorf("max_zoom value needs to be of type uint. Value is of type string"),
 		},
 	}
 
@@ -284,7 +284,7 @@ func TestMaxZoom(t *testing.T) {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 11,
@@ -298,7 +298,7 @@ func TestMaxZoom(t *testing.T) {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 9,
@@ -312,7 +312,7 @@ func TestMaxZoom(t *testing.T) {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 10,
