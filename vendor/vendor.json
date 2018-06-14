@@ -3,6 +3,18 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "z+M6FYl9EKsoZZMLcT0Ktwfk8pI=",
+			"path": "github.com/Azure/azure-pipeline-go/pipeline",
+			"revision": "7571e8eb0876932ab505918ff7ed5107773e5ee2",
+			"revisionTime": "2018-06-07T21:19:23Z"
+		},
+		{
+			"checksumSHA1": "MoGZ85BSSDrvq1XLLC/b6eF5kA4=",
+			"path": "github.com/Azure/azure-storage-blob-go/2016-05-31/azblob",
+			"revision": "66ba96e49ebbdc3cd26970c6c675c906d304b5e2",
+			"revisionTime": "2018-05-07T05:21:52Z"
+		},
+		{
 			"checksumSHA1": "UJTpOZ5IuuyoWFrS42uw/167mn0=",
 			"path": "github.com/BurntSushi/toml",
 			"revision": "f0aeabca5a127c4078abb8c8d64298b147264b55",
