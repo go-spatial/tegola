@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -12,65 +13,61 @@ var (
 	ErrProviderNameInvalid = errors.New("register: provider 'name' value must be a string")
 )
 
-type ErrProviderAlreadyRegistered struct {
-	ProviderName string
-}
+type ErrProviderAlreadyRegistered string
 
 func (e ErrProviderAlreadyRegistered) Error() string {
-	return fmt.Sprintf("register: provider (%v) already registered", e.ProviderName)
+	return fmt.Sprintf("register: provider (%v) already registered", string(e))
 }
 
-type ErrProviderTypeMissing struct {
-	ProviderName string
-}
+type ErrProviderTypeMissing string
 
 func (e ErrProviderTypeMissing) Error() string {
-	return fmt.Sprintf("register: provider 'type' parameter missing for provider (%v)", e.ProviderName)
+	return fmt.Sprintf("register: provider 'type' parameter missing for provider (%v)", string(e))
 }
 
-type ErrProviderTypeInvalid struct {
-	ProviderName string
-}
+type ErrProviderTypeInvalid string
 
 func (e ErrProviderTypeInvalid) Error() string {
-	return fmt.Sprintf("register: provider 'type' must be a string for provider (%v)", e.ProviderName)
+	return fmt.Sprintf("register: provider 'type' must be a string for provider (%v)", string(e))
 }
 
 // Providers registers data provider backends
-func Providers(providers []map[string]interface{}) (map[string]provider.Tiler, error) {
-	var err error
-
+func Providers(providers []dict.Dicter) (map[string]provider.Tiler, error) {
 	// holder for registered providers
 	registeredProviders := map[string]provider.Tiler{}
 
 	// iterate providers
 	for _, p := range providers {
 		// lookup our proivder name
-		n, ok := p["name"]
-		if !ok {
-			return registeredProviders, ErrProviderNameMissing
-		}
-
-		pname, found := n.(string)
-		if !found {
-			return registeredProviders, ErrProviderNameInvalid
+		pname, err := p.String("name", nil)
+		if err != nil {
+			switch err.(type) {
+			case dict.ErrKeyRequired:
+				return registeredProviders, ErrProviderNameMissing
+			case dict.ErrKeyType:
+				return registeredProviders, ErrProviderNameInvalid
+			default:
+				return registeredProviders, err
+			}
 		}
 
 		// check if a proivder with this name is alrady registered
-		_, ok = registeredProviders[pname]
+		_, ok := registeredProviders[pname]
 		if ok {
-			return registeredProviders, ErrProviderAlreadyRegistered{pname}
+			return registeredProviders, ErrProviderAlreadyRegistered(pname)
 		}
 
 		// lookup our provider type
-		t, ok := p["type"]
-		if !ok {
-			return registeredProviders, ErrProviderTypeMissing{pname}
-		}
-
-		ptype, found := t.(string)
-		if !found {
-			return registeredProviders, ErrProviderTypeInvalid{pname}
+		ptype, err := p.String("type", nil)
+		if err != nil {
+			switch err.(type) {
+			case dict.ErrKeyRequired:
+				return registeredProviders, ErrProviderTypeMissing(pname)
+			case dict.ErrKeyType:
+				return registeredProviders, ErrProviderTypeInvalid(pname)
+			default:
+				return registeredProviders, err
+			}
 		}
 
 		// register the provider
@@ -83,5 +80,5 @@ func Providers(providers []map[string]interface{}) (map[string]provider.Tiler, e
 		registeredProviders[pname] = prov
 	}
 
-	return registeredProviders, err
+	return registeredProviders, nil
 }

@@ -8,11 +8,12 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/file"
+	"github.com/go-spatial/tegola/dict"
 )
 
 func TestNew(t *testing.T) {
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		expected *file.Cache
 		err      error
 	}
@@ -27,7 +28,7 @@ func TestNew(t *testing.T) {
 				// correct error returned
 				return
 			}
-			t.Errorf("%v", err)
+			t.Errorf("unexpected error %v", err)
 			return
 		}
 
@@ -70,7 +71,7 @@ func TestNew(t *testing.T) {
 				"max_zoom": "foo",
 			},
 			expected: nil,
-			err:      fmt.Errorf("max_zoom value needs to be of type uint. Value is of type string"),
+			err:      fmt.Errorf(`config: value mapped to "max_zoom" is string not uint`),
 		},
 	}
 
@@ -84,7 +85,7 @@ func TestNew(t *testing.T) {
 
 func TestSetGetPurge(t *testing.T) {
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		expected []byte
 	}
@@ -150,7 +151,7 @@ func TestSetGetPurge(t *testing.T) {
 
 func TestSetOverwrite(t *testing.T) {
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		bytes1   []byte
 		bytes2   []byte
@@ -227,7 +228,7 @@ func TestSetOverwrite(t *testing.T) {
 
 func TestMaxZoom(t *testing.T) {
 	type tcase struct {
-		config      map[string]interface{}
+		config      dict.Dict
 		key         cache.Key
 		bytes       []byte
 		expectedHit bool

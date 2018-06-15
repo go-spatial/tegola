@@ -1,12 +1,15 @@
 package redis_test
 
 import (
+	"net"
+	"os"
 	"reflect"
-	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/redis"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
 )
 
@@ -18,12 +21,52 @@ const TESTENV = "RUN_REDIS_TESTS"
 func TestNew(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
-	type tc struct {
-		config   map[string]interface{}
-		errMatch string
+	type tcase struct {
+		config      dict.Dict
+		expectedErr error
 	}
 
-	testcases := map[string]tc{
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
+		_, err := redis.New(tc.config)
+		if tc.expectedErr != nil {
+			if err == nil {
+				t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+				return
+			}
+
+			// check error types
+			if reflect.TypeOf(err) != reflect.TypeOf(tc.expectedErr) {
+				t.Errorf("invalid error type. expected %T, got %T", tc.expectedErr, err)
+				return
+			}
+
+			switch e := err.(type) {
+			case *net.OpError:
+				expectedErr := tc.expectedErr.(*net.OpError)
+
+				if reflect.TypeOf(e.Err) != reflect.TypeOf(expectedErr.Err) {
+					t.Errorf("invalid error type. expected %T, got %T", expectedErr.Err, e.Err)
+					return
+				}
+			default:
+				// check error messages
+				if err.Error() != tc.expectedErr.Error() {
+					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err.Error())
+					return
+				}
+			}
+
+			return
+		}
+		if err != nil {
+			t.Errorf("unexpected err: %v", err)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
 		"explicit config": {
 			config: map[string]interface{}{
 				"network":  "tcp",
@@ -32,42 +75,53 @@ func TestNew(t *testing.T) {
 				"db":       0,
 				"max_zoom": uint(10),
 			},
-			errMatch: "",
 		},
 		"implicit config": {
-			config:   map[string]interface{}{},
-			errMatch: "",
+			config: map[string]interface{}{},
 		},
 		"bad address": {
 			config: map[string]interface{}{
 				"address": "127.0.0.1:6000",
 			},
-			errMatch: "connection refused",
+			expectedErr: &net.OpError{
+				Op:  "dial",
+				Net: "tcp",
+				Addr: &net.TCPAddr{
+					IP:   net.ParseIP("127.0.0.1"),
+					Port: 6000,
+				},
+				Err: &os.SyscallError{
+					Err: syscall.ECONNREFUSED,
+				},
+			},
 		},
 		"bad max_zoom": {
 			config: map[string]interface{}{
 				"max_zoom": "2",
 			},
-			errMatch: "max_zoom value needs to be of type uint. Value is of type string",
+			expectedErr: dict.ErrKeyType{
+				Key:   "max_zoom",
+				Value: "2",
+				T:     reflect.TypeOf(uint(0)),
+			},
 		},
 		"bad max_zoom 2": {
 			config: map[string]interface{}{
 				"max_zoom": -2,
 			},
-			errMatch: "max_zoom value needs to be of type uint. Value is of type int",
+			expectedErr: dict.ErrKeyType{
+				Key:   "max_zoom",
+				Value: -2,
+				T:     reflect.TypeOf(uint(0)),
+			},
 		},
 	}
 
-	for i, tc := range testcases {
-		_, err := redis.New(tc.config)
-		if err != nil {
-			if tc.errMatch != "" && strings.Contains(err.Error(), tc.errMatch) {
-				// correct error returned
-				continue
-			}
-			t.Errorf("[%v] unexpected err, expected to find %q in %q", i, tc.errMatch, err)
-			continue
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
 	}
 }
 
@@ -75,7 +129,7 @@ func TestSetGetPurge(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
 	type tc struct {
-		config       map[string]interface{}
+		config       dict.Dict
 		key          cache.Key
 		expectedData []byte
 		expectedHit  bool
@@ -150,7 +204,7 @@ func TestSetGetPurge(t *testing.T) {
 func TestSetOverwrite(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 	type tc struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		bytes1   []byte
 		bytes2   []byte
@@ -217,7 +271,7 @@ func TestSetOverwrite(t *testing.T) {
 func TestMaxZoom(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 	type tcase struct {
-		config      map[string]interface{}
+		config      dict.Dict
 		key         cache.Key
 		bytes       []byte
 		expectedHit bool

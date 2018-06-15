@@ -27,10 +27,10 @@
 			"revisionTime": "2017-05-07T10:33:33Z"
 		},
 		{
-			"checksumSHA1": "52yky33tRrIw0DUvHMcrEWx2OfE=",
-			"path": "github.com/akrylysov/algnhsa",
-			"revision": "6b0effb2a8105690435d472b180c4cc1ba6b2dc8",
-			"revisionTime": "2018-05-02T23:46:33Z"
+			"checksumSHA1": "stlCSj5YfHbH1fZvziEZtMTxa8I=",
+			"path": "github.com/arolek/algnhsa",
+			"revision": "c6c22c361ed25a5b441f4d741573385abc72ccd4",
+			"revisionTime": "2018-06-06T22:25:14Z"
 		},
 		{
 			"checksumSHA1": "H+nuubKZtdEPryI/ZiaF3W+hnus=",
@@ -273,52 +273,52 @@
 			"revisionTime": "2018-02-15T11:00:54Z"
 		},
 		{
-			"checksumSHA1": "VArPKtf4oEk3olzzhAM/YiQ2teU=",
+			"checksumSHA1": "aI+j75XA6Z+sWAQdcP3eMmYTj08=",
 			"path": "github.com/go-spatial/geom",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
 			"checksumSHA1": "o8Raj/QGN30BPBHndQMO++3Qulc=",
 			"path": "github.com/go-spatial/geom/cmp",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
-			"checksumSHA1": "qJqMiY0d7h1xYsgJ0s/c9OIcO2M=",
+			"checksumSHA1": "nI30tAnIkEh8ljn+qYsgKmd440E=",
 			"path": "github.com/go-spatial/geom/encoding/wkb",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
 			"checksumSHA1": "cbxzkF7Qas08G7TBXkv5afpJmkY=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/consts",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
 			"checksumSHA1": "FwWv3mHOHaWWmlD4A3S34boo2bY=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/decode",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
 			"checksumSHA1": "52nmbyH1lTE1aJ/jNqOBFCOpazk=",
 			"path": "github.com/go-spatial/geom/encoding/wkb/internal/encode",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
-			"checksumSHA1": "UGlhFPZERs/pRq/mIE8+GUTRq1U=",
+			"checksumSHA1": "U2JkAfWI5nBagnL/MjN2xCuifxk=",
 			"path": "github.com/go-spatial/geom/encoding/wkt",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
-			"checksumSHA1": "50agr4g6gwl5wDRAdv/+LCtDWb8=",
+			"checksumSHA1": "IOqvwFC+WfeiH2kqD0/0v1OyROI=",
 			"path": "github.com/go-spatial/geom/slippy",
-			"revision": "6774c5a33e7dc70863cb768b32cc094c853570a3",
-			"revisionTime": "2018-04-18T05:48:00Z"
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
 		},
 		{
 			"checksumSHA1": "NFd/7OSLQKBzvwufplt4kbokfbA=",

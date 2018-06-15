@@ -14,7 +14,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/config/env"
+	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
@@ -26,10 +26,10 @@ type Config struct {
 	// If this is an empty string, it means that the location was unknown. This is the case if
 	// the Parse() function is used directly.
 	LocationName string
-	Webserver    Webserver              `toml:"webserver"`
-	Cache        map[string]interface{} `toml:"cache"`
+	Webserver    Webserver `toml:"webserver"`
+	Cache        env.Dict  `toml:"cache"`
 	// Map of providers.
-	Providers []map[string]interface{}
+	Providers []env.Dict
 	Maps      []Map
 }
 

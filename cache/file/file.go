@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/util/dict"
+	"github.com/go-spatial/tegola/dict"
 )
 
 var (
@@ -31,24 +31,21 @@ func init() {
 // 	basepath (string): a path to where the cache will be written
 // 	max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
 //
-func New(config map[string]interface{}) (cache.Interface, error) {
+func New(config dict.Dicter) (cache.Interface, error) {
 	var err error
 
 	// new filecache
 	fc := Cache{}
 
-	// parse the config
-	c := dict.M(config)
-
 	defaultMaxZoom := uint(tegola.MaxZ)
-	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
+	maxZoom, err := config.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
 
 	fc.MaxZoom = maxZoom
 
-	fc.Basepath, err = c.String(ConfigKeyBasepath, nil)
+	fc.Basepath, err = config.String(ConfigKeyBasepath, nil)
 	if err != nil {
 		return nil, ErrMissingBasepath
 	}

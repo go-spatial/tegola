@@ -31,7 +31,35 @@ type Tile struct {
 	SRID uint64
 }
 
+func NewTileLatLon(z uint, lat, lon, buffer float64, srid uint64) *Tile {
+	x := Lon2Tile(z, lon)
+	y := Lat2Tile(z, lat)
+
+	return &Tile{
+		z:      z,
+		x:      x,
+		y:      y,
+		Buffer: buffer,
+		SRID:   srid,
+	}
+}
+
 func (t *Tile) ZXY() (uint, uint, uint) { return t.z, t.x, t.y }
+
+func Lat2Tile(zoom uint, lat float64) (y uint) {
+	lat_rad := lat * math.Pi / 180
+
+	return uint(math.Exp2(float64(zoom))*
+		(1.0-math.Log(
+			math.Tan(lat_rad)+
+				(1/math.Cos(lat_rad)))/math.Pi)) /
+		2.0
+
+}
+
+func Lon2Tile(zoom uint, lon float64) (x uint) {
+	return uint(math.Exp2(float64(zoom)) * (lon + 180.0) / 360.0)
+}
 
 // Tile2Lon will return the west most longitude
 func Tile2Lon(x, z uint) float64 { return float64(x)/math.Exp2(float64(z))*360.0 - 180.0 }
@@ -152,4 +180,33 @@ func (t *Tile) BufferedExtent() (bufferedExtent *geom.Extent, srid uint64) {
 		},
 	)
 	return bufferedExtent, t.SRID
+}
+
+// TODO (ear7h): sibling support
+// RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
+func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
+	// handle ancestors and self
+	if zoom <= t.z {
+		mag := t.z - zoom
+		arg := NewTile(zoom, t.x>>mag, t.y>>mag, t.Buffer, t.SRID)
+		return f(arg)
+	}
+
+	// handle descendants
+	mag := zoom - t.z
+	delta := uint(math.Exp2(float64(mag)))
+
+	leastX := t.x << mag
+	leastY := t.y << mag
+
+	for x := leastX; x < leastX+delta; x++ {
+		for y := leastY; y < leastY+delta; y++ {
+			err := f(NewTile(zoom, x, y, 0, geom.WebMercator))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/dict"
 )
 
 var (
@@ -12,16 +13,17 @@ var (
 )
 
 // Cache registers cache backends
-func Cache(config map[string]interface{}) (cache.Interface, error) {
-	// lookup our cache type
-	t, ok := config["type"]
-	if !ok {
-		return nil, ErrCacheTypeMissing
-	}
-
-	cType, ok := t.(string)
-	if !ok {
-		return nil, ErrCacheTypeInvalid
+func Cache(config dict.Dicter) (cache.Interface, error) {
+	cType, err := config.String("type", nil)
+	if err != nil {
+		switch err.(type) {
+		case dict.ErrKeyRequired:
+			return nil, ErrCacheTypeMissing
+		case dict.ErrKeyType:
+			return nil, ErrCacheTypeInvalid
+		default:
+			return nil, err
+		}
 	}
 
 	// register the provider

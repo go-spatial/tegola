@@ -4,18 +4,25 @@ import (
 	"testing"
 
 	"github.com/go-spatial/tegola/cmd/internal/register"
+	"github.com/go-spatial/tegola/dict"
 )
 
 func TestProviders(t *testing.T) {
 	type tcase struct {
-		config      []map[string]interface{}
+		config      []dict.Dict
 		expectedErr error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
 		var err error
 
-		_, err = register.Providers(tc.config)
+		// convert []dict.Dict -> []dict.Dicter
+		provArr := make([]dict.Dicter, len(tc.config))
+		for i := range provArr {
+			provArr[i] = tc.config[i]
+		}
+
+		_, err = register.Providers(provArr)
 		if tc.expectedErr != nil {
 			if err.Error() != tc.expectedErr.Error() {
 				t.Errorf("invalid error. expected: %v, got %v", tc.expectedErr, err.Error())
@@ -30,7 +37,7 @@ func TestProviders(t *testing.T) {
 
 	tests := map[string]tcase{
 		"missing name": {
-			config: []map[string]interface{}{
+			config: []dict.Dict{
 				{
 					"type": "postgis",
 				},
@@ -38,7 +45,7 @@ func TestProviders(t *testing.T) {
 			expectedErr: register.ErrProviderNameMissing,
 		},
 		"name is not string": {
-			config: []map[string]interface{}{
+			config: []dict.Dict{
 				{
 					"name": 1,
 				},
@@ -46,24 +53,24 @@ func TestProviders(t *testing.T) {
 			expectedErr: register.ErrProviderNameInvalid,
 		},
 		"missing type": {
-			config: []map[string]interface{}{
+			config: []dict.Dict{
 				{
 					"name": "test",
 				},
 			},
-			expectedErr: register.ErrProviderTypeMissing{"test"},
+			expectedErr: register.ErrProviderTypeMissing("test"),
 		},
 		"invalid type": {
-			config: []map[string]interface{}{
+			config: []dict.Dict{
 				{
 					"name": "test",
 					"type": 1,
 				},
 			},
-			expectedErr: register.ErrProviderTypeInvalid{"test"},
+			expectedErr: register.ErrProviderTypeInvalid("test"),
 		},
 		"already registered": {
-			config: []map[string]interface{}{
+			config: []dict.Dict{
 				{
 					"name": "test",
 					"type": "debug",
@@ -73,10 +80,10 @@ func TestProviders(t *testing.T) {
 					"type": "debug",
 				},
 			},
-			expectedErr: register.ErrProviderAlreadyRegistered{"test"},
+			expectedErr: register.ErrProviderAlreadyRegistered("test"),
 		},
 		"success": {
-			config: []map[string]interface{}{
+			config: []dict.Dict{
 				{
 					"name": "test",
 					"type": "debug",

@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/gpkg"
 )
@@ -174,7 +175,7 @@ func TestAutoConfig(t *testing.T) {
 
 func TestNewTileProvider(t *testing.T) {
 	type tcase struct {
-		config             map[string]interface{}
+		config             dict.Dict
 		expectedLayerCount int
 		expectedErr        error
 	}
@@ -253,7 +254,7 @@ func (t *MockTile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
 func TestTileFeatures(t *testing.T) {
 	type tcase struct {
-		config               map[string]interface{}
+		config               dict.Dict
 		layerName            string
 		tile                 MockTile
 		expectedFeatureCount int
@@ -387,7 +388,7 @@ func TestTileFeatures(t *testing.T) {
 
 func TestConfigs(t *testing.T) {
 	type tcase struct {
-		config       map[string]interface{}
+		config       dict.Dict
 		tile         MockTile
 		layerName    string
 		expectedTags map[uint64]map[string]interface{}
@@ -431,7 +432,7 @@ func TestConfigs(t *testing.T) {
 
 	tests := map[string]tcase{
 		"expecting tags": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"amenity", "religion", "tourism", "shop"}},
@@ -463,7 +464,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"no tags provided": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"amenity", "religion", "tourism", "shop"}},
@@ -484,7 +485,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"simple sql": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{
@@ -517,7 +518,7 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		"complex sql": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"filepath": GPKGAthensFilePath,
 				"layers": []map[string]interface{}{
 					{
@@ -567,7 +568,7 @@ func TestConfigs(t *testing.T) {
 func TestOpenNonExistantFile(t *testing.T) {
 
 	type tcase struct {
-		config map[string]interface{}
+		config dict.Dict
 		err    error
 	}
 	const (
@@ -578,14 +579,14 @@ func TestOpenNonExistantFile(t *testing.T) {
 
 	tests := map[string]tcase{
 		"empty": tcase{
-			config: map[string]interface{}{
+			config: dict.Dict{
 				gpkg.ConfigKeyFilePath: "",
 			},
 			err: gpkg.ErrInvalidFilePath{FilePath: ""},
 		},
 		"nonexistance": tcase{
 			// should not exists
-			config: map[string]interface{}{
+			config: dict.Dict{
 				gpkg.ConfigKeyFilePath: NONEXISTANTFILE,
 			},
 			err: gpkg.ErrInvalidFilePath{FilePath: NONEXISTANTFILE},

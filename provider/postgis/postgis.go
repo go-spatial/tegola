@@ -1,6 +1,7 @@
 package postgis
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,14 +10,13 @@ import (
 
 	"github.com/jackc/pgx"
 
-	"context"
-
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/go-spatial/tegola/util/dict"
+
+	"github.com/go-spatial/tegola/dict"
 )
 
 const Name = "postgis"
@@ -91,42 +91,40 @@ func init() {
 // 			!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
 // 			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
-func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
-	// Validate the config to make sure it has the values I care about and the types for those values.
-	c := dict.M(config)
+func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 
-	host, err := c.String(ConfigKeyHost, nil)
+	host, err := config.String(ConfigKeyHost, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := c.String(ConfigKeyDB, nil)
+	db, err := config.String(ConfigKeyDB, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := c.String(ConfigKeyUser, nil)
+	user, err := config.String(ConfigKeyUser, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	password, err := c.String(ConfigKeyPassword, nil)
+	password, err := config.String(ConfigKeyPassword, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	port := int64(DefaultPort)
-	if port, err = c.Int64(ConfigKeyPort, &port); err != nil {
+	port := DefaultPort
+	if port, err = config.Int(ConfigKeyPort, &port); err != nil {
 		return nil, err
 	}
 
-	maxcon := int64(DefaultMaxConn)
-	if maxcon, err = c.Int64(ConfigKeyMaxConn, &maxcon); err != nil {
+	maxcon := DefaultMaxConn
+	if maxcon, err = config.Int(ConfigKeyMaxConn, &maxcon); err != nil {
 		return nil, err
 	}
 
-	var srid = int64(DefaultSRID)
-	if srid, err = c.Int64(ConfigKeySRID, &srid); err != nil {
+	var srid = DefaultSRID
+	if srid, err = config.Int(ConfigKeySRID, &srid); err != nil {
 		return nil, err
 	}
 
@@ -148,18 +146,17 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		return nil, fmt.Errorf("Failed while creating connection pool: %v", err)
 	}
 
-	layers, ok := c[ConfigKeyLayers].([]map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("Expected %v to be a []map[string]interface{}", ConfigKeyLayers)
+	layers, err := config.MapSlice(ConfigKeyLayers)
+	if err != nil {
+		return nil, err
 	}
 
 	lyrs := make(map[string]Layer)
 	lyrsSeen := make(map[string]int)
 
-	for i, v := range layers {
-		vc := dict.M(v)
+	for i, layer := range layers {
 
-		lname, err := vc.String(ConfigKeyLayerName, nil)
+		lname, err := layer.String(ConfigKeyLayerName, nil)
 		if err != nil {
 			return nil, fmt.Errorf("For layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
 		}
@@ -171,19 +168,19 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			p.firstlayer = lname
 		}
 
-		fields, err := vc.StringSlice(ConfigKeyFields)
+		fields, err := layer.StringSlice(ConfigKeyFields)
 		if err != nil {
 			return nil, fmt.Errorf("For layer (%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
 		}
 
 		geomfld := "geom"
-		geomfld, err = vc.String(ConfigKeyGeomField, &geomfld)
+		geomfld, err = layer.String(ConfigKeyGeomField, &geomfld)
 		if err != nil {
 			return nil, fmt.Errorf("For layer (%v) %v : %v", i, lname, err)
 		}
 
 		idfld := "gid"
-		idfld, err = vc.String(ConfigKeyGeomIDField, &idfld)
+		idfld, err = layer.String(ConfigKeyGeomIDField, &idfld)
 		if err != nil {
 			return nil, fmt.Errorf("For layer (%v) %v : %v", i, lname, err)
 		}
@@ -192,13 +189,13 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		}
 
 		var tblName string
-		tblName, err = vc.String(ConfigKeyTablename, &lname)
+		tblName, err = layer.String(ConfigKeyTablename, &lname)
 		if err != nil {
 			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
 		}
 
 		var sql string
-		sql, err = vc.String(ConfigKeySQL, &sql)
+		sql, err = layer.String(ConfigKeySQL, &sql)
 		if err != nil {
 			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
 		}
@@ -208,7 +205,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 		}
 
 		var lsrid = srid
-		if lsrid, err = vc.Int64(ConfigKeySRID, &lsrid); err != nil {
+		if lsrid, err = layer.Int(ConfigKeySRID, &lsrid); err != nil {
 			return nil, err
 		}
 
@@ -218,6 +215,7 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			geomField: geomfld,
 			srid:      uint64(lsrid),
 		}
+
 		if sql != "" {
 			// make sure that the sql has a !BBOX! token
 			if !strings.Contains(sql, bboxToken) {

@@ -16,6 +16,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/draw/svg"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/validate"
@@ -95,11 +96,19 @@ func drawCommand(cmd *cobra.Command, args []string) {
 		format:  drawOutputFilenameFormat,
 		basedir: drawOutputBaseDir,
 	}
-	providers, err := register.Providers(config.Providers)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading providers in config(%v): %v\n", configFilename, err)
-		os.Exit(1)
+
+	// convert []env.Map -> []dict.Dicter
+	provArr := make([]dict.Dicter, len(config.Providers))
+	for i := range provArr {
+		provArr[i] = config.Providers[i]
 	}
+
+	// register providers
+	providers, err := register.Providers(provArr)
+	if err != nil {
+		log.Fatalf("Error loading providers in config(%v): %v\n", configFilename, err)
+	}
+
 	prv, lyr := splitProviderLayer(providerString)
 	var allprvs []string
 	for name := range providers {

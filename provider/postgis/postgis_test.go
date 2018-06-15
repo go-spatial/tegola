@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
 )
@@ -16,7 +17,7 @@ func TestNewTileProvider(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
 	type tcase struct {
-		config map[string]interface{}
+		config dict.Dict
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -29,7 +30,7 @@ func TestNewTileProvider(t *testing.T) {
 
 	tests := map[string]tcase{
 		"1": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
 				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
@@ -55,7 +56,7 @@ func TestTileFeatures(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
 	type tcase struct {
-		config               map[string]interface{}
+		config               dict.Dict
 		tile                 *slippy.Tile
 		expectedFeatureCount int
 	}
@@ -91,7 +92,7 @@ func TestTileFeatures(t *testing.T) {
 
 	tests := map[string]tcase{
 		"land query": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
 				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
@@ -108,7 +109,7 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 4032,
 		},
 		"scalerank test": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
 				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
@@ -125,7 +126,7 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 98,
 		},
 		"decode numeric(x,x) types": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:     port,
 				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),

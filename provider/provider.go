@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
@@ -33,7 +34,7 @@ type LayerInfo interface {
 }
 
 // InitFunc initilize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
-type InitFunc func(map[string]interface{}) (Tiler, error)
+type InitFunc func(dicter dict.Dicter) (Tiler, error)
 
 // CleanupFunc is called to when the system is shuting down, this allows the provider to cleanup.
 type CleanupFunc func()
@@ -78,7 +79,7 @@ func Drivers() (l []string) {
 }
 
 // For function returns a configured provider of the given type, provided the correct config map.
-func For(name string, config map[string]interface{}) (Tiler, error) {
+func For(name string, config dict.Dicter) (Tiler, error) {
 	if providers == nil {
 		return nil, fmt.Errorf("no providers registered")
 	}
