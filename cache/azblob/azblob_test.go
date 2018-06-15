@@ -1,26 +1,26 @@
 package azblob_test
 
 import (
-	"testing"
-	"os"
 	"fmt"
+	"os"
 	"reflect"
+	"testing"
 
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/cache/azblob"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
-	"github.com/go-spatial/tegola/cache/azblob"
 )
 
-const TESTENV  = "RUN_AZBLOB_TESTS"
+const TESTENV = "RUN_AZBLOB_TESTS"
 
 func TestNew(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
-		config dict.Dict
+		config         dict.Dict
 		expectReadOnly bool
-		err    error
+		err            error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -32,7 +32,6 @@ func TestNew(t *testing.T) {
 				t.Errorf("unexpected err %v", err)
 				return
 			}
-
 
 			if err.Error() == tc.err.Error() {
 				// correct error returned
@@ -58,19 +57,19 @@ func TestNew(t *testing.T) {
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
 			},
 			expectReadOnly: false,
-			err: nil,
+			err:            nil,
 		},
 		"anon creds": {
 			config: dict.Dict{
-				"container_url":   os.Getenv("AZ_CONTAINER_PUB_URL"),
+				"container_url": os.Getenv("AZ_CONTAINER_PUB_URL"),
 			},
 			expectReadOnly: true,
-			err: nil,
+			err:            nil,
 		},
 		"invalid value for max_zoom": {
 			config: dict.Dict{
-				"container_url":   os.Getenv("AZ_CONTAINER_PUB_URL"),
-				"max_zoom": "foo",
+				"container_url": os.Getenv("AZ_CONTAINER_PUB_URL"),
+				"max_zoom":      "foo",
 			},
 			err: fmt.Errorf(`config: value mapped to "max_zoom" is string not uint`),
 		},
@@ -240,7 +239,6 @@ func TestSetOverwrite(t *testing.T) {
 	}
 }
 
-
 func TestMaxZoom(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
@@ -295,7 +293,7 @@ func TestMaxZoom(t *testing.T) {
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
-				"max_zoom": uint(10),
+				"max_zoom":        uint(10),
 			},
 			key: cache.Key{
 				Z: 11,
@@ -310,7 +308,7 @@ func TestMaxZoom(t *testing.T) {
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
-				"max_zoom": uint(10),
+				"max_zoom":        uint(10),
 			},
 			key: cache.Key{
 				Z: 9,
@@ -325,7 +323,7 @@ func TestMaxZoom(t *testing.T) {
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
-				"max_zoom": uint(10),
+				"max_zoom":        uint(10),
 			},
 			key: cache.Key{
 				Z: 10,

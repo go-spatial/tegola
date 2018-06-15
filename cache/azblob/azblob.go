@@ -1,20 +1,19 @@
 package azblob
 
 import (
-	"path/filepath"
 	"bytes"
-	"net/http"
-	"io/ioutil"
-	"net/url"
 	"context"
 	"encoding/binary"
 	"fmt"
-	"strconv"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"path/filepath"
 
 	"github.com/Azure/azure-storage-blob-go/2016-05-31/azblob"
 
-	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
 )
 
