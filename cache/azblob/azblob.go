@@ -5,17 +5,17 @@ import (
 	"bytes"
 	"net/http"
 	"io/ioutil"
-
-	"github.com/Azure/azure-storage-blob-go/2016-05-31/azblob"
-
-	"github.com/go-spatial/tegola/cache"
 	"net/url"
-	"github.com/go-spatial/tegola/util/dict"
-	"github.com/go-spatial/tegola"
 	"context"
 	"encoding/binary"
 	"fmt"
 	"strconv"
+
+	"github.com/Azure/azure-storage-blob-go/2016-05-31/azblob"
+
+	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/dict"
 )
 
 const CacheType = "azblob"
@@ -35,15 +35,12 @@ func init() {
 	cache.Register(CacheType, New)
 }
 
-func New(config map[string]interface{}) (cache.Interface, error) {
+func New(config dict.Dicter) (cache.Interface, error) {
 	azCache := Cache{}
-
-	//parse the config
-	c := dict.M(config)
 
 	// the config map's underlying value is int
 	defaultMaxZoom := uint(tegola.MaxZ)
-	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
+	maxZoom, err := config.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
@@ -52,20 +49,15 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 
 	// basepath
 	basePath := ""
-	basePath, err = c.String(ConfigKeyBasepath, &basePath)
+	basePath, err = config.String(ConfigKeyBasepath, &basePath)
 	if err != nil {
 		return nil, err
 	}
 
 	azCache.Basepath = basePath
 
-	// TODO: use (dict).Bool method
-	readOnlyStr := strconv.FormatBool(false)
-	readOnlyStr, err = c.String(ConfigKeyReadOnly, &readOnlyStr)
-	if err != nil {
-		return nil, err
-	}
-	readOnly, err := strconv.ParseBool(readOnlyStr)
+	readOnly := false
+	readOnly, err = config.Bool(ConfigKeyReadOnly, &readOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -74,13 +66,13 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 
 	// credentials
 	acctName := ""
-	acctName, err = c.String(ConfigKeyAzureAccountName, &acctName)
+	acctName, err = config.String(ConfigKeyAzureAccountName, &acctName)
 	if err != nil {
 		return nil, err
 	}
 
 	acctKey := ""
-	acctKey, err = c.String(ConfigKeyAzureSharedKey, &acctKey)
+	acctKey, err = config.String(ConfigKeyAzureSharedKey, &acctKey)
 	if err != nil {
 
 	}
@@ -107,7 +99,7 @@ func New(config map[string]interface{}) (cache.Interface, error) {
 	pipeline := azblob.NewPipeline(cred, pipelineOpts)
 
 	// container
-	uStr, err := c.String(ConfigKeyContainerUrl, nil)
+	uStr, err := config.String(ConfigKeyContainerUrl, nil)
 	if err != nil {
 		return nil, err
 	}

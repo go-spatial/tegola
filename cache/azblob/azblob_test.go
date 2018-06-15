@@ -3,19 +3,22 @@ package azblob_test
 import (
 	"testing"
 	"os"
-	"github.com/go-spatial/tegola/cache/azblob"
 	"fmt"
 	"reflect"
+
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/ttools"
+	"github.com/go-spatial/tegola/cache/azblob"
 )
 
+const TESTENV  = "RUN_AZBLOB_TESTS"
+
 func TestNew(t *testing.T) {
-	if os.Getenv("RUN_AZBLOB_TESTS") != "yes" {
-		return
-	}
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
-		config map[string]interface{}
+		config dict.Dict
 		expectReadOnly bool
 		err    error
 	}
@@ -49,7 +52,7 @@ func TestNew(t *testing.T) {
 
 	tests := map[string]tcase{
 		"static creds": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
@@ -58,18 +61,18 @@ func TestNew(t *testing.T) {
 			err: nil,
 		},
 		"anon creds": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"container_url":   os.Getenv("AZ_CONTAINER_PUB_URL"),
 			},
 			expectReadOnly: true,
 			err: nil,
 		},
 		"invalid value for max_zoom": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"container_url":   os.Getenv("AZ_CONTAINER_PUB_URL"),
 				"max_zoom": "foo",
 			},
-			err: fmt.Errorf("max_zoom value needs to be of type uint. Value is of type string"),
+			err: fmt.Errorf(`config: value mapped to "max_zoom" is string not uint`),
 		},
 	}
 
@@ -82,12 +85,10 @@ func TestNew(t *testing.T) {
 }
 
 func TestSetGetPurge(t *testing.T) {
-	if os.Getenv("RUN_AZBLOB_TESTS") != "yes" {
-		return
-	}
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		expected []byte
 	}
@@ -132,7 +133,7 @@ func TestSetGetPurge(t *testing.T) {
 
 	tests := map[string]tcase{
 		"get set purge": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
@@ -156,12 +157,10 @@ func TestSetGetPurge(t *testing.T) {
 }
 
 func TestSetOverwrite(t *testing.T) {
-	if os.Getenv("RUN_AZBLOB_TESTS") != "yes" {
-		return
-	}
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		bytes1   []byte
 		bytes2   []byte
@@ -217,7 +216,7 @@ func TestSetOverwrite(t *testing.T) {
 
 	tests := map[string]tcase{
 		"overwrite": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
@@ -243,12 +242,10 @@ func TestSetOverwrite(t *testing.T) {
 
 
 func TestMaxZoom(t *testing.T) {
-	if os.Getenv("RUN_AZBLOB_TESTS") != "yes" {
-		return
-	}
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
-		config      map[string]interface{}
+		config      dict.Dict
 		key         cache.Key
 		bytes       []byte
 		expectedHit bool
@@ -294,7 +291,7 @@ func TestMaxZoom(t *testing.T) {
 
 	tests := map[string]tcase{
 		"over max zoom": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
@@ -309,7 +306,7 @@ func TestMaxZoom(t *testing.T) {
 			expectedHit: false,
 		},
 		"under max zoom": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
@@ -324,7 +321,7 @@ func TestMaxZoom(t *testing.T) {
 			expectedHit: true,
 		},
 		"equals max zoom": {
-			config: map[string]interface{}{
+			config: dict.Dict{
 				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
 				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
 				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
