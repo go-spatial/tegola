@@ -422,14 +422,20 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		}
 
 		// decode our WKB
-		geom, err := wkb.DecodeBytes(geobytes)
+		geometry, err := wkb.DecodeBytes(geobytes)
 		if err != nil {
 			return fmt.Errorf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %v", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
 		}
 
+		// skip row if geometry collection empty.
+		g, ok := geometry.(geom.Collection)
+		if ok && len(g.Geometries()) == 0 {
+			continue
+		}
+
 		feature := provider.Feature{
 			ID:       gid,
-			Geometry: geom,
+			Geometry: geometry,
 			SRID:     plyr.SRID(),
 			Tags:     tags,
 		}
