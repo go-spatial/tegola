@@ -412,7 +412,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		if err != nil {
 			switch err.(type) {
 			case wkb.ErrUnknownGeometryType:
-				log.Printf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %v (skipping)", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
+				log.Printf("unknown geometry type (%v) for layer (%v) with geometry field (%v) where (%v = %v): %v (skipping)", err, layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid)
 				continue
 			default:
 				return fmt.Errorf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %v", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
