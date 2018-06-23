@@ -28,6 +28,10 @@ const (
 	ConfigKeyAzureSharedKey   = "az_shared_key"
 )
 
+const (
+	BlobHeaderLen = 8 // bytes
+)
+
 const testMsg = "\x41\x74\x6c\x61\x73\x20\x54\x65\x6c\x61\x6d\x6f\x6e"
 
 func init() {
@@ -73,7 +77,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	acctKey := ""
 	acctKey, err = config.String(ConfigKeyAzureSharedKey, &acctKey)
 	if err != nil {
-
+		return nil, err
 	}
 
 	var cred azblob.Credential
@@ -81,11 +85,9 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	if acctName+acctKey == "" {
 		cred = azblob.NewAnonymousCredential()
 		azCache.ReadOnly = true
+	} else if acctName == "" || acctKey == "" {
+		return nil, fmt.Errorf("both %s and %s must be present", ConfigKeyAzureAccountName, ConfigKeyAzureSharedKey)
 	} else {
-		if acctName == "" || acctKey == "" {
-			return nil, fmt.Errorf("both %s and %s must be present", ConfigKeyAzureAccountName, ConfigKeyAzureSharedKey)
-		}
-
 		cred = azblob.NewSharedKeyCredential(acctName, acctKey)
 	}
 
@@ -157,13 +159,17 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		}
 		if !hit {
 			//return an error?
-			panic("no hit on writable cache")
+			e := cache.ErrGettingFromCache{
+				Err: fmt.Errorf("no hit during test for key %s", key.String()),
+				CacheType: CacheType,
+			}
+			return nil, e
 		}
 
 		// test response of writable cache
 		if string(byt) != testMsg {
 			e := cache.ErrGettingFromCache{
-				Err:       fmt.Errorf("incrrect test response %s != %s", string(byt), testMsg),
+				Err:       fmt.Errorf("incorrect test response %s != %s", string(byt), testMsg),
 				CacheType: CacheType,
 			}
 
@@ -191,7 +197,8 @@ type Cache struct {
 	Container azblob.ContainerURL
 }
 
-func roundUp512(n int) int32 {
+func padBy512(n int) int32 {
+	n-- // n will always be >= BlobHeaderLen => n - 1 will never be negative
 	return int32(n + (512 - n%512))
 }
 
@@ -209,17 +216,16 @@ func (azb *Cache) Set(key *cache.Key, val []byte) error {
 
 	// must send things in multiples of 512 byte pages
 	msgLen := len(val)
-	blobLen := roundUp512(msgLen + 8)
+	blobLen := padBy512(msgLen + BlobHeaderLen)
 
 	// allocate blob
 	blobSlice := make([]byte, blobLen)
 	// encode the length of the blob
-	binary.BigEndian.PutUint64(blobSlice[:8], uint64(msgLen))
-	copy(blobSlice[8:], val)
+	binary.BigEndian.PutUint64(blobSlice[:BlobHeaderLen], uint64(msgLen))
+	copy(blobSlice[BlobHeaderLen:], val)
 
 	_, err := blob.Create(ctx, int64(blobLen), 0, httpHeaders, azblob.Metadata{}, azblob.BlobAccessConditions{})
 	if err != nil {
-		println("\n\n ERR CREATE \n\n")
 		return err
 	}
 
@@ -230,7 +236,6 @@ func (azb *Cache) Set(key *cache.Key, val []byte) error {
 
 	_, err = blob.PutPages(ctx, pageRange, bytes.NewReader(blobSlice), azblob.BlobAccessConditions{})
 	if err != nil {
-		println("\n\n ERR PUT \n\n")
 		return err
 	}
 
@@ -265,14 +270,14 @@ func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	}
 
 	// get the encoded message length
-	msgLen := binary.BigEndian.Uint64(blobSlice[:8])
+	msgLen := binary.BigEndian.Uint64(blobSlice[:BlobHeaderLen])
 
 	// check for out of bounds
-	if msgLen > uint64(len(blobSlice)) {
+	if msgLen > uint64(len(blobSlice) - BlobHeaderLen) {
 		return nil, false, fmt.Errorf("azblob: length section does not match message length")
 	}
 
-	return blobSlice[8:][:msgLen], true, nil
+	return blobSlice[BlobHeaderLen:][:msgLen], true, nil
 }
 
 func (azb *Cache) Purge(key *cache.Key) error {
