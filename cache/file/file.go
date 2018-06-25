@@ -118,7 +118,6 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 	if err != nil {
 		return err
 	}
-	//defer f.Close()
 
 	// copy the contents
 	_, err = f.Write(val)
