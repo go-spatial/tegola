@@ -121,10 +121,8 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
-	sslmode, err := config.String(ConfigKeySSLMode, nil)
-	if err != nil {
-		return nil, err
-	}
+	sslmode := "disable"
+	sslmode, err = config.String(ConfigKeySSLMode, &sslmode)
 
 	sslkey, err := config.String(ConfigKeySSLKey, nil)
 	if err != nil {
@@ -292,10 +290,6 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 }
 
 func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string, cc *pgx.ConnConfig) error {
-	// Match libpq default behavior
-	if sslMode == "" {
-		sslMode = "disable"
-	}
 
 	switch sslMode {
 	case "disable":
