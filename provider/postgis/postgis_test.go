@@ -50,19 +50,8 @@ func TestTLSConfig(t *testing.T) {
 			sslKey:      "",
 			sslCert:     "",
 			sslRootCert: "",
-			shouldError: false,
+			shouldError: true,
 			testFunc: func(config pgx.ConnConfig) {
-				if config.UseFallbackTLS != false {
-					t.Error("When using disable ssl mode; UseFallbackTLS, expected false got true")
-				}
-
-				if config.TLSConfig != nil {
-					t.Errorf("When using disable ssl mode; TLSConfig, expected nil got %v", testConnConfig.TLSConfig)
-				}
-
-				if config.FallbackTLSConfig != nil {
-					t.Errorf("When using disable ssl mode; FallbackTLSConfig, expected nil got %v", testConnConfig.FallbackTLSConfig)
-				}
 			},
 		},
 		"2": {
@@ -175,15 +164,6 @@ func TestTLSConfig(t *testing.T) {
 				if config.TLSConfig != nil && config.TLSConfig.ServerName != testConnConfig.Host {
 					t.Errorf("When using prefer ssl mode; TLSConfig.ServerName, expected %s got %s", testConnConfig.Host, config.TLSConfig.ServerName)
 				}
-			},
-		},
-		"8": {
-			sslMode:     "allow",
-			sslKey:      "",
-			sslCert:     "test",
-			sslRootCert: "",
-			shouldError: true,
-			testFunc: func(config pgx.ConnConfig) {
 			},
 		},
 	}
