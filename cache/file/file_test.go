@@ -137,7 +137,7 @@ func TestSetGetPurge(t *testing.T) {
 				X: 1,
 				Y: 2,
 			},
-			expected: []byte("\x53\x69\x6c\x61\x73"),
+			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
 		},
 	}
 
@@ -212,9 +212,9 @@ func TestSetOverwrite(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			bytes1:   []byte("\x66\x6f\x6f"),
-			bytes2:   []byte("\x53\x69\x6c\x61\x73"),
-			expected: []byte("\x53\x69\x6c\x61\x73"),
+			bytes1:   []byte{0x66, 0x6f, 0x6f},
+			bytes2:   []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
+			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
 		},
 	}
 
@@ -280,7 +280,7 @@ func TestMaxZoom(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: false,
 		},
 		"under max zoom": {
@@ -293,7 +293,7 @@ func TestMaxZoom(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: true,
 		},
 		"equals max zoom": {
@@ -306,7 +306,7 @@ func TestMaxZoom(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: true,
 		},
 	}
