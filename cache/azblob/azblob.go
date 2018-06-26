@@ -29,6 +29,12 @@ const (
 )
 
 const (
+	DefaultBasepath = ""
+	DefaultAccountName = ""
+	DefaultAccountKey = ""
+)
+
+const (
 	BlobHeaderLen = 8 // bytes
 )
 
@@ -39,42 +45,37 @@ func init() {
 }
 
 func New(config dict.Dicter) (cache.Interface, error) {
+	var err error
 	azCache := Cache{}
 
 	// the config map's underlying value is int
-	defaultMaxZoom := uint(tegola.MaxZ)
-	maxZoom, err := config.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
+	maxZoom := uint(tegola.MaxZ)
+	azCache.MaxZoom , err = config.Uint(ConfigKeyMaxZoom, &maxZoom)
 	if err != nil {
 		return nil, err
 	}
-
-	azCache.MaxZoom = maxZoom
 
 	// basepath
-	basePath := ""
-	basePath, err = config.String(ConfigKeyBasepath, &basePath)
+	basePath := DefaultBasepath
+	azCache.Basepath, err = config.String(ConfigKeyBasepath, &basePath)
 	if err != nil {
 		return nil, err
 	}
-
-	azCache.Basepath = basePath
 
 	readOnly := false
-	readOnly, err = config.Bool(ConfigKeyReadOnly, &readOnly)
+	azCache.ReadOnly, err = config.Bool(ConfigKeyReadOnly, &readOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	azCache.ReadOnly = readOnly
-
 	// credentials
-	acctName := ""
+	acctName := DefaultAccountName
 	acctName, err = config.String(ConfigKeyAzureAccountName, &acctName)
 	if err != nil {
 		return nil, err
 	}
 
-	acctKey := ""
+	acctKey := DefaultAccountKey
 	acctKey, err = config.String(ConfigKeyAzureSharedKey, &acctKey)
 	if err != nil {
 		return nil, err

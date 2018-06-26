@@ -38,12 +38,10 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	fc := Cache{}
 
 	defaultMaxZoom := uint(tegola.MaxZ)
-	maxZoom, err := config.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
+	fc.MaxZoom, err = config.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
-
-	fc.MaxZoom = maxZoom
 
 	fc.Basepath, err = config.String(ConfigKeyBasepath, nil)
 	if err != nil {
