@@ -47,6 +47,9 @@ const (
 	DefaultPort    = 5432
 	DefaultSRID    = tegola.WebMercator
 	DefaultMaxConn = 100
+	DefaultSSLMode = "disable"
+	DefaultSSLKey = ""
+	DefaultSSLCert = ""
 )
 
 const (
@@ -121,20 +124,23 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
-	sslmode := "disable"
+	sslmode := DefaultSSLMode
 	sslmode, err = config.String(ConfigKeySSLMode, &sslmode)
 
-	sslkey, err := config.String(ConfigKeySSLKey, nil)
+	sslkey := DefaultSSLKey
+	sslkey, err = config.String(ConfigKeySSLKey, &sslkey)
 	if err != nil {
 		return nil, err
 	}
 
-	sslcert, err := config.String(ConfigKeySSLCert, nil)
+	sslcert := DefaultSSLCert
+	sslcert, err = config.String(ConfigKeySSLCert, &sslcert)
 	if err != nil {
 		return nil, err
 	}
 
-	sslrootcert, err := config.String(ConfigKeySSLRootCert, nil)
+	sslrootcert := DefaultSSLCert
+	sslrootcert, err = config.String(ConfigKeySSLRootCert, &sslrootcert)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +155,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
-	var srid = DefaultSRID
+	srid := DefaultSRID
 	if srid, err = config.Int(ConfigKeySRID, &srid); err != nil {
 		return nil, err
 	}
@@ -332,9 +338,7 @@ func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string
 
 	if (sslCert == "") != (sslKey == "") {
 		return fmt.Errorf(`both "sslcert" and "sslkey" are required`)
-	}
-
-	if sslCert != "" && sslKey != "" {
+	} else if sslCert != "" { // we must have both now
 		cert, err := tls.LoadX509KeyPair(sslCert, sslKey)
 		if err != nil {
 			return errors.Wrap(err, "unable to read cert")
