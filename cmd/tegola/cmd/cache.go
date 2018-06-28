@@ -363,6 +363,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		_, xi, yi := corner.ZXY()
 		_, xf, yf := diagCorder.ZXY()
 
+		// ensure the initials are smaller than finals
 		if xi > xf {xi, xf = xf, xi}
 		if yi > yi {yi, yf = yf, yi}
 
