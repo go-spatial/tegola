@@ -175,6 +175,26 @@ The following tokens are supported in custom SQL queries for the PostGIS data pr
 - `!ZOOM!` - [optional] Pass in the zoom value for the request. Useful for filtering feature results by zoom.
 
 ## Environment Variables
+
+#### Config TOML
+Environment variables can be injected into the configuration file. One caveat is that the injection has to be within a string, though the value it represents does not have to be a string.
+
+The above config example could be written as:
+```toml
+# register data providers
+[[providers]]
+name = "test_postgis"
+type = "postgis"
+host = "${POSTGIS_HOST}"    # postgis database host (required)
+port = "${POSTGIS_PORT}"    # recall this value must be an int
+database = "${POSTGIS_DB}"
+user = "tegola"
+password = ""
+srid = 3857
+max_connections = "${POSTGIS_MAX_CONN}"
+```
+
+#### SQL Debugging
 The following environment variables can be used for debugging:
 
 `SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
