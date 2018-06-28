@@ -54,6 +54,21 @@ var serverCmd = &cobra.Command{
 			server.URIPrefix = string(conf.Webserver.URIPrefix)
 		}
 
+		if conf.Webserver.SSLCert+conf.Webserver.SSLKey != "" {
+			if conf.Webserver.SSLCert == "" {
+				// error
+				log.Fatal("config must have both or nether ssl_key and ssl_cert, missing ssl_cert")
+			}
+
+			if conf.Webserver.SSLKey == "" {
+				// error
+				log.Fatal("config must have both or nether ssl_key and ssl_cert, missing ssl_key")
+			}
+
+			server.SSLCert = string(conf.Webserver.SSLCert)
+			server.SSLKey = string(conf.Webserver.SSLKey)
+		}
+
 		// start our webserver
 		srv := server.Start(nil, serverPort)
 		shutdown(srv)
