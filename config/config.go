@@ -37,6 +37,8 @@ type Webserver struct {
 	Port      env.String `toml:"port"`
 	URIPrefix env.String `toml:"uri_prefix"`
 	Headers   env.Dict   `toml:"headers"`
+	SSLCert env.String `toml:"ssl_cert"`
+	SSLKey env.String `toml:"ssl_key"`
 }
 
 // A Map represents a map in the Tegola Config file.

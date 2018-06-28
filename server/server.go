@@ -32,6 +32,12 @@ var (
 	// configurable via the tegola config.toml file (set in main.go)
 	Port string
 
+	// SSLCert is a filepath to an SSL cert, this will be used to enable https
+	SSLCert string
+
+	// SSLKey is a filepath to an SSL key, this will be used to enable https
+	SSLKey string
+
 	// Headers is the map of user defined response headers.
 	// configurable via the tegola config.toml file (set in main.go)
 	Headers = map[string]string{}
@@ -79,21 +85,29 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 	// notify the user the server is starting
 	log.Infof("starting tegola server on port %v", port)
 
-	// start our server
 	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
 
+	// start our server
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			switch err {
-			case http.ErrServerClosed:
-				log.Info("http server closed")
-				return
-			default:
-				log.Fatal(err)
-				return
-			}
+		var err error
+
+		if SSLCert+SSLKey != "" {
+			err = srv.ListenAndServeTLS(SSLCert, SSLKey)
+		} else {
+			err = srv.ListenAndServe()
 		}
-		return
+
+		switch err {
+		case nil:
+			// noop
+			return
+		case http.ErrServerClosed:
+			log.Info("http server closed")
+			return
+		default:
+			log.Fatal(err)
+			return
+		}
 	}()
 
 	return srv
