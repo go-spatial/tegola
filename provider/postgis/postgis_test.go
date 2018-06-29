@@ -33,14 +33,16 @@ func TestTLSConfig(t *testing.T) {
 		shouldError bool
 	}
 
-	fn := func(t *testing.T, tc tcase, testCaseName string) {
+	fn := func(t *testing.T, tc tcase) {
 		err := postgis.ConfigTLS(tc.sslMode, tc.sslKey, tc.sslCert, tc.sslRootCert, &testConnConfig)
 		if !tc.shouldError && err != nil {
-			t.Errorf("unable to create a new provider. err: %v", err)
+			t.Errorf("unable to create a new provider: %v", err)
 			return
 		} else if tc.shouldError && err == nil {
-			t.Errorf("Test case %s failed. Error expected but got no error", testCaseName)
+			t.Errorf("Error expected but got no error")
+			return
 		}
+
 		tc.testFunc(testConnConfig)
 	}
 
@@ -170,7 +172,7 @@ func TestTLSConfig(t *testing.T) {
 
 	for name, tc := range tests {
 		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc, name) })
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
 	}
 }
 

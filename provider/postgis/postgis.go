@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx"
-	"github.com/pkg/errors"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
@@ -48,7 +47,7 @@ const (
 	DefaultSRID    = tegola.WebMercator
 	DefaultMaxConn = 100
 	DefaultSSLMode = "disable"
-	DefaultSSLKey = ""
+	DefaultSSLKey  = ""
 	DefaultSSLCert = ""
 )
 
@@ -295,6 +294,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	return p, nil
 }
 
+// derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
 func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string, cc *pgx.ConnConfig) error {
 
 	switch sslMode {
@@ -317,7 +317,7 @@ func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string
 			ServerName: cc.Host,
 		}
 	default:
-		return errors.New("sslmode is invalid")
+		return ErrInvalidSSLMode(sslMode)
 	}
 
 	if sslRootCert != "" {
@@ -325,11 +325,11 @@ func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string
 
 		caCert, err := ioutil.ReadFile(sslRootCert)
 		if err != nil {
-			return errors.Wrapf(err, "unable to read CA file %q", sslRootCert)
+			return fmt.Errorf("unable to read CA file (%q): %v", sslRootCert, err)
 		}
 
 		if !caCertPool.AppendCertsFromPEM(caCert) {
-			return errors.Wrap(err, "unable to add CA to cert pool")
+			return fmt.Errorf("unable to add CA to cert pool")
 		}
 
 		cc.TLSConfig.RootCAs = caCertPool
@@ -337,11 +337,11 @@ func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string
 	}
 
 	if (sslCert == "") != (sslKey == "") {
-		return fmt.Errorf(`both "sslcert" and "sslkey" are required`)
+		return fmt.Errorf("both 'sslcert' and 'sslkey' are required")
 	} else if sslCert != "" { // we must have both now
 		cert, err := tls.LoadX509KeyPair(sslCert, sslKey)
 		if err != nil {
-			return errors.Wrap(err, "unable to read cert")
+			return fmt.Errorf("unable to read cert: %v", err)
 		}
 
 		cc.TLSConfig.Certificates = []tls.Certificate{cert}
