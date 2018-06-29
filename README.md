@@ -122,6 +122,7 @@ user = "tegola"             # postgis database user (required)
 password = ""               # postgis database password (required)
 srid = 3857                 # The default srid for this provider. Defaults to WebMercator (3857) (optional)
 max_connections = 50        # The max connections to maintain in the connection pool. Default is 100. (optional)
+ssl_mode = "prefer"        # PostgreSQL SSL mode*. Default is "disable". (optional)
 
 	[[providers.layers]]
 	name = "landuse"                    # will be encoded as the layer name in the tile
@@ -167,6 +168,8 @@ name = "zoning"                              # used in the URL to reference this
 	min_zoom = 10                            # minimum zoom level to include this layer
 	max_zoom = 18                            # maximum zoom level to include this layer
 ```
+
+\* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#Environment Variables) on injecting environment variables into the config.
 
 ### Supported PostGIS SQL tokens
 The following tokens are supported in custom SQL queries for the PostGIS data provider:
