@@ -71,3 +71,13 @@ $ export PGDATABASE="tegola"
 $ export PGUSER="postgres"
 $ export PGPASSWORD=""
 ```
+
+If you're testing SSL, the following additional env vars can be set:
+
+```bash
+$ export PGPASSWORD=""
+$ export PGSSLMODE=""
+$ export PGSSLKEY=""
+$ export PGSSLCERT=""
+$ export PGSSLROOTCERT=""
+```
