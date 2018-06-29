@@ -365,7 +365,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 
 		// ensure the initials are smaller than finals
 		if xi > xf {xi, xf = xf, xi}
-		if yi > yi {yi, yf = yf, yi}
+		if yi > yf {yi, yf = yf, yi}
 
 		// TODO (@ear7h): find a way to keep from doing the same tile twice
 		for x := xi; x <= xf; x++ {
