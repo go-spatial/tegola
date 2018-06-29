@@ -29,9 +29,9 @@ const (
 )
 
 const (
-	DefaultBasepath = ""
+	DefaultBasepath    = ""
 	DefaultAccountName = ""
-	DefaultAccountKey = ""
+	DefaultAccountKey  = ""
 )
 
 const (
@@ -50,7 +50,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 
 	// the config map's underlying value is int
 	maxZoom := uint(tegola.MaxZ)
-	azCache.MaxZoom , err = config.Uint(ConfigKeyMaxZoom, &maxZoom)
+	azCache.MaxZoom, err = config.Uint(ConfigKeyMaxZoom, &maxZoom)
 	if err != nil {
 		return nil, err
 	}
@@ -129,62 +129,50 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		// read test file
 		_, _, err := azCache.Get(&key)
 		if err != nil {
-			e := cache.ErrGettingFromCache{
+			return nil, cache.ErrGettingFromCache{
 				Err:       err,
 				CacheType: CacheType,
 			}
-
-			return nil, e
 		}
 	} else {
 		// write test file
 		err = azCache.Set(&key, []byte(testMsg))
 		if err != nil {
-			e := cache.ErrSettingToCache{
+			return nil, cache.ErrSettingToCache{
 				Err:       err,
 				CacheType: CacheType,
 			}
-
-			return nil, e
 		}
 
 		// read test file
 		byt, hit, err := azCache.Get(&key)
 		if err != nil {
-			e := cache.ErrGettingFromCache{
+			return nil, cache.ErrGettingFromCache{
 				Err:       err,
 				CacheType: CacheType,
 			}
-
-			return nil, e
 		}
 		if !hit {
-			//return an error?
-			e := cache.ErrGettingFromCache{
-				Err: fmt.Errorf("no hit during test for key %s", key.String()),
+			return nil, cache.ErrGettingFromCache{
+				Err:       fmt.Errorf("no hit during test for key %s", key.String()),
 				CacheType: CacheType,
 			}
-			return nil, e
 		}
 
 		// test response of writable cache
 		if string(byt) != testMsg {
-			e := cache.ErrGettingFromCache{
+			return nil, cache.ErrGettingFromCache{
 				Err:       fmt.Errorf("incorrect test response %s != %s", string(byt), testMsg),
 				CacheType: CacheType,
 			}
-
-			return nil, e
 		}
 
 		err = azCache.Purge(&key)
 		if err != nil {
-			e := cache.ErrPurgingCache{
+			return nil, cache.ErrPurgingCache{
 				Err:       err,
 				CacheType: CacheType,
 			}
-
-			return nil, e
 		}
 	}
 
@@ -199,8 +187,16 @@ type Cache struct {
 }
 
 func padBy512(n int) int32 {
-	n-- // n will always be >= BlobHeaderLen => n - 1 will never be negative
-	return int32(n + (512 - n%512))
+	if n <= 0 {
+		return 512
+	}
+
+	pad := n % 512
+	if pad != 0 {
+		pad = 512 - pad
+	}
+
+	return int32(n + pad)
 }
 
 func (azb *Cache) Set(key *cache.Key, val []byte) error {
@@ -274,7 +270,7 @@ func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	msgLen := binary.BigEndian.Uint64(blobSlice[:BlobHeaderLen])
 
 	// check for out of bounds
-	if msgLen > uint64(len(blobSlice) - BlobHeaderLen) {
+	if msgLen > uint64(len(blobSlice)-BlobHeaderLen) {
 		return nil, false, fmt.Errorf("azblob: length section does not match message length")
 	}
 
