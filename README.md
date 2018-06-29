@@ -169,7 +169,7 @@ name = "zoning"                              # used in the URL to reference this
 	max_zoom = 18                            # maximum zoom level to include this layer
 ```
 
-\* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#Environment Variables) on injecting environment variables into the config.
+\* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#environment-variables) on injecting environment variables into the config.
 
 ### Supported PostGIS SQL tokens
 The following tokens are supported in custom SQL queries for the PostGIS data provider:
