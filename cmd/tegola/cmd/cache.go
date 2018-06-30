@@ -189,12 +189,12 @@ func seedWorker(ctx context.Context, mt MapTile) (err error) {
 	defer func() {
 		if err != nil {
 			z, x, y := mt.Tile.ZXY()
-			f := Format{
-				Z:z,
-				X: x,
-				Y: y,
-				Sep: "/",
-			}
+
+			f := defaultTileNameFormat
+
+			var v [3]uint
+			v[f.X], v[f.Y], v[f.Z] = x, y , z
+			str := fmt.Sprintf("%[2]d%[1]s%[3]d%[1]s%[4]d", f.Sep, v[0], v[1], v[2])
 
 			fd, err2 := os.OpenFile("cache-last.tiles", os.O_CREATE | os.O_TRUNC | os.O_WRONLY, 0666)
 			if err2 != nil {
@@ -202,7 +202,7 @@ func seedWorker(ctx context.Context, mt MapTile) (err error) {
 				return
 			}
 
-			fd.Write([]byte(f.String()))
+			fd.Write([]byte(str))
 			fd.Close()
 		}
 	}()
