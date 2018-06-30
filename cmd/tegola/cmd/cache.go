@@ -397,8 +397,10 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		byt, err := ioutil.ReadFile("cache-last.tiles")
 		if err != nil {
 			if !os.IsNotExist(err) {return err}
+			if os.IsNotExist(err) {
 			zl = tegola.MaxZ + 1
 			goto L
+			}
 		}
 
 		zl, xl, yl, err = defaultTileNameFormat.Parse(string(byt))
