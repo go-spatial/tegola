@@ -21,6 +21,8 @@ import (
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/server"
 )
 
 var (
@@ -299,7 +301,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			}
 		}
 		return nil
-	case cacheFile != "" :
+	case cacheFile != "":
 		// read xyz from a file
 		f, err := os.Open(cacheFile)
 		if err != nil {
@@ -364,19 +366,15 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		_, xf, yf := bottomRight.ZXY()
 
 		// TODO (@ear7h): find a way to keep from doing the same tile twice
-		for x := xi; x <= xf; x++ {
-			for y := yi; y <= yf; y++ {
-				root := slippy.NewTile(maxZoom, x, y, 0, tegola.WebMercator)
+		for _, z := range zooms {
+			xii := xi / uint(maths.Exp2(uint64(z)))
+			xff := xf / uint(maths.Exp2(uint64(z)))
+			for x := xii; x <= xff; x++ {
+				yii := yi / uint(maths.Exp2(uint64(z)))
+				yff := yf / uint(maths.Exp2(uint64(z)))
+				for y := yii; y <= yff; y++ {
 
-				for _, z := range zooms {
-					err := root.RangeFamilyAt(z, func(t *slippy.Tile) error {
-						if gdcmd.IsCancelled() {
-							return fmt.Errorf("stop iteration")
-						}
-
-						c <- t
-						return nil
-					})
+					c <- slippy.NewTile(maxZoom, x, y, server.TileBuffer, tegola.WebMercator)
 
 					// graceful stop if cancelled
 					if err != nil {
