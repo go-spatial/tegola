@@ -225,10 +225,11 @@ func (azb *Cache) Set(key *cache.Key, val []byte) error {
 	binary.BigEndian.PutUint64(blobSlice[:BlobHeaderLen], uint64(msgLen))
 	copy(blobSlice[BlobHeaderLen:], val)
 
-	_, err := blob.Create(ctx, int64(blobLen), 0, httpHeaders, azblob.Metadata{}, azblob.BlobAccessConditions{})
+	res, err := blob.Create(ctx, int64(blobLen), 0, httpHeaders, azblob.Metadata{}, azblob.BlobAccessConditions{})
 	if err != nil {
 		return err
 	}
+	res.Response().Body.Close()
 
 	pageRange := azblob.PageRange{
 		Start: 0,
