@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"errors"
 
 	"github.com/spf13/cobra"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/server"
+	"io/ioutil"
 )
 
 var (
@@ -183,7 +185,29 @@ type MapTile struct {
 	Tile    *slippy.Tile
 }
 
-func seedWorker(ctx context.Context, mt MapTile) error {
+func seedWorker(ctx context.Context, mt MapTile) (err error) {
+	defer func() {
+		if err != nil {
+			z, x, y := mt.Tile.ZXY()
+			f := Format{
+				Z:z,
+				X: x,
+				Y: y,
+				Sep: "/",
+			}
+
+			fd, err2 := os.OpenFile("cache-last.tiles", os.O_CREATE | os.O_TRUNC | os.O_WRONLY, 0666)
+			if err2 != nil {
+				err = errors.New(err.Error() + ", in defer: " + err.Error())
+				return
+			}
+
+			fd.Write([]byte(f.String()))
+			fd.Close()
+		}
+	}()
+
+
 	//	track how long the tile generation is taking
 	t := time.Now()
 
@@ -366,14 +390,32 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		_, xf, yf := bottomRight.ZXY()
 
 		// TODO (@ear7h): find a way to keep from doing the same tile twice
+		var xl uint
+		var yl uint
+		var zl uint
+
+		byt, err := ioutil.ReadFile("cache-last.tiles")
+		if err != nil {
+			if !os.IsNotExist(err) {return err}
+			zl = tegola.MaxZ + 1
+			goto L
+		}
+
+		zl, xl, yl, err = defaultTileNameFormat.Parse(string(byt))
+		if err != nil {
+			return err
+		}
+		L:
+
 		for _, z := range zooms {
 			xii := xi / uint(maths.Exp2(uint64(z)))
 			xff := xf / uint(maths.Exp2(uint64(z)))
 			for x := xii; x <= xff; x++ {
+				if z == zl {x = xl}
 				yii := yi / uint(maths.Exp2(uint64(z)))
 				yff := yf / uint(maths.Exp2(uint64(z)))
 				for y := yii; y <= yff; y++ {
-
+					if z == zl {y = yl}
 					c <- slippy.NewTile(maxZoom, x, y, server.TileBuffer, tegola.WebMercator)
 
 					// graceful stop if cancelled
