@@ -15,10 +15,10 @@ import (
 
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 )
@@ -68,6 +68,7 @@ var cacheCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		defer gdcmd.New().Complete()
 		gdcmd.OnComplete(provider.Cleanup)
+
 		var maps []atlas.Map
 
 		initConfig()
@@ -102,8 +103,7 @@ var cacheCmd = &cobra.Command{
 
 		tileChan := make(chan *slippy.Tile)
 		go func() {
-			err := sendTiles(zooms, tileChan)
-			if err != nil {
+			if err := sendTiles(zooms, tileChan); err != nil {
 				log.Fatal(err)
 			}
 		}()
@@ -126,6 +126,7 @@ var cacheCmd = &cobra.Command{
 					<-gdcmd.Cancelled()
 					cancel()
 				}()
+
 				// range our channel to listen for jobs
 				for mt := range tiler {
 					if gdcmd.IsCancelled() {
@@ -162,7 +163,7 @@ var cacheCmd = &cobra.Command{
 				select {
 				case tiler <- mapTile:
 				case <-gdcmd.Cancelled():
-					log.Info("cancel recieved; cleaning up…")
+					log.Info("cancel recieved. cleaning up…")
 					break
 				}
 			}
@@ -257,6 +258,7 @@ func purgeWorker(mt MapTile) error {
 
 	//	purge the tile
 	ttile := tegola.NewTile(mt.Tile.ZXY())
+
 	if err = atlas.PurgeMapTile(m, ttile); err != nil {
 		return fmt.Errorf("error purging tile (%+v): %v", mt.Tile, err)
 	}
@@ -273,8 +275,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 	}
 
 	switch {
-	case cacheZXY != "":
-		// single xyz
+	case cacheZXY != "": // single tile
 		//	convert the input into a tile
 		z, x, y, err := format.Parse(cacheZXY)
 		if err != nil {
@@ -286,7 +287,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		for _, zoom := range zooms {
 			err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
 				if gdcmd.IsCancelled() {
-					return fmt.Errorf("stop iteration")
+					return fmt.Errorf("cache manipulation interrupted")
 				}
 
 				c <- t
@@ -295,15 +296,15 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 
 			// graceful stop if cancelled
 			if err != nil {
-				return nil
+				return err
 			}
 		}
+
 		return nil
-	case cacheFile != "" :
-		// read xyz from a file
+	case cacheFile != "": // read xyz from a file (tile list)
 		f, err := os.Open(cacheFile)
 		if err != nil {
-			return fmt.Errorf("could not open file")
+			return fmt.Errorf("unable to open file (%v): %v", cacheFile, err)
 		}
 
 		scanner := bufio.NewScanner(f)
@@ -321,7 +322,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			for _, zoom := range zooms {
 				err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
 					if gdcmd.IsCancelled() {
-						return fmt.Errorf("stop iteration")
+						return fmt.Errorf("cache manipulation interrupted")
 					}
 
 					if z1, x1, y1 := t.ZXY(); z != z1 || x != x1 || y != y1 {
@@ -333,19 +334,20 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 
 				// graceful stop if cancelled
 				if err != nil {
-					return nil
+					return err
 				}
 			}
 		}
+
 		return nil
-	default:
-		// bounding box caching
+	default: // bounding box caching
+		var err error
+
 		boundsParts := strings.Split(cacheBounds, ",")
 		if len(boundsParts) != 4 {
-			return fmt.Errorf("invalid value for bounds. expecting minx, miny, maxx, maxy")
+			return fmt.Errorf("invalid value for bounds (%v). expecting minx, miny, maxx, maxy", cacheBounds)
 		}
 
-		var err error
 		bounds := make([]float64, 4)
 
 		for i := range boundsParts {
@@ -355,36 +357,38 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			}
 		}
 
-		maxZoom := zooms[len(zooms)-1]
+		for _, z := range zooms {
+			// get the tiles at the corners given the bounds and zoom
+			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0], 0, tegola.WebMercator)
+			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2], 0, tegola.WebMercator)
 
-		upperLeft := slippy.NewTileLatLon(maxZoom, bounds[1], bounds[0], 0, tegola.WebMercator)
-		bottomRight := slippy.NewTileLatLon(maxZoom, bounds[3], bounds[2], 0, tegola.WebMercator)
+			// x,y initials and finals
+			_, xi, yi := corner1.ZXY()
+			_, xf, yf := corner2.ZXY()
 
-		_, xi, yi := upperLeft.ZXY()
-		_, xf, yf := bottomRight.ZXY()
+			// ensure the initials are smaller than finals
+			if xi > xf {
+				xi, xf = xf, xi
+			}
+			if yi > yf {
+				yi, yf = yf, yi
+			}
 
-		// TODO (@ear7h): find a way to keep from doing the same tile twice
-		for x := xi; x <= xf; x++ {
-			for y := yi; y <= yf; y++ {
-				root := slippy.NewTile(maxZoom, x, y, 0, tegola.WebMercator)
+			// loop rows
+			for x := xi; x <= xf; x++ {
+				// loop columns
+				for y := yi; y <= yf; y++ {
 
-				for _, z := range zooms {
-					err := root.RangeFamilyAt(z, func(t *slippy.Tile) error {
-						if gdcmd.IsCancelled() {
-							return fmt.Errorf("stop iteration")
-						}
-
-						c <- t
-						return nil
-					})
-
-					// graceful stop if cancelled
-					if err != nil {
-						return nil
+					if gdcmd.IsCancelled() {
+						return fmt.Errorf("cache manipulation interrupted")
 					}
+
+					// send tile over the channel
+					c <- slippy.NewTile(z, x, y, 0, tegola.WebMercator)
 				}
 			}
 		}
+
 		return nil
 	}
 }
