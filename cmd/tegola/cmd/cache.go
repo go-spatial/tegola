@@ -413,11 +413,11 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			xii := xi / uint(maths.Exp2(uint64(z)))
 			xff := xf / uint(maths.Exp2(uint64(z)))
 			for x := xii; x <= xff; x++ {
-				if z == zl {x = xl}
+				if z == zl && x == xii {x = xl}
 				yii := yi / uint(maths.Exp2(uint64(z)))
 				yff := yf / uint(maths.Exp2(uint64(z)))
 				for y := yii; y <= yff; y++ {
-					if z == zl {y = yl}
+					if z == zl && y == yii {y = yl}
 					c <- slippy.NewTile(maxZoom, x, y, server.TileBuffer, tegola.WebMercator)
 
 					// graceful stop if cancelled
