@@ -68,26 +68,27 @@ func (f Format) String() string {
 }
 
 func (f Format) Parse(val string) (z, x, y uint, err error) {
+	val = strings.TrimSpace(val)
 	parts := strings.Split(val, f.Sep)
 	if len(parts) != 3 {
-		return 0, 0, 0, fmt.Errorf("invalid zxy value (%v). expecting the formatStr %v", val, f)
+		return 0, 0, 0, fmt.Errorf("invalid zxy value (%q). expecting the formatStr %v", val, f)
 	}
 
 	zi, err := strconv.ParseUint(parts[f.Z], 10, 64)
 	if err != nil || zi > tegola.MaxZ {
-		return 0, 0, 0, fmt.Errorf("invalid Z value (%v)", parts[f.Z])
+		return 0, 0, 0, fmt.Errorf("invalid Z value (%q)", parts[f.Z])
 	}
 
 	maxXYatZ := maths.Exp2(zi) - 1
 
 	xi, err := strconv.ParseUint(parts[f.X], 10, 64)
 	if err != nil || xi > maxXYatZ {
-		return 0, 0, 0, fmt.Errorf("invalid X value (%v)", parts[f.X])
+		return 0, 0, 0, fmt.Errorf("invalid X value (%q)", parts[f.X])
 	}
 
 	yi, err := strconv.ParseUint(parts[f.Y], 10, 64)
 	if err != nil || yi > maxXYatZ {
-		return 0, 0, 0, fmt.Errorf("invalid Y value (%v)", parts[f.Y])
+		return 0, 0, 0, fmt.Errorf("invalid Y value (%q)", parts[f.Y])
 	}
 
 	return uint(zi), uint(xi), uint(yi), nil
