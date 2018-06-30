@@ -2,3 +2,4 @@
 .idea
 documents
 *.toml*.out
+.env

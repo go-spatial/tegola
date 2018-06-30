@@ -1,4 +1,4 @@
-package s3_test
+package azblob_test
 
 import (
 	"fmt"
@@ -7,66 +7,71 @@ import (
 	"testing"
 
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/cache/s3"
+	"github.com/go-spatial/tegola/cache/azblob"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/ttools"
 )
 
+const TESTENV = "RUN_AZBLOB_TESTS"
+
 func TestNew(t *testing.T) {
-	if os.Getenv("RUN_S3_TESTS") != "yes" {
-		return
-	}
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
-		config dict.Dict
-		err    error
+		config         dict.Dict
+		expectReadOnly bool
+		err            error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
 
-		_, err := s3.New(tc.config)
+		c, err := azblob.New(tc.config)
 		if err != nil {
 			if tc.err == nil {
-				t.Errorf("received unexpected err: %v", err)
+				t.Errorf("unexpected err %v", err)
 				return
 			}
+
 			if err.Error() == tc.err.Error() {
 				// correct error returned
 				return
 			}
-			t.Errorf("%v", err)
+			t.Errorf("unexpected err, got %v expected %v", err, tc.err)
+			return
+		}
+
+		azb := c.(*azblob.Cache)
+
+		if tc.expectReadOnly != azb.ReadOnly {
+			t.Errorf("unexpected (*azblob.Cache).ReadOnly value got %v expected %v", azb.ReadOnly, tc.expectReadOnly)
 			return
 		}
 	}
 
 	tests := map[string]tcase{
 		"static creds": {
-			config: map[string]interface{}{
-				"bucket":                os.Getenv("AWS_TEST_BUCKET"),
-				"region":                os.Getenv("AWS_REGION"),
-				"aws_access_key_id":     os.Getenv("AWS_ACCESS_KEY_ID"),
-				"aws_secret_access_key": os.Getenv("AWS_SECRET_ACCESS_KEY"),
+			config: dict.Dict{
+				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
+				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
+				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
 			},
-			err: nil,
+			expectReadOnly: false,
+			err:            nil,
 		},
-		"env var creds": {
-			config: map[string]interface{}{
-				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
-				"max_zoom": 9,
-				"region":   os.Getenv("AWS_REGION"),
+		"anon creds": {
+			config: dict.Dict{
+				"container_url": os.Getenv("AZ_CONTAINER_PUB_URL"),
 			},
-			err: nil,
-		},
-		"missing bucket": {
-			config: map[string]interface{}{},
-			err:    s3.ErrMissingBucket,
+			expectReadOnly: true,
+			err:            nil,
 		},
 		"invalid value for max_zoom": {
-			config: map[string]interface{}{
-				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
-				"max_zoom": "foo",
+			config: dict.Dict{
+				"container_url": os.Getenv("AZ_CONTAINER_PUB_URL"),
+				"max_zoom":      "foo",
 			},
-			err: fmt.Errorf("max_zoom value needs to be of type uint. Value is of type string"),
+			err: fmt.Errorf(`config: value mapped to "max_zoom" is string not uint`),
 		},
 	}
 
@@ -79,9 +84,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestSetGetPurge(t *testing.T) {
-	if os.Getenv("RUN_S3_TESTS") != "yes" {
-		return
-	}
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
 		config   dict.Dict
@@ -92,7 +95,7 @@ func TestSetGetPurge(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		t.Parallel()
 
-		fc, err := s3.New(tc.config)
+		fc, err := azblob.New(tc.config)
 		if err != nil {
 			t.Errorf("%v", err)
 			return
@@ -129,9 +132,10 @@ func TestSetGetPurge(t *testing.T) {
 
 	tests := map[string]tcase{
 		"get set purge": {
-			config: map[string]interface{}{
-				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
-				"basepath": "cache",
+			config: dict.Dict{
+				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
+				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
+				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
 			},
 			key: cache.Key{
 				MapName: "test-map",
@@ -139,7 +143,7 @@ func TestSetGetPurge(t *testing.T) {
 				X:       1,
 				Y:       2,
 			},
-			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
+			expected: []byte("\x41\x74\x6c\x61\x73\x20\x54\x65\x6c\x61\x6d\x6f\x6e"),
 		},
 	}
 
@@ -152,9 +156,7 @@ func TestSetGetPurge(t *testing.T) {
 }
 
 func TestSetOverwrite(t *testing.T) {
-	if os.Getenv("RUN_S3_TESTS") != "yes" {
-		return
-	}
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
 		config   dict.Dict
@@ -165,9 +167,12 @@ func TestSetOverwrite(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+		// This test must be run in series otherwise
+		// there is a race condition in the
+		// initialization routine (the same test file must
+		// be created and destroyed)
 
-		fc, err := s3.New(tc.config)
+		fc, err := azblob.New(tc.config)
 		if err != nil {
 			t.Errorf("%v", err)
 			return
@@ -210,9 +215,10 @@ func TestSetOverwrite(t *testing.T) {
 
 	tests := map[string]tcase{
 		"overwrite": {
-			config: map[string]interface{}{
-				"bucket": "tegola-test-data",
-				"region": "us-west-1",
+			config: dict.Dict{
+				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
+				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
+				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
 			},
 			key: cache.Key{
 				Z: 0,
@@ -234,9 +240,7 @@ func TestSetOverwrite(t *testing.T) {
 }
 
 func TestMaxZoom(t *testing.T) {
-	if os.Getenv("RUN_S3_TESTS") != "yes" {
-		return
-	}
+	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
 		config      dict.Dict
@@ -246,11 +250,14 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+		// This test must be run in series otherwise
+		// there is a race condition in the
+		// initialization routine (the same test file must
+		// be created and destroyed)
 
-		fc, err := s3.New(tc.config)
+		fc, err := azblob.New(tc.config)
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("error initializing %v", err)
 			return
 		}
 
@@ -274,7 +281,7 @@ func TestMaxZoom(t *testing.T) {
 		// clean up
 		if tc.expectedHit {
 			if err != fc.Purge(&tc.key) {
-				t.Errorf("%v", err)
+				t.Errorf("error cleaning %v", err)
 				return
 			}
 		}
@@ -282,10 +289,11 @@ func TestMaxZoom(t *testing.T) {
 
 	tests := map[string]tcase{
 		"over max zoom": {
-			config: map[string]interface{}{
-				"bucket":   "tegola-test-data",
-				"region":   "us-west-1",
-				"max_zoom": uint(10),
+			config: dict.Dict{
+				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
+				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
+				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
+				"max_zoom":        uint(10),
 			},
 			key: cache.Key{
 				Z: 11,
@@ -296,10 +304,11 @@ func TestMaxZoom(t *testing.T) {
 			expectedHit: false,
 		},
 		"under max zoom": {
-			config: map[string]interface{}{
-				"bucket":   "tegola-test-data",
-				"region":   "us-west-1",
-				"max_zoom": uint(10),
+			config: dict.Dict{
+				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
+				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
+				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
+				"max_zoom":        uint(10),
 			},
 			key: cache.Key{
 				Z: 9,
@@ -310,10 +319,11 @@ func TestMaxZoom(t *testing.T) {
 			expectedHit: true,
 		},
 		"equals max zoom": {
-			config: map[string]interface{}{
-				"bucket":   "tegola-test-data",
-				"region":   "us-west-1",
-				"max_zoom": uint(10),
+			config: dict.Dict{
+				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
+				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
+				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
+				"max_zoom":        uint(10),
 			},
 			key: cache.Key{
 				Z: 10,

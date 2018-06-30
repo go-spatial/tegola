@@ -38,7 +38,10 @@ const (
 )
 
 const (
+	DefaultBasepath = ""
 	DefaultRegion = "us-east-1"
+	DefaultAccessKey = ""
+	DefaultSecretKey = ""
 )
 
 const (
@@ -86,7 +89,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 
 	// basepath
-	basepath := ""
+	basepath := DefaultBasepath
 	s3cache.Basepath, err = config.String(ConfigKeyBasepath, &basepath)
 	if err != nil {
 		return nil, err
@@ -102,12 +105,12 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, err
 	}
 
-	accessKey := ""
+	accessKey := DefaultAccessKey
 	accessKey, err = config.String(ConfigKeyAWSAccessKeyID, &accessKey)
 	if err != nil {
 		return nil, err
 	}
-	secretKey := ""
+	secretKey := DefaultSecretKey
 	secretKey, err = config.String(ConfigKeyAWSSecretKey, &secretKey)
 	if err != nil {
 		return nil, err
