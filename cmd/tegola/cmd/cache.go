@@ -21,6 +21,7 @@ import (
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/maths"
 )
 
 var (
@@ -90,16 +91,11 @@ var cacheCmd = &cobra.Command{
 			log.Fatalf("mising cache backend. check your config (%v)", configFile)
 		}
 
-		var zooms []uint
-		if cacheMaxZoom+cacheMinZoom != 0 {
-			if cacheMaxZoom <= cacheMinZoom {
-				log.Fatalf("invalid zoom range. min (%v) is greater than max (%v)", cacheMinZoom, cacheMaxZoom)
-			}
-
-			for i := cacheMinZoom; i <= cacheMaxZoom; i++ {
-				zooms = append(zooms, i)
-			}
+		zooms, err := sliceFromRange(cacheMinZoom, cacheMaxZoom)
+		if err != nil {
+			log.Fatalf("invalid zoom range, %v", err)
 		}
+
 
 		tileChan := make(chan *slippy.Tile)
 		go func() {
@@ -175,6 +171,20 @@ var cacheCmd = &cobra.Command{
 		// wait for the workers to complete any remaining jobs
 		wg.Wait()
 	},
+}
+
+func sliceFromRange(min, max uint) ([]uint, error) {
+	var ret []uint
+	if max < min {
+		return nil, fmt.Errorf("min (%v) is greater than max (%v)", min, max)
+	}
+
+	ret = make([]uint, max - min + 1)
+	for i := min; i <= max; i++ {
+		ret[i - min] = i
+	}
+
+	return ret, nil
 }
 
 type MapTile struct {
@@ -366,6 +376,8 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			_, xi, yi := corner1.ZXY()
 			_, xf, yf := corner2.ZXY()
 
+			maxXYatZ := uint(maths.Exp2(uint64(z))) - 1
+
 			// ensure the initials are smaller than finals
 			if xi > xf {
 				xi, xf = xf, xi
@@ -373,6 +385,10 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			if yi > yf {
 				yi, yf = yf, yi
 			}
+
+			// prevent seeding out of bounds
+			xf = maths.Min(xf, maxXYatZ)
+			yf = maths.Min(xf, maxXYatZ)
 
 			// loop rows
 			for x := xi; x <= xf; x++ {
