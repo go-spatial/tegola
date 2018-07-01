@@ -328,3 +328,9 @@ func Exp2(p uint64) uint64 {
 	}
 	return uint64(1) << p
 }
+
+// Minimum of uints
+func Min(x, y uint) uint {
+	if x < y {return x}
+	return y
+}
