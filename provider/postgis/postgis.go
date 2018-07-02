@@ -2,7 +2,10 @@ package postgis
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -16,7 +19,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/provider"
 
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/dict"
 )
 
 const Name = "postgis"
@@ -43,6 +46,9 @@ const (
 	DefaultPort    = 5432
 	DefaultSRID    = tegola.WebMercator
 	DefaultMaxConn = 100
+	DefaultSSLMode = "disable"
+	DefaultSSLKey  = ""
+	DefaultSSLCert = ""
 )
 
 const (
@@ -51,6 +57,10 @@ const (
 	ConfigKeyDB          = "database"
 	ConfigKeyUser        = "user"
 	ConfigKeyPassword    = "password"
+	ConfigKeySSLMode     = "ssl_mode"
+	ConfigKeySSLKey      = "ssl_key"
+	ConfigKeySSLCert     = "ssl_cert"
+	ConfigKeySSLRootCert = "ssl_root_cert"
 	ConfigKeyMaxConn     = "max_connections"
 	ConfigKeySRID        = "srid"
 	ConfigKeyLayers      = "layers"
@@ -113,6 +123,27 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
+	sslmode := DefaultSSLMode
+	sslmode, err = config.String(ConfigKeySSLMode, &sslmode)
+
+	sslkey := DefaultSSLKey
+	sslkey, err = config.String(ConfigKeySSLKey, &sslkey)
+	if err != nil {
+		return nil, err
+	}
+
+	sslcert := DefaultSSLCert
+	sslcert, err = config.String(ConfigKeySSLCert, &sslcert)
+	if err != nil {
+		return nil, err
+	}
+
+	sslrootcert := DefaultSSLCert
+	sslrootcert, err = config.String(ConfigKeySSLRootCert, &sslrootcert)
+	if err != nil {
+		return nil, err
+	}
+
 	port := DefaultPort
 	if port, err = config.Int(ConfigKeyPort, &port); err != nil {
 		return nil, err
@@ -123,21 +154,28 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
-	var srid = DefaultSRID
+	srid := DefaultSRID
 	if srid, err = config.Int(ConfigKeySRID, &srid); err != nil {
+		return nil, err
+	}
+
+	connConfig := pgx.ConnConfig{
+		Host:     host,
+		Port:     uint16(port),
+		Database: db,
+		User:     user,
+		Password: password,
+	}
+
+	err = ConfigTLS(sslmode, sslkey, sslcert, sslrootcert, &connConfig)
+	if err != nil {
 		return nil, err
 	}
 
 	p := Provider{
 		srid: uint64(srid),
 		config: pgx.ConnPoolConfig{
-			ConnConfig: pgx.ConnConfig{
-				Host:     host,
-				Port:     uint16(port),
-				Database: db,
-				User:     user,
-				Password: password,
-			},
+			ConnConfig:     connConfig,
 			MaxConnections: int(maxcon),
 		},
 	}
@@ -254,6 +292,62 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	p.layers = lyrs
 
 	return p, nil
+}
+
+// derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
+func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string, cc *pgx.ConnConfig) error {
+
+	switch sslMode {
+	case "disable":
+		cc.UseFallbackTLS = false
+		cc.TLSConfig = nil
+		cc.FallbackTLSConfig = nil
+		return nil
+	case "allow":
+		cc.UseFallbackTLS = true
+		cc.FallbackTLSConfig = &tls.Config{InsecureSkipVerify: true}
+	case "prefer":
+		cc.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+		cc.UseFallbackTLS = true
+		cc.FallbackTLSConfig = nil
+	case "require":
+		cc.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	case "verify-ca", "verify-full":
+		cc.TLSConfig = &tls.Config{
+			ServerName: cc.Host,
+		}
+	default:
+		return ErrInvalidSSLMode(sslMode)
+	}
+
+	if sslRootCert != "" {
+		caCertPool := x509.NewCertPool()
+
+		caCert, err := ioutil.ReadFile(sslRootCert)
+		if err != nil {
+			return fmt.Errorf("unable to read CA file (%q): %v", sslRootCert, err)
+		}
+
+		if !caCertPool.AppendCertsFromPEM(caCert) {
+			return fmt.Errorf("unable to add CA to cert pool")
+		}
+
+		cc.TLSConfig.RootCAs = caCertPool
+		cc.TLSConfig.ClientCAs = caCertPool
+	}
+
+	if (sslCert == "") != (sslKey == "") {
+		return fmt.Errorf("both 'sslcert' and 'sslkey' are required")
+	} else if sslCert != "" { // we must have both now
+		cert, err := tls.LoadX509KeyPair(sslCert, sslKey)
+		if err != nil {
+			return fmt.Errorf("unable to read cert: %v", err)
+		}
+
+		cc.TLSConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	return nil
 }
 
 // layerGeomType sets the geomType field on the layer by running the SQL and reading the geom type in the result set

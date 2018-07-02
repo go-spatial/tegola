@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/dict"
 )
 
 var (
@@ -118,11 +118,17 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	// copy the contents
 	_, err = f.Write(val)
 	if err != nil {
+		// close the file, can't use 'defer f.Close()'' otherwise rename wont happen
+		f.Close()
+		return err
+	}
+
+	// close the file, can't use 'defer f.Close()'' otherwise rename wont happen
+	if err = f.Close(); err != nil {
 		return err
 	}
 

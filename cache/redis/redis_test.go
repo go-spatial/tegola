@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/redis"
-	"github.com/go-spatial/tegola/internal/dict"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
 )
 

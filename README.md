@@ -122,6 +122,7 @@ user = "tegola"             # postgis database user (required)
 password = ""               # postgis database password (required)
 srid = 3857                 # The default srid for this provider. Defaults to WebMercator (3857) (optional)
 max_connections = 50        # The max connections to maintain in the connection pool. Default is 100. (optional)
+ssl_mode = "prefer"        # PostgreSQL SSL mode*. Default is "disable". (optional)
 
 	[[providers.layers]]
 	name = "landuse"                    # will be encoded as the layer name in the tile
@@ -168,6 +169,8 @@ name = "zoning"                              # used in the URL to reference this
 	max_zoom = 18                            # maximum zoom level to include this layer
 ```
 
+\* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#environment-variables) on injecting environment variables into the config.
+
 ### Supported PostGIS SQL tokens
 The following tokens are supported in custom SQL queries for the PostGIS data provider:
 
@@ -175,6 +178,26 @@ The following tokens are supported in custom SQL queries for the PostGIS data pr
 - `!ZOOM!` - [optional] Pass in the zoom value for the request. Useful for filtering feature results by zoom.
 
 ## Environment Variables
+
+#### Config TOML
+Environment variables can be injected into the configuration file. One caveat is that the injection has to be within a string, though the value it represents does not have to be a string.
+
+The above config example could be written as:
+```toml
+# register data providers
+[[providers]]
+name = "test_postgis"
+type = "postgis"
+host = "${POSTGIS_HOST}"    # postgis database host (required)
+port = "${POSTGIS_PORT}"    # recall this value must be an int
+database = "${POSTGIS_DB}"
+user = "tegola"
+password = ""
+srid = 3857
+max_connections = "${POSTGIS_MAX_CONN}"
+```
+
+#### SQL Debugging
 The following environment variables can be used for debugging:
 
 `SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
