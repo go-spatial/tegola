@@ -18,11 +18,11 @@ func (d Dict) Dict(key string) (v Dict, err error) {
 	var dv Dict
 	var ok bool
 	if val, ok = d[key]; !ok {
-		return v, fmt.Errorf("%v value is required.", key)
+		return v, dict.ErrKeyRequired(key)
 	}
 
 	if dv, ok = val.(Dict); !ok {
-		return v, fmt.Errorf("%v value needs to be of type map[string]interface{}.", key)
+		return v, dict.ErrKeyType{Key: key, Value: val, T:reflect.TypeOf(v)}
 	}
 	return dv, nil
 }
@@ -86,8 +86,9 @@ func (d Dict) StringSlice(key string) (v []string, err error) {
 			if iv[k] == nil {
 				v[k] = ""
 			} else {
-				ptr, err := ParseString(val)
+				ptr, err := ParseString(iv[k])
 				if err != nil {
+					fmt.Println("err", err)
 					switch err.(type) {
 					case ErrEnvVar:
 						return v, err
@@ -163,7 +164,7 @@ func (d Dict) BoolSlice(key string) (v []bool, err error) {
 			if iv[k] == nil {
 				iv[k] = false
 			} else {
-				ptr, err := ParseBool(val)
+				ptr, err := ParseBool(iv[k])
 				if err != nil {
 					switch err.(type) {
 					case ErrEnvVar:
@@ -238,7 +239,7 @@ func (d Dict) IntSlice(key string) (v []int, err error) {
 			if iv[k] == nil {
 				iv[k] = 0
 			} else {
-				ptr, err := ParseInt(val)
+				ptr, err := ParseInt(iv[k])
 				if err != nil {
 					switch err.(type) {
 					case ErrEnvVar:
@@ -309,11 +310,12 @@ func (d Dict) UintSlice(key string) (v []uint, err error) {
 			// Could not convert to the generic type, so we don't have the correct thing.
 			return v, &ErrType{val}
 		}
+		v = make([]uint, len(iv))
 		for k := range iv {
 			if iv[k] == nil {
 				iv[k] = 0
 			} else {
-				ptr, err := ParseUint(val)
+				ptr, err := ParseUint(iv[k])
 				if err != nil {
 					switch err.(type) {
 					case ErrEnvVar:
@@ -382,11 +384,12 @@ func (d Dict) FloatSlice(key string) (v []float64, err error) {
 			// Could not convert to the generic type, so we don't have the correct thing.
 			return v, &ErrType{val}
 		}
+		v = make([]float64, len(iv))
 		for k := range iv {
 			if iv[k] == nil {
 				iv[k] = 0
 			} else {
-				ptr, err := ParseFloat(val)
+				ptr, err := ParseFloat(iv[k])
 				if err != nil {
 					switch err.(type) {
 					case ErrEnvVar:
