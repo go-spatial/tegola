@@ -198,9 +198,11 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		if err != nil {
 			return nil, fmt.Errorf("For layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
 		}
+
 		if j, ok := lyrsSeen[lname]; ok {
 			return nil, fmt.Errorf("%v layer name is duplicated in both layer %v and layer %v", lname, i, j)
 		}
+
 		lyrsSeen[lname] = i
 		if i == 0 {
 			p.firstlayer = lname
@@ -208,38 +210,38 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 
 		fields, err := layer.StringSlice(ConfigKeyFields)
 		if err != nil {
-			return nil, fmt.Errorf("For layer (%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
+			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
 		}
 
 		geomfld := "geom"
 		geomfld, err = layer.String(ConfigKeyGeomField, &geomfld)
 		if err != nil {
-			return nil, fmt.Errorf("For layer (%v) %v : %v", i, lname, err)
+			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
 		}
 
 		idfld := "gid"
 		idfld, err = layer.String(ConfigKeyGeomIDField, &idfld)
 		if err != nil {
-			return nil, fmt.Errorf("For layer (%v) %v : %v", i, lname, err)
+			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
 		}
 		if idfld == geomfld {
-			return nil, fmt.Errorf("For layer (%v) %v: %v (%v) and %v field (%v) is the same!", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+			return nil, fmt.Errorf("for layer (%v) %v: %v (%v) and %v field (%v) is the same", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
 		}
 
 		var tblName string
 		tblName, err = layer.String(ConfigKeyTablename, &lname)
 		if err != nil {
-			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
+			return nil, fmt.Errorf("for %v layer (%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
 		}
 
 		var sql string
 		sql, err = layer.String(ConfigKeySQL, &sql)
 		if err != nil {
-			return nil, fmt.Errorf("for %v layer(%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
+			return nil, fmt.Errorf("for %v layer (%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
 		}
 
 		if tblName != lname && sql != "" {
-			log.Printf("Both %v and %v field are specified for layer(%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
+			log.Printf("both %v and %v field are specified for layer (%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
 		}
 
 		var lsrid = srid
@@ -267,17 +269,18 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
 				}
 			}
+
 			l.sql = sql
 		} else {
 			// Tablename and Fields will be used to
 			// We need to do some work. We need to check to see Fields contains the geom and gid fields
-			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field
-			// list.
+			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field list.
 			l.sql, err = genSQL(&l, p.pool, tblName, fields)
 			if err != nil {
-				return nil, fmt.Errorf("Could not generate sql, for layer(%v): %v", lname, err)
+				return nil, fmt.Errorf("could not generate sql, for layer(%v): %v", lname, err)
 			}
 		}
+
 		if strings.Contains(os.Getenv("SQL_DEBUG"), "LAYER_SQL") {
 			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.sql)
 		}
@@ -494,14 +497,20 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			case context.Canceled:
 				return err
 			default:
-				return fmt.Errorf("For layer (%v) %v", plyr.Name(), err)
+				return fmt.Errorf("for layer (%v) %v", plyr.Name(), err)
 			}
 		}
 
 		// decode our WKB
 		geom, err := wkb.DecodeBytes(geobytes)
 		if err != nil {
-			return fmt.Errorf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %v", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
+			switch err.(type) {
+			case wkb.ErrUnknownGeometryType:
+				log.Printf("unknown geometry type (%v) for layer (%v) with geometry field (%v) where (%v = %v), skipping", err.(wkb.ErrUnknownGeometryType).Typ, layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid)
+				continue
+			default:
+				return fmt.Errorf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %v", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
+			}
 		}
 
 		feature := provider.Feature{

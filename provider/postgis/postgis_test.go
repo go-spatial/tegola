@@ -246,7 +246,7 @@ func TestTileFeatures(t *testing.T) {
 				return nil
 			})
 			if err != nil {
-				t.Errorf("unexpected error; failed to create mvt layer, expected nil got %v", err)
+				t.Errorf("unexpected err: %v", err)
 				return
 			}
 
@@ -322,6 +322,25 @@ func TestTileFeatures(t *testing.T) {
 			},
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 101,
+		},
+		"gracefully handle 3d point": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:     port,
+				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeyLayers: []map[string]interface{}{
+					{
+						postgis.ConfigKeyLayerName:   "three_d_points",
+						postgis.ConfigKeyGeomIDField: "id",
+						postgis.ConfigKeyGeomField:   "geom",
+						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geom) AS geom, id FROM three_d_test WHERE geom && !BBOX!",
+					},
+				},
+			},
+			tile:                 slippy.NewTile(0, 0, 0, 64, tegola.WebMercator),
+			expectedFeatureCount: 0,
 		},
 	}
 
