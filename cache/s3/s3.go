@@ -116,26 +116,6 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	awsConfig := aws.Config{
 		Region: aws.String(region),
 	}
-	// check for endpoint env var
-	endpoint := os.Getenv("AWS_ENDPOINT")
-	if endpoint == "" {
-		endpoint = DefaultEndpoint
-	}
-	endpoint, err = c.String(ConfigKeyEndpoint, &endpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	// check for endpoint env var
-	endpoint := os.Getenv("AWS_ENDPOINT")
-	if endpoint == "" {
-		endpoint = DefaultEndpoint
-	}
-
-	endpoint, err = config.String(ConfigKeyEndpoint, &endpoint)
-	if err != nil {
-		return nil, err
-	}
 
 	// check for endpoint env var
 	endpoint := os.Getenv("AWS_ENDPOINT")
