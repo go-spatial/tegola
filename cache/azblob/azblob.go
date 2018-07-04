@@ -36,6 +36,7 @@ const (
 
 const (
 	BlobHeaderLen = 8 // bytes
+	BlobReqMaxLen = 4194304 // ~4MB
 )
 
 const testMsg = "\x41\x74\x6c\x61\x73\x20\x54\x65\x6c\x61\x6d\x6f\x6e"
@@ -235,12 +236,23 @@ func (azb *Cache) Set(key *cache.Key, val []byte) error {
 		End:   blobLen - 1,
 	}
 
-	_, err = blob.PutPages(ctx, pageRange, bytes.NewReader(blobSlice), azblob.BlobAccessConditions{})
-	if err != nil {
-		return err
+	for ok := true; ok ; ok = len(blobSlice) > 0 {
+		l := min(BlobReqMaxLen, len(blobSlice))
+
+		_, err = blob.PutPages(ctx, pageRange, bytes.NewReader(blobSlice[:l]), azblob.BlobAccessConditions{})
+		if err != nil {
+			return err
+		}
+
+		blobSlice = blobSlice[l:]
 	}
 
 	return nil
+}
+
+func min(x, y int) int {
+	if x < y {return x}
+	return y
 }
 
 func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
