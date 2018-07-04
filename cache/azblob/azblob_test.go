@@ -10,6 +10,7 @@ import (
 	"github.com/go-spatial/tegola/cache/azblob"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
+	"math/rand"
 )
 
 const TESTENV = "RUN_AZBLOB_TESTS"
@@ -93,7 +94,6 @@ func TestSetGetPurge(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
 
 		fc, err := azblob.New(tc.config)
 		if err != nil {
@@ -145,6 +145,20 @@ func TestSetGetPurge(t *testing.T) {
 			},
 			expected: []byte("\x41\x74\x6c\x61\x73\x20\x54\x65\x6c\x61\x6d\x6f\x6e"),
 		},
+		"get set purge large": {
+			config: dict.Dict{
+				"container_url":   os.Getenv("AZ_CONTAINER_URL"),
+				"az_account_name": os.Getenv("AZ_ACCOUNT_NAME"),
+				"az_shared_key":   os.Getenv("AZ_SHARED_KEY"),
+			},
+			key: cache.Key{
+				MapName: "test-map",
+				Z:       3,
+				X:       1,
+				Y:       2,
+			},
+			expected: randBytes(azblob.BlobReqMaxLen * 2.5),
+		},
 	}
 
 	for name, tc := range tests {
@@ -153,6 +167,13 @@ func TestSetGetPurge(t *testing.T) {
 			fn(t, tc)
 		})
 	}
+}
+
+func randBytes(l int) []byte {
+	ret := make([]byte, l)
+	rand.Read(ret)
+
+	return ret
 }
 
 func TestSetOverwrite(t *testing.T) {

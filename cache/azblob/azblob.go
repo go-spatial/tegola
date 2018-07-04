@@ -233,17 +233,19 @@ func (azb *Cache) Set(key *cache.Key, val []byte) error {
 
 	pageRange := azblob.PageRange{
 		Start: 0,
-		End:   blobLen - 1,
 	}
 
 	for ok := true; ok ; ok = len(blobSlice) > 0 {
 		l := min(BlobReqMaxLen, len(blobSlice))
+
+		pageRange.End = pageRange.Start + int32(l) - 1
 
 		_, err = blob.PutPages(ctx, pageRange, bytes.NewReader(blobSlice[:l]), azblob.BlobAccessConditions{})
 		if err != nil {
 			return err
 		}
 
+		pageRange.Start += int32(l)
 		blobSlice = blobSlice[l:]
 	}
 
