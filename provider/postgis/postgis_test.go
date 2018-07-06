@@ -323,6 +323,29 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 101,
 		},
+		"null feature": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+				postgis.ConfigKeyLayers: []map[string]interface{}{
+					{
+						postgis.ConfigKeyLayerName:   "null_geom",
+						postgis.ConfigKeyGeomIDField: "gid",
+						postgis.ConfigKeyGeomField:   "geometry",
+						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(ST_Union(geometry)) AS geometry FROM osm_buildings_test WHERE geometry && !BBOX!",
+					},
+				},
+			},
+			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			expectedFeatureCount: 0,
+		},
 	}
 
 	for name, tc := range tests {

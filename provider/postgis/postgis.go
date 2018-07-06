@@ -498,6 +498,12 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			}
 		}
 
+		// check that we have geometry data. if not, skip the feature
+		if len(geobytes) == 0 {
+			// TODO(arolek): implement debug log
+			continue
+		}
+
 		// decode our WKB
 		geom, err := wkb.DecodeBytes(geobytes)
 		if err != nil {
