@@ -385,6 +385,12 @@
 			"revisionTime": "2018-04-10T21:30:10Z"
 		},
 		{
+			"checksumSHA1": "jQ0wltHJ4nQ63Q+8Z6x0qhG91q4=",
+			"path": "github.com/theckman/goconstraint/go1.8/gte",
+			"revision": "e867bde6e4e19dde02a92e53627928770ee0ed41",
+			"revisionTime": "2018-02-16T22:48:03Z"
+		},
+		{
 			"checksumSHA1": "i05c1J3Pkn6Ll+YINNnf6nv8z0g=",
 			"path": "golang.org/x/tools/cmd/cover",
 			"revision": "25101aadb97aa42907eee6a238d6d26a6cb3c756",
