@@ -60,6 +60,20 @@ name = "rivers"
 sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
 ```
 
+## Environment Variable support
+Helpful debugging environment variables:
+
+- `SQL_DEBUG`: specify the type of SQL debug information to output. Supports the following values:
+  - `LAYER_SQL`: print layer SQL as they’re parsed from the config file.
+  - `EXECUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
+  - `LAYER_SQL:EXECUTE_SQL`: print `LAYER_SQL` and `EXECUTE_SQL`.
+
+Example:
+
+```
+$ SQL_DEBUG=LAYER_SQL tegola serve --config=/path/to/conf.toml
+```
+
 ## Testing
 Testing is designed to work against a live PostGIS database. To run the PostGIS tests, the following environment variables need to be set:
 
@@ -75,8 +89,7 @@ $ export PGPASSWORD=""
 If you're testing SSL, the following additional env vars can be set:
 
 ```bash
-$ export PGPASSWORD=""
-$ export PGSSLMODE=""
+$ export PGSSLMODE="" // disable, allow, prefer, require, verify-ca, verify-full
 $ export PGSSLKEY=""
 $ export PGSSLCERT=""
 $ export PGSSLROOTCERT=""

@@ -325,11 +325,14 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"gracefully handle 3d point": {
 			config: dict.Dict{
-				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName:   "three_d_points",
@@ -341,6 +344,30 @@ func TestTileFeatures(t *testing.T) {
 			},
 			tile:                 slippy.NewTile(0, 0, 0, 64, tegola.WebMercator),
 			expectedFeatureCount: 0,
+		},
+		"gracefully handle null geometry": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+				postgis.ConfigKeyLayers: []map[string]interface{}{
+					{
+						postgis.ConfigKeyLayerName:   "null_geom",
+						postgis.ConfigKeyGeomIDField: "id",
+						postgis.ConfigKeyGeomField:   "geometry",
+						// this SQL is a workaround the normal !BBOX! WHERE clause. we're simulating a null geometry lookup in the table and don't want to filter by bounding box
+						postgis.ConfigKeySQL: "SELECT id, ST_AsBinary(geometry) AS geometry, !BBOX! as bbox FROM null_geom_test",
+					},
+				},
+			},
+			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			expectedFeatureCount: 1,
 		},
 	}
 
