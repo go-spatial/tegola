@@ -246,7 +246,7 @@ func TestTileFeatures(t *testing.T) {
 				return nil
 			})
 			if err != nil {
-				t.Errorf("unexpected error; failed to create mvt layer, expected nil got %v", err)
+				t.Errorf("unexpected err: %v", err)
 				return
 			}
 
@@ -323,7 +323,29 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 101,
 		},
-		"null feature": {
+		"gracefully handle 3d point": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+				postgis.ConfigKeyLayers: []map[string]interface{}{
+					{
+						postgis.ConfigKeyLayerName:   "three_d_points",
+						postgis.ConfigKeyGeomIDField: "id",
+						postgis.ConfigKeyGeomField:   "geom",
+						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geom) AS geom, id FROM three_d_test WHERE geom && !BBOX!",
+					},
+				},
+			},
+			tile:                 slippy.NewTile(0, 0, 0, 64, tegola.WebMercator),
+			expectedFeatureCount: 0,
+		},
+		"gracefully handle null geometry": {
 			config: dict.Dict{
 				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
 				postgis.ConfigKeyPort:        port,
@@ -337,14 +359,15 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName:   "null_geom",
-						postgis.ConfigKeyGeomIDField: "gid",
+						postgis.ConfigKeyGeomIDField: "id",
 						postgis.ConfigKeyGeomField:   "geometry",
-						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(ST_Union(geometry)) AS geometry FROM osm_buildings_test WHERE geometry && !BBOX!",
+						// this SQL is a workaround the normal !BBOX! WHERE clause. we're simulating a null geometry lookup in the table and don't want to filter by bounding box
+						postgis.ConfigKeySQL: "SELECT id, ST_AsBinary(geometry) AS geometry, !BBOX! as bbox FROM null_geom_test",
 					},
 				},
 			},
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
-			expectedFeatureCount: 0,
+			expectedFeatureCount: 1,
 		},
 	}
 
