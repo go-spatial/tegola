@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	_ "github.com/theckman/goconstraint/go1.8/gte"
+
 	"github.com/go-spatial/tegola/cmd/tegola/cmd"
 )
-
-var codeLogFile *os.File
 
 func main() {
 	if err := cmd.RootCmd.Execute(); err != nil {
