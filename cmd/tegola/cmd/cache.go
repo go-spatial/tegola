@@ -132,9 +132,9 @@ var cacheCmd = &cobra.Command{
 					var err error
 					switch args[0] {
 					case "seed":
-						err = seedWorker(ctx, mt)
+						err = SeedWorker(ctx, mt)
 					case "purge":
-						err = purgeWorker(mt)
+						err = PurgeWorker(mt)
 					default:
 						log.Fatalf("sub-command %q not recognized", args[0])
 					}
@@ -147,7 +147,7 @@ var cacheCmd = &cobra.Command{
 				wg.Done()
 			}()
 
-			//	Done() will be called after close(channel) is called and the final job this seedWorker is processing completes
+			//	Done() will be called after close(channel) is called and the final job this SeedWorker is processing completes
 		}
 
 		for tile := range tileChan {
@@ -192,7 +192,7 @@ type MapTile struct {
 	Tile    *slippy.Tile
 }
 
-func seedWorker(ctx context.Context, mt MapTile) error {
+func SeedWorker(ctx context.Context, mt MapTile) error {
 	//	track how long the tile generation is taking
 	t := time.Now()
 
@@ -236,8 +236,8 @@ func seedWorker(ctx context.Context, mt MapTile) error {
 	}
 
 	//	set tile buffer if it was configured by the user
-	if conf.TileBuffer > 0 {
-		mt.Tile.Buffer = float64(conf.TileBuffer)
+	if conf.TileBuffer != nil {
+		mt.Tile.Buffer = float64(*conf.TileBuffer)
 	}
 
 	//	seed the tile
@@ -254,7 +254,7 @@ func seedWorker(ctx context.Context, mt MapTile) error {
 	return nil
 }
 
-func purgeWorker(mt MapTile) error {
+func PurgeWorker(mt MapTile) error {
 
 	z, x, y := mt.Tile.ZXY()
 
@@ -292,7 +292,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			return err
 		}
 
-		tile := slippy.NewTile(z, x, y, 0, tegola.WebMercator)
+		tile := slippy.NewTile(z, x, y, tegola.DefaultTileBuffer, tegola.WebMercator)
 
 		for _, zoom := range zooms {
 			err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
