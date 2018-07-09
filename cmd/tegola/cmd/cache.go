@@ -357,11 +357,15 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 
 		maxZoom := zooms[len(zooms)-1]
 
-		upperLeft := slippy.NewTileLatLon(maxZoom, bounds[1], bounds[0], 0, tegola.WebMercator)
-		bottomRight := slippy.NewTileLatLon(maxZoom, bounds[3], bounds[2], 0, tegola.WebMercator)
+		corner := slippy.NewTileLatLon(maxZoom, bounds[1], bounds[0], 0, tegola.WebMercator)
+		diagCorder := slippy.NewTileLatLon(maxZoom, bounds[3], bounds[2], 0, tegola.WebMercator)
 
-		_, xi, yi := upperLeft.ZXY()
-		_, xf, yf := bottomRight.ZXY()
+		_, xi, yi := corner.ZXY()
+		_, xf, yf := diagCorder.ZXY()
+
+		// ensure the initials are smaller than finals
+		if xi > xf {xi, xf = xf, xi}
+		if yi > yf {yi, yf = yf, yi}
 
 		// TODO (@ear7h): find a way to keep from doing the same tile twice
 		for x := xi; x <= xf; x++ {
