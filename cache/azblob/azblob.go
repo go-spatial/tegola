@@ -3,14 +3,13 @@ package azblob
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path/filepath"
 
-	"github.com/Azure/azure-storage-blob-go/2016-05-31/azblob"
+	"github.com/Azure/azure-storage-blob-go/2017-07-29/azblob"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
@@ -187,74 +186,29 @@ type Cache struct {
 	Container azblob.ContainerURL
 }
 
-func padBy512(n int) int32 {
-	if n <= 0 {
-		return 512
-	}
-
-	pad := n % 512
-	if pad != 0 {
-		pad = 512 - pad
-	}
-
-	return int32(n + pad)
-}
-
 func (azb *Cache) Set(key *cache.Key, val []byte) error {
 	if key.Z > azb.MaxZoom || azb.ReadOnly {
 		return nil
 	}
 
-	blob := azb.makeBlob(key).ToPageBlobURL()
 	ctx := context.Background()
 
 	httpHeaders := azblob.BlobHTTPHeaders{
 		ContentType: "application/x-protobuf",
 	}
 
-	// must send things in multiples of 512 byte pages
-	msgLen := len(val)
-	blobLen := padBy512(msgLen + BlobHeaderLen)
+	res, err := azb.makeBlob(key).
+		ToBlockBlobURL().
+		Upload(ctx, bytes.NewReader(val), httpHeaders, azblob.Metadata{}, azblob.BlobAccessConditions{})
 
-	// allocate blob
-	blobSlice := make([]byte, blobLen)
-	// encode the length of the blob
-	binary.BigEndian.PutUint64(blobSlice[:BlobHeaderLen], uint64(msgLen))
-	copy(blobSlice[BlobHeaderLen:], val)
-
-	res, err := blob.Create(ctx, int64(blobLen), 0, httpHeaders, azblob.Metadata{}, azblob.BlobAccessConditions{})
 	if err != nil {
 		return err
 	}
-
 	// response body needs to be explicitly closed or
 	// the socket will stay open
 	res.Response().Body.Close()
 
-	pageRange := azblob.PageRange{
-		Start: 0,
-	}
-
-	for ok := true; ok ; ok = len(blobSlice) > 0 {
-		l := min(BlobReqMaxLen, len(blobSlice))
-
-		pageRange.End = pageRange.Start + int32(l) - 1
-
-		_, err = blob.PutPages(ctx, pageRange, bytes.NewReader(blobSlice[:l]), azblob.BlobAccessConditions{})
-		if err != nil {
-			return err
-		}
-
-		pageRange.Start += int32(l)
-		blobSlice = blobSlice[l:]
-	}
-
 	return nil
-}
-
-func min(x, y int) int {
-	if x < y {return x}
-	return y
 }
 
 func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
@@ -262,10 +216,13 @@ func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 		return nil, false, nil
 	}
 
-	blob := azb.makeBlob(key)
 	ctx := context.Background()
 
-	res, err := blob.GetBlob(ctx, azblob.BlobRange{}, azblob.BlobAccessConditions{}, false)
+	res, err := azb.makeBlob(key).
+		ToBlockBlobURL().
+		Download(ctx, 0, 0, azblob.BlobAccessConditions{}, false)
+
+
 	if err != nil {
 		// check if 404
 		resErr, ok := err.(azblob.ResponseError)
@@ -277,22 +234,15 @@ func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 
 		return nil, false, err
 	}
-	defer res.Body().Close()
+	body := res.Body(azblob.RetryReaderOptions{})
+	defer body.Close()
 
-	blobSlice, err := ioutil.ReadAll(res.Body())
+	blobSlice, err := ioutil.ReadAll(body)
 	if err != nil {
 		return nil, false, err
 	}
 
-	// get the encoded message length
-	msgLen := binary.BigEndian.Uint64(blobSlice[:BlobHeaderLen])
-
-	// check for out of bounds
-	if msgLen > uint64(len(blobSlice)-BlobHeaderLen) {
-		return nil, false, fmt.Errorf("azblob: length section does not match message length")
-	}
-
-	return blobSlice[BlobHeaderLen:][:msgLen], true, nil
+	return blobSlice, true, nil
 }
 
 func (azb *Cache) Purge(key *cache.Key) error {
@@ -300,11 +250,12 @@ func (azb *Cache) Purge(key *cache.Key) error {
 		return nil
 	}
 
-	blob := azb.makeBlob(key)
 	ctx := context.Background()
 
-	_, err := blob.Delete(ctx, azblob.DeleteSnapshotsOptionNone,
+	_, err :=  azb.makeBlob(key).
+		Delete(ctx, azblob.DeleteSnapshotsOptionNone,
 		azblob.BlobAccessConditions{})
+
 	if err != nil {
 		return err
 	}
