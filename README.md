@@ -246,6 +246,7 @@ You will now have a binary named `tegola` in the current directory which is [rea
 **Build Flags**
 The following build flags can be used to turn off certain features of tegola:
 
+- `noAzblobCache` - turn off the Azure Blob cache back end.
 - `noS3Cache` - turn off the AWS S3 cache back end.
 - `noRedisCache` - turn off the Redis cache back end.
 - `noPostgisProvider` - turn off the PostGIS data provider.
