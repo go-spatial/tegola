@@ -4,7 +4,7 @@ s3cache is an abstraction on top of Amazon Web Services (AWS) Simple Storage Ser
 
 ```toml
 [cache]
-type="s3"   
+type="s3"
 bucket="tegola-test-data"
 ```
 
@@ -19,6 +19,8 @@ The s3cache config supports the following properties:
 - `max_zoom` (int): [Optional] the max zoom the cache should cache to. After this zoom, Set() calls will return before doing work.
 - `endpoint` (string): the endpoint where the S3 compliant backend is located. only necessary for non-AWS deployments. defaults to ''.
 - `access_control_list` (string): the S3 access control to set on the file when putting the file. defaults to ''.
+- `cache_control` (string): the HTTP cache control header to set on the file when putting the file. defaults to ''.
+
 
 ## Credential chain
 If the `aws_access_key_id` and `aws_secret_access_key` are not set, then the [credential provider chain](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html) will be used. The provider chain supports multiple methods for passing credentials, one of which is setting environment variables. For example:
