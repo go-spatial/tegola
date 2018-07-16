@@ -44,8 +44,8 @@ tablename = "gis.zoning_base_3857"
 - `fields` ([]string): [Optional] a list of fields to include alongside the feature. Can be used if `sql` is not defined.
 - `srid` (int): [Optional] the SRID of the layer. Supports `3857` (WebMercator) or `4326` (WGS84).
 - `sql` (string): [*Required] custom SQL to use use. Required if `tablename` is not defined. Supports the following tokens:
-  - !BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
-  - !ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
+  - `!BBOX!` - [Required] will be replaced with the bounding box of the tile before the query is sent to the database. `!bbox!` and`!BOX!` are supported as well for compatibilitiy with queries from Mapnik and MapServer styles.
+  - `!ZOOM!` - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 
 
 `*Required`: either the `tablename` or `sql` must be defined, but not both.

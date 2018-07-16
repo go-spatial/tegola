@@ -219,6 +219,8 @@ func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
 			srid:      uint64(lsrid),
 		}
 		if sql != "" {
+			// convert !BOX! (MapServer) and !bbox! (Mapnik) to !BBOX! for compatibility
+			sql := strings.Replace(strings.Replace(sql, "!BOX!", "!BBOX!", -1), "!bbox!", "!BBOX!", -1)
 			// make sure that the sql has a !BBOX! token
 			if !strings.Contains(sql, bboxToken) {
 				return nil, fmt.Errorf("SQL for layer (%v) %v is missing required token: %v", i, lname, bboxToken)
