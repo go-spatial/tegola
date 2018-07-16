@@ -20,8 +20,8 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/provider"
 )
 
 var (
@@ -95,7 +95,6 @@ var cacheCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("invalid zoom range, %v", err)
 		}
-
 
 		tileChan := make(chan *slippy.Tile)
 		go func() {
@@ -179,9 +178,9 @@ func sliceFromRange(min, max uint) ([]uint, error) {
 		return nil, fmt.Errorf("min (%v) is greater than max (%v)", min, max)
 	}
 
-	ret = make([]uint, max - min + 1)
+	ret = make([]uint, max-min+1)
 	for i := min; i <= max; i++ {
-		ret[i - min] = i
+		ret[i-min] = i
 	}
 
 	return ret, nil
@@ -388,7 +387,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 
 			// prevent seeding out of bounds
 			xf = maths.Min(xf, maxXYatZ)
-			yf = maths.Min(xf, maxXYatZ)
+			yf = maths.Min(yf, maxXYatZ)
 
 			// loop rows
 			for x := xi; x <= xf; x++ {
