@@ -70,6 +70,7 @@ const (
 	ConfigKeyFields      = "fields"
 	ConfigKeyGeomField   = "geometry_fieldname"
 	ConfigKeyGeomIDField = "id_fieldname"
+	ConfigKeyGeomType    = "geometry_type"
 )
 
 func init() {
@@ -228,6 +229,12 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			return nil, fmt.Errorf("for layer (%v) %v: %v (%v) and %v field (%v) is the same", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
 		}
 
+		geomType := ""
+		geomType, err = layer.String(ConfigKeyGeomType, &geomType)
+		if err != nil {
+			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
+		}
+
 		var tblName string
 		tblName, err = layer.String(ConfigKeyTablename, &lname)
 		if err != nil {
@@ -288,8 +295,14 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		}
 
 		// set the layer geom type
-		if err = p.layerGeomType(&l); err != nil {
-			return nil, fmt.Errorf("error fetching geometry type for layer (%v): %v", l.name, err)
+		if geomType != "" {
+			if err = p.setLayerGeomType(&l, geomType); err != nil {
+				return nil, fmt.Errorf("error fetching geometry type for layer (%v): %v", l.name, err)
+			}
+		} else {
+			if err = p.inspectLayerGeomType(&l); err != nil {
+				return nil, fmt.Errorf("error fetching geometry type for layer (%v): %v", l.name, err)
+			}
 		}
 
 		lyrs[lname] = l
@@ -355,8 +368,34 @@ func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string
 	return nil
 }
 
-// layerGeomType sets the geomType field on the layer by running the SQL and reading the geom type in the result set
-func (p Provider) layerGeomType(l *Layer) error {
+// setLayerGeomType sets the geomType field on the layer to one of point,
+// linestring, polygon, multipoint, multilinestring, multipolygon or
+// geometrycollection
+func (p Provider) setLayerGeomType(l *Layer, geomType string) error {
+	switch strings.ToLower(geomType) {
+	case "point":
+		l.geomType = geom.Point{}
+	case "linestring":
+		l.geomType = geom.LineString{}
+	case "polygon":
+		l.geomType = geom.Polygon{}
+	case "multipoint":
+		l.geomType = geom.MultiPoint{}
+	case "multilinestring":
+		l.geomType = geom.MultiLineString{}
+	case "multipolygon":
+		l.geomType = geom.MultiPolygon{}
+	case "geometrycollection":
+		l.geomType = geom.Collection{}
+	default:
+		return fmt.Errorf("unsupported geometry_type (%v) for layer (%v)", geomType, l.name)
+	}
+	return nil
+}
+
+// inspectLayerGeomType sets the geomType field on the layer by running the SQL
+// and reading the geom type in the result set
+func (p Provider) inspectLayerGeomType(l *Layer) error {
 	var err error
 
 	// we want to know the geom type instead of returning the geom data so we modify the SQL
