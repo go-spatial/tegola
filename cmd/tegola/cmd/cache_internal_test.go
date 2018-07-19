@@ -85,7 +85,7 @@ func TestSendTiles (t *testing.T) {
 		// t.Logf("%v", tileDups)
 	}
 
-	// note: the flags are left over from previous
+	// NOTE: the flags are left over from previous testcases
 	// test cases
 	testcases := map[string]tcase{
 		"max_zoom=0":{
@@ -107,6 +107,18 @@ func TestSendTiles (t *testing.T) {
 			flags: "--min_zoom=1 --max_zoom=1 --bounds=\"180,90,0,0\"",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(1, 1, 0, 0, tegola.WebMercator),
+			},
+		},
+		"max_zoom=0 tile-name=0/0/0": {
+			flags: "--min_zoom=0 --max_zoom=0 --tile-name=\"0/0/0\"",
+			tiles: []*slippy.Tile{
+				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
+			},
+		},
+		"max_zoom=0 tile-name=14/300/781": {
+			flags: "--min_zoom=0 --max_zoom=0 --tile-name=\"14/300/781\"",
+			tiles: []*slippy.Tile{
+				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
 			},
 		},
 	}
