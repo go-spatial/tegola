@@ -3,6 +3,11 @@
 # This script will build the necessary binaries for tegola.
 ################################################################################
 
+# xgo is used for cross compiling cgo. use the docker container and xgo wrapper tool
+docker pull karalabe/xgo-latest
+source $CI_DIR/install_go_bin.sh
+go_install github.com/karalabe/xgo
+
 OLDDIR=$(pwd)
 VERSION_TAG=$TRAVIS_TAG
 if [ -z "$VERSION_TAG" ]; then 
@@ -35,7 +40,7 @@ do
 			FILENAME="${FILENAME}.exe"
 		fi
 
-		GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags "${LDFLAGS}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola
+		GOOS=${GOOS} GOARCH=${GOARCH} xgo build -ldflags "${LDFLAGS}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola
 		chmod a+x ${FILENAME}
 		dir=$(dirname $FILENAME)
 		fn=$(basename $FILENAME)
@@ -47,7 +52,3 @@ do
 	done
 done
 cd $OLDDIR
-
-
-
-
