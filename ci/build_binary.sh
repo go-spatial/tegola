@@ -3,6 +3,8 @@
 # This script will build the necessary binaries for tegola.
 ################################################################################
 
+CI_DIR=`dirname $0`
+
 # xgo is used for cross compiling cgo. use the docker container and xgo wrapper tool
 docker pull karalabe/xgo-latest
 source $CI_DIR/install_go_bin.sh
