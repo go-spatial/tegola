@@ -62,7 +62,7 @@ do
 		cdir=$(pwd)
 		cd $dir
 		zip -9 -D ${fn}.zip tegola${EXT}
-		rm tegola${EXT}
+		rm -f tegola${EXT}
 		cd ${cdir}
 	done
 done
