@@ -32,7 +32,7 @@ In addition to the connection configuration above, Provider Layers need to be co
 [[providers.layers]]
 name = "landuse"
 # this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
-tablename = "gis.zoning_base_3857"  
+tablename = "gis.zoning_base_3857"
 ```
 
 ### Provider Layers Properties
@@ -78,7 +78,7 @@ $ TEGOLA_SQL_DEBUG=LAYER_SQL tegola serve --config=/path/to/conf.toml
 ```
 
 ## Testing
-Testing is designed to work against a live PostGIS database. To run the PostGIS tests, the following environment variables need to be set:
+Testing is designed to work against a live PostGIS database. To see how to set up a database check this [ci script](https://github.com/go-spatial/tegola/blob/master/ci/config_postgis.sh). To run the PostGIS tests, the following environment variables need to be set:
 
 ```bash
 $ export RUN_POSTGIS_TESTS=yes
