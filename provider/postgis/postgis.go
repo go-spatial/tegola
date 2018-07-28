@@ -289,7 +289,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the geometry field: %v", i, lname, geomfld)
 				}
 				if !strings.Contains(sql, idfld) {
-					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lname, idfld)
+					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lname, sql)
 				}
 			}
 

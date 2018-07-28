@@ -303,6 +303,17 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 4032,
 			expectedTags:         []string{"scalerank"},
 		},
+		"tablename query with fields and id as field": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
+				postgis.ConfigKeyGeomIDField: "gid",
+				postgis.ConfigKeyFields:    []string{"gid", "scalerank"},
+			},
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
+			expectedFeatureCount: 4032,
+			expectedTags:         []string{"gid", "scalerank"},
+		},
 		"SQL sub-query": {
 			layerConfig: map[string]interface{}{
 				postgis.ConfigKeyLayerName: "land",
