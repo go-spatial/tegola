@@ -367,6 +367,12 @@
 			"revisionTime": "2015-10-23T09:11:02Z"
 		},
 		{
+			"checksumSHA1": "sYo8tZi0yGAMGrCC+COALe8QhIM=",
+			"path": "github.com/karalabe/xgo",
+			"revision": "f99c776585a083c3b9703a8e24604b85da040b1d",
+			"revisionTime": "2018-04-16T08:30:54Z"
+		},
+		{
 			"checksumSHA1": "+ArBDwAK19OC1iDy1yEbXOC9sgQ=",
 			"path": "github.com/mattn/goveralls",
 			"revision": "b71a1e4855f87991aff01c2c833a75a07059c61c",

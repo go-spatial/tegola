@@ -3,7 +3,12 @@
 # This script will build the necessary binaries for tegola.
 ################################################################################
 
-OLDDIR=$(pwd)
+set -ex
+
+OLD_DIR=$(pwd)
+CI_DIR=`dirname $0`
+
+
 VERSION_TAG=$TRAVIS_TAG
 if [ -z "$VERSION_TAG" ]; then 
 	VERSION_TAG=$(git rev-parse --short HEAD)
@@ -13,6 +18,11 @@ LDFLAGS="-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION_TAG
 if [[ "$CGO_ENABLED" == "0" ]]; then
 	echo "Building binaries without CGO."
 	LDFLAGS="${LDFLAGS} -s"
+else 
+	# xgo is used for cross compiling cgo. use the docker container and xgo wrapper tool
+	docker pull karalabe/xgo-latest
+	source $CI_DIR/install_go_bin.sh
+	go_install github.com/karalabe/xgo	
 fi
 
 if [ -z "$TRAVIS_BUILD_DIR" ]; then
@@ -31,36 +41,30 @@ do
 			echo "CGO_ENABLED: $CGO_ENABLED"
 			FILENAME="${FILENAME}_cgo"
 		fi
+
+		EXT=""
 		if [[ $GOOS == windows ]]; then 
-			FILENAME="${FILENAME}.exe"
+			EXT=".exe"
 		fi
 
-		GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags "${LDFLAGS}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola
-		chmod a+x ${FILENAME}
+		# use xgo for CGO builds and the normal Go toolchain for non CGO builds
+		if [[ "$CGO_ENABLED" != "0" ]]; then
+			echo "CGO_ENABLED: $CGO_ENABLED"
+			xgo -go 1.10.x --targets="${GOOS}/${GOARCH}" -ldflags "${LDFLAGS}" -dest "${TRAVIS_BUILD_DIR}/releases" github.com/go-spatial/tegola/cmd/tegola
+			mv ${TRAVIS_BUILD_DIR}/releases/tegola-${GOOS}* "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}"
+		else
+			GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags "${LDFLAGS}" -o "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}" github.com/go-spatial/tegola/cmd/tegola
+			chmod a+x "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}"
+		fi
+
 		dir=$(dirname $FILENAME)
 		fn=$(basename $FILENAME)
 		cdir=$(pwd)
 		cd $dir
-		zip -9 -D ${fn}.zip ${fn}
-		rm ${fn}
+		zip -9 -D ${fn}.zip tegola${EXT}
+		rm -f tegola${EXT}
 		cd ${cdir}
 	done
 done
 
-# build tegola_lambda
-FILENAME="${TRAVIS_BUILD_DIR}/releases/tegola_lambda"
-GOOS=linux go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola-lambda.Version=${VERSION_TAG}" -o ${FILENAME} github.com/go-spatial/tegola/cmd/tegola_lambda
-chmod a+x ${FILENAME}
-dir=$(dirname $FILENAME)
-fn=$(basename $FILENAME)
-cdir=$(pwd)
-cd $dir
-zip -9 -D ${fn}.zip ${fn}
-rm ${fn}
-cd ${cdir}
-
-cd $OLDDIR
-
-
-
-
+cd $OLD_DIR
