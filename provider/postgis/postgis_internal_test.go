@@ -28,13 +28,14 @@ func TestLayerGeomType(t *testing.T) {
 	port := GetTestPort(t)
 
 	type tcase struct {
-		config    map[string]interface{}
-		layerName string
-		geom      geom.Geometry
-		err       string
+		layerConfig map[string]interface{}
+		layerName   string
+		geom        geom.Geometry
+		err         string
 	}
 
 	fn := func(t *testing.T, tc tcase) {
+
 		var config dict.Dict
 		config = map[string]interface{}{
 			ConfigKeyHost:        os.Getenv("PGHOST"),
@@ -47,11 +48,13 @@ func TestLayerGeomType(t *testing.T) {
 			ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
 			ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 		}
-		config[ConfigKeyLayers] = []map[string]interface{}{tc.config}
+
+		config[ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
+
 		provider, err := NewTileProvider(config)
 		if tc.err != "" {
 			if err == nil || !strings.Contains(err.Error(), tc.err) {
-				t.Errorf("expected error with %q in NewProvicer, got: %v", tc.err, err)
+				t.Errorf("expected error with %q in NewProvider, got: %v", tc.err, err)
 			}
 			return
 		}
@@ -71,7 +74,7 @@ func TestLayerGeomType(t *testing.T) {
 
 	tests := map[string]tcase{
 		"1": {
-			config: map[string]interface{}{
+			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE geom && !BBOX!",
 			},
@@ -79,7 +82,7 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 		},
 		"zoom token replacement": {
-			config: map[string]interface{}{
+			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE gid = !ZOOM! AND geom && !BBOX!",
 			},
@@ -87,7 +90,7 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 		},
 		"configured geometry_type": {
-			config: map[string]interface{}{
+			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeyGeomType:  "multipolygon",
 				ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM invalid_table_to_check_query_table_was_not_inspected WHERE geom && !BBOX!",
@@ -96,7 +99,7 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 		},
 		"configured geometry_type (case insensitive)": {
-			config: map[string]interface{}{
+			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeyGeomType:  "MultiPolyGOn",
 				ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM invalid_table_to_check_query_table_was_not_inspected WHERE geom && !BBOX!",
@@ -105,7 +108,7 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 		},
 		"invalid configured geometry_type": {
-			config: map[string]interface{}{
+			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeyGeomType:  "invalid",
 				ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM invalid_table_to_check_query_table_was_not_inspected WHERE geom && !BBOX!",

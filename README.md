@@ -135,7 +135,7 @@ ssl_mode = "prefer"        # PostgreSQL SSL mode*. Default is "disable". (option
 	name = "roads"                      # will be encoded as the layer name in the tile
 	tablename = "gis.zoning_base_3857"  # sql or table_name are required
 	geometry_fieldname = "geom"         # geom field. default is geom
-	geometry_type = "linestring"        # geometry type. Tables are inspected at startup, if not set.
+	geometry_type = "linestring"        # geometry type. if not set, tables are inspected at startup to try and infer the gemetry type
 	id_fieldname = "gid"                # geom id field. default is gid
 	fields = [ "class", "name" ]        # Additional fields to include in the select statement.
 
