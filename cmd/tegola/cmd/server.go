@@ -18,9 +18,10 @@ var (
 )
 
 var serverCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Use tegola as a tile server",
-	Long:  `Use tegola as a vector tile server. Maps tiles will be served at /maps/:map_name/:z/:x/:y`,
+	Use:     "serve",
+	Short:   "Use tegola as a tile server",
+	Aliases: []string{"server"},
+	Long:    `Use tegola as a vector tile server. Maps tiles will be served at /maps/:map_name/:z/:x/:y`,
 	Run: func(cmd *cobra.Command, args []string) {
 		gdcmd.New()
 		initConfig()
@@ -42,8 +43,8 @@ var serverCmd = &cobra.Command{
 		}
 
 		// set tile buffer
-		if conf.TileBuffer > 0 {
-			server.TileBuffer = float64(conf.TileBuffer)
+		if conf.TileBuffer != nil {
+			server.TileBuffer = float64(*conf.TileBuffer)
 		}
 
 		// start our webserver

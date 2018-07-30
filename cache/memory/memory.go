@@ -4,12 +4,19 @@ import (
 	"sync"
 
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/dict"
 )
 
-func New() *MemoryCache {
+const CacheType  = "memory"
+
+func init() {
+	cache.Register(CacheType, New)
+}
+
+func New(_ dict.Dicter) (cache.Interface, error) {
 	return &MemoryCache{
 		keyVals: map[string][]byte{},
-	}
+	}, nil
 }
 
 // test cacher, implements the cache.Interface

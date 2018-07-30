@@ -130,7 +130,7 @@ func TestParse(t *testing.T) {
 					max_zoom = 20
 					dont_simplify = true`,
 			expected: config.Config{
-				TileBuffer:   12,
+				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
 				Webserver: config.Webserver{
 					HostName:          "cdn.tegola.io",

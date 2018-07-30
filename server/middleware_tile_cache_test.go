@@ -22,7 +22,8 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 			var err error
 
 			a := newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
-			a.SetCache(memory.New())
+			cacher, _ := memory.New(nil)
+			a.SetCache(cacher)
 
 			w, router, err := doRequest(a, "GET", tc, nil)
 			if err != nil {
