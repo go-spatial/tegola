@@ -77,6 +77,10 @@ func init() {
 	provider.Register(Name, NewTileProvider, nil)
 }
 
+// isSelectQuery is a regexp to check if a query starts with `SELECT`,
+// case-insensitive and ignoring any preceeding whitespace and SQL comments.
+var isSelectQuery = regexp.MustCompile(`(?i)^((\s*)(--.*\n)?)*select`)
+
 // NewTileProvider instantiates and returns a new postgis provider or an error.
 // The function will validate that the config object looks good before
 // trying to create a driver. This Provider supports the following fields
@@ -263,6 +267,13 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			srid:      uint64(lsrid),
 		}
 
+		if sql != "" && !isSelectQuery.MatchString(sql) {
+			// if it is not a SELECT query, then we assume we have a sub-query
+			// (`(select ...) as foo`) which we can handle like a tablename
+			tblName = sql
+			sql = ""
+		}
+
 		if sql != "" {
 			// convert !BOX! (MapServer) and !bbox! (Mapnik) to !BBOX! for compatibility
 			sql := strings.Replace(strings.Replace(sql, "!BOX!", "!BBOX!", -1), "!bbox!", "!BBOX!", -1)
@@ -281,7 +292,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 
 			l.sql = sql
 		} else {
-			// Tablename and Fields will be used to
+			// Tablename and Fields will be used to build the query.
 			// We need to do some work. We need to check to see Fields contains the geom and gid fields
 			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field list.
 			l.sql, err = genSQL(&l, p.pool, tblName, fields)

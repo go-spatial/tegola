@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
@@ -15,10 +17,19 @@ import (
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
 func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
-
 	if len(flds) == 0 {
 		// We need to hit the database to see what the fields are.
-		rows, err := pool.Query(fmt.Sprintf(fldsSQL, tblname))
+
+		sql := fmt.Sprintf(fldsSQL, tblname)
+
+		// replace SQL tokens for sub-query tablenames
+		tile := slippy.NewTile(0, 0, 0, 64, tegola.WebMercator)
+		sql, err = replaceTokens(sql, 3857, tile)
+		if err != nil {
+			return "", err
+		}
+
+		rows, err := pool.Query(sql)
 		if err != nil {
 			return "", err
 		}
