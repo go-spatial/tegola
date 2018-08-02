@@ -1,14 +1,15 @@
 package cmd
 
 import (
-	"testing"
-	"github.com/go-spatial/geom/slippy"
-	"strings"
-	"reflect"
 	"fmt"
-	"github.com/go-spatial/tegola"
 	"io/ioutil"
 	"os"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola"
 )
 
 // returns the index of the tile within the array, or -1
@@ -36,7 +37,7 @@ func tilesString(tiles []*slippy.Tile) string {
 	return ret
 }
 
-func TestSendTiles (t *testing.T) {
+func TestSendTiles(t *testing.T) {
 	type tcase struct {
 		flags string
 		tiles []*slippy.Tile
@@ -49,7 +50,6 @@ func TestSendTiles (t *testing.T) {
 			t.Fatalf("unexpected error %v", err)
 		}
 
-
 		zooms, err := sliceFromRange(cacheMinZoom, cacheMaxZoom)
 		if err != nil {
 			t.Fatalf("unexpected error %v", err)
@@ -57,7 +57,7 @@ func TestSendTiles (t *testing.T) {
 
 		c := make(chan *slippy.Tile)
 
-		go func () {
+		go func() {
 			sendTiles(zooms, c)
 		}()
 
@@ -87,14 +87,14 @@ func TestSendTiles (t *testing.T) {
 	// NOTE: the flags are left over from previous testcases
 	// test cases
 	testcases := map[string]tcase{
-		"max_zoom=0":{
-			flags: "--min_zoom=0 --max_zoom=0 --bounds=\"-180,-85.0511,180,85.0511\"",
+		"max_zoom=0": {
+			flags: "--min-zoom=0 --max-zoom=0 --bounds=\"-180,-85.0511,180,85.0511\"",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
 			},
 		},
-		"min_zoom=1 max_zoom=1":{
-			flags: "--min_zoom=1 --max_zoom=1 --bounds=\"-180,-85.0511,180,85.0511\"",
+		"min_zoom=1 max_zoom=1": {
+			flags: "--min-zoom=1 --max-zoom=1 --bounds=\"-180,-85.0511,180,85.0511\"",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(1, 0, 0, 0, tegola.WebMercator),
 				slippy.NewTile(1, 1, 0, 0, tegola.WebMercator),
@@ -102,26 +102,26 @@ func TestSendTiles (t *testing.T) {
 				slippy.NewTile(1, 1, 1, 0, tegola.WebMercator),
 			},
 		},
-		"min_zoom=1 max_zoom=1 bounds=180,90,0,0":{
-			flags: "--min_zoom=1 --max_zoom=1 --bounds=\"180,90,0,0\"",
+		"min_zoom=1 max_zoom=1 bounds=180,90,0,0": {
+			flags: "--min-zoom=1 --max-zoom=1 --bounds=\"180,90,0,0\"",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(1, 1, 0, 0, tegola.WebMercator),
 			},
 		},
 		"max_zoom=0 tile-name=0/0/0": {
-			flags: "--min_zoom=0 --max_zoom=0 --tile-name=\"0/0/0\"",
+			flags: "--min-zoom=0 --max-zoom=0 --tile-name=\"0/0/0\"",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
 			},
 		},
 		"max_zoom=0 tile-name=14/300/781": {
-			flags: "--min_zoom=0 --max_zoom=0 --tile-name=\"14/300/781\"",
+			flags: "--min-zoom=0 --max-zoom=0 --tile-name=\"14/300/781\"",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
 			},
 		},
 		"min_zoom= 13 max_zoom=15 tile-name=14/300/781": {
-			flags: "--min_zoom=13 --max_zoom=15 --tile-name=\"14/300/781\"",
+			flags: "--min-zoom=13 --max-zoom=15 --tile-name=\"14/300/781\"",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(13, 150, 390, 0, tegola.WebMercator),
 				slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
@@ -132,7 +132,7 @@ func TestSendTiles (t *testing.T) {
 			},
 		},
 		"min_zoom= 13 max_zoom=15 tile-list=list.tiles": {
-			flags: "--min_zoom=13 --max_zoom=15 --tile-list=\"list.tiles\"",
+			flags: "--min-zoom=13 --max-zoom=15 --tile-list=\"list.tiles\"",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(13, 150, 390, 0, tegola.WebMercator),
 				slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
@@ -142,7 +142,6 @@ func TestSendTiles (t *testing.T) {
 				slippy.NewTile(15, 601, 1563, 0, tegola.WebMercator),
 			},
 		},
-
 	}
 
 	err := ioutil.WriteFile("list.tiles", []byte("14/300/781"), 0666)
