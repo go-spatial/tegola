@@ -76,7 +76,7 @@ build_lambda() {
 }
 
 
-#build_bins
+build_bins
 build_lambda
 
 cd $OLD_DIR
