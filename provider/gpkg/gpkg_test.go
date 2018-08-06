@@ -376,6 +376,23 @@ func TestTileFeatures(t *testing.T) {
 			},
 			expectedFeatureCount: 44,
 		},
+		"join with ambiguous column name (id in data and index)": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "boundary", "tablename": "boundary", "id_fieldname": "id"},
+				},
+			},
+			layerName: "boundary",
+			tile: MockTile{
+				srid: tegola.WGS84,
+				bufferedExtent: geom.NewExtent(
+					[2]float64{20.0, 37.85},
+					[2]float64{23.6, 37.9431},
+				),
+			},
+			expectedFeatureCount: 0,
+		},
 	}
 
 	for name, tc := range tests {

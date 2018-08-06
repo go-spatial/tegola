@@ -106,16 +106,16 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
-		rtreeTablename := fmt.Sprintf("rtree_%v_geom", pLayer.tablename)
+		rtreeTablename := fmt.Sprintf("rtree_%v_%s", pLayer.tablename, pLayer.geomFieldname)
 
-		selectClause := fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", pLayer.idFieldname, pLayer.geomFieldname)
+		selectClause := fmt.Sprintf("SELECT l.`%v`, l.`%v`", pLayer.idFieldname, pLayer.geomFieldname)
 
 		for _, tf := range pLayer.tagFieldnames {
-			selectClause += fmt.Sprintf(", `%v`", tf)
+			selectClause += fmt.Sprintf(", l.`%v`", tf)
 		}
 
 		// l - layer table, si - spatial index
-		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX! ORDER BY %v", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname, pLayer.idFieldname)
+		qtext = fmt.Sprintf("%v FROM `%v` l JOIN `%v` si ON l.`%v` = si.id WHERE l.`%v` IS NOT NULL AND !BBOX! ORDER BY l.`%v`", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname, pLayer.geomFieldname, pLayer.idFieldname)
 
 		z, _, _ := tile.ZXY()
 		qtext = replaceTokens(qtext, z, tileBBox)
