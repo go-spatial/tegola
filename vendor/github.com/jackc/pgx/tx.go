@@ -39,6 +39,7 @@ const (
 	TxStatusInProgress      = 0
 	TxStatusCommitFailure   = -1
 	TxStatusRollbackFailure = -2
+	TxStatusInFailure       = -3
 	TxStatusCommitSuccess   = 1
 	TxStatusRollbackSuccess = 2
 )
@@ -70,6 +71,7 @@ func (txOptions *TxOptions) beginSQL() string {
 }
 
 var ErrTxClosed = errors.New("tx is closed")
+var ErrTxInFailure = errors.New("tx failed")
 
 // ErrTxCommitRollback occurs when an error has occurred in a transaction and
 // Commit() is called. PostgreSQL accepts COMMIT on aborted transactions, but
@@ -238,6 +240,9 @@ func (tx *Tx) CopyFrom(tableName Identifier, columnNames []string, rowSrc CopyFr
 // Status returns the status of the transaction from the set of
 // pgx.TxStatus* constants.
 func (tx *Tx) Status() int8 {
+	if tx.status == TxStatusInProgress && tx.conn.txStatus == 'E' {
+		return TxStatusInFailure
+	}
 	return tx.status
 }
 

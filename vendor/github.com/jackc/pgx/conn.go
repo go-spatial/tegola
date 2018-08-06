@@ -4,15 +4,18 @@ import (
 	"context"
 	"crypto/md5"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -426,6 +429,10 @@ where (
 		return nil, err
 	}
 
+	if err = c.initConnInfoDomains(cinfo); err != nil {
+		return nil, err
+	}
+
 	return cinfo, nil
 }
 
@@ -487,6 +494,52 @@ where t.typtype = 'b'
 			Name:  name,
 			OID:   oid,
 		})
+	}
+
+	return nil
+}
+
+// initConnInfoDomains introspects for domains and registers a data type for them.
+func (c *Conn) initConnInfoDomains(cinfo *pgtype.ConnInfo) error {
+	type domain struct {
+		oid     pgtype.OID
+		name    pgtype.Text
+		baseOID pgtype.OID
+	}
+
+	domains := make([]*domain, 0, 16)
+
+	rows, err := c.Query(`select t.oid, t.typname, t.typbasetype
+from pg_type t
+  join pg_type base_type on t.typbasetype=base_type.oid
+where t.typtype = 'd'
+  and base_type.typtype = 'b'`)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		var d domain
+		if err := rows.Scan(&d.oid, &d.name, &d.baseOID); err != nil {
+			return err
+		}
+
+		domains = append(domains, &d)
+	}
+
+	if rows.Err() != nil {
+		return rows.Err()
+	}
+
+	for _, d := range domains {
+		baseDataType, ok := cinfo.DataTypeForOID(d.baseOID)
+		if ok {
+			cinfo.RegisterDataType(pgtype.DataType{
+				Value: reflect.New(reflect.ValueOf(baseDataType.Value).Elem().Type()).Interface().(pgtype.Value),
+				Name:  d.name.String,
+				OID:   d.oid,
+			})
+		}
 	}
 
 	return nil
@@ -653,6 +706,8 @@ func (old ConnConfig) Merge(other ConnConfig) ConnConfig {
 		cc.Dial = other.Dial
 	}
 
+	cc.PreferSimpleProtocol = other.PreferSimpleProtocol
+
 	cc.RuntimeParams = make(map[string]string)
 	for k, v := range old.RuntimeParams {
 		cc.RuntimeParams[k] = v
@@ -701,14 +756,23 @@ func ParseURI(uri string) (ConnConfig, error) {
 		cp.Dial = d.Dial
 	}
 
-	err = configSSL(url.Query().Get("sslmode"), &cp)
+	tlsArgs := configTLSArgs{
+		sslCert:     url.Query().Get("sslcert"),
+		sslKey:      url.Query().Get("sslkey"),
+		sslMode:     url.Query().Get("sslmode"),
+		sslRootCert: url.Query().Get("sslrootcert"),
+	}
+	err = configTLS(tlsArgs, &cp)
 	if err != nil {
 		return cp, err
 	}
 
 	ignoreKeys := map[string]struct{}{
-		"sslmode":         {},
 		"connect_timeout": {},
+		"sslcert":         {},
+		"sslkey":          {},
+		"sslmode":         {},
+		"sslrootcert":     {},
 	}
 
 	cp.RuntimeParams = make(map[string]string)
@@ -744,7 +808,7 @@ func ParseDSN(s string) (ConnConfig, error) {
 
 	m := dsnRegexp.FindAllStringSubmatch(s, -1)
 
-	var sslmode string
+	tlsArgs := configTLSArgs{}
 
 	cp.RuntimeParams = make(map[string]string)
 
@@ -765,7 +829,13 @@ func ParseDSN(s string) (ConnConfig, error) {
 		case "dbname":
 			cp.Database = b[2]
 		case "sslmode":
-			sslmode = b[2]
+			tlsArgs.sslMode = b[2]
+		case "sslrootcert":
+			tlsArgs.sslRootCert = b[2]
+		case "sslcert":
+			tlsArgs.sslCert = b[2]
+		case "sslkey":
+			tlsArgs.sslKey = b[2]
 		case "connect_timeout":
 			timeout, err := strconv.ParseInt(b[2], 10, 64)
 			if err != nil {
@@ -779,7 +849,7 @@ func ParseDSN(s string) (ConnConfig, error) {
 		}
 	}
 
-	err := configSSL(sslmode, &cp)
+	err := configTLS(tlsArgs, &cp)
 	if err != nil {
 		return cp, err
 	}
@@ -792,7 +862,7 @@ func ParseDSN(s string) (ConnConfig, error) {
 // ParseConnectionString parses either a URI or a DSN connection string.
 // see ParseURI and ParseDSN for details.
 func ParseConnectionString(s string) (ConnConfig, error) {
-	if strings.HasPrefix(s, "postgres://") || strings.HasPrefix(s, "postgresql://") {
+	if u, err := url.Parse(s); err == nil && u.Scheme != "" {
 		return ParseURI(s)
 	}
 	return ParseDSN(s)
@@ -810,6 +880,9 @@ func ParseConnectionString(s string) (ConnConfig, error) {
 // PGUSER
 // PGPASSWORD
 // PGSSLMODE
+// PGSSLCERT
+// PGSSLKEY
+// PGSSLROOTCERT
 // PGAPPNAME
 // PGCONNECT_TIMEOUT
 //
@@ -857,9 +930,14 @@ func ParseEnvLibpq() (ConnConfig, error) {
 		}
 	}
 
-	sslmode := os.Getenv("PGSSLMODE")
+	tlsArgs := configTLSArgs{
+		sslMode:     os.Getenv("PGSSLMODE"),
+		sslKey:      os.Getenv("PGSSLKEY"),
+		sslCert:     os.Getenv("PGSSLCERT"),
+		sslRootCert: os.Getenv("PGSSLROOTCERT"),
+	}
 
-	err := configSSL(sslmode, &cc)
+	err := configTLS(tlsArgs, &cc)
 	if err != nil {
 		return cc, err
 	}
@@ -874,14 +952,27 @@ func ParseEnvLibpq() (ConnConfig, error) {
 	return cc, nil
 }
 
-func configSSL(sslmode string, cc *ConnConfig) error {
+type configTLSArgs struct {
+	sslMode     string
+	sslRootCert string
+	sslCert     string
+	sslKey      string
+}
+
+// configTLS uses lib/pq's TLS parameters to reconstruct a coherent tls.Config.
+// Inputs are parsed out and provided by ParseDSN() or ParseURI().
+func configTLS(args configTLSArgs, cc *ConnConfig) error {
 	// Match libpq default behavior
-	if sslmode == "" {
-		sslmode = "prefer"
+	if args.sslMode == "" {
+		args.sslMode = "prefer"
 	}
 
-	switch sslmode {
+	switch args.sslMode {
 	case "disable":
+		cc.UseFallbackTLS = false
+		cc.TLSConfig = nil
+		cc.FallbackTLSConfig = nil
+		return nil
 	case "allow":
 		cc.UseFallbackTLS = true
 		cc.FallbackTLSConfig = &tls.Config{InsecureSkipVerify: true}
@@ -897,6 +988,39 @@ func configSSL(sslmode string, cc *ConnConfig) error {
 		}
 	default:
 		return errors.New("sslmode is invalid")
+	}
+
+	if args.sslRootCert != "" {
+		caCertPool := x509.NewCertPool()
+
+		caPath := args.sslRootCert
+		caCert, err := ioutil.ReadFile(caPath)
+		if err != nil {
+			return errors.Wrapf(err, "unable to read CA file %q", caPath)
+		}
+
+		if !caCertPool.AppendCertsFromPEM(caCert) {
+			return errors.Wrap(err, "unable to add CA to cert pool")
+		}
+
+		cc.TLSConfig.RootCAs = caCertPool
+		cc.TLSConfig.ClientCAs = caCertPool
+	}
+
+	sslcert := args.sslCert
+	sslkey := args.sslKey
+
+	if (sslcert != "" && sslkey == "") || (sslcert == "" && sslkey != "") {
+		return fmt.Errorf(`both "sslcert" and "sslkey" are required`)
+	}
+
+	if sslcert != "" && sslkey != "" {
+		cert, err := tls.LoadX509KeyPair(sslcert, sslkey)
+		if err != nil {
+			return errors.Wrap(err, "unable to read cert")
+		}
+
+		cc.TLSConfig.Certificates = []tls.Certificate{cert}
 	}
 
 	return nil
