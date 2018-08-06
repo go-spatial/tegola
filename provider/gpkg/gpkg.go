@@ -106,7 +106,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	if pLayer.tablename != "" {
 		// If layer was specified via "tablename" in config, construct query.
-		rtreeTablename := fmt.Sprintf("rtree_%v_geom", pLayer.tablename)
+		rtreeTablename := fmt.Sprintf("rtree_%v_%s", pLayer.tablename, pLayer.geomFieldname)
 
 		selectClause := fmt.Sprintf("SELECT `%v` AS fid, `%v` AS geom", pLayer.idFieldname, pLayer.geomFieldname)
 
