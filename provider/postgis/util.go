@@ -182,7 +182,7 @@ func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descr
 				}
 			case *pgtype.Numeric:
 				var num float64
-				values[i].(*pgtype.Numeric).AssignTo(&num)
+				vex.AssignTo(&num)
 
 				tags[desc.Name] = num
 			default:
