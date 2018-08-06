@@ -73,8 +73,11 @@ build_bins(){
 build_lambda() {	
 	local filename="${TRAVIS_BUILD_DIR}/releases/tegola_${GOOS}_${GOARCH}"
 	GOOS="linux" GOARCH="amd64" go build -ldflags "${LDFLAGS}" -o "${TRAVIS_BUILD_DIR}/releases/tegola_lambda" github.com/go-spatial/tegola/cmd/tegola_lambda
-}
 
+	cd $(dirname $filename)
+	zip -9 -D tegola_lambda.zip tegola_lambda
+	rm -f tegola_lambda
+}
 
 build_bins
 build_lambda
