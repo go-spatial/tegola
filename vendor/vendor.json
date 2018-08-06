@@ -341,10 +341,10 @@
 			"revisionTime": "2014-10-17T20:07:13Z"
 		},
 		{
-			"checksumSHA1": "GqfDzW1K5azy49s9byxc9GSr8zs=",
+			"checksumSHA1": "MCQRBIXmcwHCqR33QoGUx4PWb4A=",
 			"path": "github.com/jackc/pgx",
-			"revision": "26f6ae2c86e68de8b6e8c403be8ee48684f48a3d",
-			"revisionTime": "2018-04-27T11:54:52Z",
+			"revision": "93ee40e691def90ce1489b113ac99450239dfb82",
+			"revisionTime": "2018-07-24T14:53:07Z",
 			"version": "v3.1.0",
 			"versionExact": "v3.1.0"
 		},
