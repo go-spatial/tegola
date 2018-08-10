@@ -12,11 +12,12 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 - Native geometry processing (simplification, clipping, make valid, intersection, contains, scaling, translation)
 - [Mapbox Vector Tile v2 specification](https://github.com/mapbox/vector-tile-spec) compliant.
 - Embedded viewer with auto generated style for quick data visualization and inspection.
-- Support for PostGIS as a data provider. Extensible to support additional data providers.
-- Local filesystem caching. Extensible design to support additional cache backends.
-- Cache seeding to fill the cache prior to web requests.
+- Support for PostGIS and GeoPackage data providers. Extensible design to support additional data providers.
+- Support for several cache backends: [file](cache/file), [s3](cache/s3), [redis](cache/redis), [azure blob store](cache/azblob).
+- Cache seeding and invalidation via individual tiles (ZXY), lat / lon bounds and ZXY tile list.
 - Parallelized tile serving and geometry processing.
 - Support for Web Mercator (3857) and WGS84 (4326) projections.
+- Support for [AWS Lambda](cmd/tegola_lambda).
 
 ## Usage
 ```
