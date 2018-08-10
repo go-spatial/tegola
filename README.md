@@ -201,7 +201,7 @@ max_connections = "${POSTGIS_MAX_CONN}"
 #### SQL Debugging
 The following environment variables can be used for debugging:
 
-`SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
+`TEGOLA_SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
 
 - `LAYER_SQL`: print layer SQL as they are parsed from the config file.
 - `EXECUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
@@ -209,12 +209,12 @@ The following environment variables can be used for debugging:
 #### Usage
 
 ```bash
-$ SQL_DEBUG=LAYER_SQL tegola -config=/path/to/conf.toml
+$ TEGOLA_SQL_DEBUG=LAYER_SQL tegola serve --config=/path/to/conf.toml
 ```
 
-The following environment variables can be use to control various runtime options:
+The following environment variables can be used to control various runtime options:
 
-`TEGOLA_OPTIONS` specify a set of options comma (or space) seperated options.
+`TEGOLA_OPTIONS` specify a set of options comma or space delimited. Supports the following options
 
 - `DontSimplifyGeo` to turn off simplification for all layers.
 - `SimplifyMaxZoom={{int}}` to set the max zoom that simplification will apply to. (14 is default)
