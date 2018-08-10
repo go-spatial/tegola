@@ -7,7 +7,7 @@ type Equality struct {
 	Expected string
 	// Got is the actual value
 	Got string
-	// Continue used to determine weather or not to continue with futher assertions.
+	// Continue used to determine weather or not to continue with further assertions.
 	IsEqual bool
 }
 

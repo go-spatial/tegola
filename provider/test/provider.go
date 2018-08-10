@@ -3,9 +3,11 @@ package test
 import (
 	"context"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/geom"
 	"github.com/go-spatial/tegola/provider"
+
+	"github.com/go-spatial/tegola/dict"
 )
 
 const Name = "test"
@@ -17,7 +19,7 @@ func init() {
 }
 
 // NewProvider setups a test provider. there are not currently any config params supported
-func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
+func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	Count++
 	return &TileProvider{}, nil
 }
@@ -37,22 +39,15 @@ func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 	}, nil
 }
 
-//	TilFeatures always returns a feature with a polygon outlining the tile's Extent (not Buffered Extent)
+// TilFeatures always returns a feature with a polygon outlining the tile's Extent (not Buffered Extent)
 func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, fn func(f *provider.Feature) error) error {
-	//	get tile bounding box
+	// get tile bounding box
 	ext, srid := t.Extent()
 
 	debugTileOutline := provider.Feature{
-		ID: 0,
-		Geometry: geom.Polygon{
-			[][2]float64{
-				[2]float64{ext[0][0], ext[0][1]}, // Minx, Miny
-				[2]float64{ext[1][0], ext[0][1]}, // Maxx, Miny
-				[2]float64{ext[1][0], ext[1][1]}, // Maxx, Maxy
-				[2]float64{ext[0][0], ext[1][1]}, // Minx, Maxy
-			},
-		},
-		SRID: srid,
+		ID:       0,
+		Geometry: ext.AsPolygon(),
+		SRID:     srid,
 		Tags: map[string]interface{}{
 			"type": "debug_buffer_outline",
 		},

@@ -32,38 +32,54 @@ fi
 mkdir -p "${TRAVIS_BUILD_DIR}/releases"
 echo "building bins into ${TRAVIS_BUILD_DIR}/releases"
 
-for GOARCH in amd64
-do
-	for GOOS in darwin linux windows
+build_bins(){
+	for GOARCH in amd64
 	do
-		FILENAME="${TRAVIS_BUILD_DIR}/releases/tegola_${GOOS}_${GOARCH}"
-		if [[ "$CGO_ENABLED" != "0" ]]; then
-			echo "CGO_ENABLED: $CGO_ENABLED"
-			FILENAME="${FILENAME}_cgo"
-		fi
+		for GOOS in darwin linux windows
+		do
+			FILENAME="${TRAVIS_BUILD_DIR}/releases/tegola_${GOOS}_${GOARCH}"
+			if [[ "$CGO_ENABLED" != "0" ]]; then
+				echo "CGO_ENABLED: $CGO_ENABLED"
+				FILENAME="${FILENAME}_cgo"
+			fi
 
-		EXT=""
-		if [[ $GOOS == windows ]]; then 
-			EXT=".exe"
-		fi
+			EXT=""
+			if [[ $GOOS == windows ]]; then 
+				EXT=".exe"
+			fi
 
-		# use xgo for CGO builds and the normal Go toolchain for non CGO builds
-		if [[ "$CGO_ENABLED" != "0" ]]; then
-			echo "CGO_ENABLED: $CGO_ENABLED"
-			xgo -go 1.10.x --targets="${GOOS}/${GOARCH}" -ldflags "${LDFLAGS}" -dest "${TRAVIS_BUILD_DIR}/releases" github.com/go-spatial/tegola/cmd/tegola
-			mv ${TRAVIS_BUILD_DIR}/releases/tegola-${GOOS}* "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}"
-		else
-			GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags "${LDFLAGS}" -o "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}" github.com/go-spatial/tegola/cmd/tegola
-			chmod a+x "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}"
-		fi
+			# use xgo for CGO builds and the normal Go toolchain for non CGO builds
+			if [[ "$CGO_ENABLED" != "0" ]]; then
+				echo "CGO_ENABLED: $CGO_ENABLED"
+				xgo -go 1.10.x --targets="${GOOS}/${GOARCH}" -ldflags "${LDFLAGS}" -dest "${TRAVIS_BUILD_DIR}/releases" github.com/go-spatial/tegola/cmd/tegola
+				mv ${TRAVIS_BUILD_DIR}/releases/tegola-${GOOS}* "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}"
+			else
+				GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags "${LDFLAGS}" -o "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}" github.com/go-spatial/tegola/cmd/tegola
+				chmod a+x "${TRAVIS_BUILD_DIR}/releases/tegola${EXT}"
+			fi
 
-		dir=$(dirname $FILENAME)
-		fn=$(basename $FILENAME)
-		cdir=$(pwd)
-		cd $dir
-		zip -9 -D ${fn}.zip tegola${EXT}
-		rm -f tegola${EXT}
-		cd ${cdir}
-	done
-done
+			dir=$(dirname $FILENAME)
+			fn=$(basename $FILENAME)
+			cdir=$(pwd)
+			cd $dir
+			zip -9 -D ${fn}.zip tegola${EXT}
+			rm -f tegola${EXT}
+			cd ${cdir}
+		done
+	done	
+}
+
+# AWS lambda has a special shim and needs to be built for linux
+build_lambda() {	
+	local filename="${TRAVIS_BUILD_DIR}/releases/tegola_${GOOS}_${GOARCH}"
+	GOOS="linux" GOARCH="amd64" go build -ldflags "${LDFLAGS}" -o "${TRAVIS_BUILD_DIR}/releases/tegola_lambda" github.com/go-spatial/tegola/cmd/tegola_lambda
+
+	cd $(dirname $filename)
+	zip -9 -D tegola_lambda.zip tegola_lambda
+	rm -f tegola_lambda
+}
+
+build_bins
+build_lambda
+
 cd $OLD_DIR

@@ -1,14 +1,15 @@
-//	The debug provider returns features that are helpful for debugging a tile
-//	including a box for the tile edges and a point in the middle of the tile
-//	with z,x,y values encoded
+// The debug provider returns features that are helpful for debugging a tile
+// including a box for the tile edges and a point in the middle of the tile
+// with z,x,y values encoded
 package debug
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -24,7 +25,7 @@ func init() {
 }
 
 // NewProvider Setups a debug provider. there are not currently any config params supported
-func NewTileProvider(config map[string]interface{}) (provider.Tiler, error) {
+func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	return &Provider{}, nil
 }
 
@@ -39,16 +40,9 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	switch layer {
 	case "debug-tile-outline":
 		debugTileOutline := provider.Feature{
-			ID: 0,
-			Geometry: geom.Polygon{
-				[][2]float64{
-					[2]float64{ext[0][0], ext[0][1]}, // Minx, Miny
-					[2]float64{ext[1][0], ext[0][1]}, // Maxx, Miny
-					[2]float64{ext[1][0], ext[1][1]}, // Maxx, Maxy
-					[2]float64{ext[0][0], ext[1][1]}, // Minx, Maxy
-				},
-			},
-			SRID: srid,
+			ID:       0,
+			Geometry: ext.AsPolygon(),
+			SRID:     srid,
 			Tags: map[string]interface{}{
 				"type": "debug_buffer_outline",
 			},
@@ -59,17 +53,17 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		}
 
 	case "debug-tile-center":
-		xlen := ext[1][0] - ext[0][0] // Maxx - Minx
-		ylen := ext[1][1] - ext[0][1] // Maxy - Miny
+		xlen := ext.XSpan()
+		ylen := ext.YSpan()
 		z, x, y := tile.ZXY()
 
 		debugTileCenter := provider.Feature{
 			ID: 1,
 			Geometry: geom.Point{
-				//	Minx
-				ext[0][0] + (xlen / 2),
-				//	Miny
-				ext[0][1] + (ylen / 2),
+				// Minx
+				ext.MinX() + (xlen / 2),
+				// Miny
+				ext.MinY() + (ylen / 2),
 			},
 			SRID: srid,
 			Tags: map[string]interface{}{

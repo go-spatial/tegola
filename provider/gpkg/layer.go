@@ -1,6 +1,6 @@
 package gpkg
 
-import "github.com/go-spatial/tegola/geom"
+import "github.com/go-spatial/geom"
 
 type Layer struct {
 	name          string
@@ -11,7 +11,7 @@ type Layer struct {
 	geomFieldname string
 	geomType      geom.Geometry
 	srid          uint64
-	bbox          geom.BoundingBox
+	bbox          geom.Extent
 	sql           string
 }
 

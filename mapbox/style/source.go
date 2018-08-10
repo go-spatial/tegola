@@ -11,12 +11,12 @@ const (
 
 type Source struct {
 	Type string `json:"type"`
-	//	An array of one or more tile source URLs, as in the TileJSON spec.
+	// An array of one or more tile source URLs, as in the TileJSON spec.
 	Tiles []string `json:"tiles,omitempty"`
-	//	defaults to 0 if not set
+	// defaults to 0 if not set
 	MinZoom int `json:"minzoom,omitempty"`
-	//	defaults to 22 if not set
+	// defaults to 22 if not set
 	MaxZoom int `json:"maxzoom,omitempty"`
-	//	url to TileJSON resource
+	// url to TileJSON resource
 	URL string `json:"url,omitempty"`
 }

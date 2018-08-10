@@ -27,6 +27,24 @@ func (e ErrOverlappingLayerZooms) Error() string {
 	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
 }
 
+type ErrInvalidLayerZoom struct {
+	ProviderLayer string
+	MinZoom       bool
+	Zoom          int
+	ZoomLimit     int
+}
+
+func (e ErrInvalidLayerZoom) Error() string {
+	n, d := "MaxZoom", "above"
+	if e.MinZoom {
+		n, d = "MinZoom", "below"
+	}
+	return fmt.Sprintf(
+		"config: for provider layer %v %v(%v) is %v allowed level of %v",
+		e.ProviderLayer, n, e.Zoom, d, e.ZoomLimit,
+	)
+}
+
 type ErrMissingEnvVar struct {
 	EnvVar string
 }

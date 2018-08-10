@@ -1,9 +1,13 @@
 package pgx
 
 import (
-	"errors"
+	"context"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+
+	"github.com/jackc/pgx/pgtype"
 )
 
 type ConnPoolConfig struct {
@@ -27,11 +31,7 @@ type ConnPool struct {
 	closed               bool
 	preparedStatements   map[string]*PreparedStatement
 	acquireTimeout       time.Duration
-	pgTypes              map[Oid]PgType
-	pgsql_af_inet        *byte
-	pgsql_af_inet6       *byte
-	txAfterClose         func(tx *Tx)
-	rowsAfterClose       func(rows *Rows)
+	connInfo             *pgtype.ConnInfo
 }
 
 type ConnPoolStat struct {
@@ -40,11 +40,18 @@ type ConnPoolStat struct {
 	AvailableConnections int // unused live connections
 }
 
+// ErrAcquireTimeout occurs when an attempt to acquire a connection times out.
+var ErrAcquireTimeout = errors.New("timeout acquiring connection from pool")
+
+// ErrClosedPool occurs on an attempt to acquire a connection from a closed pool.
+var ErrClosedPool = errors.New("cannot acquire from closed pool")
+
 // NewConnPool creates a new ConnPool. config.ConnConfig is passed through to
 // Connect directly.
 func NewConnPool(config ConnPoolConfig) (p *ConnPool, err error) {
 	p = new(ConnPool)
 	p.config = config.ConnConfig
+	p.connInfo = minimalConnInfo
 	p.maxConnections = config.MaxConnections
 	if p.maxConnections == 0 {
 		p.maxConnections = 5
@@ -70,14 +77,6 @@ func NewConnPool(config ConnPoolConfig) (p *ConnPool, err error) {
 		p.logLevel = LogLevelNone
 	}
 
-	p.txAfterClose = func(tx *Tx) {
-		p.Release(tx.Conn())
-	}
-
-	p.rowsAfterClose = func(rows *Rows) {
-		p.Release(rows.Conn())
-	}
-
 	p.allConnections = make([]*Conn, 0, p.maxConnections)
 	p.availableConnections = make([]*Conn, 0, p.maxConnections)
 	p.preparedStatements = make(map[string]*PreparedStatement)
@@ -91,6 +90,7 @@ func NewConnPool(config ConnPoolConfig) (p *ConnPool, err error) {
 	}
 	p.allConnections = append(p.allConnections, c)
 	p.availableConnections = append(p.availableConnections, c)
+	p.connInfo = c.ConnInfo.DeepCopy()
 
 	return
 }
@@ -111,7 +111,7 @@ func (p *ConnPool) deadlinePassed(deadline *time.Time) bool {
 // acquire performs acquision assuming pool is already locked
 func (p *ConnPool) acquire(deadline *time.Time) (*Conn, error) {
 	if p.closed {
-		return nil, errors.New("cannot acquire from closed pool")
+		return nil, ErrClosedPool
 	}
 
 	// A connection is available
@@ -131,7 +131,7 @@ func (p *ConnPool) acquire(deadline *time.Time) (*Conn, error) {
 
 	// Make sure the deadline (if it is) has not passed yet
 	if p.deadlinePassed(deadline) {
-		return nil, errors.New("Timeout: Acquire connection timeout")
+		return nil, ErrAcquireTimeout
 	}
 
 	// If there is a deadline then start a timeout timer
@@ -148,26 +148,25 @@ func (p *ConnPool) acquire(deadline *time.Time) (*Conn, error) {
 		// Create a new connection.
 		// Careful here: createConnectionUnlocked() removes the current lock,
 		// creates a connection and then locks it back.
-		if c, err := p.createConnectionUnlocked(); err == nil {
-			c.poolResetCount = p.resetCount
-			p.allConnections = append(p.allConnections, c)
-			return c, nil
-		} else {
+		c, err := p.createConnectionUnlocked()
+		if err != nil {
 			return nil, err
 		}
-	} else {
-		// All connections are in use and we cannot create more
-		if p.logLevel >= LogLevelWarn {
-			p.logger.Warn("All connections in pool are busy - waiting...")
-		}
+		c.poolResetCount = p.resetCount
+		p.allConnections = append(p.allConnections, c)
+		return c, nil
+	}
+	// All connections are in use and we cannot create more
+	if p.logLevel >= LogLevelWarn {
+		p.logger.Log(LogLevelWarn, "waiting for available connection", nil)
+	}
 
-		// Wait until there is an available connection OR room to create a new connection
-		for len(p.availableConnections) == 0 && len(p.allConnections)+p.inProgressConnects == p.maxConnections {
-			if p.deadlinePassed(deadline) {
-				return nil, errors.New("Timeout: All connections in pool are busy")
-			}
-			p.cond.Wait()
+	// Wait until there is an available connection OR room to create a new connection
+	for len(p.availableConnections) == 0 && len(p.allConnections)+p.inProgressConnects == p.maxConnections {
+		if p.deadlinePassed(deadline) {
+			return nil, ErrAcquireTimeout
 		}
+		p.cond.Wait()
 	}
 
 	// Stop the timer so that we do not spawn it on every acquire call.
@@ -179,7 +178,11 @@ func (p *ConnPool) acquire(deadline *time.Time) (*Conn, error) {
 
 // Release gives up use of a connection.
 func (p *ConnPool) Release(conn *Conn) {
-	if conn.TxStatus != 'I' {
+	if conn.ctxInProgress {
+		panic("should never release when context is in progress")
+	}
+
+	if conn.txStatus != 'I' {
 		conn.Exec("rollback")
 	}
 
@@ -221,25 +224,21 @@ func (p *ConnPool) removeFromAllConnections(conn *Conn) bool {
 	return false
 }
 
-// Close ends the use of a connection pool. It prevents any new connections
-// from being acquired, waits until all acquired connections are released,
-// then closes all underlying connections.
+// Close ends the use of a connection pool. It prevents any new connections from
+// being acquired and closes available underlying connections. Any acquired
+// connections will be closed when they are released.
 func (p *ConnPool) Close() {
 	p.cond.L.Lock()
 	defer p.cond.L.Unlock()
 
 	p.closed = true
 
-	// Wait until all connections are released
-	if len(p.availableConnections) != len(p.allConnections) {
-		for len(p.availableConnections) != len(p.allConnections) {
-			p.cond.Wait()
-		}
-	}
-
-	for _, c := range p.allConnections {
+	for _, c := range p.availableConnections {
 		_ = c.Close()
 	}
+
+	// This will cause any checked out connections to be closed on release
+	p.resetCount++
 }
 
 // Reset closes all open connections, but leaves the pool open. It is intended
@@ -253,8 +252,13 @@ func (p *ConnPool) Reset() {
 	defer p.cond.L.Unlock()
 
 	p.resetCount++
-	p.allConnections = make([]*Conn, 0, p.maxConnections)
-	p.availableConnections = make([]*Conn, 0, p.maxConnections)
+	p.allConnections = p.allConnections[0:0]
+
+	for _, conn := range p.availableConnections {
+		conn.Close()
+	}
+
+	p.availableConnections = p.availableConnections[0:0]
 }
 
 // invalidateAcquired causes all acquired connections to be closed when released.
@@ -282,7 +286,7 @@ func (p *ConnPool) Stat() (s ConnPoolStat) {
 }
 
 func (p *ConnPool) createConnection() (*Conn, error) {
-	c, err := connect(p.config, p.pgTypes, p.pgsql_af_inet, p.pgsql_af_inet6)
+	c, err := connect(p.config, p.connInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -317,10 +321,6 @@ func (p *ConnPool) createConnectionUnlocked() (*Conn, error) {
 // afterConnectionCreated executes (if it is) afterConnect() callback and prepares
 // all the known statements for the new connection.
 func (p *ConnPool) afterConnectionCreated(c *Conn) (*Conn, error) {
-	p.pgTypes = c.PgTypes
-	p.pgsql_af_inet = c.pgsql_af_inet
-	p.pgsql_af_inet6 = c.pgsql_af_inet6
-
 	if p.afterConnect != nil {
 		err := p.afterConnect(c)
 		if err != nil {
@@ -350,6 +350,16 @@ func (p *ConnPool) Exec(sql string, arguments ...interface{}) (commandTag Comman
 	return c.Exec(sql, arguments...)
 }
 
+func (p *ConnPool) ExecEx(ctx context.Context, sql string, options *QueryExOptions, arguments ...interface{}) (commandTag CommandTag, err error) {
+	var c *Conn
+	if c, err = p.Acquire(); err != nil {
+		return
+	}
+	defer p.Release(c)
+
+	return c.ExecEx(ctx, sql, options, arguments...)
+}
+
 // Query acquires a connection and delegates the call to that connection. When
 // *Rows are closed, the connection is released automatically.
 func (p *ConnPool) Query(sql string, args ...interface{}) (*Rows, error) {
@@ -365,7 +375,25 @@ func (p *ConnPool) Query(sql string, args ...interface{}) (*Rows, error) {
 		return rows, err
 	}
 
-	rows.AfterClose(p.rowsAfterClose)
+	rows.connPool = p
+
+	return rows, nil
+}
+
+func (p *ConnPool) QueryEx(ctx context.Context, sql string, options *QueryExOptions, args ...interface{}) (*Rows, error) {
+	c, err := p.Acquire()
+	if err != nil {
+		// Because checking for errors can be deferred to the *Rows, build one with the error
+		return &Rows{closed: true, err: err}, err
+	}
+
+	rows, err := c.QueryEx(ctx, sql, options, args...)
+	if err != nil {
+		p.Release(c)
+		return rows, err
+	}
+
+	rows.connPool = p
 
 	return rows, nil
 }
@@ -378,10 +406,15 @@ func (p *ConnPool) QueryRow(sql string, args ...interface{}) *Row {
 	return (*Row)(rows)
 }
 
+func (p *ConnPool) QueryRowEx(ctx context.Context, sql string, options *QueryExOptions, args ...interface{}) *Row {
+	rows, _ := p.QueryEx(ctx, sql, options, args...)
+	return (*Row)(rows)
+}
+
 // Begin acquires a connection and begins a transaction on it. When the
 // transaction is closed the connection will be automatically released.
 func (p *ConnPool) Begin() (*Tx, error) {
-	return p.BeginIso("")
+	return p.BeginEx(context.Background(), nil)
 }
 
 // Prepare creates a prepared statement on a connection in the pool to test the
@@ -396,7 +429,7 @@ func (p *ConnPool) Begin() (*Tx, error) {
 // the same name and sql arguments. This allows a code path to Prepare and
 // Query/Exec/PrepareEx without concern for if the statement has already been prepared.
 func (p *ConnPool) Prepare(name, sql string) (*PreparedStatement, error) {
-	return p.PrepareEx(name, sql, nil)
+	return p.PrepareEx(context.Background(), name, sql, nil)
 }
 
 // PrepareEx creates a prepared statement on a connection in the pool to test the
@@ -410,7 +443,7 @@ func (p *ConnPool) Prepare(name, sql string) (*PreparedStatement, error) {
 // PrepareEx is idempotent; i.e. it is safe to call PrepareEx multiple times with the same
 // name and sql arguments. This allows a code path to PrepareEx and Query/Exec/Prepare without
 // concern for if the statement has already been prepared.
-func (p *ConnPool) PrepareEx(name, sql string, opts *PrepareExOptions) (*PreparedStatement, error) {
+func (p *ConnPool) PrepareEx(ctx context.Context, name, sql string, opts *PrepareExOptions) (*PreparedStatement, error) {
 	p.cond.L.Lock()
 	defer p.cond.L.Unlock()
 
@@ -432,13 +465,13 @@ func (p *ConnPool) PrepareEx(name, sql string, opts *PrepareExOptions) (*Prepare
 		return ps, nil
 	}
 
-	ps, err := c.PrepareEx(name, sql, opts)
+	ps, err := c.PrepareEx(ctx, name, sql, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, c := range p.availableConnections {
-		_, err := c.PrepareEx(name, sql, opts)
+		_, err := c.PrepareEx(ctx, name, sql, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -467,17 +500,17 @@ func (p *ConnPool) Deallocate(name string) (err error) {
 	return nil
 }
 
-// BeginIso acquires a connection and begins a transaction in isolation mode iso
-// on it. When the transaction is closed the connection will be automatically
-// released.
-func (p *ConnPool) BeginIso(iso string) (*Tx, error) {
+// BeginEx acquires a connection and starts a transaction with txOptions
+// determining the transaction mode. When the transaction is closed the
+// connection will be automatically released.
+func (p *ConnPool) BeginEx(ctx context.Context, txOptions *TxOptions) (*Tx, error) {
 	for {
 		c, err := p.Acquire()
 		if err != nil {
 			return nil, err
 		}
 
-		tx, err := c.BeginIso(iso)
+		tx, err := c.BeginEx(ctx, txOptions)
 		if err != nil {
 			alive := c.IsAlive()
 			p.Release(c)
@@ -486,24 +519,31 @@ func (p *ConnPool) BeginIso(iso string) (*Tx, error) {
 			// again on a new connection would fix, so just return the error. But
 			// if the connection is dead try to acquire a new connection and try
 			// again.
-			if alive {
+			if alive || ctx.Err() != nil {
 				return nil, err
 			}
 			continue
 		}
 
-		tx.AfterClose(p.txAfterClose)
+		tx.connPool = p
 		return tx, nil
 	}
 }
 
-// CopyTo acquires a connection, delegates the call to that connection, and releases the connection
-func (p *ConnPool) CopyTo(tableName string, columnNames []string, rowSrc CopyToSource) (int, error) {
+// CopyFrom acquires a connection, delegates the call to that connection, and releases the connection
+func (p *ConnPool) CopyFrom(tableName Identifier, columnNames []string, rowSrc CopyFromSource) (int, error) {
 	c, err := p.Acquire()
 	if err != nil {
 		return 0, err
 	}
 	defer p.Release(c)
 
-	return c.CopyTo(tableName, columnNames, rowSrc)
+	return c.CopyFrom(tableName, columnNames, rowSrc)
+}
+
+// BeginBatch acquires a connection and begins a batch on that connection. When
+// *Batch is finished, the connection is released automatically.
+func (p *ConnPool) BeginBatch() *Batch {
+	c, err := p.Acquire()
+	return &Batch{conn: c, connPool: p, err: err}
 }

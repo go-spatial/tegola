@@ -82,7 +82,7 @@ func (l *Layer) VTileLayer(ctx context.Context, tile *tegola.Tile) (*vectorTile.
 			l.MaxSimplificationZoom = uint(simplificationMaxZoom)
 		}
 
-		simplify = simplify && tile.Z < int(l.MaxSimplificationZoom)
+		simplify = simplify && tile.Z < l.MaxSimplificationZoom
 
 		vtf, err := f.VTileFeature(ctx, kmap, vmap, tile, simplify)
 		if err != nil {

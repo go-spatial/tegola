@@ -9,30 +9,26 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dimfeld/httptreemux"
-
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/mapbox/tilejson"
 	"github.com/go-spatial/tegola/server"
 )
 
 func TestHandleMapCapabilities(t *testing.T) {
-	//	setup a new provider
+	// setup a new provider
 	testcases := []struct {
-		handler    http.Handler
-		hostName   string
-		port       string
-		uri        string
-		uriPattern string
-		reqMethod  string
-		expected   tilejson.TileJSON
+		handler   http.Handler
+		hostName  string
+		port      string
+		uri       string
+		reqMethod string
+		expected  tilejson.TileJSON
 	}{
 		{
-			handler:    server.HandleCapabilities{},
-			hostName:   "",
-			uri:        "http://localhost:8080/capabilities/test-map.json",
-			uriPattern: "/capabilities/:map_name",
-			reqMethod:  "GET",
+			handler:   server.HandleCapabilities{},
+			hostName:  "",
+			uri:       "http://localhost:8080/capabilities/test-map.json",
+			reqMethod: "GET",
 			expected: tilejson.TileJSON{
 				Attribution: &testMapAttribution,
 				Bounds:      [4]float64{-180.0, -85.0511, 180.0, 85.0511},
@@ -60,7 +56,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+						MaxZoom:      testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
 							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 						},
@@ -81,12 +77,11 @@ func TestHandleMapCapabilities(t *testing.T) {
 			},
 		},
 		{
-			handler:    server.HandleCapabilities{},
-			hostName:   "cdn.tegola.io",
-			port:       "none",
-			uri:        "http://localhost:8080/capabilities/test-map.json?debug=true",
-			uriPattern: "/capabilities/:map_name",
-			reqMethod:  "GET",
+			handler:   server.HandleCapabilities{},
+			hostName:  "cdn.tegola.io",
+			port:      "none",
+			uri:       "http://localhost:8080/capabilities/test-map.json?debug=true",
+			reqMethod: "GET",
 			expected: tilejson.TileJSON{
 				Attribution: &testMapAttribution,
 				Bounds:      [4]float64{-180.0, -85.0511, 180.0, 85.0511},
@@ -114,7 +109,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Name:         testLayer1.MVTName(),
 						GeometryType: tilejson.GeomTypePoint,
 						MinZoom:      testLayer1.MinZoom,
-						MaxZoom:      testLayer3.MaxZoom, //	layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
+						MaxZoom:      testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 						Tiles: []string{
 							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 						},
@@ -166,12 +161,8 @@ func TestHandleMapCapabilities(t *testing.T) {
 		server.HostName = test.hostName
 		server.Port = test.port
 
-		//	setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
-		router := httptreemux.New()
-
-		//	setup a new router group
-		group := router.NewGroup("/")
-		group.UsingContext().Handler(test.reqMethod, test.uriPattern, server.HandleMapCapabilities{})
+		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		router := server.NewRouter(nil)
 
 		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
 		if err != nil {
@@ -194,7 +185,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 		}
 
 		var tileJSON tilejson.TileJSON
-		//	read the response body
+		// read the response body
 		if err := json.Unmarshal(bytes, &tileJSON); err != nil {
 			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
 			continue
@@ -204,5 +195,18 @@ func TestHandleMapCapabilities(t *testing.T) {
 			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
 			continue
 		}
+	}
+}
+
+func TestHandleMapCapabilitiesCORS(t *testing.T) {
+	tests := map[string]CORSTestCase{
+		"1": {
+			uri: "/capabilities/test-map.json",
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
 	}
 }

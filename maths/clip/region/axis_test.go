@@ -47,34 +47,34 @@ func TestAxis_Intersect(t *testing.T) {
 		testcase{ // 6
 			line:          maths.Line{maths.Pt{0, 50}, maths.Pt{50, 50}},
 			doesIntersect: [4]bool{true, false, false, false},
-			pt:            [4]maths.Pt{maths.Pt{0, 50}, maths.Pt{}, maths.Pt{}, maths.Pt{}},
+			pt:            [4]maths.Pt{{0, 50}, {}, {}, {}},
 		},
 		testcase{ // 7
 			line:          maths.Line{maths.Pt{0, 50}, maths.Pt{100, 50}},
 			doesIntersect: [4]bool{true, false, true, false},
-			pt:            [4]maths.Pt{maths.Pt{0, 50}, maths.Pt{}, maths.Pt{100, 50}, maths.Pt{}},
+			pt:            [4]maths.Pt{{0, 50}, {}, {100, 50}, {}},
 		},
 		testcase{ // 8
 			line:          maths.Line{maths.Pt{0, 50}, maths.Pt{150, 50}},
 			doesIntersect: [4]bool{true, false, true, false},
-			pt:            [4]maths.Pt{maths.Pt{0, 50}, maths.Pt{}, maths.Pt{100, 50}, maths.Pt{}},
+			pt:            [4]maths.Pt{{0, 50}, {}, {100, 50}, {}},
 		},
 
 		testcase{ // 9
 			line:          maths.Line{maths.Pt{50, 50}, maths.Pt{100, 50}},
 			doesIntersect: [4]bool{false, false, true, false},
-			pt:            [4]maths.Pt{maths.Pt{}, maths.Pt{}, maths.Pt{100, 50}, maths.Pt{}},
+			pt:            [4]maths.Pt{{}, {}, {100, 50}, {}},
 		},
 		testcase{ // 10
 			line:          maths.Line{maths.Pt{50, 50}, maths.Pt{150, 50}},
 			doesIntersect: [4]bool{false, false, true, false},
-			pt:            [4]maths.Pt{maths.Pt{}, maths.Pt{}, maths.Pt{100, 50}, maths.Pt{}},
+			pt:            [4]maths.Pt{{}, {}, {100, 50}, {}},
 		},
 
 		testcase{ // 11
 			line:          maths.Line{maths.Pt{100, 50}, maths.Pt{150, 50}},
 			doesIntersect: [4]bool{false, false, true, false},
-			pt:            [4]maths.Pt{maths.Pt{}, maths.Pt{}, maths.Pt{100, 50}, maths.Pt{}},
+			pt:            [4]maths.Pt{{}, {}, {100, 50}, {}},
 		},
 
 		testcase{ // 12
@@ -146,28 +146,28 @@ func TestAxis_Intersect(t *testing.T) {
 		testcase{ // 27
 			line:          maths.Line{maths.Pt{50, 0}, maths.Pt{50, 50}},
 			doesIntersect: [4]bool{false, true, false, false},
-			pt:            [4]maths.Pt{maths.Pt{}, maths.Pt{50, 0}, maths.Pt{}, maths.Pt{}},
+			pt:            [4]maths.Pt{{}, {50, 0}, {}, {}},
 		},
 		testcase{ // 28
 			line:          maths.Line{maths.Pt{50, 0}, maths.Pt{50, 100}},
 			doesIntersect: [4]bool{false, true, false, true},
-			pt:            [4]maths.Pt{maths.Pt{}, maths.Pt{50, 0}, maths.Pt{}, maths.Pt{50, 100}},
+			pt:            [4]maths.Pt{{}, {50, 0}, {}, {50, 100}},
 		},
 		testcase{ // 29
 			line:          maths.Line{maths.Pt{50, 0}, maths.Pt{50, 150}},
 			doesIntersect: [4]bool{false, true, false, true},
-			pt:            [4]maths.Pt{maths.Pt{}, maths.Pt{50, 0}, maths.Pt{}, maths.Pt{50, 100}},
+			pt:            [4]maths.Pt{{}, {50, 0}, {}, {50, 100}},
 		},
 
 		testcase{ // 30
 			line:          maths.Line{maths.Pt{50, 50}, maths.Pt{50, 100}},
 			doesIntersect: [4]bool{false, false, false, true},
-			pt:            [4]maths.Pt{maths.Pt{}, maths.Pt{}, maths.Pt{}, maths.Pt{50, 100}},
+			pt:            [4]maths.Pt{{}, {}, {}, {50, 100}},
 		},
 		testcase{ // 31
 			line:          maths.Line{maths.Pt{50, 100}, maths.Pt{50, 150}},
 			doesIntersect: [4]bool{false, false, false, true},
-			pt:            [4]maths.Pt{maths.Pt{}, maths.Pt{}, maths.Pt{}, maths.Pt{50, 100}},
+			pt:            [4]maths.Pt{{}, {}, {}, {50, 100}},
 		},
 
 		// diagonals
@@ -175,35 +175,35 @@ func TestAxis_Intersect(t *testing.T) {
 		testcase{ // 32
 			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{50, 50}},
 			doesIntersect: [4]bool{true, true, false, false},
-			pt:            [4]maths.Pt{maths.Pt{0, 0}, maths.Pt{0, 0}, maths.Pt{}, maths.Pt{}},
+			pt:            [4]maths.Pt{{0, 0}, {0, 0}, {}, {}},
 		},
 
 		testcase{ // 33
 			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{100, 100}},
 			doesIntersect: [4]bool{true, true, true, true},
-			pt:            [4]maths.Pt{maths.Pt{0, 0}, maths.Pt{0, 0}, maths.Pt{100, 100}, maths.Pt{100, 100}},
+			pt:            [4]maths.Pt{{0, 0}, {0, 0}, {100, 100}, {100, 100}},
 		},
 		testcase{ // 34
 			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{150, 150}},
 			doesIntersect: [4]bool{true, true, true, true},
-			pt:            [4]maths.Pt{maths.Pt{0, 0}, maths.Pt{0, 0}, maths.Pt{100, 100}, maths.Pt{100, 100}},
+			pt:            [4]maths.Pt{{0, 0}, {0, 0}, {100, 100}, {100, 100}},
 		},
 		// bottom left to top right.
 		testcase{ // 35
 			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{50, 50}},
 			doesIntersect: [4]bool{true, false, false, true},
-			pt:            [4]maths.Pt{maths.Pt{0, 100}, maths.Pt{}, maths.Pt{}, maths.Pt{0, 100}},
+			pt:            [4]maths.Pt{{0, 100}, {}, {}, {0, 100}},
 		},
 
 		testcase{ // 36
 			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{100, 0}},
 			doesIntersect: [4]bool{true, true, true, true},
-			pt:            [4]maths.Pt{maths.Pt{0, 100}, maths.Pt{100, 0}, maths.Pt{100, 0}, maths.Pt{0, 100}},
+			pt:            [4]maths.Pt{{0, 100}, {100, 0}, {100, 0}, {0, 100}},
 		},
 		testcase{ // 37
 			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{150, -50}},
 			doesIntersect: [4]bool{true, true, true, true},
-			pt:            [4]maths.Pt{maths.Pt{0, 100}, maths.Pt{100, 0}, maths.Pt{100, 0}, maths.Pt{0, 100}},
+			pt:            [4]maths.Pt{{0, 100}, {100, 0}, {100, 0}, {0, 100}},
 		},
 	)
 	//test.RunOrder = "32"

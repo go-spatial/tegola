@@ -9,21 +9,22 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
 
-//	NewMap creates a new map with the necessary default values
+// NewMap creates a new map with the necessary default values
 func NewWebMercatorMap(name string) Map {
 	return Map{
 		Name: name,
-		//	default bounds
+		// default bounds
 		Bounds:     tegola.WGS84Bounds,
 		Layers:     []Layer{},
 		SRID:       tegola.WebMercator,
@@ -34,33 +35,33 @@ func NewWebMercatorMap(name string) Map {
 
 type Map struct {
 	Name string
-	//	Contains an attribution to be displayed when the map is shown to a user.
+	// Contains an attribution to be displayed when the map is shown to a user.
 	// 	This string is sanatized so it can't be abused as a vector for XSS or beacon tracking.
 	Attribution string
-	//	The maximum extent of available map tiles in WGS:84
-	//	latitude and longitude values, in the order left, bottom, right, top.
-	//	Default: [-180, -85, 180, 85]
-	Bounds [4]float64
-	//	The first value is the longitude, the second is latitude (both in
-	//	WGS:84 values), the third value is the zoom level.
+	// The maximum extent of available map tiles in WGS:84
+	// latitude and longitude values, in the order left, bottom, right, top.
+	// Default: [-180, -85, 180, 85]
+	Bounds *geom.Extent
+	// The first value is the longitude, the second is latitude (both in
+	// WGS:84 values), the third value is the zoom level.
 	Center [3]float64
 	Layers []Layer
 
 	SRID uint64
-	//	MVT output values
+	// MVT output values
 	TileExtent uint64
 	TileBuffer uint64
 }
 
 // AddDebugLayers returns a copy of a Map with the debug layers appended to the layer list
 func (m Map) AddDebugLayers() Map {
-	//	make an explict copy of the layers
+	// make an explicit copy of the layers
 	layers := make([]Layer, len(m.Layers))
 	copy(layers, m.Layers)
 	m.Layers = layers
 
-	//	setup a debug provider
-	debugProvider, _ := debug.NewTileProvider(map[string]interface{}{})
+	// setup a debug provider
+	debugProvider, _ := debug.NewTileProvider(dict.Dict{})
 
 	m.Layers = append(layers, []Layer{
 		{
@@ -85,7 +86,7 @@ func (m Map) AddDebugLayers() Map {
 }
 
 // FilterLayersByZoom returns a copy of a Map with a subset of layers that match the given zoom
-func (m Map) FilterLayersByZoom(zoom int) Map {
+func (m Map) FilterLayersByZoom(zoom uint) Map {
 	var layers []Layer
 
 	for i := range m.Layers {
@@ -95,7 +96,7 @@ func (m Map) FilterLayersByZoom(zoom int) Map {
 		}
 	}
 
-	//	overwrite the Map's layers with our subset
+	// overwrite the Map's layers with our subset
 	m.Layers = layers
 
 	return m
@@ -111,7 +112,7 @@ func (m Map) FilterLayersByName(names ...string) Map {
 		if m.Layers[i].Name != "" && strings.Contains(nameStr, m.Layers[i].Name) {
 			layers = append(layers, m.Layers[i])
 			continue
-		} else if m.Layers[i].ProviderLayerName != "" && strings.Contains(nameStr, m.Layers[i].ProviderLayerName) { //	default to using the ProviderLayerName for the lookup
+		} else if m.Layers[i].ProviderLayerName != "" && strings.Contains(nameStr, m.Layers[i].ProviderLayerName) { // default to using the ProviderLayerName for the lookup
 			layers = append(layers, m.Layers[i])
 			continue
 		}
@@ -123,7 +124,7 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
-//	TODO (arolek): support for max zoom
+// TODO (arolek): support for max zoom
 func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	// tile container
 	var mvtTile mvt.Tile
@@ -149,7 +150,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 			// on completion let the wait group know
 			defer wg.Done()
 
-			//	fetch layer from data provider
+			// fetch layer from data provider
 			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
 				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package
 				geo, err := convert.ToTegola(f.Geometry)
@@ -210,13 +211,13 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 		return nil, ctx.Err()
 	}
 
-	//	add layers to our tile
+	// add layers to our tile
 	mvtTile.AddLayers(mvtLayers...)
 
 	z, x, y := tile.ZXY()
 
 	// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-	tegolaTile := tegola.NewTile(int(z), int(x), int(y))
+	tegolaTile := tegola.NewTile(uint(z), uint(x), uint(y))
 
 	// generate our tile
 	vtile, err := mvtTile.VTile(ctx, tegolaTile)

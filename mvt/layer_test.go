@@ -60,7 +60,7 @@ func TestLayerAddFeatures(t *testing.T) {
 	}
 	newID := func(id uint64) *uint64 { return &id }
 	tbltest.Cases(
-		//	nil id test 1
+		// nil id test 1
 		tc{
 			features: []Feature{
 				{
@@ -74,7 +74,7 @@ func TestLayerAddFeatures(t *testing.T) {
 				},
 			},
 		},
-		//	nil id test 2
+		// nil id test 2
 		tc{
 			features: []Feature{
 				{
@@ -88,7 +88,7 @@ func TestLayerAddFeatures(t *testing.T) {
 				},
 			},
 		},
-		//	same feature test
+		// same feature test
 		tc{
 			features: []Feature{
 				{
@@ -111,7 +111,7 @@ func TestLayerAddFeatures(t *testing.T) {
 			},
 			skipped: true,
 		},
-		//	different feature test
+		// different feature test
 		tc{
 			features: []Feature{
 				{
@@ -132,12 +132,6 @@ func TestLayerAddFeatures(t *testing.T) {
 func TestLayer(t *testing.T) {
 	tile := tegola.NewTile(0, 0, 0)
 
-	baseBBox := tegola.BoundingBox{
-		Minx: 0,
-		Miny: 0,
-		Maxx: 4096,
-		Maxy: 4096,
-	}
 	//TODO: gdey — thing of a better way to build out features for a layer.
 	fromPixel := func(x, y float64) *basic.Point {
 		pt, err := tile.FromPixel(tegola.WebMercator, [2]float64{x, y})
@@ -150,7 +144,6 @@ func TestLayer(t *testing.T) {
 	type tc struct {
 		layer   *Layer
 		vtlayer *vectorTile.Tile_Layer
-		bbox    tegola.BoundingBox
 		eerr    error
 	}
 	fn := func(i int, tcase tc) {
@@ -194,7 +187,6 @@ func TestLayer(t *testing.T) {
 				Name: "nofeatures",
 			},
 			vtlayer: newTileLayer("nofeatures", nil, nil, nil),
-			bbox:    baseBBox,
 		},
 		tc{
 			layer: &Layer{
@@ -212,7 +204,6 @@ func TestLayer(t *testing.T) {
 			// features should not be nil, when we start comparing features this will fail.
 			// But for now it's okay.
 			vtlayer: newTileLayer("onefeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag")}, []*vectorTile.Tile_Feature{nil}),
-			bbox:    baseBBox,
 		},
 		tc{
 			layer: &Layer{
@@ -243,7 +234,6 @@ func TestLayer(t *testing.T) {
 			// features should not be nil, when we start comparing features this will fail.
 			// But for now it's okay.
 			vtlayer: newTileLayer("twofeature", []string{"tag1", "tag2"}, []*vectorTile.Tile_Value{vectorTileValue("tag1")}, []*vectorTile.Tile_Feature{nil, nil}),
-			bbox:    baseBBox,
 		},
 	).Run(fn)
 }

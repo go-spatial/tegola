@@ -3,15 +3,15 @@ package gpkg
 import (
 	"testing"
 
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 )
 
 func TestReplaceTokens(t *testing.T) {
 	type tcase struct {
 		qtext string
-		zoom  uint64
+		zoom  uint
 		// TODO: replace with geom.Extent once it's ready
-		extent   geom.BoundingBox
+		extent   *geom.Extent
 		expected string
 	}
 
@@ -25,7 +25,7 @@ func TestReplaceTokens(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"zoom": tcase{
+		"zoom": {
 			qtext: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
@@ -42,7 +42,7 @@ func TestReplaceTokens(t *testing.T) {
 				WHERE
 					min_zoom <= 9 AND max_zoom >= 9`,
 		},
-		"bbox": tcase{
+		"bbox": {
 			qtext: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
@@ -50,9 +50,9 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX!`,
-			extent: geom.BoundingBox{
-				{180, 85.0511},
-				{-180, -85.0511},
+			extent: &geom.Extent{
+				-180, -85.0511,
+				180, 85.0511,
 			},
 			expected: `
 				SELECT
@@ -62,7 +62,7 @@ func TestReplaceTokens(t *testing.T) {
 				WHERE
 					minx <= 180 AND maxx >= -180 AND miny <= 85.0511 AND maxy >= -85.0511`,
 		},
-		"bbox zoom": tcase{
+		"bbox zoom": {
 			qtext: `
 				SELECT
 					fid, geom, featurecla, min_zoom, 22 as max_zoom, minx, miny, maxx, maxy
@@ -70,9 +70,9 @@ func TestReplaceTokens(t *testing.T) {
 					ne_110m_land t JOIN rtree_ne_110m_land_geom si ON t.fid = si.id
 				WHERE
 					!BBOX! AND min_zoom = !ZOOM!`,
-			extent: geom.BoundingBox{
-				{180, 85.0511},
-				{-180, -85.0511},
+			extent: &geom.Extent{
+				-180, -85.0511,
+				180, 85.0511,
 			},
 			zoom: 3,
 			expected: `

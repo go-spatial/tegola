@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
@@ -27,9 +28,9 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		if len(fdescs) == 0 {
 			return "", fmt.Errorf("No fields were returned for table %v", tblname)
 		}
-		//	to avoid field names possibly colliding with Postgres keywords,
-		//	we wrap the field names in quotes
-		for i, _ := range fdescs {
+		// to avoid field names possibly colliding with Postgres keywords,
+		// we wrap the field names in quotes
+		for i := range fdescs {
 			flds = append(flds, fdescs[i].Name)
 		}
 	}
@@ -48,8 +49,8 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		}
 	}
 
-	//	to avoid field names possibly colliding with Postgres keywords,
-	//	we wrap the field names in quotes
+	// to avoid field names possibly colliding with Postgres keywords,
+	// we wrap the field names in quotes
 	if fgeom == -1 {
 		flds = append(flds, fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField))
 	} else {
@@ -70,41 +71,41 @@ const (
 	zoomToken = "!ZOOM!"
 )
 
-//	replaceTokens replaces tokens in the provided SQL string
+// replaceTokens replaces tokens in the provided SQL string
 //
-//	!BBOX! - the bounding box of the tile
-//	!ZOOM! - the tile Z value
+// !BBOX! - the bounding box of the tile
+// !ZOOM! - the tile Z value
 func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
 	bufferedExtent, _ := tile.BufferedExtent()
 
-	//	TODO: leverage helper functions for minx / miny to make this easier to follow
-	//	TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
-	minGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
+	// TODO: leverage helper functions for minx / miny to make this easier to follow
+	// TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
+	minGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent.MinX(), bufferedExtent.MinY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
-	maxGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
+	maxGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent.MaxX(), bufferedExtent.MaxY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
 	minPt, maxPt := minGeo.AsPoint(), maxGeo.AsPoint()
 
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%v,%v,%v,%v,%v)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
+	bbox := fmt.Sprintf("ST_MakeEnvelope(%g,%g,%g,%g,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
-	//	replace query string tokens
+	// replace query string tokens
 	z, _, _ := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
-		zoomToken, strconv.FormatUint(z, 10),
+		zoomToken, strconv.FormatUint(uint64(z), 10),
 	)
 
 	return tokenReplacer.Replace(sql), nil
 }
 
-func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
+func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 	switch valType {
 	default:
 		switch vt := val.(type) {
@@ -116,9 +117,9 @@ func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 		case string:
 			return vt, nil
 		}
-	case pgx.BoolOid, pgx.ByteaOid, pgx.TextOid, pgx.OidOid, pgx.VarcharOid, pgx.JsonbOid:
+	case pgtype.BoolOID, pgtype.ByteaOID, pgtype.TextOID, pgtype.OIDOID, pgtype.VarcharOID, pgtype.JSONBOID:
 		return val, nil
-	case pgx.Int8Oid, pgx.Int2Oid, pgx.Int4Oid, pgx.Float4Oid, pgx.Float8Oid:
+	case pgtype.Int8OID, pgtype.Int2OID, pgtype.Int4OID, pgtype.Float4OID, pgtype.Float8OID:
 		switch vt := val.(type) {
 		case int8:
 			return int64(vt), nil
@@ -141,68 +142,60 @@ func transformVal(valType pgx.Oid, val interface{}) (interface{}, error) {
 		default: // should never happen.
 			return nil, fmt.Errorf("%v type is not supported. (should never happen)", valType)
 		}
-	case pgx.DateOid, pgx.TimestampOid, pgx.TimestampTzOid:
+	case pgtype.DateOID, pgtype.TimestampOID, pgtype.TimestamptzOID:
 		return fmt.Sprintf("%v", val), nil
 	}
 }
 
 func decipherFields(ctx context.Context, geoFieldname, idFieldname string, descriptions []pgx.FieldDescription, values []interface{}) (gid uint64, geom []byte, tags map[string]interface{}, err error) {
-	tags = make(map[string]interface{})
-	var desc pgx.FieldDescription
 	var ok bool
+	tags = make(map[string]interface{})
 
-	for i, v := range values {
-		// Do a quick check
+	for i := range values {
+		// do a quick check
 		if err := ctx.Err(); err != nil {
 			return 0, nil, nil, err
 		}
-		// Skip nil values.
+
+		// skip nil values.
 		if values[i] == nil {
 			continue
 		}
-		desc = descriptions[i]
+
+		desc := descriptions[i]
+
 		switch desc.Name {
 		case geoFieldname:
-			if geom, ok = v.([]byte); !ok {
-				return 0, nil, nil, fmt.Errorf("Unable to convert geometry field (%v) into bytes.", geoFieldname)
+			if geom, ok = values[i].([]byte); !ok {
+				return 0, nil, nil, fmt.Errorf("unable to convert geometry field (%v) into bytes.", geoFieldname)
 			}
 		case idFieldname:
-			gid, err = gId(v)
+			gid, err = gId(values[i])
 		default:
-			switch desc.DataTypeName {
-			// hstore is a special case
-			case "hstore":
-				// parse our Hstore values into keys and values
-				keys, values, err := pgx.ParseHstore(v.(string))
-				if err != nil {
-					return gid, geom, tags, fmt.Errorf("Unable to parse Hstore err: %v", err)
-				}
-				for i, k := range keys {
-					// if the value is Valid (i.e. not null) then add it to our tags map.
-					if values[i].Valid {
-						//	we need to check if the key already exists. if it does, then don't overwrite it
-						if _, ok := tags[k]; !ok {
-							tags[k] = values[i].String
-						}
+			switch vex := values[i].(type) {
+			case map[string]pgtype.Text:
+				for k, v := range vex {
+					// we need to check if the key already exists. if it does, then don't overwrite it
+					if _, ok := tags[k]; !ok {
+						tags[k] = v.String
 					}
 				}
-				continue
-			case "numeric":
-				num, err := strconv.ParseFloat(v.(string), 64)
-				if err != nil {
-					return 0, nil, nil, fmt.Errorf("Unable to parse numeric (%v) to float64 err: %v", v.(string), err)
-				}
+			case *pgtype.Numeric:
+				var num float64
+				vex.AssignTo(&num)
+
 				tags[desc.Name] = num
-				continue
 			default:
-				value, err := transformVal(desc.DataType, v)
+				value, err := transformVal(desc.DataType, values[i])
 				if err != nil {
-					return gid, geom, tags, fmt.Errorf("Unable to convert field[%v] (%v) of type (%v - %v) to a suitable value.: [[ %T  :: %[5]t ]]", i, desc.Name, desc.DataType, desc.DataTypeName, v)
+					return gid, geom, tags, fmt.Errorf("unable to convert field [%v] (%v) of type (%v - %v) to a suitable value: %+v", i, desc.Name, desc.DataType, desc.DataTypeName, values[i])
 				}
+
 				tags[desc.Name] = value
 			}
 		}
 	}
+
 	return gid, geom, tags, err
 }
 
@@ -229,6 +222,6 @@ func gId(v interface{}) (gid uint64, err error) {
 	case string:
 		return strconv.ParseUint(aval, 10, 64)
 	default:
-		return gid, fmt.Errorf("Unable to convert field into a uint64.")
+		return gid, fmt.Errorf("unable to convert field into a uint64.")
 	}
 }

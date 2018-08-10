@@ -120,7 +120,7 @@ func Segment(img *image.RGBA, minx, miny int, s []float64, c color.RGBA) {
 }
 func Region(img *image.RGBA, minx, miny int, clipr *region.Region, c color.RGBA) {
 	r := clipr.LineString()
-	//	log.Printf("Drawing region: %v", r)
+	// log.Printf("Drawing region: %v", r)
 	Segment(img, minx, miny, r, c)
 }
 

@@ -212,7 +212,7 @@ type TriangleEdge struct {
 
 func (te *TriangleEdge) Dump() {
 	if te == nil || te.Node == nil {
-		//	log.Println("Triangle: nil")
+		// log.Println("Triangle: nil")
 		return
 	}
 	//log.Println("Triangle: ", te.Node.Key(), "Constrained:", te.IsConstrained)
@@ -289,9 +289,9 @@ func (tn *TriangleNode) LabelAs(l Label, force bool) (unlabled []*TriangleNode) 
 
 type TriangleGraph struct {
 	triangles []*TriangleNode
-	// List of the triangles that are labled as outside.
+	// List of the triangles that are labelled as outside.
 	outside []int
-	// List of the triangles that are labled as inside.
+	// List of the triangles that are labelled as inside.
 	inside   []int
 	bounding []int
 }
@@ -459,22 +459,22 @@ func PointPairs(pts []Pt) ([][2]Pt, error) {
 
 	case 2:
 		return [][2]Pt{
-			[2]Pt{pts[0], pts[1]},
+			{pts[0], pts[1]},
 		}, nil
 	case 3:
 		return [][2]Pt{
-			[2]Pt{pts[0], pts[1]},
-			[2]Pt{pts[0], pts[2]},
-			[2]Pt{pts[1], pts[2]},
+			{pts[0], pts[1]},
+			{pts[0], pts[2]},
+			{pts[1], pts[2]},
 		}, nil
 	case 4:
 		return [][2]Pt{
-			[2]Pt{pts[0], pts[1]},
-			[2]Pt{pts[0], pts[2]},
-			[2]Pt{pts[0], pts[3]},
-			[2]Pt{pts[1], pts[2]},
-			[2]Pt{pts[1], pts[3]},
-			[2]Pt{pts[2], pts[3]},
+			{pts[0], pts[1]},
+			{pts[0], pts[2]},
+			{pts[0], pts[3]},
+			{pts[1], pts[2]},
+			{pts[1], pts[3]},
+			{pts[2], pts[3]},
 		}, nil
 
 	default:
@@ -510,7 +510,7 @@ func insureConnected(polygons ...[]Line) (ret [][]Line) {
 	return ret
 }
 
-// desctucture will split the given polygons into their composit lines, breaking up lines at intersection points. It will remove lines that overlap as well. Polygons need to be fully connected before calling this function.
+// desctucture will split the given polygons into their composite lines, breaking up lines at intersection points. It will remove lines that overlap as well. Polygons need to be fully connected before calling this function.
 func destructure(polygons [][]Line) (lines []Line) {
 
 	// First we need to combine all the segments.
@@ -757,7 +757,7 @@ func generateEdgeMap(destructuredLines []Line) (em EdgeMap) {
 	}
 	// We are calculating a bound box around all of the given polygons. These external points will
 	// be used during the labeling phase.
-	// The adjustBBoxBy is just an arbitrary number, we just care that is out futher then the largest and smallest points.
+	// The adjustBBoxBy is just an arbitrary number, we just care that is out further then the largest and smallest points.
 	minPt.X, minPt.Y, maxPt.X, maxPt.Y = minPt.X-adjustBBoxBy, minPt.Y-adjustBBoxBy, maxPt.X+adjustBBoxBy, maxPt.Y+adjustBBoxBy
 	bbv1, bbv2, bbv3, bbv4 := minPt, Pt{maxPt.X, minPt.Y}, maxPt, Pt{minPt.X, maxPt.Y}
 
@@ -1025,7 +1025,7 @@ func (em *EdgeMap) FindTriangles() (*TriangleGraph, error) {
 			}
 			if tr1 == nil && tr2 == nil {
 				// zero area triangle.
-				// This can happend if an edge lays on the same line as another edge.
+				// This can happen if an edge lays on the same line as another edge.
 				continue
 			}
 			var trn1, trn2 *TriangleNode

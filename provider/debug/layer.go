@@ -1,6 +1,6 @@
 package debug
 
-import "github.com/go-spatial/tegola/geom"
+import "github.com/go-spatial/geom"
 
 type Layer struct {
 	name     string

@@ -15,6 +15,10 @@ env:
     - PGPORT=5432
     - PGDATABASE="tegola"
     - PGUSER="postgres"
+    - PGSSLMODE="disable"
+    - PGSSLKEY=""
+    - PGSSLCERT=""
+    - PGSSLROOTCERT=""
     - DOCKERHUB_ORG="gospatial"
     - DOCKERHUB_REPO="tegola"
     - RUN_REDIS_TESTS=yes

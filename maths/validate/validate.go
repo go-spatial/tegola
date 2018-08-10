@@ -3,13 +3,13 @@ package validate
 import (
 	"context"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/clip"
 	"github.com/go-spatial/tegola/maths/hitmap"
 	"github.com/go-spatial/tegola/maths/makevalid"
-	"github.com/go-spatial/tegola/maths/points"
 )
 
 func CleanLinestring(g []float64) (l []float64, err error) {
@@ -41,7 +41,7 @@ func LineStringToSegments(l tegola.LineString) ([]maths.Line, error) {
 	ppln := tegola.LineAsPointPairs(l)
 	return maths.NewSegments(ppln)
 }
-func makePolygonValid(ctx context.Context, hm *hitmap.M, extent *points.Extent, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
+func makePolygonValid(ctx context.Context, hm *hitmap.M, extent *geom.Extent, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
 	var plygLines [][]maths.Line
 	for _, g := range gs {
 		for _, l := range g.Sublines() {
@@ -96,51 +96,36 @@ func scaleMultiPolygon(p tegola.MultiPolygon, factor float64) (bmp basic.MultiPo
 	return bmp
 }
 
-func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *points.Extent) (geo tegola.Geometry, err error) {
+func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent) (geo tegola.Geometry, err error) {
 	if g == nil {
 		return nil, nil
 	}
-	var ext *points.Extent
 	switch gg := g.(type) {
 	case tegola.Polygon:
 		expp := scalePolygon(gg, 10.0)
+		ext := extent.ScaleBy(10.0)
 		hm := hitmap.NewFromGeometry(expp)
-
-		if extent != nil {
-			ext = &points.Extent{
-				{extent[0][0] * 10.0, extent[0][1] * 10.0},
-				{extent[1][0] * 10.0, extent[1][1] * 10.0},
-			}
-		}
 		mp, err := makePolygonValid(ctx, &hm, ext, expp)
 		if err != nil {
 			return nil, err
 		}
 		return scaleMultiPolygon(mp, 0.10), nil
 
-		//return makePolygonValid(ctx, &hm, extent, gg)
 	case tegola.MultiPolygon:
 		expp := scaleMultiPolygon(gg, 10.0)
+		ext := extent.ScaleBy(10.0)
 		hm := hitmap.NewFromGeometry(expp)
-
-		if extent != nil {
-			ext = &points.Extent{
-				{extent[0][0] * 10.0, extent[0][1] * 10.0},
-				{extent[1][0] * 10.0, extent[1][1] * 10.0},
-			}
-		}
 		mp, err := makePolygonValid(ctx, &hm, ext, expp.Polygons()...)
 		if err != nil {
 			return nil, err
 		}
 		return scaleMultiPolygon(mp, 0.10), nil
-		//return makePolygonValid(ctx, &hm, ext, gg.Polygons()...)
 
 	case tegola.MultiLine:
 		var ml basic.MultiLine
 		lns := gg.Lines()
 		for i := range lns {
-			//	log.Println("Clip MultiLine Buff", buff)
+			// log.Println("Clip MultiLine Buff", buff)
 			nls, err := clip.LineString(lns[i], extent)
 			if err != nil {
 				return ml, err
@@ -149,7 +134,7 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *points.Extent
 		}
 		return ml, nil
 	case tegola.LineString:
-		//		log.Println("Clip LineString Buff", buff)
+		// 	log.Println("Clip LineString Buff", buff)
 		nls, err := clip.LineString(gg, extent)
 		return basic.MultiLine(nls), err
 	}

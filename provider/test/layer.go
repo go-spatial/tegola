@@ -1,6 +1,6 @@
 package test
 
-import "github.com/go-spatial/tegola/geom"
+import "github.com/go-spatial/geom"
 
 type layer struct {
 	name     string
