@@ -42,8 +42,7 @@ Use "tegola [command] --help" for more information about a command.
 
 ## Running tegola as a vector tile server
 1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/go-spatial/tegola/releases).
-2. After the download you will need to make the binary executable. The binary, will be name `tegola_$OS_$ARCH`, to follow along with the instructions make sure to rename it to `tegola`.
-2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
+2. Setup your config file and run. Dy default tegola looks for a `config.toml` in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
 ./tegola serve --config=/path/to/config.toml
