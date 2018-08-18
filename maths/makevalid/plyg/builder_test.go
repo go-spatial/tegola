@@ -21,7 +21,7 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Simple Triangle.",
 			ipoints: [][2][]float64{
-				[2][]float64{{0, 1}, {0}},
+				{{0, 1}, {0}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,
@@ -31,7 +31,7 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Simple Triangle two.",
 			ipoints: [][2][]float64{
-				[2][]float64{{0}, {0, 1}},
+				{{0}, {0, 1}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,
@@ -41,8 +41,8 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Simple Square.",
 			ipoints: [][2][]float64{
-				[2][]float64{{0}, {0, 1}},
-				[2][]float64{{0, 1}, {1}},
+				{{0}, {0, 1}},
+				{{0, 1}, {1}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,
@@ -52,8 +52,8 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Diag Rect.",
 			ipoints: [][2][]float64{
-				[2][]float64{{0, 1}, {1}},
-				[2][]float64{{1}, {1, 2}},
+				{{0, 1}, {1}},
+				{{1}, {1, 2}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,
@@ -63,8 +63,8 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Diag Rect. 1",
 			ipoints: [][2][]float64{
-				[2][]float64{{1}, {0, 1}},
-				[2][]float64{{1, 2}, {1}},
+				{{1}, {0, 1}},
+				{{1, 2}, {1}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,
@@ -74,8 +74,8 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Large Triangle.",
 			ipoints: [][2][]float64{
-				[2][]float64{{0, 1}, {1}},
-				[2][]float64{{1, 2}, {1}},
+				{{0, 1}, {1}},
+				{{1, 2}, {1}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,
@@ -85,8 +85,8 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Large Triangle 1.",
 			ipoints: [][2][]float64{
-				[2][]float64{{1}, {0, 1}},
-				[2][]float64{{1}, {1, 2}},
+				{{1}, {0, 1}},
+				{{1}, {1, 2}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,
@@ -96,9 +96,9 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Left Triangle and Rectangle",
 			ipoints: [][2][]float64{
-				[2][]float64{{0, 1}, {1}},
-				[2][]float64{{1}, {1, 2}},
-				[2][]float64{{1, 2}, {2}},
+				{{0, 1}, {1}},
+				{{1}, {1, 2}},
+				{{1, 2}, {2}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,
@@ -108,9 +108,9 @@ func TestBuilder(t *testing.T) {
 		testcase{
 			desc: "Right Triangle and Rectangle",
 			ipoints: [][2][]float64{
-				[2][]float64{{1}, {0, 1}},
-				[2][]float64{{1}, {1, 2}},
-				[2][]float64{{1, 2}, {2}},
+				{{1}, {0, 1}},
+				{{1}, {1, 2}},
+				{{1, 2}, {2}},
 			},
 			ring: Ring{
 				Label:  maths.Inside,

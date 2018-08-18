@@ -6,27 +6,203 @@ import (
 
 	"context"
 
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
+	"github.com/jackc/pgx"
 )
 
+func TestTLSConfig(t *testing.T) {
 
+	testConnConfig := pgx.ConnConfig{
+		Host:     "testhost",
+		Port:     8080,
+		Database: "testdb",
+		User:     "testuser",
+		Password: "testpassword",
+	}
+
+	type tcase struct {
+		sslMode     string
+		sslKey      string
+		sslCert     string
+		sslRootCert string
+		testFunc    func(config pgx.ConnConfig)
+		shouldError bool
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		err := postgis.ConfigTLS(tc.sslMode, tc.sslKey, tc.sslCert, tc.sslRootCert, &testConnConfig)
+		if !tc.shouldError && err != nil {
+			t.Errorf("unable to create a new provider: %v", err)
+			return
+		} else if tc.shouldError && err == nil {
+			t.Errorf("Error expected but got no error")
+			return
+		}
+
+		tc.testFunc(testConnConfig)
+	}
+
+	tests := map[string]tcase{
+		"1": {
+			sslMode:     "",
+			sslKey:      "",
+			sslCert:     "",
+			sslRootCert: "",
+			shouldError: true,
+			testFunc: func(config pgx.ConnConfig) {
+			},
+		},
+		"2": {
+			sslMode:     "disable",
+			sslKey:      "",
+			sslCert:     "",
+			sslRootCert: "",
+			shouldError: false,
+			testFunc: func(config pgx.ConnConfig) {
+				if config.UseFallbackTLS != false {
+					t.Error("When using disable ssl mode; UseFallbackTLS, expected false got true")
+				}
+
+				if config.TLSConfig != nil {
+					t.Errorf("When using disable ssl mode; UseFallbackTLS, expected nil got %v", testConnConfig.TLSConfig)
+				}
+
+				if config.FallbackTLSConfig != nil {
+					t.Errorf("When using disable ssl mode; UseFallbackTLS, expected nil got %v", testConnConfig.FallbackTLSConfig)
+				}
+			},
+		},
+		"3": {
+			sslMode:     "allow",
+			sslKey:      "",
+			sslCert:     "",
+			sslRootCert: "",
+			shouldError: false,
+			testFunc: func(config pgx.ConnConfig) {
+				if config.UseFallbackTLS != true {
+					t.Error("When using allow ssl mode; UseFallbackTLS, expected true got false")
+				}
+
+				if config.FallbackTLSConfig == nil {
+					t.Error("When using allow ssl mode; UseFallbackTLS, expected not nil got nil")
+				}
+
+				if config.FallbackTLSConfig != nil && config.FallbackTLSConfig.InsecureSkipVerify == false {
+					t.Error("When using allow ssl mode; UseFallbackTLS.InsecureSkipVerify, expected true got false")
+				}
+			},
+		},
+		"4": {
+			sslMode:     "prefer",
+			sslKey:      "",
+			sslCert:     "",
+			sslRootCert: "",
+			shouldError: false,
+			testFunc: func(config pgx.ConnConfig) {
+				if config.UseFallbackTLS != true {
+					t.Error("When using prefer ssl mode; UseFallbackTLS, expected true got false")
+				}
+
+				if config.FallbackTLSConfig != nil {
+					t.Errorf("When using prefer ssl mode; UseFallbackTLS, expected nil got %v", config.FallbackTLSConfig)
+				}
+
+				if config.TLSConfig == nil {
+					t.Error("When using prefer ssl mode; TLSConfig, expected not nil got nil")
+				}
+
+				if config.TLSConfig != nil && config.TLSConfig.InsecureSkipVerify == false {
+					t.Error("When using prefer ssl mode; TLSConfig.InsecureSkipVerify, expected true got false")
+				}
+			},
+		},
+		"5": {
+			sslMode:     "require",
+			sslKey:      "",
+			sslCert:     "",
+			sslRootCert: "",
+			shouldError: false,
+			testFunc: func(config pgx.ConnConfig) {
+				if config.TLSConfig == nil {
+					t.Error("When using prefer ssl mode; TLSConfig, expected not nil got nil")
+				}
+
+				if config.TLSConfig != nil && config.TLSConfig.InsecureSkipVerify == false {
+					t.Error("When using prefer ssl mode; TLSConfig.InsecureSkipVerify, expected true got false")
+				}
+			},
+		},
+		"6": {
+			sslMode:     "verify-ca",
+			sslKey:      "",
+			sslCert:     "",
+			sslRootCert: "",
+			shouldError: false,
+			testFunc: func(config pgx.ConnConfig) {
+				if config.TLSConfig == nil {
+					t.Error("When using prefer ssl mode; TLSConfig, expected not nil got nil")
+				}
+
+				if config.TLSConfig != nil && config.TLSConfig.ServerName != testConnConfig.Host {
+					t.Errorf("When using prefer ssl mode; TLSConfig.ServerName, expected %s got %s", testConnConfig.Host, config.TLSConfig.ServerName)
+				}
+			},
+		},
+		"7": {
+			sslMode:     "verify-full",
+			sslKey:      "",
+			sslCert:     "",
+			sslRootCert: "",
+			shouldError: false,
+			testFunc: func(config pgx.ConnConfig) {
+				if config.TLSConfig == nil {
+					t.Error("When using prefer ssl mode; TLSConfig, expected not nil got nil")
+				}
+
+				if config.TLSConfig != nil && config.TLSConfig.ServerName != testConnConfig.Host {
+					t.Errorf("When using prefer ssl mode; TLSConfig.ServerName, expected %s got %s", testConnConfig.Host, config.TLSConfig.ServerName)
+				}
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
 
 func TestNewTileProvider(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
-	testcases := []struct {
-		config map[string]interface{}
-	}{
-		{
-			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+	type tcase struct {
+		config dict.Dict
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		_, err := postgis.NewTileProvider(tc.config)
+		if err != nil {
+			t.Errorf("unable to create a new provider. err: %v", err)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		"1": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -37,30 +213,62 @@ func TestNewTileProvider(t *testing.T) {
 		},
 	}
 
-	for i, tc := range testcases {
-		_, err := postgis.NewTileProvider(tc.config)
-		if err != nil {
-			t.Errorf("Failed test %v. Unable to create a new provider. err: %v", i, err)
-			return
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
 	}
 }
 
 func TestTileFeatures(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
-	testcases := []struct {
-		config               map[string]interface{}
+	type tcase struct {
+		config               dict.Dict
 		tile                 *slippy.Tile
 		expectedFeatureCount int
-	}{
-		{
-			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		p, err := postgis.NewTileProvider(tc.config)
+		if err != nil {
+			t.Errorf("unexpected error; unable to create a new provider, expected: nil Got %v", err)
+			return
+		}
+
+		// iterate our configured layers
+		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
+			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
+
+			var featureCount int
+			err := p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
+				featureCount++
+
+				return nil
+			})
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
+				return
+			}
+
+			if featureCount != tc.expectedFeatureCount {
+				t.Errorf("feature count, expected %v got %v", tc.expectedFeatureCount, featureCount)
+				return
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"land query": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -71,14 +279,17 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 4032,
 		},
-		//	scalerank test
-		{
-			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+		"scalerank test": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName: "land",
@@ -89,14 +300,17 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 98,
 		},
-		//	decode numeric(x,x) types
-		{
-			config: map[string]interface{}{
-				postgis.ConfigKeyHost:     os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:     port,
-				postgis.ConfigKeyDB:       os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:     os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword: os.Getenv("PGPASSWORD"),
+		"decode numeric(x,x) types": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 				postgis.ConfigKeyLayers: []map[string]interface{}{
 					{
 						postgis.ConfigKeyLayerName:   "buildings",
@@ -109,33 +323,56 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 101,
 		},
+		"gracefully handle 3d point": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+				postgis.ConfigKeyLayers: []map[string]interface{}{
+					{
+						postgis.ConfigKeyLayerName:   "three_d_points",
+						postgis.ConfigKeyGeomIDField: "id",
+						postgis.ConfigKeyGeomField:   "geom",
+						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geom) AS geom, id FROM three_d_test WHERE geom && !BBOX!",
+					},
+				},
+			},
+			tile:                 slippy.NewTile(0, 0, 0, 64, tegola.WebMercator),
+			expectedFeatureCount: 0,
+		},
+		"gracefully handle null geometry": {
+			config: dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+				postgis.ConfigKeyLayers: []map[string]interface{}{
+					{
+						postgis.ConfigKeyLayerName:   "null_geom",
+						postgis.ConfigKeyGeomIDField: "id",
+						postgis.ConfigKeyGeomField:   "geometry",
+						// this SQL is a workaround the normal !BBOX! WHERE clause. we're simulating a null geometry lookup in the table and don't want to filter by bounding box
+						postgis.ConfigKeySQL: "SELECT id, ST_AsBinary(geometry) AS geometry, !BBOX! as bbox FROM null_geom_test",
+					},
+				},
+			},
+			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			expectedFeatureCount: 1,
+		},
 	}
 
-	for i, tc := range testcases {
-		p, err := postgis.NewTileProvider(tc.config)
-		if err != nil {
-			t.Errorf("[%v] unexpected error; unable to create a new provider, expected: nil Got %v", i, err)
-			continue
-		}
-
-		//	iterate our configured layers
-		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
-			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
-
-			var featureCount int
-			err := p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
-				featureCount++
-
-				return nil
-			})
-			if err != nil {
-				t.Errorf("[%v] unexpected error; failed to create mvt layer, expected nil got %v", i, err)
-				continue
-			}
-
-			if featureCount != tc.expectedFeatureCount {
-				t.Errorf("[%v] feature count, expected %v got %v", i, tc.expectedFeatureCount, featureCount)
-			}
-		}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
 	}
 }

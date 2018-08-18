@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
+
 	"github.com/go-spatial/tegola/provider"
 
 	_ "github.com/go-spatial/tegola/provider/postgis"
@@ -44,72 +44,27 @@ func init() {
 	Root.AddCommand(drawCmd)
 }
 
-//initProviders will return a map of registered providers in the config file.
-func initProviders(providers []map[string]interface{}) (prvs map[string]provider.Tiler, err error) {
-
-	prvs = make(map[string]provider.Tiler)
-
-	// iterate providers
-	for _, p := range providers {
-		// lookup our provider name
-		n, ok := p["name"]
-		if !ok {
-			return prvs, errors.New("missing 'name' parameter for provider")
-		}
-
-		pname, found := n.(string)
-		if !found {
-			return prvs, fmt.Errorf("'name' or provider must be of type string")
-		}
-
-		// check if a proivder with this name is alrady registered
-		if _, ok := prvs[pname]; ok {
-			return prvs, fmt.Errorf("provider (%v) already registered!", pname)
-		}
-
-		// lookup our provider type
-		t, ok := p["type"]
-		if !ok {
-			return prvs, fmt.Errorf("missing 'type' parameter for provider (%v)", pname)
-		}
-
-		ptype, found := t.(string)
-		if !found {
-			return prvs, fmt.Errorf("'type' for provider (%v) must be a string", pname)
-		}
-
-		// register the provider
-		prov, err := provider.For(ptype, p)
-		if err != nil {
-			return prvs, err
-		}
-		// add the provider to our map of registered providers
-		prvs[pname] = prov
-	}
-	return prvs, err
-}
-
 //parseTileString will convert a z/x/y formatted string into a the three components.
-func parseTileString(str string) (int, int, int, error) {
+func parseTileString(str string) (uint, uint, uint, error) {
 	parts := strings.Split(str, "/")
 	if len(parts) != 3 {
 		return 0, 0, 0, fmt.Errorf("invalid zxy value “%v”; expected format “z/x/y”", str)
 	}
 	attr := [3]string{"z", "x", "y"}
-	var vals [3]int
+
+	var vals [3]uint
+	var placeholder uint64
 	var err error
+
 	for i := range attr {
-
-		vals[i], err = strconv.Atoi(parts[i])
+		placeholder, err = strconv.ParseUint(parts[i], 10, 64)
 		if err != nil {
-			return 0, 0, 0, fmt.Errorf("invalid %v value (%v); should be a postive integer.", attr[i], vals[i])
+			return 0, 0, 0, fmt.Errorf("invalid %v value (%v); should be a positive integer.", attr[i], vals[i])
 		}
-		if vals[i] < 0 {
-			return 0, 0, 0, fmt.Errorf("%v value should be a positive integer.", attr[i])
-		}
+		vals[i] = uint(placeholder)
 	}
-	return vals[0], vals[1], vals[2], nil
 
+	return vals[0], vals[1], vals[2], nil
 }
 
 //splitProviderLayer will convert a “$provider.$layer” formatted string into a the two components.

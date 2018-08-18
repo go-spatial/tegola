@@ -1,6 +1,6 @@
 package postgis
 
-import "github.com/go-spatial/tegola/geom"
+import "github.com/go-spatial/geom"
 
 // layer holds information about a query.
 type Layer struct {
@@ -10,7 +10,7 @@ type Layer struct {
 	sql string
 	// The ID field name, this will default to 'gid' if not set to something other then empty string.
 	idField string
-	// The Geometery field name, this will default to 'geom' if not set to soemthing other then empty string.
+	// The Geometery field name, this will default to 'geom' if not set to something other then empty string.
 	geomField string
 	// GeomType is the the type of geometry returned from the SQL
 	geomType geom.Geometry

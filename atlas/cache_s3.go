@@ -3,7 +3,7 @@
 package atlas
 
 // The point of this file is to load and register the s3 cache backend.
-// the redis cache can be excluded during the build with the `noS3Cache` build flag
+// the s3 cache can be excluded during the build with the `noS3Cache` build flag
 // for example from the cmd/tegola direcotry:
 //
 // go build -tags 'noS3Cache'

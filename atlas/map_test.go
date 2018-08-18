@@ -7,9 +7,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/p"
 	"github.com/go-spatial/tegola/mvt/vector_tile"
 	"github.com/go-spatial/tegola/provider/test"
@@ -18,7 +18,7 @@ import (
 func TestMapFilterLayersByZoom(t *testing.T) {
 	testcases := []struct {
 		atlasMap atlas.Map
-		zoom     int
+		zoom     uint
 		expected atlas.Map
 	}{
 		{
@@ -240,7 +240,7 @@ func TestEncode(t *testing.T) {
 				continue
 			}
 
-			//	features check
+			// features check
 			for k, tileLayerFeature := range tileLayer.Features {
 				expectedTileLayerFeature := expectedLayer.Features[k]
 
@@ -250,8 +250,8 @@ func TestEncode(t *testing.T) {
 				}
 
 				/*
-					//	the vector tile layer tags output is not always consistent since it's generated from a map.
-					//	because of that we're going to check everything but the tags values
+					// the vector tile layer tags output is not always consistent since it's generated from a map.
+					// because of that we're going to check everything but the tags values
 
 					if !reflect.DeepEqual(tileLayerFeature.Tags, expectedTileLayerFeature.Tags) {
 						t.Errorf("[%v] expected %v got %v", i, tileLayerFeature.Tags, expectedTileLayerFeature.Tags)

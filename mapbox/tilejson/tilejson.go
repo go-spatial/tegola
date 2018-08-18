@@ -1,5 +1,5 @@
-//	TileJSON
-//	https://github.com/mapbox/tilejson-spec
+// TileJSON
+// https://github.com/mapbox/tilejson-spec
 package tilejson
 
 const Version = "2.1.0"
@@ -39,14 +39,14 @@ type TileJSON struct {
 	// value is null, implementations may use their own algorithm for
 	// determining a default location.
 	Center [3]float64 `json:"center"`
-	//	pbf - protocol buffer
+	// pbf - protocol buffer
 	Format string `json:"format"`
 	// OPTIONAL. Default: 0. >= 0, <= 22.
-	// An integer specifying the minimum zoom level.
-	MinZoom int `json:"minzoom"`
+	// A positive integer specifying the minimum zoom level.
+	MinZoom uint `json:"minzoom"`
 	// OPTIONAL. Default: 22. >= 0, <= 22.
-	// An integer specifying the maximum zoom level. MUST be >= minzoom.
-	MaxZoom int `json:"maxzoom"`
+	// An positive integer specifying the maximum zoom level. MUST be >= minzoom.
+	MaxZoom uint `json:"maxzoom"`
 	// OPTIONAL. Default: null. A name describing the tileset. The name can
 	// contain any legal character. Implementations SHOULD NOT interpret the
 	// name as HTML.
@@ -102,14 +102,14 @@ type TileJSON struct {
 	// For security reasons, make absolutely sure that this field can't be
 	// abused as a vector for XSS or beacon tracking.
 	Legend *string `json:"legend"`
-	//	vector layer details. This is not part of the tileJSON spec
-	//	properties mimiced based on other vector provider implementations
+	// vector layer details. This is not part of the tileJSON spec
+	// properties mimiced based on other vector provider implementations
 	VectorLayers []VectorLayer `json:"vector_layers"`
 }
 
-//	vector layers are not officially part of the tileJSON spec.
-//	the following was proposed on the TileJSON spec repo at
-//	https://github.com/mapbox/tilejson-spec/issues/14
+// vector layers are not officially part of the tileJSON spec.
+// the following was proposed on the TileJSON spec repo at
+// https://github.com/mapbox/tilejson-spec/issues/14
 type VectorLayer struct {
 	// REQUIRED. The MVT encoding version.
 	Version int `json:"version"`
@@ -128,11 +128,11 @@ type VectorLayer struct {
 	// possible values include: "point", "line", "polygon", "unknown"
 	GeometryType GeomType `json:"geometry_type,omitempty"`
 	// OPTIONAL. Default: 0. >= 0, <= 22.
-	// An integer specifying the minimum zoom level.
-	MinZoom int `json:"minzoom"`
+	// A positive integer specifying the minimum zoom level.
+	MinZoom uint `json:"minzoom"`
 	// OPTIONAL. Default: 22. >= 0, <= 22.
-	// An integer specifying the maximum zoom level. MUST be >= minzoom.
-	MaxZoom int `json:"maxzoom"`
-	//	Tegola supports individual layer tiles.
+	// A positive integer specifying the maximum zoom level. MUST be >= minzoom.
+	MaxZoom uint `json:"maxzoom"`
+	// Tegola supports individual layer tiles.
 	Tiles []string `json:"tiles"`
 }

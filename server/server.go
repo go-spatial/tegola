@@ -2,6 +2,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -13,64 +14,74 @@ import (
 )
 
 const (
-	//	MaxTileSize is 500k. Currently just throws a warning when tile
-	//	is larger than MaxTileSize
+	// MaxTileSize is 500k. Currently just throws a warning when tile
+	// is larger than MaxTileSize
 	MaxTileSize = 500000
 )
 
 var (
-	//	set at runtime from main
-	Version string
-	//	configurable via the tegola config.toml file (set in main.go)
+	// Version is the version of the software, this should be set by the main program, before starting up.
+	// It is used by various Middleware to determine the version.
+	Version string = "Version Not Set"
+
+	// HostName is the name of the host to use for construction of URLS.
+	// configurable via the tegola config.toml file (set in main.go)
 	HostName string
-	//	configurable via the tegola config.toml file (set in main.go)
+
+	// Port is the port the server is listening on, used for construction of URLS.
+	// configurable via the tegola config.toml file (set in main.go)
 	Port string
-	//	the "Access-Control-Allow-Origin" CORS header.
-	//	configurable via the tegola config.toml file (set in main.go)
-	CORSAllowedOrigin = "*"
-	//	reference to the version of atlas to work with
-	Atlas *atlas.Atlas
-	//	tile buffer to use. can be overwritten in the config file
+
+	// CORSAllowedOrigin is the "Access-Control-Allow-Origin" CORS header.
+	// configurable via the tegola config.toml file (set in main.go)
+	CORSAllowedOrigin string = "*"
+
+	// TileBuffer is the tile buffer to use.
+	// configurable via tegola config.tomal file (set in main.go)
 	TileBuffer float64 = tegola.DefaultTileBuffer
 )
 
-//	Start starts the tile server binding to the provided port
-func Start(port string) *http.Server {
-	Atlas = atlas.DefaultAtlas
-
-	//	notify the user the server is starting
-	log.Infof("starting tegola server on port %v", port)
-
+// NewRouter set's up the our routes.
+func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r := httptreemux.New()
 	group := r.NewGroup("/")
 
-	//	capabilities endpoints
+	// one handler to respond to all OPTIONS requests for registered routes with our CORS headers
+	r.OptionsHandler = corsHandler
+
+	// capabilities endpoints
 	group.UsingContext().Handler("GET", "/capabilities", CORSHandler(HandleCapabilities{}))
-	group.UsingContext().Handler("OPTIONS", "/capabilities", CORSHandler(HandleCapabilities{}))
 	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
-	group.UsingContext().Handler("OPTIONS", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
 
-	//	map tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapZXY{})))
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:z/:x/:y", CORSHandler(HandleMapZXY{}))
+	// map tiles
+	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
+
+	// map style
 	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
-
-	//	map layer tiles
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(HandleMapLayerZXY{})))
-	group.UsingContext().Handler("OPTIONS", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(HandleMapLayerZXY{}))
 
 	//	setup viewer routes, which can excluded via build flags
 	setupViewer(group)
 
-	//	start our server
-	srv := &http.Server{Addr: port, Handler: r}
+	return r
+}
+
+// Start starts the tile server binding to the provided port
+func Start(a *atlas.Atlas, port string) *http.Server {
+
+	// notify the user the server is starting
+	log.Infof("starting tegola server on port %v", port)
+
+	// start our server
+	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
 	go func() { log.Error(srv.ListenAndServe()) }()
 	return srv
 }
 
-//	determines the hostname:port to return based on the following hierarchy
-//	- HostName / Port vars as configured via the config file
-//	- The request host / port if config HostName or Port is missing
+// hostName determines the hostname:port to return based on the following hierarchy
+// - HostName / Port values as configured via the config file
+// - The request host / port if config HostName or Port is missing
 func hostName(r *http.Request) string {
 	var requestHostname string
 	var requestPort string
@@ -102,8 +113,8 @@ func hostName(r *http.Request) string {
 	return retHost
 }
 
-//	various checks to determin if the request is http or https. the scheme is needed for the TileURLs
-//	r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
+// various checks to determin if the request is http or https. the scheme is needed for the TileURLs
+// r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
 func scheme(r *http.Request) string {
 	if r.Header.Get("X-Forwarded-Proto") != "" {
 		return r.Header.Get("X-Forwarded-Proto")
@@ -112,4 +123,17 @@ func scheme(r *http.Request) string {
 	}
 
 	return "http"
+}
+
+// URLRoot builds a string containing the scheme, host and port based on a combination of user defined values,
+// headers and request parameters. The function is public so it can be overridden for other implementations.
+var URLRoot = func(r *http.Request) string {
+	return fmt.Sprintf("%v://%v", scheme(r), hostName(r))
+}
+
+// corsHanlder is used to respond to all OPTIONS requests for registered routes
+func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	return
 }

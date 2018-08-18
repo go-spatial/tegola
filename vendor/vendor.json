@@ -3,6 +3,18 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "z+M6FYl9EKsoZZMLcT0Ktwfk8pI=",
+			"path": "github.com/Azure/azure-pipeline-go/pipeline",
+			"revision": "7571e8eb0876932ab505918ff7ed5107773e5ee2",
+			"revisionTime": "2018-06-07T21:19:23Z"
+		},
+		{
+			"checksumSHA1": "PBzHEMQyrzbTAjHMA/gT3tgzthY=",
+			"path": "github.com/Azure/azure-storage-blob-go/2017-07-29/azblob",
+			"revision": "f0a732ea9441c73511367d5861da6bda664ffabd",
+			"revisionTime": "2018-07-06T17:31:41Z"
+		},
+		{
 			"checksumSHA1": "UJTpOZ5IuuyoWFrS42uw/167mn0=",
 			"path": "github.com/BurntSushi/toml",
 			"revision": "f0aeabca5a127c4078abb8c8d64298b147264b55",
@@ -13,6 +25,36 @@
 			"path": "github.com/ajstarks/svgo",
 			"revision": "2489f1e6d405e953ac052d1e7ae3769672bf43bb",
 			"revisionTime": "2017-05-07T10:33:33Z"
+		},
+		{
+			"checksumSHA1": "stlCSj5YfHbH1fZvziEZtMTxa8I=",
+			"path": "github.com/arolek/algnhsa",
+			"revision": "c6c22c361ed25a5b441f4d741573385abc72ccd4",
+			"revisionTime": "2018-06-06T22:25:14Z"
+		},
+		{
+			"checksumSHA1": "H+nuubKZtdEPryI/ZiaF3W+hnus=",
+			"path": "github.com/aws/aws-lambda-go/events",
+			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
+			"revisionTime": "2018-04-08T23:25:24Z"
+		},
+		{
+			"checksumSHA1": "Atnv24CtEnB8ZLGDqFevLMfzLtQ=",
+			"path": "github.com/aws/aws-lambda-go/lambda",
+			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
+			"revisionTime": "2018-04-08T23:25:24Z"
+		},
+		{
+			"checksumSHA1": "d4ehJWLS4YsqFG825pgwdvKDB6A=",
+			"path": "github.com/aws/aws-lambda-go/lambda/messages",
+			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
+			"revisionTime": "2018-04-08T23:25:24Z"
+		},
+		{
+			"checksumSHA1": "f9MhOwQHveaPVWO6trwfqHa+W0M=",
+			"path": "github.com/aws/aws-lambda-go/lambdacontext",
+			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
+			"revisionTime": "2018-04-08T23:25:24Z"
 		},
 		{
 			"checksumSHA1": "nv58S9hV7km2wMcP28T3Fla/7wo=",
@@ -165,16 +207,10 @@
 			"revisionTime": "2017-12-07T22:17:37Z"
 		},
 		{
-			"checksumSHA1": "67Ufp7gCzJyjLVW3iW3og8uVtkw=",
-			"path": "github.com/dimfeld/httppath",
-			"revision": "c8e499c3ef3c3e272ed8bdcc1ccf39f73c88debc",
-			"revisionTime": "2014-05-15T16:47:37Z"
-		},
-		{
-			"checksumSHA1": "pvSASUV9ePhHWwO/c0DIfI0zX58=",
+			"checksumSHA1": "JOJJUSMwStEk5H8WAKuX7s3zrA4=",
 			"path": "github.com/dimfeld/httptreemux",
-			"revision": "5684d912938d8ef16b72e9c9dd1ce2117e62bc2a",
-			"revisionTime": "2016-10-04T02:10:53Z"
+			"revision": "7f532489e7739b3d49df5c602bf63549881fe753",
+			"revisionTime": "2018-02-13T07:44:14Z"
 		},
 		{
 			"checksumSHA1": "H5aa/58hIaaMETBYW8rYYBsVOc0=",
@@ -237,6 +273,54 @@
 			"revisionTime": "2018-02-15T11:00:54Z"
 		},
 		{
+			"checksumSHA1": "aI+j75XA6Z+sWAQdcP3eMmYTj08=",
+			"path": "github.com/go-spatial/geom",
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
+		},
+		{
+			"checksumSHA1": "o8Raj/QGN30BPBHndQMO++3Qulc=",
+			"path": "github.com/go-spatial/geom/cmp",
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
+		},
+		{
+			"checksumSHA1": "nI30tAnIkEh8ljn+qYsgKmd440E=",
+			"path": "github.com/go-spatial/geom/encoding/wkb",
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
+		},
+		{
+			"checksumSHA1": "cbxzkF7Qas08G7TBXkv5afpJmkY=",
+			"path": "github.com/go-spatial/geom/encoding/wkb/internal/consts",
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
+		},
+		{
+			"checksumSHA1": "FwWv3mHOHaWWmlD4A3S34boo2bY=",
+			"path": "github.com/go-spatial/geom/encoding/wkb/internal/decode",
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
+		},
+		{
+			"checksumSHA1": "52nmbyH1lTE1aJ/jNqOBFCOpazk=",
+			"path": "github.com/go-spatial/geom/encoding/wkb/internal/encode",
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
+		},
+		{
+			"checksumSHA1": "U2JkAfWI5nBagnL/MjN2xCuifxk=",
+			"path": "github.com/go-spatial/geom/encoding/wkt",
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
+		},
+		{
+			"checksumSHA1": "IOqvwFC+WfeiH2kqD0/0v1OyROI=",
+			"path": "github.com/go-spatial/geom/slippy",
+			"revision": "3d919e27757d7c50928cc606e27b1bc401a76fe5",
+			"revisionTime": "2018-05-21T18:03:46Z"
+		},
+		{
 			"checksumSHA1": "NFd/7OSLQKBzvwufplt4kbokfbA=",
 			"path": "github.com/go-test/deep",
 			"revision": "f49763a6ea0a91026be26f8213bebee726b4185f",
@@ -257,12 +341,12 @@
 			"revisionTime": "2014-10-17T20:07:13Z"
 		},
 		{
-			"checksumSHA1": "vCcYMoqdweCNKygpC6MOYAYWNUw=",
+			"checksumSHA1": "MCQRBIXmcwHCqR33QoGUx4PWb4A=",
 			"path": "github.com/jackc/pgx",
-			"revision": "2508faa9ced29f4bbb3a39483e4b5ac2627a7c48",
-			"revisionTime": "2016-08-26T12:39:15Z",
-			"version": "v2.9.0",
-			"versionExact": "v2.9.0"
+			"revision": "93ee40e691def90ce1489b113ac99450239dfb82",
+			"revisionTime": "2018-07-24T14:53:07Z",
+			"version": "v3.1.0",
+			"versionExact": "v3.1.0"
 		},
 		{
 			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",
@@ -283,6 +367,12 @@
 			"revisionTime": "2015-10-23T09:11:02Z"
 		},
 		{
+			"checksumSHA1": "sYo8tZi0yGAMGrCC+COALe8QhIM=",
+			"path": "github.com/karalabe/xgo",
+			"revision": "f99c776585a083c3b9703a8e24604b85da040b1d",
+			"revisionTime": "2018-04-16T08:30:54Z"
+		},
+		{
 			"checksumSHA1": "+ArBDwAK19OC1iDy1yEbXOC9sgQ=",
 			"path": "github.com/mattn/goveralls",
 			"revision": "b71a1e4855f87991aff01c2c833a75a07059c61c",
@@ -295,6 +385,12 @@
 			"revisionTime": "2017-06-12T15:36:48Z"
 		},
 		{
+			"checksumSHA1": "ljd3FhYRJ91cLZz3wsH9BQQ2JbA=",
+			"path": "github.com/pkg/errors",
+			"revision": "816c9085562cd7ee03e7f8188a1cfd942858cded",
+			"revisionTime": "2018-03-11T21:45:15Z"
+		},
+		{
 			"checksumSHA1": "imvfVf7lRxu0Fz7V2G43CUC6Ff0=",
 			"path": "github.com/spf13/cobra",
 			"revision": "cd30c2a7e91a1d63fd9a0027accf18a681e9d50b",
@@ -305,6 +401,12 @@
 			"path": "github.com/spf13/pflag",
 			"revision": "329ebf1e04800d11a25047832495199d366580f3",
 			"revisionTime": "2018-04-10T21:30:10Z"
+		},
+		{
+			"checksumSHA1": "jQ0wltHJ4nQ63Q+8Z6x0qhG91q4=",
+			"path": "github.com/theckman/goconstraint/go1.8/gte",
+			"revision": "e867bde6e4e19dde02a92e53627928770ee0ed41",
+			"revisionTime": "2018-02-16T22:48:03Z"
 		},
 		{
 			"checksumSHA1": "i05c1J3Pkn6Ll+YINNnf6nv8z0g=",

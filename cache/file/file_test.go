@@ -5,15 +5,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/file"
+	"github.com/go-spatial/tegola/dict"
 )
 
 func TestNew(t *testing.T) {
-	maxZoom := uint(9)
-
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		expected *file.Cache
 		err      error
 	}
@@ -23,11 +23,12 @@ func TestNew(t *testing.T) {
 
 		output, err := file.New(tc.config)
 		if err != nil {
-			if err.Error() == tc.err.Error() {
-				//	correct error returned
+
+			if tc.err != nil && err.Error() == tc.err.Error() {
+				// correct error returned
 				return
 			}
-			t.Errorf("%v", err)
+			t.Errorf("unexpected error %v", err)
 			return
 		}
 
@@ -44,17 +45,18 @@ func TestNew(t *testing.T) {
 			},
 			expected: &file.Cache{
 				Basepath: "testfiles/tegola-cache",
+				MaxZoom:  tegola.MaxZ,
 			},
 			err: nil,
 		},
 		"valid basepath and max zoom": {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
-				"max_zoom": 9,
+				"max_zoom": uint(9),
 			},
 			expected: &file.Cache{
 				Basepath: "testfiles/tegola-cache",
-				MaxZoom:  &maxZoom,
+				MaxZoom:  9,
 			},
 			err: nil,
 		},
@@ -69,7 +71,7 @@ func TestNew(t *testing.T) {
 				"max_zoom": "foo",
 			},
 			expected: nil,
-			err:      fmt.Errorf("max_zoom value needs to be of type int. Value is of type string"),
+			err:      fmt.Errorf(`config: value mapped to "max_zoom" is string not uint`),
 		},
 	}
 
@@ -83,7 +85,7 @@ func TestNew(t *testing.T) {
 
 func TestSetGetPurge(t *testing.T) {
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		expected []byte
 	}
@@ -97,7 +99,7 @@ func TestSetGetPurge(t *testing.T) {
 			return
 		}
 
-		//	test write
+		// test write
 		if err = fc.Set(&tc.key, tc.expected); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
@@ -118,7 +120,7 @@ func TestSetGetPurge(t *testing.T) {
 			return
 		}
 
-		//	test purge
+		// test purge
 		if err = fc.Purge(&tc.key); err != nil {
 			t.Errorf("purge failed. err: %v", err)
 			return
@@ -135,7 +137,7 @@ func TestSetGetPurge(t *testing.T) {
 				X: 1,
 				Y: 2,
 			},
-			expected: []byte("\x53\x69\x6c\x61\x73"),
+			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
 		},
 	}
 
@@ -149,7 +151,7 @@ func TestSetGetPurge(t *testing.T) {
 
 func TestSetOverwrite(t *testing.T) {
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		bytes1   []byte
 		bytes2   []byte
@@ -165,19 +167,19 @@ func TestSetOverwrite(t *testing.T) {
 			return
 		}
 
-		//	test write1
+		// test write1
 		if err = fc.Set(&tc.key, tc.bytes1); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
 		}
 
-		//	test write2
+		// test write2
 		if err = fc.Set(&tc.key, tc.bytes2); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
 		}
 
-		//	fetch the cache entry
+		// fetch the cache entry
 		output, hit, err := fc.Get(&tc.key)
 		if err != nil {
 			t.Errorf("read failed. err: %v", err)
@@ -193,7 +195,7 @@ func TestSetOverwrite(t *testing.T) {
 			return
 		}
 
-		//	clean up
+		// clean up
 		if err = fc.Purge(&tc.key); err != nil {
 			t.Errorf("purge failed. err: %v", err)
 			return
@@ -210,9 +212,9 @@ func TestSetOverwrite(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			bytes1:   []byte("\x66\x6f\x6f"),
-			bytes2:   []byte("\x53\x69\x6c\x61\x73"),
-			expected: []byte("\x53\x69\x6c\x61\x73"),
+			bytes1:   []byte{0x66, 0x6f, 0x6f},
+			bytes2:   []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
+			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
 		},
 	}
 
@@ -226,7 +228,7 @@ func TestSetOverwrite(t *testing.T) {
 
 func TestMaxZoom(t *testing.T) {
 	type tcase struct {
-		config      map[string]interface{}
+		config      dict.Dict
 		key         cache.Key
 		bytes       []byte
 		expectedHit bool
@@ -241,13 +243,13 @@ func TestMaxZoom(t *testing.T) {
 			return
 		}
 
-		//	test set
+		// test set
 		if err = fc.Set(&tc.key, tc.bytes); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
 		}
 
-		//	fetch the cache entry
+		// fetch the cache entry
 		_, hit, err := fc.Get(&tc.key)
 		if err != nil {
 			t.Errorf("read failed. err: %v", err)
@@ -258,7 +260,7 @@ func TestMaxZoom(t *testing.T) {
 			return
 		}
 
-		//	clean up
+		// clean up
 		if tc.expectedHit {
 			if err != fc.Purge(&tc.key) {
 				t.Errorf("%v", err)
@@ -268,43 +270,43 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"over max zoom": tcase{
+		"over max zoom": {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 11,
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: false,
 		},
-		"under max zoom": tcase{
+		"under max zoom": {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 9,
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: true,
 		},
-		"equals max zoom": tcase{
+		"equals max zoom": {
 			config: map[string]interface{}{
 				"basepath": "testfiles/tegola-cache",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 10,
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: true,
 		},
 	}

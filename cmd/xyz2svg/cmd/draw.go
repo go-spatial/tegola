@@ -10,12 +10,15 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/draw/svg"
-	"github.com/go-spatial/tegola/geom/slippy"
 	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/maths/points"
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
@@ -37,7 +40,7 @@ func init() {
 }
 
 type drawFilename struct {
-	z, x, y int
+	z, x, y uint
 	basedir string
 	format  string
 	ext     string
@@ -93,11 +96,19 @@ func drawCommand(cmd *cobra.Command, args []string) {
 		format:  drawOutputFilenameFormat,
 		basedir: drawOutputBaseDir,
 	}
-	providers, err := initProviders(config.Providers)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading providers in config(%v): %v\n", configFilename, err)
-		os.Exit(1)
+
+	// convert []env.Map -> []dict.Dicter
+	provArr := make([]dict.Dicter, len(config.Providers))
+	for i := range provArr {
+		provArr[i] = config.Providers[i]
 	}
+
+	// register providers
+	providers, err := register.Providers(provArr)
+	if err != nil {
+		log.Fatalf("Error loading providers in config(%v): %v\n", configFilename, err)
+	}
+
 	prv, lyr := splitProviderLayer(providerString)
 	var allprvs []string
 	for name := range providers {
@@ -137,7 +148,7 @@ func drawCommand(cmd *cobra.Command, args []string) {
 func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, dfn *drawFilename) error {
 	ctx := context.Background()
 	ttile := tegola.NewTile(dfn.z, dfn.x, dfn.y)
-	slippyTile := slippy.NewTile(uint64(dfn.z), uint64(dfn.x), uint64(dfn.y), tegola.DefaultTileBuffer, tegola.WebMercator)
+	slippyTile := slippy.NewTile(dfn.z, dfn.x, dfn.y, tegola.DefaultTileBuffer, tegola.WebMercator)
 	for _, name := range layers {
 		count := 0
 		err := tiler.TileFeatures(ctx, name, slippyTile, func(f *provider.Feature) error {
@@ -148,13 +159,13 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 			count++
 			cursor := mvt.NewCursor(ttile)
 
-			geom, err := convert.ToTegola(f.Geometry)
+			geometry, err := convert.ToTegola(f.Geometry)
 			if err != nil {
 				return err
 			}
 
 			// Scale
-			g := cursor.ScaleGeo(geom)
+			g := cursor.ScaleGeo(geometry)
 
 			// Simplify
 			sg := mvt.SimplifyGeometry(g, ttile.ZEpislon(), true)
@@ -164,8 +175,8 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 			}
 
 			// Clip and validate
-			ext := points.Extent(pbb)
-			vg, err := validate.CleanGeometry(ctx, sg, &ext)
+			ext := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+			vg, err := validate.CleanGeometry(ctx, sg, ext)
 
 			// Draw each of the steps.
 			ffname, file, err := dfn.createFile(pname, name, gid, count)
@@ -207,5 +218,4 @@ func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, 
 		fmt.Printf("// Number of geometries drawn for %v.%v : %v\n", pname, name, count)
 	}
 	return nil
-
 }

@@ -39,14 +39,14 @@ tablename = "gis.zoning_base_3857"
 
 - `name` (string): [Required] the name of the layer. This is used to reference this layer from map layers.
 - `tablename` (string): [*Required] the name of the database table to query against. Required if `sql` is not defined.
-- `geometry_fieldname` (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to `geom`
-- `id_fieldname` (string): [Optional] the name of the feature id field. defaults to `gid`
+- `geometry_fieldname` (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to `geom`.
+- `id_fieldname` (string): [Optional] the name of the feature id field. defaults to `gid`.
 - `fields` ([]string): [Optional] a list of fields to include alongside the feature. Can be used if `sql` is not defined.
 - `srid` (int): [Optional] the SRID of the layer. Supports `3857` (WebMercator) or `4326` (WGS84).
+- `geometry_type` (string): [Optional] the layer geometry type. If not set, the table will be inspected at startup to try and infer the gemetry type. Valid values are: `Point`, `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`.
 - `sql` (string): [*Required] custom SQL to use use. Required if `tablename` is not defined. Supports the following tokens:
-  - !BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
-  - !ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
-
+  - `!BBOX!` - [Required] will be replaced with the bounding box of the tile before the query is sent to the database. `!bbox!` and`!BOX!` are supported as well for compatibilitiy with queries from Mapnik and MapServer styles.
+  - `!ZOOM!` - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 
 `*Required`: either the `tablename` or `sql` must be defined, but not both.
 
@@ -60,6 +60,20 @@ name = "rivers"
 sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
 ```
 
+## Environment Variable support
+Helpful debugging environment variables:
+
+- `TEGOLA_SQL_DEBUG`: specify the type of SQL debug information to output. Supports the following values:
+  - `LAYER_SQL`: print layer SQL as they’re parsed from the config file.
+  - `EXECUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
+  - `LAYER_SQL:EXECUTE_SQL`: print `LAYER_SQL` and `EXECUTE_SQL`.
+
+Example:
+
+```
+$ TEGOLA_SQL_DEBUG=LAYER_SQL tegola serve --config=/path/to/conf.toml
+```
+
 ## Testing
 Testing is designed to work against a live PostGIS database. To run the PostGIS tests, the following environment variables need to be set:
 
@@ -70,4 +84,14 @@ $ export PGPORT=5432
 $ export PGDATABASE="tegola"
 $ export PGUSER="postgres"
 $ export PGPASSWORD=""
+$ export PGSSLMODE="disable"
+```
+
+If you're testing SSL, the following additional env vars can be set:
+
+```bash
+$ export PGSSLMODE="" // disable, allow, prefer, require, verify-ca, verify-full
+$ export PGSSLKEY=""
+$ export PGSSLCERT=""
+$ export PGSSLROOTCERT=""
 ```

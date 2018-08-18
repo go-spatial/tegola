@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
 type Tile interface {
 	// ZXY returns the z, x and y values of the tile
-	ZXY() (uint64, uint64, uint64)
+	ZXY() (uint, uint, uint)
 	// Extent returns the extent of the tile excluding any buffer
-	Extent() (extent [2][2]float64, srid uint64)
+	Extent() (extent *geom.Extent, srid uint64)
 	// BufferedExtent returns the extent of the tile including any buffer
-	BufferedExtent() (extent [2][2]float64, srid uint64)
+	BufferedExtent() (extent *geom.Extent, srid uint64)
 }
 
 type Tiler interface {
@@ -33,7 +34,7 @@ type LayerInfo interface {
 }
 
 // InitFunc initilize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
-type InitFunc func(map[string]interface{}) (Tiler, error)
+type InitFunc func(dicter dict.Dicter) (Tiler, error)
 
 // CleanupFunc is called to when the system is shuting down, this allows the provider to cleanup.
 type CleanupFunc func()
@@ -53,7 +54,7 @@ func Register(name string, init InitFunc, cleanup CleanupFunc) error {
 	}
 
 	if _, ok := providers[name]; ok {
-		return fmt.Errorf("Provider %v already exists", name)
+		return fmt.Errorf("provider %v already exists", name)
 	}
 
 	providers[name] = pfns{
@@ -70,7 +71,7 @@ func Drivers() (l []string) {
 		return l
 	}
 
-	for k, _ := range providers {
+	for k := range providers {
 		l = append(l, k)
 	}
 
@@ -78,14 +79,14 @@ func Drivers() (l []string) {
 }
 
 // For function returns a configured provider of the given type, provided the correct config map.
-func For(name string, config map[string]interface{}) (Tiler, error) {
+func For(name string, config dict.Dicter) (Tiler, error) {
 	if providers == nil {
-		return nil, fmt.Errorf("No providers registered.")
+		return nil, fmt.Errorf("no providers registered")
 	}
 
 	p, ok := providers[name]
 	if !ok {
-		return nil, fmt.Errorf("No providers registered by the name: %v, known providers(%v)", name, strings.Join(Drivers(), ","))
+		return nil, fmt.Errorf("no providers registered by the name: %v, known providers: %v", name, strings.Join(Drivers(), ", "))
 	}
 
 	return p.init(config)

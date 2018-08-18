@@ -152,11 +152,11 @@ func TestNewFromPolygon(t *testing.T) {
 	}
 	tests = map[string]basic.Polygon{
 		"Nil Polygon":   nil,
-		"Basic Polygon": basic.Polygon{},
-		"With One empty Line": basic.Polygon{
+		"Basic Polygon": {},
+		"With One empty Line": {
 			basic.Line{},
 		},
-		"With one non-empty line": basic.Polygon{
+		"With one non-empty line": {
 			basic.Line{{10, 10}, {20, 10}, {20, 20}, {10, 20}},
 		},
 	}
@@ -181,13 +181,13 @@ func TestNewFromMultiPolygon(t *testing.T) {
 	}
 	tests = map[string]basic.MultiPolygon{
 		"Nil Polygon":   nil,
-		"Basic Polygon": basic.MultiPolygon{},
-		"With One empty Line": basic.MultiPolygon{
+		"Basic Polygon": {},
+		"With One empty Line": {
 			basic.Polygon{
 				basic.Line{},
 			},
 		},
-		"With one non-empty line": basic.MultiPolygon{
+		"With one non-empty line": {
 			basic.Polygon{
 				basic.Line{{10, 10}, {20, 10}, {20, 20}, {10, 20}},
 			},

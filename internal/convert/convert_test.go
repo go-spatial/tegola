@@ -3,8 +3,8 @@ package convert
 import (
 	"testing"
 
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/cmp"
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func TestToTegolaToGeom(t *testing.T) {
@@ -43,28 +43,28 @@ func TestToTegolaToGeom(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"Point Empty":           tcase{geom: geom.Point{}},
-		"MultiPoint Empty":      tcase{geom: geom.MultiPoint{}},
-		"LineString Empty":      tcase{geom: geom.LineString{}},
-		"MultiLineString Empty": tcase{geom: geom.MultiLineString{}},
-		"Polygon Empty":         tcase{geom: geom.Polygon{}},
-		"MultiPolygon Empty":    tcase{geom: geom.MultiPolygon{}},
-		"Point":                 tcase{geom: geom.Point{10, 10}},
-		"MultiPoint":            tcase{geom: geom.MultiPoint{{10, 10}, {90, 90}, {20, 30}}},
-		"LineString":            tcase{geom: geom.LineString{{10, 10}, {90, 90}, {20, 30}}},
-		"MultiLineString": tcase{
+		"Point Empty":           {geom: geom.Point{}},
+		"MultiPoint Empty":      {geom: geom.MultiPoint{}},
+		"LineString Empty":      {geom: geom.LineString{}},
+		"MultiLineString Empty": {geom: geom.MultiLineString{}},
+		"Polygon Empty":         {geom: geom.Polygon{}},
+		"MultiPolygon Empty":    {geom: geom.MultiPolygon{}},
+		"Point":                 {geom: geom.Point{10, 10}},
+		"MultiPoint":            {geom: geom.MultiPoint{{10, 10}, {90, 90}, {20, 30}}},
+		"LineString":            {geom: geom.LineString{{10, 10}, {90, 90}, {20, 30}}},
+		"MultiLineString": {
 			geom: geom.MultiLineString{
 				{{10, 10}, {90, 90}, {20, 30}},
 				{{10, 15}, {95, 90}, {25, 30}},
 			},
 		},
-		"Polygon": tcase{
+		"Polygon": {
 			geom: geom.Polygon{
 				{{10, 10}, {90, 90}, {20, 30}},
 				{{10, 15}, {95, 90}, {25, 30}},
 			},
 		},
-		"MultiPolygon": tcase{
+		"MultiPolygon": {
 			geom: geom.MultiPolygon{
 				{
 					{{10, 10}, {90, 90}, {20, 30}},

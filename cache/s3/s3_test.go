@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/s3"
+	"github.com/go-spatial/tegola/dict"
 )
 
 func TestNew(t *testing.T) {
@@ -16,7 +17,7 @@ func TestNew(t *testing.T) {
 	}
 
 	type tcase struct {
-		config map[string]interface{}
+		config dict.Dict
 		err    error
 	}
 
@@ -30,7 +31,7 @@ func TestNew(t *testing.T) {
 				return
 			}
 			if err.Error() == tc.err.Error() {
-				//	correct error returned
+				// correct error returned
 				return
 			}
 			t.Errorf("%v", err)
@@ -65,7 +66,7 @@ func TestNew(t *testing.T) {
 				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
 				"max_zoom": "foo",
 			},
-			err: fmt.Errorf("max_zoom value needs to be of type int. Value is of type string"),
+			err: fmt.Errorf("max_zoom value needs to be of type uint. Value is of type string"),
 		},
 	}
 
@@ -83,7 +84,7 @@ func TestSetGetPurge(t *testing.T) {
 	}
 
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		expected []byte
 	}
@@ -97,7 +98,7 @@ func TestSetGetPurge(t *testing.T) {
 			return
 		}
 
-		//	test write
+		// test write
 		if err = fc.Set(&tc.key, tc.expected); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
@@ -118,7 +119,7 @@ func TestSetGetPurge(t *testing.T) {
 			return
 		}
 
-		//	test purge
+		// test purge
 		if err = fc.Purge(&tc.key); err != nil {
 			t.Errorf("purge failed. err: %v", err)
 			return
@@ -156,7 +157,7 @@ func TestSetOverwrite(t *testing.T) {
 	}
 
 	type tcase struct {
-		config   map[string]interface{}
+		config   dict.Dict
 		key      cache.Key
 		bytes1   []byte
 		bytes2   []byte
@@ -172,19 +173,19 @@ func TestSetOverwrite(t *testing.T) {
 			return
 		}
 
-		//	test write1
+		// test write1
 		if err = fc.Set(&tc.key, tc.bytes1); err != nil {
 			t.Errorf("write 1 failed. err: %v", err)
 			return
 		}
 
-		//	test write2
+		// test write2
 		if err = fc.Set(&tc.key, tc.bytes2); err != nil {
 			t.Errorf("write 2 failed. err: %v", err)
 			return
 		}
 
-		//	fetch the cache entry
+		// fetch the cache entry
 		output, hit, err := fc.Get(&tc.key)
 		if err != nil {
 			t.Errorf("read failed. err: %v", err)
@@ -200,7 +201,7 @@ func TestSetOverwrite(t *testing.T) {
 			return
 		}
 
-		//	clean up
+		// clean up
 		if err = fc.Purge(&tc.key); err != nil {
 			t.Errorf("purge failed. err: %v", err)
 			return
@@ -238,7 +239,7 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	type tcase struct {
-		config      map[string]interface{}
+		config      dict.Dict
 		key         cache.Key
 		bytes       []byte
 		expectedHit bool
@@ -253,13 +254,13 @@ func TestMaxZoom(t *testing.T) {
 			return
 		}
 
-		//	test set
+		// test set
 		if err = fc.Set(&tc.key, tc.bytes); err != nil {
 			t.Errorf("write failed. err: %v", err)
 			return
 		}
 
-		//	fetch the cache entry
+		// fetch the cache entry
 		_, hit, err := fc.Get(&tc.key)
 		if err != nil {
 			t.Errorf("read failed. err: %v", err)
@@ -270,7 +271,7 @@ func TestMaxZoom(t *testing.T) {
 			return
 		}
 
-		//	clean up
+		// clean up
 		if tc.expectedHit {
 			if err != fc.Purge(&tc.key) {
 				t.Errorf("%v", err)
@@ -280,11 +281,11 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"over max zoom": tcase{
+		"over max zoom": {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 11,
@@ -294,11 +295,11 @@ func TestMaxZoom(t *testing.T) {
 			bytes:       []byte("\x66\x6f\x6f"),
 			expectedHit: false,
 		},
-		"under max zoom": tcase{
+		"under max zoom": {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 9,
@@ -308,11 +309,11 @@ func TestMaxZoom(t *testing.T) {
 			bytes:       []byte("\x66\x6f\x6f"),
 			expectedHit: true,
 		},
-		"equals max zoom": tcase{
+		"equals max zoom": {
 			config: map[string]interface{}{
 				"bucket":   "tegola-test-data",
 				"region":   "us-west-1",
-				"max_zoom": 10,
+				"max_zoom": uint(10),
 			},
 			key: cache.Key{
 				Z: 10,

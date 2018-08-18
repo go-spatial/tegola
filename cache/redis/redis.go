@@ -1,12 +1,14 @@
 package redis
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-redis/redis"
+
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/util/dict"
-	"fmt"
+	"github.com/go-spatial/tegola/dict"
 )
 
 const CacheType = "redis"
@@ -23,16 +25,16 @@ func init() {
 	cache.Register(CacheType, New)
 }
 
-func New(config map[string]interface{}) (rcache cache.Interface, err error) {
+func New(config dict.Dicter) (rcache cache.Interface, err error) {
 
 	// default values
 	defaultNetwork := "tcp"
 	defaultAddress := "127.0.0.1:6379"
 	defaultPassword := ""
 	defaultDB := 0
-	defaultMaxZoom := 19 // max zoom in slippy map scheme
+	defaultMaxZoom := uint(tegola.MaxZ)
 
-	c := dict.M(config)
+	c := config
 
 	network, err := c.String(ConfigKeyNetwork, &defaultNetwork)
 	if err != nil {
@@ -71,7 +73,8 @@ func New(config map[string]interface{}) (rcache cache.Interface, err error) {
 		return nil, fmt.Errorf("redis did not respond with 'PONG', '%s'", pong)
 	}
 
-	maxZoom, err := c.Int(ConfigKeyMaxZoom, &defaultMaxZoom)
+	// the config map's underlying value is int
+	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +88,10 @@ func New(config map[string]interface{}) (rcache cache.Interface, err error) {
 type RedisCache struct {
 	Redis      *redis.Client
 	Expiration time.Duration
-	MaxZoom    int
+	MaxZoom    uint
 }
 
-func (rdc *RedisCache) Set(key *cache.Key, val []byte) (error) {
+func (rdc *RedisCache) Set(key *cache.Key, val []byte) error {
 	if key.Z > rdc.MaxZoom {
 		return nil
 	}

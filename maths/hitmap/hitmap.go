@@ -3,9 +3,10 @@ package hitmap
 import (
 	"sort"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/points"
 )
 
 type Interface interface {
@@ -219,7 +220,8 @@ func NewSegmentFromRing(label maths.Label, ring []maths.Pt) (seg Segment) {
 	seg.events = make(segEvents, 0, len(ring))
 
 	j := len(ring) - 1
-	seg.bbox.f = points.BBox(ring)
+	pts := convert.FromMathPoint(ring...)
+	seg.bbox.f = geom.NewExtent(pts...).Extent()
 	seg.bbox.init = true
 	for i := range ring {
 		l := maths.Line{ring[j], ring[i]}

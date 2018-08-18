@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/gdey/tbltest"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/internal/assert"
-	"github.com/go-spatial/tegola/maths/points"
 )
 
 func TestSplitPoints(t *testing.T) {
@@ -46,8 +46,8 @@ func TestSplitPoints(t *testing.T) {
 				{{0, 7}, {3, 16}},
 			},
 			pts: [][]maths.Pt{
-				[]maths.Pt{{0, 9}, {2, 13}, {4, 17}},
-				[]maths.Pt{{0, 7}, {2, 13}, {3, 16}},
+				{{0, 9}, {2, 13}, {4, 17}},
+				{{0, 7}, {2, 13}, {3, 16}},
 			},
 		},
 		tcase{
@@ -56,8 +56,8 @@ func TestSplitPoints(t *testing.T) {
 				{{0, 7}, {2, 13}},
 			},
 			pts: [][]maths.Pt{
-				[]maths.Pt{{0, 9}, {2, 13}, {4, 17}},
-				[]maths.Pt{{0, 7}, {2, 13}},
+				{{0, 9}, {2, 13}, {4, 17}},
+				{{0, 7}, {2, 13}},
 			},
 		},
 		tcase{
@@ -66,8 +66,8 @@ func TestSplitPoints(t *testing.T) {
 				{{0, 7}, {3, 16}},
 			},
 			pts: [][]maths.Pt{
-				[]maths.Pt{{0, 9}, {2, 13}},
-				[]maths.Pt{{0, 7}, {2, 13}, {3, 16}},
+				{{0, 9}, {2, 13}},
+				{{0, 7}, {2, 13}, {3, 16}},
 			},
 		},
 		tcase{
@@ -77,9 +77,9 @@ func TestSplitPoints(t *testing.T) {
 				{{0, 5}, {2, 13}},
 			},
 			pts: [][]maths.Pt{
-				[]maths.Pt{{0, 9}, {2, 13}, {4, 17}},
-				[]maths.Pt{{0, 7}, {2, 13}, {3, 16}},
-				[]maths.Pt{{0, 5}, {2, 13}},
+				{{0, 9}, {2, 13}, {4, 17}},
+				{{0, 7}, {2, 13}, {3, 16}},
+				{{0, 5}, {2, 13}},
 			},
 		},
 	).Run(fn)
@@ -88,7 +88,7 @@ func TestSplitSegments(t *testing.T) {
 	type tcase struct {
 		segs    []maths.Line
 		lns     [][2][2]float64
-		clipbox *points.Extent
+		clipbox *geom.Extent
 		err     error
 	}
 	ctx := context.Background()
@@ -119,10 +119,10 @@ func TestSplitSegments(t *testing.T) {
 				{{0, 7}, {3, 16}},
 			},
 			lns: [][2][2]float64{
-				[2][2]float64{{0, 9}, {2, 13}},
-				[2][2]float64{{2, 13}, {4, 17}},
-				[2][2]float64{{0, 7}, {2, 13}},
-				[2][2]float64{{2, 13}, {3, 16}},
+				{{0, 9}, {2, 13}},
+				{{2, 13}, {4, 17}},
+				{{0, 7}, {2, 13}},
+				{{2, 13}, {3, 16}},
 			},
 		},
 		tcase{
@@ -131,9 +131,9 @@ func TestSplitSegments(t *testing.T) {
 				{{0, 7}, {2, 13}},
 			},
 			lns: [][2][2]float64{
-				[2][2]float64{{0, 9}, {2, 13}},
-				[2][2]float64{{2, 13}, {4, 17}},
-				[2][2]float64{{0, 7}, {2, 13}},
+				{{0, 9}, {2, 13}},
+				{{2, 13}, {4, 17}},
+				{{0, 7}, {2, 13}},
 			},
 		},
 		tcase{
@@ -142,9 +142,9 @@ func TestSplitSegments(t *testing.T) {
 				{{0, 7}, {3, 16}},
 			},
 			lns: [][2][2]float64{
-				[2][2]float64{{0, 9}, {2, 13}},
-				[2][2]float64{{0, 7}, {2, 13}},
-				[2][2]float64{{2, 13}, {3, 16}},
+				{{0, 9}, {2, 13}},
+				{{0, 7}, {2, 13}},
+				{{2, 13}, {3, 16}},
 			},
 		},
 		tcase{
@@ -154,11 +154,11 @@ func TestSplitSegments(t *testing.T) {
 				{{0, 5}, {2, 13}},
 			},
 			lns: [][2][2]float64{
-				[2][2]float64{{0, 9}, {2, 13}},
-				[2][2]float64{{2, 13}, {4, 17}},
-				[2][2]float64{{0, 7}, {2, 13}},
-				[2][2]float64{{2, 13}, {3, 16}},
-				[2][2]float64{{0, 5}, {2, 13}},
+				{{0, 9}, {2, 13}},
+				{{2, 13}, {4, 17}},
+				{{0, 7}, {2, 13}},
+				{{2, 13}, {3, 16}},
+				{{0, 5}, {2, 13}},
 			},
 		},
 	).Run(fn)

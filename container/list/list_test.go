@@ -20,7 +20,7 @@ func checkListPointers(t *testing.T, desc string, l *List, es []*Element) {
 		return
 	}
 
-	// zero lenght lists must be the zero value or properly initialized (sentinel circle)
+	// zero length lists must be the zero value or properly initialized (sentinel circle)
 	if len(es) == 0 {
 		if n, p := l.root.Next(), l.root.Prev(); (n != nil && n != root) ||
 			(p != nil && p != root) {

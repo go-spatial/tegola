@@ -8,10 +8,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/encoding/wkb"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 )
@@ -23,7 +23,7 @@ const (
 	DefaultGeomFieldName = "geom"
 )
 
-//	config keys
+// config keys
 const (
 	ConfigKeyFilePath    = "filepath"
 	ConfigKeyLayers      = "layers"
@@ -53,7 +53,7 @@ func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
 type Provider struct {
 	// path to the geopackage file
 	Filepath string
-	// map of layer name and corrosponding sql
+	// map of layer name and corresponding sql
 	layers map[string]Layer
 	// reference to the database connection
 	db *sql.DB
@@ -80,31 +80,25 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	pLayer := p.layers[layer]
 
-	//	read the tile extent
-	bufferedExtent, tileSRID := tile.BufferedExtent()
-
-	// TODO: leverage minx/y maxx/y methods once the BufferedExtent returns a geom.Extent type
-	tileBBox := geom.BoundingBox{
-		{bufferedExtent[0][0], bufferedExtent[0][1]}, //minx, miny
-		{bufferedExtent[1][0], bufferedExtent[1][1]}, //maxx, maxy
-	}
+	// read the tile extent
+	tileBBox, tileSRID := tile.BufferedExtent()
 
 	// TODO(arolek): reimplement once the geom package has reprojection
 	// check if the SRID of the layer differs from that of the tile. tileSRID is assumed to always be WebMercator
 	if pLayer.srid != tileSRID {
-		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[0][0], bufferedExtent[0][1]})
+		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox.MinX(), tileBBox.MinY()})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{bufferedExtent[1][0], bufferedExtent[1][1]})
+		maxGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox.MaxX(), tileBBox.MaxY()})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		tileBBox = geom.BoundingBox{
-			{minGeo.AsPoint().X(), minGeo.AsPoint().Y()},
-			{maxGeo.AsPoint().X(), maxGeo.AsPoint().Y()},
+		tileBBox = &geom.Extent{
+			minGeo.AsPoint().X(), minGeo.AsPoint().Y(),
+			maxGeo.AsPoint().X(), maxGeo.AsPoint().Y(),
 		}
 	}
 
@@ -121,7 +115,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		}
 
 		// l - layer table, si - spatial index
-		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX!", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname)
+		qtext = fmt.Sprintf("%v FROM %v l JOIN %v si ON l.%v = si.id WHERE geom IS NOT NULL AND !BBOX! ORDER BY %v", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname, pLayer.idFieldname)
 
 		z, _, _ := tile.ZXY()
 		qtext = replaceTokens(qtext, z, tileBBox)
@@ -222,7 +216,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			}
 		}
 
-		//	pass the feature to the provided call back
+		// pass the feature to the provided call back
 		if err = fn(&feature); err != nil {
 			return err
 		}
@@ -240,7 +234,7 @@ type GeomTableDetails struct {
 	geomFieldname string
 	geomType      geom.Geometry
 	srid          uint64
-	bbox          geom.BoundingBox
+	bbox          geom.Extent
 }
 
 type GeomColumn struct {

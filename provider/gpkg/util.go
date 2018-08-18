@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 )
 
 const (
@@ -13,10 +13,10 @@ const (
 	zoomToken = "!ZOOM!"
 )
 
-func replaceTokens(qtext string, zoom uint64, extent geom.BoundingBox) string {
+func replaceTokens(qtext string, zoom uint, extent *geom.Extent) string {
 	// --- Convert tokens provided to SQL
 	// The ZOOM token requires two parameters, both filled with the current zoom level.
-	//	Until support for named parameters, the ZOOM token must follow the BBOX token.
+	// Until support for named parameters, the ZOOM token must follow the BBOX token.
 	/*
 		tokensPresent := make(map[string]bool)
 
@@ -35,7 +35,7 @@ func replaceTokens(qtext string, zoom uint64, extent geom.BoundingBox) string {
 		// The BBOX token requires parameters ordered as [maxx, minx, maxy, miny] and checks for overlap.
 		// 	Until support for named parameters, we'll only support one BBOX token per query.
 		bboxToken, fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY()),
-		zoomToken, strconv.FormatUint(zoom, 10),
+		zoomToken, strconv.FormatUint(uint64(zoom), 10),
 	)
 
 	return tokenReplacer.Replace(qtext)

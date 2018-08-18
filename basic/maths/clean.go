@@ -54,7 +54,7 @@ func cleanPolygon(p tegola.Polygon) (polygons []basic.Polygon, invalids basic.Po
 	return polygons, invalids
 }
 
-// cleanMultiPolygon will take a look at a multipolygon and attemp to remove, consoludate to turn
+// cleanMultiPolygon will take a look at a multipolygon and attemp to remove, consolidate to turn
 // the given multipolygon into a OGC compliant polygon.
 func cleanMultiPolygon(mpolygon tegola.MultiPolygon) (mp basic.MultiPolygon, err error) {
 	for _, p := range mpolygon.Polygons() {
