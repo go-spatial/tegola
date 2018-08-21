@@ -95,7 +95,6 @@ func extractColsAndPKFromSQL(sql string) ([]string, string) {
 	colNames := make([]string, 0, len(defs))
 
 	// match unquoted (`column_name`) or quoted (`"column name"`) indentifiers
-	colFinder := regexp.MustCompile(`^(([a-zA-Z_][a-zA-Z0-9_]*)|"([^"]+)")\s`)
 	for _, def := range defs {
 		matches := colFinder.FindStringSubmatch(def)
 		if matches == nil {
