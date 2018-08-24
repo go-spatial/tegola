@@ -37,21 +37,21 @@ func TestReplaceTokens(t *testing.T) {
 		"replace BBOX": {
 			sql:      "SELECT * FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
-			tile:     slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
-			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390624933,1.017529720390625e+07,3857)",
+			tile:     slippy.NewTile(2, 1, 1),
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390625,1.017529720390625e+07,3857)",
 		},
 		"replace BBOX and ZOOM 1": {
 
 			sql:      "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
-			tile:     slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
-			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390624933,1.017529720390625e+07,3857)",
+			tile:     slippy.NewTile(2, 1, 1),
+			expected: "SELECT id, scalerank=2 FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390625,1.017529720390625e+07,3857)",
 		},
 		"replace BBOX and ZOOM 2": {
 			sql:      "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
-			tile:     slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
-			expected: "SELECT id, scalerank=16 FROM foo WHERE geom && ST_MakeEnvelope(-1.3163688815956049e+07,4.0352540420407774e+06,-1.3163058210472783e+07,4.035884647524042e+06,3857)",
+			tile:     slippy.NewTile(16, 11241, 26168),
+			expected: "SELECT id, scalerank=16 FROM foo WHERE geom && ST_MakeEnvelope(-1.3163688815956049e+07,4.0352540420407765e+06,-1.3163058210472783e+07,4.035884647524042e+06,3857)",
 		},
 	}
 

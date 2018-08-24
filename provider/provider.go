@@ -14,15 +14,14 @@ type Tile interface {
 	// ZXY returns the z, x and y values of the tile
 	ZXY() (uint, uint, uint)
 	// Extent returns the extent of the tile excluding any buffer
-	Extent() (extent *geom.Extent, srid uint64)
-	// BufferedExtent returns the extent of the tile including any buffer
-	BufferedExtent() (extent *geom.Extent, srid uint64)
+	Extent4326() (extent *geom.Extent)
+	Extent3857() (extent *geom.Extent)
 }
 
 type Tiler interface {
 	// TileFeature will stream decoded features to the callback function fn
 	// if fn returns ErrCanceled, the TileFeatures method should stop processing
-	TileFeatures(ctx context.Context, layer string, t Tile, fn func(f *Feature) error) error
+	TileFeatures(ctx context.Context, layer string, t Tile, fn func(f *Feature) error) error // TODO(@ear7h,@arolek,@gdey): replcae the tile with an extent
 	// Layers returns information about the various layers the provider supports
 	Layers() ([]LayerInfo, error)
 }

@@ -71,6 +71,7 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 
 		newMap.Center = centerArr
 
+		// Todo(@ear7h): use the geom.Segment value
 		if len(m.Bounds) == 4 {
 			newMap.Bounds = geom.NewExtent(
 				[2]float64{float64(m.Bounds[0]), float64(m.Bounds[1])},

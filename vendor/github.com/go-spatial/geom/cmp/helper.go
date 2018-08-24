@@ -30,6 +30,9 @@ func XYLessPoint(pt1, pt2 [2]float64) bool {
 // FindMinPointIdx given a slice of points, it will return the index to the smallest point
 // according to XYLessPoint
 func FindMinPointIdx(ln [][2]float64) (min int) {
+	if len(ln) < 2 {
+		return 0
+	}
 	for i := range ln[1:] {
 		// Adjust for the slice.
 		if XYLessPoint(ln[i+1], ln[min]) {
@@ -39,15 +42,21 @@ func FindMinPointIdx(ln [][2]float64) (min int) {
 	return min
 }
 
-// RotateToLeftMostPoint will rotate the points in the linestring so that the smallest
-// point (as defined by XYLessPoint) is the first point in the linestring.
-func RotateToLeftMostPoint(ln [][2]float64) {
+// RoateToIdx
+func RotateToIdx(idx int, ln [][2]float64) {
 	if len(ln) == 0 {
 		return
 	}
-	idx := FindMinPointIdx(ln)
 	tmp := make([][2]float64, len(ln))
 	copy(tmp, ln[idx:])
 	copy(tmp[len(ln[idx:]):], ln)
 	copy(ln, tmp)
+
+}
+
+// RotateToLeftMostPoint will rotate the points in the linestring so that the smallest
+// point (as defined by XYLessPoint) is the first point in the linestring.
+func RotateToLeftMostPoint(ln [][2]float64) {
+	idx := FindMinPointIdx(ln)
+	RotateToIdx(idx, ln)
 }

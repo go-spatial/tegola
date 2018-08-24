@@ -22,6 +22,7 @@ import (
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/atlas"
 )
 
 var drawCmd = &cobra.Command{
@@ -148,10 +149,10 @@ func drawCommand(cmd *cobra.Command, args []string) {
 func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, dfn *drawFilename) error {
 	ctx := context.Background()
 	ttile := tegola.NewTile(dfn.z, dfn.x, dfn.y)
-	slippyTile := slippy.NewTile(dfn.z, dfn.x, dfn.y, tegola.DefaultTileBuffer, tegola.WebMercator)
+	bufTile := atlas.BufferedTile{Tile: slippy.NewTile(dfn.z, dfn.x, dfn.y,), Buf: tegola.DefaultTileBuffer}
 	for _, name := range layers {
 		count := 0
-		err := tiler.TileFeatures(ctx, name, slippyTile, func(f *provider.Feature) error {
+		err := tiler.TileFeatures(ctx, name, bufTile, func(f *provider.Feature) error {
 			if gid != -1 && f.ID != uint64(gid) {
 				// Skip the feature.
 				return nil
