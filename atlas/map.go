@@ -124,13 +124,14 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
+// TODO(@ear7h): remove this once provider.Tiler.TileFeatures(..) takes an extent instead of a tile
 type BufferedTile struct {
 	*slippy.Tile
-	Buf uint64
+	PixelBuf uint64
 }
 
 func (bt BufferedTile) Extent3857() *geom.Extent{
-	return bt.Tile.Extent3857().ExpandBy(slippy.Pixels2Webs(bt.Z, uint(bt.Buf)))
+	return bt.Tile.Extent3857().ExpandBy(slippy.Pixels2Webs(bt.Z, uint(bt.PixelBuf)))
 }
 
 // TODO (arolek): support for max zoom
