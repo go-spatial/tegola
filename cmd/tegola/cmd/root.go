@@ -35,7 +35,7 @@ func init() {
 	cacheCmd.Flags().StringVarP(&cacheFile, "tile-list", "", "", "path to a file with tile entries separated by newlines and formatted according to tile-name-format")
 	cacheCmd.Flags().UintVarP(&cacheMinZoom, "min-zoom", "", 0, "min zoom to seed cache from")
 	cacheCmd.Flags().UintVarP(&cacheMaxZoom, "max-zoom", "", atlas.MaxZoom, "max zoom to seed cache to")
-	cacheCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
+	cacheCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "long / lat bounds to seed the cache with in the format: west, south, east, north")
 	cacheCmd.Flags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
 	cacheCmd.Flags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
 	cacheCmd.Flags().StringVarP(&cacheFormat, "tile-name-format", "", "/zxy", "4 character string where the first character is a non-numeric delimiter followed by \"z\", \"x\" and \"y\" defining the coordinate order")

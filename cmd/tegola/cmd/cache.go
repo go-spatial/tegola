@@ -390,9 +390,9 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			yf = maths.Min(yf, maxXYatZ)
 
 			// loop rows
-			for x := xi; x <= xf; x++ {
+			for x := xi; x != xf; x=(x+1)%maxXYatZ {
 				// loop columns
-				for y := yi; y <= yf; y++ {
+				for y := yi; y != yf; y=(y+1)%maxXYatZ {
 
 					if gdcmd.IsCancelled() {
 						return fmt.Errorf("cache manipulation interrupted")

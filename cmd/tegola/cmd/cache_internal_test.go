@@ -142,6 +142,13 @@ func TestSendTiles(t *testing.T) {
 				slippy.NewTile(15, 601, 1563, 0, tegola.WebMercator),
 			},
 		},
+		"min_zoom=3 max_zoom=3 bounds=-179.99,0.001,179.99,0.002 (antimeridian)": {
+			flags: "--bounds=\"-179.99,0.001,179.99,0.002\" --max-zoom=3 --min-zoom=3",
+			tiles: []*slippy.Tile{
+				slippy.NewTile(3, 0, 3),
+				slippy.NewTile(3, 7, 3),
+			},
+		},
 	}
 
 	err := ioutil.WriteFile("list.tiles", []byte("14/300/781"), 0666)
