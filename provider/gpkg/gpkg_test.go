@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/gpkg"
@@ -238,17 +238,13 @@ func TestNewTileProvider(t *testing.T) {
 }
 
 type MockTile struct {
-	extent         *geom.Extent
-	bufferedExtent *geom.Extent
+	tile         *slippy.Tile// used for extent
 	Z, X, Y        uint
-	srid           uint64
+
 }
 
-// TODO(arolek): Extent needs to return a geom.Extent
-func (t *MockTile) Extent() (*geom.Extent, uint64) { return t.extent, t.srid }
-
-// TODO(arolek): BufferedExtent needs to return a geom.Extent
-func (t *MockTile) BufferedExtent() (*geom.Extent, uint64) { return t.bufferedExtent, t.srid }
+func (t *MockTile) Extent4326() (*geom.Extent) { return t.tile.Extent4326()}
+func (t *MockTile) Extent3857() (*geom.Extent) { return t.tile.Extent3857()}
 
 func (t *MockTile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
@@ -256,7 +252,7 @@ func TestTileFeatures(t *testing.T) {
 	type tcase struct {
 		config               dict.Dict
 		layerName            string
-		tile                 MockTile
+		tile                 provider.Tile
 		expectedFeatureCount int
 	}
 
@@ -270,7 +266,7 @@ func TestTileFeatures(t *testing.T) {
 		}
 
 		var featureCount int
-		err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+		err = p.TileFeatures(context.TODO(), tc.layerName, tc.tile, func(f *provider.Feature) error {
 			featureCount++
 			return nil
 		})
@@ -295,13 +291,9 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "rd_lines",
-			tile: MockTile{
-				srid: tegola.WGS84,
-				bufferedExtent: geom.NewExtent(
+			tile: slippy.NewTileMinMaxer(geom.Hull(
 					[2]float64{20.0, 37.85},
-					[2]float64{23.6, 37.9431},
-				),
-			},
+					[2]float64{21.6, 37.91})),
 			expectedFeatureCount: 0,
 		},
 		// rail lines bounding box is: [23.6828, 37.8501, 23.7549, 37.9431]
@@ -313,13 +305,9 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "rl_lines",
-			tile: MockTile{
-				srid: tegola.WGS84,
-				bufferedExtent: geom.NewExtent(
-					[2]float64{23.6, 37.8},
-					[2]float64{23.8, 38.0},
-				),
-			},
+			tile: slippy.NewTileMinMaxer(geom.Hull(
+				[2]float64{23.6, 37.8},
+				[2]float64{23.8, 38.0})),
 			expectedFeatureCount: 187,
 		},
 		"zoom token": {
@@ -339,13 +327,11 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "land1",
-			tile: MockTile{
+			tile: &MockTile{
+				tile: slippy.NewTileMinMaxer(geom.Segment(
+					[2]float64{-179.9, 85},
+					[2]float64{179.9, -85})),
 				Z:    1,
-				srid: tegola.WebMercator,
-				bufferedExtent: geom.NewExtent(
-					[2]float64{-20026376.39, -20048966.10},
-					[2]float64{20026376.39, 20048966.10},
-				),
 			},
 			expectedFeatureCount: 101,
 		},
@@ -366,14 +352,15 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "land2",
-			tile: MockTile{
-				Z:    0,
-				srid: tegola.WebMercator,
-				bufferedExtent: geom.NewExtent(
-					[2]float64{-20026376.39, -20048966.10},
-					[2]float64{20026376.39, 20048966.10},
-				),
-			},
+			tile: slippy.NewTile(0, 0, 0),
+			//MockTile{
+			//	Z:    0,
+			//	srid: tegola.WebMercator,
+			//	bufferedExtent: geom.NewExtent(
+			//		[2]float64{-20026376.39, -20048966.10},
+			//		[2]float64{20026376.39, 20048966.10},
+			//	),
+			//},
 			expectedFeatureCount: 44,
 		},
 	}
@@ -389,7 +376,7 @@ func TestTileFeatures(t *testing.T) {
 func TestConfigs(t *testing.T) {
 	type tcase struct {
 		config       dict.Dict
-		tile         MockTile
+		tile         *slippy.Tile
 		layerName    string
 		expectedTags map[uint64]map[string]interface{}
 	}
@@ -401,7 +388,7 @@ func TestConfigs(t *testing.T) {
 			return
 		}
 
-		err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+		err = p.TileFeatures(context.TODO(), tc.layerName, tc.tile, func(f *provider.Feature) error {
 			// check if the feature is part of the test
 			if _, ok := tc.expectedTags[f.ID]; !ok {
 				return nil
@@ -440,13 +427,13 @@ func TestConfigs(t *testing.T) {
 					{"name": "rd_lines", "tablename": "roads_lines"},
 				},
 			},
-			tile: MockTile{
-				bufferedExtent: geom.NewExtent(
-					[2]float64{-20026376.39, -20048966.10},
-					[2]float64{20026376.39, 20048966.10},
-				),
-				srid: tegola.WebMercator,
-			},
+			tile: slippy.NewTile(0, 0, 0),
+				//bufferedExtent: geom.NewExtent(
+				//	[2]float64{-20026376.39, -20048966.10},
+				//	[2]float64{20026376.39, 20048966.10},
+				//),
+				//srid: tegola.WebMercator,
+			//},
 			layerName: "a_points",
 			expectedTags: map[uint64]map[string]interface{}{
 				515: {
@@ -472,13 +459,14 @@ func TestConfigs(t *testing.T) {
 					{"name": "rd_lines", "tablename": "roads_lines"},
 				},
 			},
-			tile: MockTile{
-				bufferedExtent: geom.NewExtent(
-					[2]float64{-20026376.39, -20048966.10},
-					[2]float64{20026376.39, 20048966.10},
-				),
-				srid: tegola.WebMercator,
-			},
+			tile: slippy.NewTile(0, 0, 0),
+			//tile: MockTile{
+			//	bufferedExtent: geom.NewExtent(
+			//		[2]float64{-20026376.39, -20048966.10},
+			//		[2]float64{20026376.39, 20048966.10},
+			//	),
+			//	srid: tegola.WebMercator,
+			//},
 			layerName: "rd_lines",
 			expectedTags: map[uint64]map[string]interface{}{
 				1: {},
@@ -494,13 +482,14 @@ func TestConfigs(t *testing.T) {
 					},
 				},
 			},
-			tile: MockTile{
-				bufferedExtent: geom.NewExtent(
-					[2]float64{-20026376.39, -20048966.10},
-					[2]float64{20026376.39, 20048966.10},
-				),
-				srid: tegola.WebMercator,
-			},
+			tile: slippy.NewTile(0, 0, 0),
+			//tile: MockTile{
+			//	bufferedExtent: geom.NewExtent(
+			//		[2]float64{-20026376.39, -20048966.10},
+			//		[2]float64{20026376.39, 20048966.10},
+			//	),
+			//	srid: tegola.WebMercator,
+			//},
 			layerName: "a_points",
 			expectedTags: map[uint64]map[string]interface{}{
 				515: {
@@ -539,13 +528,14 @@ func TestConfigs(t *testing.T) {
 					},
 				},
 			},
-			tile: MockTile{
-				bufferedExtent: geom.NewExtent(
-					[2]float64{-20026376.39, -20048966.10},
-					[2]float64{20026376.39, 20048966.10},
-				),
-				srid: tegola.WebMercator,
-			},
+			tile: slippy.NewTile(0, 0, 0),
+			//tile: MockTile{
+			//	bufferedExtent: geom.NewExtent(
+			//		[2]float64{-20026376.39, -20048966.10},
+			//		[2]float64{20026376.39, 20048966.10},
+			//	),
+			//	srid: tegola.WebMercator,
+			//},
 			layerName: "a_p_points",
 			expectedTags: map[uint64]map[string]interface{}{
 				255: {

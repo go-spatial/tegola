@@ -9,6 +9,31 @@ import (
 
 const TOLERANCE = 0.000001
 
+// FloatSlice compare two sets of float slices.
+func FloatSlice(f1, f2 []float64) bool { return Float64Slice(f1, f2, TOLERANCE) }
+
+// Float64Slice compares two sets of float64 slices within the given tolerance.
+func Float64Slice(f1, f2 []float64, tolerance float64) bool {
+	if len(f1) != len(f2) {
+		return false
+	}
+	if len(f1) == 0 {
+		return true
+	}
+	f1s := make([]float64, len(f1))
+	f2s := make([]float64, len(f2))
+	copy(f1s, f1)
+	copy(f2s, f2)
+	sort.Float64s(f1s)
+	sort.Float64s(f2s)
+	for i := range f1s {
+		if !Float64(f1s[i], f2s[i], tolerance) {
+			return false
+		}
+	}
+	return true
+}
+
 // Float64 compares two floats to see if they are within the given tolerance.
 func Float64(f1, f2, tolerance float64) bool {
 	if math.IsInf(f1, 1) {
@@ -40,6 +65,7 @@ func GeomExtent(extent1, extent2 geom.Extenter) bool {
 	return Extent(extent1.Extent(), extent2.Extent())
 }
 
+// PointLess returns weather p1 is < p2 by first comparing the X values, and if they are the same the Y values.
 func PointLess(p1, p2 [2]float64) bool {
 	if p1[0] != p2[0] {
 		return p1[0] < p2[0]
@@ -47,6 +73,7 @@ func PointLess(p1, p2 [2]float64) bool {
 	return p1[1] < p2[1]
 }
 
+// PointEqual returns weather both points have the same value for x,y.
 func PointEqual(p1, p2 [2]float64) bool { return Float(p1[0], p2[0]) && Float(p1[1], p2[1]) }
 
 // MultiPoint will check to see see if the given slices are the same.
@@ -138,6 +165,9 @@ func PolygonEqual(ply1, ply2 [][][2]float64) bool {
 
 // Point will check to see if the x and y of both points are the same.
 func PointerEqual(geo1, geo2 geom.Pointer) bool { return PointEqual(geo1.XY(), geo2.XY()) }
+
+// PointerLess returns weather p1 is < p2 by first comparing the X values, and if they are the same the Y values.
+func PointerLess(p1, p2 geom.Pointer) bool { return PointLess(p1.XY(), p2.XY()) }
 
 // MultiPoint will check to see if the provided multipoints have the same points.
 func MultiPointerEqual(geo1, geo2 geom.MultiPointer) bool {

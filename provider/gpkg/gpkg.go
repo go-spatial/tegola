@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
@@ -80,12 +81,13 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 
 	pLayer := p.layers[layer]
 
-	// read the tile extent
-	tileBBox, tileSRID := tile.BufferedExtent()
-
 	// TODO(arolek): reimplement once the geom package has reprojection
+	tileZ, _, _ := tile.ZXY()
+	tileBBox := tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tileZ, tegola.DefaultTileBuffer))
+
+	// read the tile extent
 	// check if the SRID of the layer differs from that of the tile. tileSRID is assumed to always be WebMercator
-	if pLayer.srid != tileSRID {
+	if pLayer.srid != tegola.WebMercator {
 		minGeo, err := basic.FromWebMercator(pLayer.srid, basic.Point{tileBBox.MinX(), tileBBox.MinY()})
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)

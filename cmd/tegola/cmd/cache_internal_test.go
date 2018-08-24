@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 )
 
 // returns the index of the tile within the array, or -1
@@ -90,56 +89,56 @@ func TestSendTiles(t *testing.T) {
 		"max_zoom=0": {
 			flags: "--min-zoom=0 --max-zoom=0 --bounds=\"-180,-85.0511,180,85.0511\"",
 			tiles: []*slippy.Tile{
-				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
+				slippy.NewTile(0, 0, 0),
 			},
 		},
 		"min_zoom=1 max_zoom=1": {
 			flags: "--min-zoom=1 --max-zoom=1 --bounds=\"-180,-85.0511,180,85.0511\"",
 			tiles: []*slippy.Tile{
-				slippy.NewTile(1, 0, 0, 0, tegola.WebMercator),
-				slippy.NewTile(1, 1, 0, 0, tegola.WebMercator),
-				slippy.NewTile(1, 0, 1, 0, tegola.WebMercator),
-				slippy.NewTile(1, 1, 1, 0, tegola.WebMercator),
+				slippy.NewTile(1, 0, 0),
+				slippy.NewTile(1, 1, 0),
+				slippy.NewTile(1, 0, 1),
+				slippy.NewTile(1, 1, 1),
 			},
 		},
 		"min_zoom=1 max_zoom=1 bounds=180,90,0,0": {
 			flags: "--min-zoom=1 --max-zoom=1 --bounds=\"180,90,0,0\"",
 			tiles: []*slippy.Tile{
-				slippy.NewTile(1, 1, 0, 0, tegola.WebMercator),
+				slippy.NewTile(1, 1, 0),
 			},
 		},
 		"max_zoom=0 tile-name=0/0/0": {
 			flags: "--min-zoom=0 --max-zoom=0 --tile-name=\"0/0/0\"",
 			tiles: []*slippy.Tile{
-				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
+				slippy.NewTile(0, 0, 0),
 			},
 		},
 		"max_zoom=0 tile-name=14/300/781": {
 			flags: "--min-zoom=0 --max-zoom=0 --tile-name=\"14/300/781\"",
 			tiles: []*slippy.Tile{
-				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
+				slippy.NewTile(0, 0, 0),
 			},
 		},
 		"min_zoom= 13 max_zoom=15 tile-name=14/300/781": {
 			flags: "--min-zoom=13 --max-zoom=15 --tile-name=\"14/300/781\"",
 			tiles: []*slippy.Tile{
-				slippy.NewTile(13, 150, 390, 0, tegola.WebMercator),
-				slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
-				slippy.NewTile(15, 600, 1562, 0, tegola.WebMercator),
-				slippy.NewTile(15, 600, 1563, 0, tegola.WebMercator),
-				slippy.NewTile(15, 601, 1562, 0, tegola.WebMercator),
-				slippy.NewTile(15, 601, 1563, 0, tegola.WebMercator),
+				slippy.NewTile(13, 150, 390),
+				slippy.NewTile(14, 300, 781),
+				slippy.NewTile(15, 600, 1562),
+				slippy.NewTile(15, 600, 1563),
+				slippy.NewTile(15, 601, 1562),
+				slippy.NewTile(15, 601, 1563),
 			},
 		},
 		"min_zoom= 13 max_zoom=15 tile-list=list.tiles": {
 			flags: "--min-zoom=13 --max-zoom=15 --tile-list=\"list.tiles\"",
 			tiles: []*slippy.Tile{
-				slippy.NewTile(13, 150, 390, 0, tegola.WebMercator),
-				slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
-				slippy.NewTile(15, 600, 1562, 0, tegola.WebMercator),
-				slippy.NewTile(15, 600, 1563, 0, tegola.WebMercator),
-				slippy.NewTile(15, 601, 1562, 0, tegola.WebMercator),
-				slippy.NewTile(15, 601, 1563, 0, tegola.WebMercator),
+				slippy.NewTile(13, 150, 390),
+				slippy.NewTile(14, 300, 781),
+				slippy.NewTile(15, 600, 1562),
+				slippy.NewTile(15, 600, 1563),
+				slippy.NewTile(15, 601, 1562),
+				slippy.NewTile(15, 601, 1563),
 			},
 		},
 	}

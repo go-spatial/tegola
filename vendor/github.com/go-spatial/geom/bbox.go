@@ -116,18 +116,10 @@ func (e *Extent) Add(extent MinMaxer) {
 	if e == nil {
 		return
 	}
-	if e[0] > extent.MinX() {
-		e[0] = extent.MinX()
-	}
-	if e[1] > extent.MinY() {
-		e[1] = extent.MinY()
-	}
-	if e[2] < extent.MaxX() {
-		e[2] = extent.MaxX()
-	}
-	if e[3] < extent.MaxY() {
-		e[3] = extent.MaxY()
-	}
+	e[0] = math.Min(e[0], extent.MinX())
+	e[2] = math.Max(e[2], extent.MaxX())
+	e[1] = math.Min(e[1], extent.MinY())
+	e[3] = math.Max(e[3], extent.MaxY())
 }
 
 // AddPoints will expand the extent to contain the given points.
@@ -139,8 +131,12 @@ func (e *Extent) AddPoints(points ...[2]float64) {
 	if len(points) == 0 {
 		return
 	}
-	extent := NewExtent(points...)
-	e.Add(extent)
+	for _, pt := range points {
+		e[0] = math.Min(pt[0], e[0])
+		e[1] = math.Min(pt[1], e[1])
+		e[2] = math.Max(pt[0], e[2])
+		e[3] = math.Max(pt[1], e[3])
+	}
 }
 
 func (e *Extent) AddPointers(pts ...Pointer) {
@@ -168,6 +164,37 @@ func (e *Extent) AsPolygon() Polygon { return Polygon{e.Vertices()} }
 // Area returns the area of the extent, if the extent is nil, it will return 0
 func (e *Extent) Area() float64 {
 	return math.Abs((e.MaxY() - e.MinY()) * (e.MaxX() - e.MinX()))
+}
+
+// Hull returns the smallest extent from lon/lat points.
+// The hull is defined in the following order [4]float64{ West, South, East, North}
+func Hull(a, b [2]float64) *Extent {
+	// lat <=> y
+	// lng <=> x
+
+	// make a the westmost point
+	if math.Abs(a[0]-b[0]) > 180.0 {
+		// smallest longitudinal arc crosses the antimeridian
+		if a[0] < b[0] {
+			a[0], b[0] = b[0], a[0]
+		}
+	} else {
+		if a[0] > b[0] {
+			a[0], b[0] = b[0], a[0]
+		}
+	}
+
+	return Segment(a, b)
+}
+
+// Segment of a sphere from two long/lat points, with a being the westmost point and b the eastmost point; in following format [4]float64{ West, South, East, North }
+func Segment(westy, easty [2]float64) *Extent {
+	north, south := westy[1], easty[1]
+	if north < south {
+		south, north = north, south
+	}
+
+	return &Extent{westy[0], south, easty[0], north}
 }
 
 // NewExtent returns an Extent for the provided points; in following format [4]float64{ MinX, MinY, MaxX, MaxY }
@@ -201,6 +228,18 @@ func NewExtent(points ...[2]float64) *Extent {
 	return &extent
 }
 
+func NewExtentFromGeometry(g Geometry) (*Extent, error) {
+	points, err := GetCoordinates(g)
+	if err != nil {
+		return nil, err
+	}
+	pts := make([][2]float64, len(points))
+	for i := range points {
+		pts[i] = points[i]
+	}
+	return NewExtent(pts...), nil
+}
+
 // Contains will return whether the given  extent is inside of the  extent.
 func (e *Extent) Contains(ne MinMaxer) bool {
 	// Nil extent contains the world.
@@ -231,6 +270,23 @@ func (e *Extent) ContainsLine(l [2][2]float64) bool {
 		return true
 	}
 	return e.ContainsPoint(l[0]) && e.ContainsPoint(l[1])
+}
+
+// ContainsGeom will return weather the given geometry is completely inside of the extent.
+func (e *Extent) ContainsGeom(g Geometry) (bool, error) {
+	if e == nil {
+		return true, nil
+	}
+	// Check to see if it can be a MinMaxer, if so use that.
+	if extenter, ok := g.(MinMaxer); ok {
+		return e.Contains(extenter), nil
+	}
+	// we will use a exntent that contains the geometry, and check to see if this extent contains that extent.
+	var ne = new(Extent)
+	if err := ne.AddGeometry(g); err != nil {
+		return false, err
+	}
+	return e.Contains(ne), nil
 }
 
 // ScaleBy will scale the points in the extent by the given scale factor.
@@ -312,4 +368,10 @@ func (e *Extent) Intersect(ne *Extent) (*Extent, bool) {
 		return nil, false
 	}
 	return &Extent{minx, miny, maxx, maxy}, true
+}
+
+// IsUniverse returns weather the extent contains the universe. This is true if the clip box is nil or the x,y values are max values.
+func (e *Extent) IsUniverse() bool {
+	return e == nil || (e.MinX() == -math.MaxFloat64 && e.MaxX() == math.MaxFloat64 &&
+		e.MinY() == -math.MaxFloat64 && e.MaxY() == math.MaxFloat64)
 }

@@ -234,9 +234,10 @@ func SeedWorker(ctx context.Context, mt MapTile) error {
 		}
 	}
 
+	// REVIEW (@ear7h:@gdey,@arolek): is this necessary? since tile buffer is set within the map package
 	//	set tile buffer if it was configured by the user
 	if conf.TileBuffer != nil {
-		mt.Tile.Buffer = float64(*conf.TileBuffer)
+		m.TileBuffer = uint64(*conf.TileBuffer)
 	}
 
 	//	seed the tile
@@ -291,7 +292,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			return err
 		}
 
-		tile := slippy.NewTile(z, x, y, tegola.DefaultTileBuffer, tegola.WebMercator)
+		tile := slippy.NewTile(z, x, y)
 
 		for _, zoom := range zooms {
 			err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
@@ -323,7 +324,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 			if err != nil {
 				return err
 			}
-			tile := slippy.NewTile(z, x, y, 0, tegola.WebMercator)
+			tile := slippy.NewTile(z, x, y)
 
 			c <- tile
 
@@ -368,8 +369,8 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 
 		for _, z := range zooms {
 			// get the tiles at the corners given the bounds and zoom
-			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0], 0, tegola.WebMercator)
-			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2], 0, tegola.WebMercator)
+			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0])
+			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2])
 
 			// x,y initials and finals
 			_, xi, yi := corner1.ZXY()
@@ -399,7 +400,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 					}
 
 					// send tile over the channel
-					c <- slippy.NewTile(z, x, y, 0, tegola.WebMercator)
+					c <- slippy.NewTile(z, x, y)
 				}
 			}
 		}

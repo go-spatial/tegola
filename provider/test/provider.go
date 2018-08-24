@@ -42,7 +42,8 @@ func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 // TilFeatures always returns a feature with a polygon outlining the tile's Extent (not Buffered Extent)
 func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, fn func(f *provider.Feature) error) error {
 	// get tile bounding box
-	ext, srid := t.Extent()
+	srid := uint64(tegola.WebMercator)
+	ext := t.Extent3857()
 
 	debugTileOutline := provider.Feature{
 		ID:       0,

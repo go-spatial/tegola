@@ -21,3 +21,20 @@ func (mp *MultiPolygon) SetPolygons(input [][][][2]float64) (err error) {
 	*mp = append((*mp)[:0], input...)
 	return
 }
+
+// AsSegments return a set of []Line
+func (mp MultiPolygon) AsSegments() (segs [][][]Line, err error) {
+	if len(mp) == 0 {
+		return nil, nil
+	}
+	segs = make([][][]Line, 0, len(mp))
+	for i := range mp {
+		p := Polygon(mp[i])
+		seg, err := p.AsSegments()
+		if err != nil {
+			return nil, err
+		}
+		segs = append(segs, seg)
+	}
+	return segs, nil
+}
