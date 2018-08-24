@@ -75,6 +75,11 @@ const (
 //
 // !BBOX! - the bounding box of the tile
 // !ZOOM! - the tile Z value
+
+// The following tokens are replaced for compatibility with Mapnik:
+// !scale_denominator! - scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
+// !pixel_width!       - the pixel width in m, assuming 256x256 tiles
+// !pixel_height!      - the pixel height in m, assuming 256x256 tiles
 func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
 	bufferedExtent, _ := tile.BufferedExtent()
@@ -95,11 +100,20 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%g,%g,%g,%g,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
+	extent, _ := tile.Extent()
+	// TODO: Always convert to meter if we support different projections
+	pixelWidth := (extent.MaxX() - extent.MinX()) / 256
+	pixelHeight := (extent.MaxY() - extent.MinY()) / 256
+	scaleDenominator := pixelWidth / 0.00028 /* px size in m */
+
 	// replace query string tokens
 	z, _, _ := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
 		zoomToken, strconv.FormatUint(uint64(z), 10),
+		"!scale_denominator!", strconv.FormatFloat(scaleDenominator, 'f', -1, 64),
+		"!pixel_width!", strconv.FormatFloat(pixelWidth, 'f', -1, 64),
+		"!pixel_height!", strconv.FormatFloat(pixelHeight, 'f', -1, 64),
 	)
 
 	return tokenReplacer.Replace(sql), nil
