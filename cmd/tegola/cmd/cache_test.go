@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cmd/internal/register"
@@ -137,7 +136,7 @@ func TestCacheSeed(t *testing.T) {
 			tiles: []cmd.MapTile{
 				{
 					MapName: "test-map",
-					Tile:    slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
+					Tile:    slippy.NewTile(0, 0, 0),
 				},
 			},
 		},
@@ -145,7 +144,7 @@ func TestCacheSeed(t *testing.T) {
 			tiles: []cmd.MapTile{
 				{
 					MapName: "test-map",
-					Tile:    slippy.NewTile(0, 0, 0, tegola.DefaultTileBuffer, tegola.WebMercator),
+					Tile:    slippy.NewTile(0, 0, 0),
 				},
 			},
 		},

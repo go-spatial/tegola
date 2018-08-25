@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
@@ -276,7 +275,7 @@ func TestTileFeatures(t *testing.T) {
 					},
 				},
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 slippy.NewTile(1, 1, 1),
 			expectedFeatureCount: 4032,
 		},
 		"scalerank test": {
@@ -297,7 +296,7 @@ func TestTileFeatures(t *testing.T) {
 					},
 				},
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 slippy.NewTile(1, 1, 1),
 			expectedFeatureCount: 98,
 		},
 		"decode numeric(x,x) types": {
@@ -320,7 +319,7 @@ func TestTileFeatures(t *testing.T) {
 					},
 				},
 			},
-			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			tile:                 slippy.NewTile(16, 11241, 26168),
 			expectedFeatureCount: 101,
 		},
 		"gracefully handle 3d point": {
@@ -342,7 +341,7 @@ func TestTileFeatures(t *testing.T) {
 					},
 				},
 			},
-			tile:                 slippy.NewTile(0, 0, 0, 64, tegola.WebMercator),
+			tile:                 slippy.NewTile(0, 0, 0),
 			expectedFeatureCount: 0,
 		},
 		"gracefully handle null geometry": {
@@ -366,7 +365,7 @@ func TestTileFeatures(t *testing.T) {
 					},
 				},
 			},
-			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			tile:                 slippy.NewTile(16, 11241, 26168),
 			expectedFeatureCount: 1,
 		},
 	}

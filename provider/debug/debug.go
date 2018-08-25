@@ -35,7 +35,8 @@ type Provider struct{}
 func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
 
 	// get tile bounding box
-	ext, srid := tile.Extent()
+	srid := uint64(tegola.WebMercator)
+	ext := tile.Extent3857()
 
 	switch layer {
 	case "debug-tile-outline":

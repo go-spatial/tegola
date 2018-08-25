@@ -124,6 +124,16 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
+// TODO(@ear7h): remove this once provider.Tiler.TileFeatures(..) takes an extent instead of a tile
+type BufferedTile struct {
+	*slippy.Tile
+	PixelBuf uint64
+}
+
+func (bt BufferedTile) Extent3857() *geom.Extent{
+	return bt.Tile.Extent3857().ExpandBy(slippy.Pixels2Webs(bt.Z, uint(bt.PixelBuf)))
+}
+
 // TODO (arolek): support for max zoom
 func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	// tile container
@@ -151,7 +161,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 			defer wg.Done()
 
 			// fetch layer from data provider
-			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
+			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, BufferedTile{tile, m.TileBuffer}, func(f *provider.Feature) error {
 				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package
 				geo, err := convert.ToTegola(f.Geometry)
 				if err != nil {

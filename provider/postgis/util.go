@@ -6,11 +6,12 @@ import (
 	"log"
 	"strconv"
 	"strings"
-
-	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
+	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola/provider"
+	"github.com/go-spatial/tegola/basic"
 	"github.com/jackc/pgx/pgtype"
+	"github.com/go-spatial/tegola"
 )
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
@@ -77,7 +78,8 @@ const (
 // !ZOOM! - the tile Z value
 func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
-	bufferedExtent, _ := tile.BufferedExtent()
+	tileZ, _, _ := tile.ZXY()
+	bufferedExtent := tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tileZ, tegola.DefaultTileBuffer))
 
 	// TODO: leverage helper functions for minx / miny to make this easier to follow
 	// TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
@@ -96,10 +98,9 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%g,%g,%g,%g,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
 	// replace query string tokens
-	z, _, _ := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
-		zoomToken, strconv.FormatUint(uint64(z), 10),
+		zoomToken, strconv.FormatUint(uint64(tileZ), 10),
 	)
 
 	return tokenReplacer.Replace(sql), nil

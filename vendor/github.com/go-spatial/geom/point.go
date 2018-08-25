@@ -22,3 +22,11 @@ func (p *Point) SetXY(xy [2]float64) (err error) {
 	p[1] = xy[1]
 	return
 }
+
+func (p Point) X() float64    { return p[0] }
+func (p Point) Y() float64    { return p[1] }
+func (p Point) MaxX() float64 { return p[0] }
+func (p Point) MinX() float64 { return p[0] }
+func (p Point) MaxY() float64 { return p[1] }
+func (p Point) MinY() float64 { return p[1] }
+func (p Point) Area() float64 { return 0 }

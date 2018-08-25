@@ -1,8 +1,12 @@
 package geom
 
-import "errors"
+import (
+	"errors"
+)
 
 var ErrNilPolygon = errors.New("geom: nil Polygon")
+var ErrInvalidLinearRing = errors.New("geom: invalid LinearRing")
+var ErrInvalidPolygon = errors.New("geom: invalid Polygon")
 
 // Polygon is a geometry consisting of multiple closed LineStrings.
 // There must be only one exterior LineString with a clockwise winding order.
@@ -23,4 +27,36 @@ func (p *Polygon) SetLinearRings(input [][][2]float64) (err error) {
 
 	*p = append((*p)[:0], input...)
 	return
+}
+
+// AsSegments returns the polygon as a slice of lines. This will make no attempt to only add unique segments.
+func (p Polygon) AsSegments() (segs [][]Line, err error) {
+
+	if len(p) == 0 {
+		return nil, nil
+	}
+
+	segs = make([][]Line, 0, len(p))
+	for i := range p {
+		switch len(p[i]) {
+		case 0, 1, 2:
+			continue
+			// TODO(gdey) : why are we getting invalid points.
+			/*
+				case 1, 2:
+					return nil, ErrInvalidLinearRing
+			*/
+
+		default:
+			pilen := len(p[i])
+			subr := make([]Line, pilen)
+			pj := pilen - 1
+			for j := 0; j < pilen; j++ {
+				subr[j] = Line{p[i][pj], p[i][j]}
+				pj = j
+			}
+			segs = append(segs, subr)
+		}
+	}
+	return segs, nil
 }
