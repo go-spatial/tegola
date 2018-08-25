@@ -149,7 +149,7 @@ func drawCommand(cmd *cobra.Command, args []string) {
 func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, dfn *drawFilename) error {
 	ctx := context.Background()
 	ttile := tegola.NewTile(dfn.z, dfn.x, dfn.y)
-	bufTile := atlas.BufferedTile{Tile: slippy.NewTile(dfn.z, dfn.x, dfn.y,), Buf: tegola.DefaultTileBuffer}
+	bufTile := atlas.BufferedTile{Tile: slippy.NewTile(dfn.z, dfn.x, dfn.y,), PixelBuf: tegola.DefaultTileBuffer}
 	for _, name := range layers {
 		count := 0
 		err := tiler.TileFeatures(ctx, name, bufTile, func(f *provider.Feature) error {

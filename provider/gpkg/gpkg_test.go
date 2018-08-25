@@ -353,16 +353,25 @@ func TestTileFeatures(t *testing.T) {
 			},
 			layerName: "land2",
 			tile: slippy.NewTile(0, 0, 0),
-			//MockTile{
-			//	Z:    0,
-			//	srid: tegola.WebMercator,
-			//	bufferedExtent: geom.NewExtent(
-			//		[2]float64{-20026376.39, -20048966.10},
-			//		[2]float64{20026376.39, 20048966.10},
-			//	),
-			//},
 			expectedFeatureCount: 44,
 		},
+<<<<<<< Updated upstream
+=======
+		"join with ambiguous column name (id in data and index)": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "boundary", "tablename": "boundary", "id_fieldname": "id"},
+				},
+			},
+			layerName: "boundary",
+			tile: slippy.NewTileMinMaxer(
+				geom.Hull(
+					[2]float64{20.0, 37.85},
+					[2]float64{23.6, 37.9431})),
+			expectedFeatureCount: 1,
+		},
+>>>>>>> Stashed changes
 	}
 
 	for name, tc := range tests {
