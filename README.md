@@ -255,7 +255,7 @@ The following build flags can be used to turn off certain features of tegola:
 - `noViewer` - turn off the built in viewer.
 - `pprof` - enable [Go profiler](https://golang.org/pkg/net/http/pprof/). Start profile server by setting the environment `TEGOLA_HTTP_PPROF_BIND` environment (e.g. `TEGOLA_HTTP_PPROF_BIND=localhost:6060`).
 
-Example of using the build flags to turn of the Redis cache back end, the GeoPackage provider and the built in viewer.
+Example of using the build flags to turn off the Redis cache back end, the GeoPackage provider and the built in viewer.
 
 ```bash
 go build -tags 'noRedisCache noGpkgProvider noViewer'
