@@ -355,8 +355,6 @@ func TestTileFeatures(t *testing.T) {
 			tile: slippy.NewTile(0, 0, 0),
 			expectedFeatureCount: 44,
 		},
-<<<<<<< Updated upstream
-=======
 		"join with ambiguous column name (id in data and index)": {
 			config: map[string]interface{}{
 				"filepath": GPKGAthensFilePath,
@@ -371,7 +369,6 @@ func TestTileFeatures(t *testing.T) {
 					[2]float64{23.6, 37.9431})),
 			expectedFeatureCount: 1,
 		},
->>>>>>> Stashed changes
 	}
 
 	for name, tc := range tests {
