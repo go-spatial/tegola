@@ -378,33 +378,27 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 
 			maxXYatZ := uint(maths.Exp2(uint64(z))) - 1
 
-			// ensure the initials are smaller than finals
-			if xi > xf {
-				xi, xf = xf, xi
-			}
-			if yi > yf {
-				yi, yf = yf, yi
-			}
-
-			// prevent seeding out of bounds
+			xi = maths.Min(xi, maxXYatZ)
+			yi = maths.Min(yi, maxXYatZ)
 			xf = maths.Min(xf, maxXYatZ)
 			yf = maths.Min(yf, maxXYatZ)
 
 			// loop rows
-			for x := xi; x != xf; x=(x+1)%maxXYatZ {
+			for x := xi;; x=(x+1)%(maxXYatZ+1) {
 				// loop columns
-				for y := yi; y != yf; y=(y+1)%maxXYatZ {
-
+				for y := yi;; y=(y+1)%(maxXYatZ+1) {
 					if gdcmd.IsCancelled() {
 						return fmt.Errorf("cache manipulation interrupted")
 					}
-
 					// send tile over the channel
 					c <- slippy.NewTile(z, x, y)
+
+					if y == yf {break}
 				}
+
+				if x == xf {break}
 			}
 		}
-
 		return nil
 	}
 }

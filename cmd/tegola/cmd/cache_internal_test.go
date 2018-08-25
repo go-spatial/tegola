@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola"
 )
 
 // returns the index of the tile within the array, or -1
@@ -43,6 +44,13 @@ func TestSendTiles(t *testing.T) {
 	}
 
 	fn := func(tc tcase, t *testing.T) {
+		// reset cache variable to defaults
+		cacheZXY = ""
+		cacheFile = ""
+		cacheBounds = "-180,-85.0511,180,85.0511"
+		cacheMinZoom = 0
+		cacheMaxZoom = tegola.MaxZ
+
 		// parse flags
 		err := cacheCmd.Flags().Parse(strings.Split(tc.flags, " "))
 		if err != nil {
@@ -57,11 +65,18 @@ func TestSendTiles(t *testing.T) {
 		c := make(chan *slippy.Tile)
 
 		go func() {
-			sendTiles(zooms, c)
+			err := sendTiles(zooms, c)
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
 		}()
 
-		// keep track of duplicates
+		// tile to string function for map key
+		tstr := func(tile slippy.Tile) string {return fmt.Sprintf("%v", tile)}
+
+		// keep track of sent tiles
 		tileSet := map[string]struct{}{}
+		// keep track of duplicates
 		tileDups := make([]slippy.Tile, 0)
 
 		for tile := range c {
@@ -70,12 +85,28 @@ func TestSendTiles(t *testing.T) {
 			}
 
 			// used as a map key
-			tileString := fmt.Sprintf("%v", *tile)
+			tileString :=tstr(*tile)
 
 			_, ok := tileSet[tileString]
 			if ok {
 				tileDups = append(tileDups, *tile)
+			} else {
+				tileSet[tileString] = struct{}{}
 			}
+
+
+		}
+
+		if len(tileSet) != len(tc.tiles) {
+			missing := make([]slippy.Tile, 0, 10)
+			for _, v := range tc.tiles {
+				_, ok := tileSet[tstr(*v)]
+				if !ok {
+					missing = append(missing, *v)
+				}
+			}
+
+			t.Fatalf("missing tiles: %v", missing)
 		}
 
 		t.Logf("%d duplicated tiles\n", len(tileDups))
@@ -87,13 +118,13 @@ func TestSendTiles(t *testing.T) {
 	// test cases
 	testcases := map[string]tcase{
 		"max_zoom=0": {
-			flags: "--min-zoom=0 --max-zoom=0 --bounds=\"-180,-85.0511,180,85.0511\"",
+			flags: "--max-zoom=0 --bounds=-180,-85.0511,180,85.0511",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(0, 0, 0),
 			},
 		},
 		"min_zoom=1 max_zoom=1": {
-			flags: "--min-zoom=1 --max-zoom=1 --bounds=\"-180,-85.0511,180,85.0511\"",
+			flags: "--min-zoom=1 --max-zoom=1 --bounds=-180,-85.0511,180,85.0511",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(1, 0, 0),
 				slippy.NewTile(1, 1, 0),
@@ -101,26 +132,26 @@ func TestSendTiles(t *testing.T) {
 				slippy.NewTile(1, 1, 1),
 			},
 		},
-		"min_zoom=1 max_zoom=1 bounds=180,90,0,0": {
-			flags: "--min-zoom=1 --max-zoom=1 --bounds=\"180,90,0,0\"",
+		"min_zoom=1 max_zoom=1 bounds=0,0,180,90": {
+			flags: "--min-zoom=1 --max-zoom=1 --bounds=1,1,180,85.051",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(1, 1, 0),
 			},
 		},
 		"max_zoom=0 tile-name=0/0/0": {
-			flags: "--min-zoom=0 --max-zoom=0 --tile-name=\"0/0/0\"",
+			flags: "--max-zoom=0 --tile-name=0/0/0",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(0, 0, 0),
 			},
 		},
 		"max_zoom=0 tile-name=14/300/781": {
-			flags: "--min-zoom=0 --max-zoom=0 --tile-name=\"14/300/781\"",
+			flags: "--max-zoom=0 --tile-name=14/300/781",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(0, 0, 0),
 			},
 		},
 		"min_zoom= 13 max_zoom=15 tile-name=14/300/781": {
-			flags: "--min-zoom=13 --max-zoom=15 --tile-name=\"14/300/781\"",
+			flags: "--min-zoom=13 --max-zoom=15 --tile-name=14/300/781",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(13, 150, 390),
 				slippy.NewTile(14, 300, 781),
@@ -131,7 +162,7 @@ func TestSendTiles(t *testing.T) {
 			},
 		},
 		"min_zoom= 13 max_zoom=15 tile-list=list.tiles": {
-			flags: "--min-zoom=13 --max-zoom=15 --tile-list=\"list.tiles\"",
+			flags: "--min-zoom=13 --max-zoom=15 --tile-list=list.tiles",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(13, 150, 390),
 				slippy.NewTile(14, 300, 781),
@@ -141,8 +172,8 @@ func TestSendTiles(t *testing.T) {
 				slippy.NewTile(15, 601, 1563),
 			},
 		},
-		"min_zoom=3 max_zoom=3 bounds=-179.99,0.001,179.99,0.002 (antimeridian)": {
-			flags: "--bounds=\"-179.99,0.001,179.99,0.002\" --max-zoom=3 --min-zoom=3",
+		"min_zoom=3 max_zoom=3 bounds=179.99,0.001,-179.99,0.002 (antimeridian)": {
+			flags: "--bounds=179.99,0.001,-179.99,0.002 --max-zoom=3 --min-zoom=3",
 			tiles: []*slippy.Tile{
 				slippy.NewTile(3, 0, 3),
 				slippy.NewTile(3, 7, 3),
