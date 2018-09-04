@@ -135,6 +135,7 @@ func uppercaseTokens(str string) (string, error) {
 	for i := range rs {
 		if rs[i] == '!' {
 			uppercase = !uppercase
+			continue
 		}
 		if uppercase {
 			rs[i] = unicode.ToUpper(rs[i])
