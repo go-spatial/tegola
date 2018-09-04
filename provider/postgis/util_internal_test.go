@@ -102,6 +102,10 @@ func TestUppercaseTokens(t *testing.T) {
 			str:      "no token",
 			expected: "no token",
 		},
+		"empty string": {
+			str:      "",
+			expected: "",
+		},
 		"unclosed token": {
 			str:         "unclosed !token",
 			expectedErr: ErrUnclosedToken("unclosed !token"),
