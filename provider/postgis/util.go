@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
@@ -67,19 +68,20 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 }
 
 const (
-	bboxToken = "!BBOX!"
-	zoomToken = "!ZOOM!"
+	bboxToken             = "!BBOX!"
+	zoomToken             = "!ZOOM!"
+	scaleDenominatorToken = "!SCALE_DENOMINATOR!"
+	pixelWidthToken       = "!PIXEL_WIDTH!"
+	pixelHeightToken      = "!PIXEL_HEIGHT!"
 )
 
 // replaceTokens replaces tokens in the provided SQL string
 //
 // !BBOX! - the bounding box of the tile
 // !ZOOM! - the tile Z value
-
-// The following tokens are replaced for compatibility with Mapnik:
-// !scale_denominator! - scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
-// !pixel_width!       - the pixel width in m, assuming 256x256 tiles
-// !pixel_height!      - the pixel height in m, assuming 256x256 tiles
+// !SCALE_DENOMINATOR! - scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
+// !PIXEL_WIDTH!       - the pixel width in m, assuming 256x256 tiles
+// !PIXEL_HEIGHT!      - the pixel height in m, assuming 256x256 tiles
 func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
 	bufferedExtent, _ := tile.BufferedExtent()
@@ -111,12 +113,39 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 	tokenReplacer := strings.NewReplacer(
 		bboxToken, bbox,
 		zoomToken, strconv.FormatUint(uint64(z), 10),
-		"!scale_denominator!", strconv.FormatFloat(scaleDenominator, 'f', -1, 64),
-		"!pixel_width!", strconv.FormatFloat(pixelWidth, 'f', -1, 64),
-		"!pixel_height!", strconv.FormatFloat(pixelHeight, 'f', -1, 64),
+		scaleDenominatorToken, strconv.FormatFloat(scaleDenominator, 'f', -1, 64),
+		pixelWidthToken, strconv.FormatFloat(pixelWidth, 'f', -1, 64),
+		pixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', -1, 64),
 	)
 
-	return tokenReplacer.Replace(sql), nil
+	uppercaseTokenSQL, err := uppercaseTokens(sql)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenReplacer.Replace(uppercaseTokenSQL), nil
+}
+
+//	uppercaseTokens will sniff for ! chars and uppercase everything between them
+//	if an odd number of ! are found an error is thrown
+func uppercaseTokens(str string) (string, error) {
+	rs := []rune(str)
+
+	uppercase := false
+	for i := range rs {
+		if rs[i] == '!' {
+			uppercase = !uppercase
+		}
+		if uppercase {
+			rs[i] = unicode.ToUpper(rs[i])
+		}
+	}
+
+	if uppercase {
+		return str, ErrUnclosedToken(str)
+	}
+
+	return string(rs), nil
 }
 
 func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {

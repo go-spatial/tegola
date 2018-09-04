@@ -67,6 +67,52 @@ func TestReplaceTokens(t *testing.T) {
 	}
 }
 
+func TestUppercaseTokens(t *testing.T) {
+	type tcase struct {
+		str         string
+		expected    string
+		expectedErr error
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			out, err := uppercaseTokens(tc.str)
+			if err != nil {
+				if tc.expectedErr.Error() != err.Error() {
+					t.Errorf("unexpected error, expected %v got %v", tc.expectedErr, err)
+					return
+				}
+
+				return
+			}
+
+			if out != tc.expected {
+				t.Errorf("expected \n \t%v\n out \n \t%v", tc.expected, out)
+				return
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"uppercase tokens": {
+			str:      "this !lower! case !STrInG! should uppercase !TOKENS!",
+			expected: "this !LOWER! case !STRING! should uppercase !TOKENS!",
+		},
+		"no tokens": {
+			str:      "no token",
+			expected: "no token",
+		},
+		"unclosed token": {
+			str:         "unclosed !token",
+			expectedErr: ErrUnclosedToken("unclosed !token"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
 func TestDecipherFields(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
