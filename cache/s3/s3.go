@@ -35,20 +35,17 @@ const (
 	ConfigKeyAWSAccessKeyID = "aws_access_key_id"
 	ConfigKeyAWSSecretKey   = "aws_secret_access_key"
 	ConfigKeyACL            = "access_control_list" //	defaults to ""
-	ConfigKeyCacheControl   = "cache_control" //	defaults to ""
-	ConfigKeyContentType    = "content_type" //	defaults to "application/vnd.mapbox-vector-tile"
+	ConfigKeyCacheControl   = "cache_control"       //	defaults to ""
+	ConfigKeyContentType    = "content_type"        //	defaults to "application/vnd.mapbox-vector-tile"
 )
 
 const (
-	DefaultBasepath = ""
-	DefaultRegion = "us-east-1"
-	DefaultAccessKey = ""
-	DefaultSecretKey = ""
+	DefaultBasepath    = ""
+	DefaultRegion      = "us-east-1"
+	DefaultAccessKey   = ""
+	DefaultSecretKey   = ""
 	DefaultContentType = "application/vnd.mapbox-vector-tile"
-)
-
-const (
-	DefaultEndpoint = ""
+	DefaultEndpoint    = ""
 )
 
 func init() {
@@ -263,9 +260,9 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	k := filepath.Join(s3c.Basepath, key.String())
 
 	input := s3.PutObjectInput{
-		Body:   aws.ReadSeekCloser(bytes.NewReader(val)),
-		Bucket: aws.String(s3c.Bucket),
-		Key:    aws.String(k),
+		Body:        aws.ReadSeekCloser(bytes.NewReader(val)),
+		Bucket:      aws.String(s3c.Bucket),
+		Key:         aws.String(k),
 		ContentType: aws.String(s3c.ContentType),
 	}
 	if s3c.ACL != "" {
