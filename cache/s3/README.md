@@ -20,6 +20,7 @@ The s3cache config supports the following properties:
 - `endpoint` (string): the endpoint where the S3 compliant backend is located. only necessary for non-AWS deployments. defaults to ''.
 - `access_control_list` (string): the S3 access control to set on the file when putting the file. defaults to ''.
 - `cache_control` (string): the HTTP cache control header to set on the file when putting the file. defaults to ''.
+- `content_type` (string): the http MIME-type set on the file when putting the file. defaults to 'application/vnd.mapbox-vector-tile'.
 
 
 ## Credential chain
