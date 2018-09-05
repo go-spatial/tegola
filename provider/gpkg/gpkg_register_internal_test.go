@@ -21,7 +21,7 @@ var (
 	GPKGPuertoMontFilePath   = "testdata/puerto_mont-osm-20170922.gpkg"
 )
 
-func TestExtractColsFromSQL(t *testing.T) {
+func TestExtractColsAndPKFromSQL(t *testing.T) {
 	type tcase struct {
 		sqlFrom      string
 		sql          string
@@ -160,6 +160,21 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"id",
 				"timestamp",
 				"value",
+			},
+			expectedPK: "id",
+		},
+		"multi_line": {
+			sql: `CREATE TABLE "gps_points" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "geom" POINT,
+  "Lat" REAL,
+  "Lon" REAL
+)`,
+			expectedCols: []string{
+				"Lat",
+				"Lon",
+				"geom",
+				"id",
 			},
 			expectedPK: "id",
 		},
