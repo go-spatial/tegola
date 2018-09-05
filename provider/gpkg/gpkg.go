@@ -43,7 +43,7 @@ func decodeGeometry(bytes []byte) (*BinaryHeader, geom.Geometry, error) {
 
 	geo, err := wkb.DecodeBytes(bytes[h.Size():])
 	if err != nil {
-		log.Error("error decoding geometry: %v", err)
+		log.Errorf("error decoding geometry: %v", err)
 		return h, nil, err
 	}
 
