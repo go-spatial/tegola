@@ -36,6 +36,7 @@ const (
 	ConfigKeyAWSSecretKey   = "aws_secret_access_key"
 	ConfigKeyACL            = "access_control_list" //	defaults to ""
 	ConfigKeyCacheControl   = "cache_control" //	defaults to ""
+	ConfigKeyContentType    = "content_type" //	defaults to "application/vnd.mapbox-vector-tile"
 )
 
 const (
@@ -43,6 +44,7 @@ const (
 	DefaultRegion = "us-east-1"
 	DefaultAccessKey = ""
 	DefaultSecretKey = ""
+	DefaultContentType = "application/vnd.mapbox-vector-tile"
 )
 
 const (
@@ -67,6 +69,7 @@ func init() {
 // 		endpoint (string): the endpoint where the S3 compliant backend is located. only necessary for non-AWS deployments. defaults to ''
 //  	access_control_list (string): the S3 access control to set on the file when putting the file. defaults to ''.
 //  	cache_control (string): the http cache-control header to set on the file when putting the file. defaults to ''.
+//  	content_type (string): the http MIME-type set on the file when putting the file. defaults to 'application/vnd.mapbox-vector-tile'.
 
 func New(config dict.Dicter) (cache.Interface, error) {
 	var err error
@@ -160,13 +163,20 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 	s3cache.ACL = acl
 
-	// check for control_access_list env var
+	// check for cache_control env var
 	cachecontrol := os.Getenv("AWS_CacheControl")
 	cachecontrol, err = config.String(ConfigKeyCacheControl, &cachecontrol)
 	if err != nil {
 		return nil, err
 	}
 	s3cache.CacheControl = cachecontrol
+
+	contenttype := DefaultContentType
+	contenttype, err = config.String(ConfigKeyContentType, &contenttype)
+	if err != nil {
+		return nil, err
+	}
+	s3cache.ContentType = contenttype
 
 	// in order to confirm we have the correct permissions on the bucket create a small file
 	// and test a PUT, GET and DELETE to the bucket
@@ -236,6 +246,9 @@ type Cache struct {
 
 	// CacheControl is the http Cache Control header, if the not set it will use the default value for aws.
 	CacheControl string
+
+	// ContentType is MIME content type of the tile. Default is "application/vnd.mapbox-vector-tile"
+	ContentType string
 }
 
 func (s3c *Cache) Set(key *cache.Key, val []byte) error {
@@ -253,6 +266,7 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 		Body:   aws.ReadSeekCloser(bytes.NewReader(val)),
 		Bucket: aws.String(s3c.Bucket),
 		Key:    aws.String(k),
+		ContentType: aws.String(s3c.ContentType),
 	}
 	if s3c.ACL != "" {
 		input.ACL = aws.String(s3c.ACL)
