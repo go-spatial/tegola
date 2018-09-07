@@ -47,6 +47,9 @@ tablename = "gis.zoning_base_3857"
 - `sql` (string): [*Required] custom SQL to use use. Required if `tablename` is not defined. Supports the following tokens:
   - `!BBOX!` - [Required] will be replaced with the bounding box of the tile before the query is sent to the database. `!bbox!` and`!BOX!` are supported as well for compatibilitiy with queries from Mapnik and MapServer styles.
   - `!ZOOM!` - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
+  - `!PIXEL_WIDTH!` - [Optional] scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
+  - `!PIXEL_HEIGHT!` - [Optional] the pixel width in meters, assuming 256x256 tiles
+  - `!SCALE_DENOMINATOR!` - [Optional] the pixel height in meters, assuming 256x256 tiles
 
 `*Required`: either the `tablename` or `sql` must be defined, but not both.
 
