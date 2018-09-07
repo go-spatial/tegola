@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"testing"
-	"reflect"
 	"fmt"
+	"reflect"
+	"testing"
 )
 
 // TODO(ear7h): use internal package, currently in maths/internal
@@ -43,31 +43,31 @@ func TestNewFormat(t *testing.T) {
 			formatStr:     "1zxy",
 			isValidFormat: false,
 		},
-		"invalid formatStr 3" : {
+		"invalid formatStr 3": {
 			formatStr:     "/1xy",
 			isValidFormat: false,
 		},
-		"invalid formatStr 4" : {
+		"invalid formatStr 4": {
 			formatStr:     ",z45",
 			isValidFormat: false,
 		},
-		"invalid formatStr 5" : {
+		"invalid formatStr 5": {
 			formatStr:     "zzxy",
 			isValidFormat: false,
 		},
-		"invalid formatStr 6" : {
+		"invalid formatStr 6": {
 			formatStr:     "$xxx",
 			isValidFormat: false,
 		},
-		"invalid formatStr 7" : {
+		"invalid formatStr 7": {
 			formatStr:     "$xyx",
 			isValidFormat: false,
 		},
-		"invalid formatStr 8" : {
+		"invalid formatStr 8": {
 			formatStr:     "$$$$",
 			isValidFormat: false,
 		},
-		"invalid formatStr 9" : {
+		"invalid formatStr 9": {
 			formatStr:     ",100",
 			isValidFormat: false,
 		},
@@ -118,42 +118,42 @@ func TestFormatParse(t *testing.T) {
 		"invalid input separators": {
 			format: Format{1, 2, 0, "-"},
 			input:  "102-2",
-			err: fmt.Errorf("invalid zxy value (%v). expecting the formatStr %v", "102-2", Format{1, 2, 0, "-"}),
+			err:    fmt.Errorf("invalid zxy value (%v). expecting the formatStr %v", "102-2", Format{1, 2, 0, "-"}),
 		},
 		"invalid input z": {
 			format: Format{1, 2, 0, "-"},
 			input:  "#-2-2",
-			err: fmt.Errorf("invalid Z value (%v)", "#"),
+			err:    fmt.Errorf("invalid Z value (%v)", "#"),
 		},
 		"invalid input z float": {
 			format: Format{1, 2, 0, "-"},
 			input:  "10.1-2-2",
-			err: fmt.Errorf("invalid Z value (%v)", "10.1"),
+			err:    fmt.Errorf("invalid Z value (%v)", "10.1"),
 		},
 		"invalid input z too high": {
 			format: Format{1, 2, 0, "-"},
 			input:  "1000-2-2",
-			err: fmt.Errorf("invalid Z value (%v)", "1000"),
+			err:    fmt.Errorf("invalid Z value (%v)", "1000"),
 		},
 		"invalid input x": {
 			format: Format{1, 2, 0, "-"},
 			input:  "10-#-2",
-			err: fmt.Errorf("invalid X value (%v)", "#"),
+			err:    fmt.Errorf("invalid X value (%v)", "#"),
 		},
 		"invalid input x too high": {
 			format: Format{1, 2, 0, "-"},
 			input:  "3-10000-2",
-			err: fmt.Errorf("invalid X value (%v)", "10000"),
+			err:    fmt.Errorf("invalid X value (%v)", "10000"),
 		},
 		"invalid input y": {
 			format: Format{1, 2, 0, "-"},
 			input:  "10-2-#",
-			err: fmt.Errorf("invalid Y value (%v)", "#"),
+			err:    fmt.Errorf("invalid Y value (%v)", "#"),
 		},
 		"invalid input y too high": {
 			format: Format{1, 2, 0, "-"},
 			input:  "3-2-10000",
-			err: fmt.Errorf("invalid Y value (%v)", "10000"),
+			err:    fmt.Errorf("invalid Y value (%v)", "10000"),
 		},
 	}
 

@@ -415,7 +415,7 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 	sql = strings.Replace(sql, "!ZOOM!", "ANY('{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}')", 1)
 
 	// we need a tile to run our sql through the replacer
-	tile := slippy.NewTile(0, 0, 0, 64, tegola.WebMercator)
+	tile := provider.TileFromSlippy(slippy.NewTile(0, 0, 0), 64)
 
 	// normal replacer
 	sql, err = replaceTokens(sql, l.srid, tile)

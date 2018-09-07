@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola"
 	"strings"
 
 	"github.com/go-spatial/geom"
@@ -17,6 +19,31 @@ type Tile interface {
 	Extent() (extent *geom.Extent, srid uint64)
 	// BufferedExtent returns the extent of the tile including any buffer
 	BufferedExtent() (extent *geom.Extent, srid uint64)
+}
+
+type tile struct {
+	z, x, y   uint
+	ext, bext *geom.Extent
+}
+
+func (tl tile) ZXY() (uint, uint, uint) {
+	return tl.z, tl.x, tl.y
+}
+
+func (tl tile) Extent() (*geom.Extent, uint64) {
+	return tl.ext, tegola.WebMercator
+}
+
+func (tl tile) BufferedExtent() (*geom.Extent, uint64) {
+	return tl.bext, tegola.WebMercator
+}
+
+func TileFromSlippy(tl *slippy.Tile, pixelBuffer uint64) Tile {
+	return &tile{
+		z: tl.Z, x: tl.X, y: tl.Y,
+		ext:  tl.Extent3857(),
+		bext: tl.Extent3857().ExpandBy(slippy.Pixels2Webs(tl.Z, uint(pixelBuffer))),
+	}
 }
 
 type Tiler interface {

@@ -131,6 +131,9 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	// wait group for concurrent layer fetching
 	var wg sync.WaitGroup
 
+	// provider tile
+	ptile := provider.TileFromSlippy(tile, m.TileBuffer)
+
 	// layer stack
 	mvtLayers := make([]*mvt.Layer, len(m.Layers))
 
@@ -151,7 +154,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 			defer wg.Done()
 
 			// fetch layer from data provider
-			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
+			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, func(f *provider.Feature) error {
 				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package
 				geo, err := convert.ToTegola(f.Geometry)
 				if err != nil {

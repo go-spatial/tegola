@@ -9,6 +9,7 @@ type Extenter interface {
 	Extent() (extent [4]float64)
 }
 
+// MinMaxer is a wrapper for an Extent that gets min/max of the extent
 type MinMaxer interface {
 	MinX() float64
 	MinY() float64
@@ -92,6 +93,7 @@ func (e *Extent) Max() [2]float64 {
 	return [2]float64{e[2], e[3]}
 }
 
+// XSpan is the distance of the Extent in X or inf
 // TODO (gdey): look at how to have this function take into account the dpi.
 func (e *Extent) XSpan() float64 {
 	if e == nil {
@@ -99,6 +101,8 @@ func (e *Extent) XSpan() float64 {
 	}
 	return e[2] - e[0]
 }
+
+// YSpan is the distance of the Extent in Y or Inf
 func (e *Extent) YSpan() float64 {
 	if e == nil {
 		return math.Inf(1)
@@ -106,28 +110,22 @@ func (e *Extent) YSpan() float64 {
 	return e[3] - e[1]
 }
 
+// Extent returns back the min and max of the Extent
 func (e *Extent) Extent() [4]float64 {
 	return [4]float64{e.MinX(), e.MinY(), e.MaxX(), e.MaxY()}
 }
 
 /* ========================= EXPANDING BOUNDING BOX ========================= */
+
 // Add will expand the extent to contain the given extent.
 func (e *Extent) Add(extent MinMaxer) {
 	if e == nil {
 		return
 	}
-	if e[0] > extent.MinX() {
-		e[0] = extent.MinX()
-	}
-	if e[1] > extent.MinY() {
-		e[1] = extent.MinY()
-	}
-	if e[2] < extent.MaxX() {
-		e[2] = extent.MaxX()
-	}
-	if e[3] < extent.MaxY() {
-		e[3] = extent.MaxY()
-	}
+	e[0] = math.Min(e[0], extent.MinX())
+	e[2] = math.Max(e[2], extent.MaxX())
+	e[1] = math.Min(e[1], extent.MinY())
+	e[3] = math.Max(e[3], extent.MaxY())
 }
 
 // AddPoints will expand the extent to contain the given points.
@@ -139,27 +137,24 @@ func (e *Extent) AddPoints(points ...[2]float64) {
 	if len(points) == 0 {
 		return
 	}
-	extent := NewExtent(points...)
-	e.Add(extent)
+	for _, pt := range points {
+		e[0] = math.Min(pt[0], e[0])
+		e[1] = math.Min(pt[1], e[1])
+		e[2] = math.Max(pt[0], e[2])
+		e[3] = math.Max(pt[1], e[3])
+	}
 }
 
+// AddPointers will expand the Extent if a point is outside it
 func (e *Extent) AddPointers(pts ...Pointer) {
 	for i := range pts {
 		e.AddPoints(pts[i].XY())
 	}
 }
 
-// AddPointer expands the specified envelop to contain p.
+// AddGeometry expands the specified envelop to contain g.
 func (e *Extent) AddGeometry(g Geometry) error {
-	points, err := GetCoordinates(g)
-	if err != nil {
-		return err
-	}
-
-	for i := range points {
-		e.AddPointers(points[i])
-	}
-	return nil
+	return getExtent(g, e)
 }
 
 // AsPolygon will return the extent as a Polygon
@@ -201,6 +196,16 @@ func NewExtent(points ...[2]float64) *Extent {
 	return &extent
 }
 
+// NewExtentFromGeometry tries to create an extent based on the geometry
+func NewExtentFromGeometry(g Geometry) (*Extent, error) {
+	e := Extent{}
+	err := getExtent(g, &e)
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
 // Contains will return whether the given  extent is inside of the  extent.
 func (e *Extent) Contains(ne MinMaxer) bool {
 	// Nil extent contains the world.
@@ -233,6 +238,23 @@ func (e *Extent) ContainsLine(l [2][2]float64) bool {
 	return e.ContainsPoint(l[0]) && e.ContainsPoint(l[1])
 }
 
+// ContainsGeom will return weather the given geometry is completely inside of the extent.
+func (e *Extent) ContainsGeom(g Geometry) (bool, error) {
+	if e.IsUniverse() {
+		return true, nil
+	}
+	// Check to see if it can be a MinMaxer, if so use that.
+	if extenter, ok := g.(MinMaxer); ok {
+		return e.Contains(extenter), nil
+	}
+	// we will use a exntent that contains the geometry, and check to see if this extent contains that extent.
+	var ne = new(Extent)
+	if err := ne.AddGeometry(g); err != nil {
+		return false, err
+	}
+	return e.Contains(ne), nil
+}
+
 // ScaleBy will scale the points in the extent by the given scale factor.
 func (e *Extent) ScaleBy(s float64) *Extent {
 	if e == nil {
@@ -255,6 +277,7 @@ func (e *Extent) ExpandBy(s float64) *Extent {
 	)
 }
 
+// Clone returns a new Extent with contents copied.
 func (e *Extent) Clone() *Extent {
 	if e == nil {
 		return nil
@@ -312,4 +335,10 @@ func (e *Extent) Intersect(ne *Extent) (*Extent, bool) {
 		return nil, false
 	}
 	return &Extent{minx, miny, maxx, maxy}, true
+}
+
+// IsUniverse returns weather the extent contains the universe. This is true if the clip box is nil or the x,y values are max values.
+func (e *Extent) IsUniverse() bool {
+	return e == nil || (e.MinX() == -math.MaxFloat64 && e.MaxX() == math.MaxFloat64 &&
+		e.MinY() == -math.MaxFloat64 && e.MaxY() == math.MaxFloat64)
 }
