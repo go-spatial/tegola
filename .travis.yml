@@ -45,10 +45,10 @@ services:
   - redis-server
 
 addons:
-  postgresql: "9.4"
+  postgresql: "9.6"
   apt:
     packages:
-    - postgresql-9.4-postgis-2.3
+    - postgresql-9.6-postgis-2.3
 
 install:
   - echo $TRAVIS_GO_VERSION
@@ -78,7 +78,7 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-    condition: "$TRAVIS_GO_VERSION =~ ^1\\.10(\\.[0-9]+)?$"
+    condition: "$TRAVIS_GO_VERSION =~ ^1\\.10(\\..+)?$"
 
 notifications:
   email:

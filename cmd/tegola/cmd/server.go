@@ -1,6 +1,10 @@
 package cmd
 
 import (
+	"context"
+	"net/http"
+	"time"
+
 	"github.com/spf13/cobra"
 
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
@@ -14,9 +18,10 @@ var (
 )
 
 var serverCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Use tegola as a tile server",
-	Long:  `Use tegola as a vector tile server. Maps tiles will be served at /maps/:map_name/:z/:x/:y`,
+	Use:     "serve",
+	Short:   "Use tegola as a tile server",
+	Aliases: []string{"server"},
+	Long:    `Use tegola as a vector tile server. Maps tiles will be served at /maps/:map_name/:z/:x/:y`,
 	Run: func(cmd *cobra.Command, args []string) {
 		gdcmd.New()
 		initConfig()
@@ -38,8 +43,8 @@ var serverCmd = &cobra.Command{
 		}
 
 		// set tile buffer
-		if conf.TileBuffer > 0 {
-			server.TileBuffer = float64(conf.TileBuffer)
+		if conf.TileBuffer != nil {
+			server.TileBuffer = float64(*conf.TileBuffer)
 		}
 
 		// start our webserver
@@ -49,4 +54,12 @@ var serverCmd = &cobra.Command{
 		gdcmd.Complete()
 
 	},
+}
+
+func shutdown(srv *http.Server) {
+	gdcmd.OnComplete(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel() // releases resources if slowOperation completes before timeout elapses
+		srv.Shutdown(ctx)
+	})
 }

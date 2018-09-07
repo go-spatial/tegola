@@ -1,3 +1,24 @@
+# Unreleased
+
+## Features
+
+* Support sslkey, sslcert, and sslrootcert URI params (Sean Chittenden)
+* Allow any scheme in ParseURI (for convenience with cockroachdb) (Sean Chittenden)
+* Add support for domain types
+
+## Fixes
+
+* Fix Rows.Values returning same value for multiple columns of same complex type
+* Fix StartReplication() syntax (steampunkcoder)
+* Fix precision loss for test format geometric types
+
+## Changes
+
+* pgtype.JSON(B).Value now returns []byte instead of string. This allows
+  database/sql to scan json(b) into \*json.RawMessage. This is a tiny behavior
+  change, but database/sql Scan should automatically convert []byte to string, so
+  there shouldn't be any incompatibility.
+
 # 3.1.0 (January 15, 2018)
 
 ## Features

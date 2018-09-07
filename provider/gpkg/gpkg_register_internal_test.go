@@ -21,17 +21,21 @@ var (
 	GPKGPuertoMontFilePath   = "testdata/puerto_mont-osm-20170922.gpkg"
 )
 
-func TestExtractColsFromSQL(t *testing.T) {
+func TestExtractColsAndPKFromSQL(t *testing.T) {
 	type tcase struct {
 		sqlFrom      string
 		sql          string
 		expectedCols []string
+		expectedPK   string
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		cols := extractColsFromSQL(tc.sql)
+		cols, pk := extractColsAndPKFromSQL(tc.sql)
 		if !reflect.DeepEqual(cols, tc.expectedCols) {
 			t.Errorf("extract col, expected %v got %v", tc.expectedCols, cols)
+		}
+		if pk != tc.expectedPK {
+			t.Errorf("extract PK, expected %v got %v", tc.expectedPK, pk)
 		}
 	}
 
@@ -42,6 +46,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"geom",
 				"id",
 			},
+			expectedPK: "id",
 		},
 		"athens_harbours_points": {
 			sql: `CREATE TABLE 'harbours_points' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" POINT, "osm_id" TEXT, "harbour" TEXT, "name" TEXT, "leisure" TEXT, "landuse" TEXT)`,
@@ -54,6 +59,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"name",
 				"osm_id",
 			},
+			expectedPK: "fid",
 		},
 		"athens_natural_polygons": {
 			sql: `CREATE TABLE 'natural_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "natural" TEXT, "name" TEXT, "hazard_prone" TEXT)`,
@@ -66,6 +72,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"osm_id",
 				"osm_way_id",
 			},
+			expectedPK: "fid",
 		},
 		"athens_leisure_polygons": {
 			sql: `CREATE TABLE 'leisure_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "leisure" TEXT, "name" TEXT)`,
@@ -77,6 +84,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"osm_id",
 				"osm_way_id",
 			},
+			expectedPK: "fid",
 		},
 		"athens_roads_lines": {
 			sql: `CREATE TABLE 'roads_lines' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTILINESTRING, "osm_id" TEXT, "highway" TEXT, "barrier" TEXT, "ford" TEXT, "hazard_prone" TEXT, "name" TEXT, "traffic_calming" TEXT, "tunnel" TEXT, "layer" TEXT, "bicycle_road" TEXT, "z_index" TEXT)`,
@@ -95,6 +103,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"tunnel",
 				"z_index",
 			},
+			expectedPK: "fid",
 		},
 		"athens_aviation_polygons": {
 			sql: `CREATE TABLE 'aviation_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "aeroway" TEXT, "name" TEXT, "surface" TEXT, "source" TEXT, "building" TEXT, "icao" TEXT, "iata" TEXT, "type" TEXT)`,
@@ -112,6 +121,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"surface",
 				"type",
 			},
+			expectedPK: "fid",
 		},
 		"athens_landuse_polygons": {
 			sql: `CREATE TABLE 'landuse_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "landuse" TEXT, "name" TEXT)`,
@@ -123,6 +133,7 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"osm_id",
 				"osm_way_id",
 			},
+			expectedPK: "fid",
 		},
 		"athens_land_polygons": {
 			sql: `CREATE TABLE 'land_polygons' ( "ogc_fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" POLYGON, "fid" INTEGER)`,
@@ -131,6 +142,41 @@ func TestExtractColsFromSQL(t *testing.T) {
 				"geom",
 				"ogc_fid",
 			},
+			expectedPK: "ogc_fid",
+		},
+		"column without quotes": {
+			sql: `CREATE TABLE tablename ( id INTEGER primary Key AUTOINCREMENT, "geom" BLOB, value REAL)`,
+			expectedCols: []string{
+				"geom",
+				"id",
+				"value",
+			},
+			expectedPK: "id",
+		},
+		"column with defaults": {
+			sql: `CREATE TABLE tablename ( "id" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" BLOB, timestamp DATE DEFAULT (datetime('now','localtime')) , value REAL)`,
+			expectedCols: []string{
+				"geom",
+				"id",
+				"timestamp",
+				"value",
+			},
+			expectedPK: "id",
+		},
+		"multi_line": {
+			sql: `CREATE TABLE "gps_points" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "geom" POINT,
+  "Lat" REAL,
+  "Lon" REAL
+)`,
+			expectedCols: []string{
+				"Lat",
+				"Lon",
+				"geom",
+				"id",
+			},
+			expectedPK: "id",
 		},
 	}
 

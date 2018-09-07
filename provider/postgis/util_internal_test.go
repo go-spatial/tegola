@@ -41,7 +41,6 @@ func TestReplaceTokens(t *testing.T) {
 			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390624933,1.017529720390625e+07,3857)",
 		},
 		"replace BBOX and ZOOM 1": {
-
 			sql:      "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
 			tile:     slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
@@ -53,11 +52,67 @@ func TestReplaceTokens(t *testing.T) {
 			tile:     slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expected: "SELECT id, scalerank=16 FROM foo WHERE geom && ST_MakeEnvelope(-1.3163688815956049e+07,4.0352540420407774e+06,-1.3163058210472783e+07,4.035884647524042e+06,3857)",
 		},
+		"replace pixel_width/height and scale_denominator": {
+			sql:      "SELECT id, !pixel_width! as width, !pixel_height! as height, !scale_denominator! as scale_denom FROM foo WHERE geom && !BBOX!",
+			srid:     tegola.WebMercator,
+			tile:     slippy.NewTile(11, 1070, 676, 64, tegola.WebMercator),
+			expected: "SELECT id, 76.43702827453626 as width, 76.43702827453671 as height, 272989.3866947724 as scale_denom FROM foo WHERE geom && ST_MakeEnvelope(899816.6968478388,6.789748347570495e+06,919996.0723123164,6.809927723034973e+06,3857)",
+		},
 	}
 
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
+
+func TestUppercaseTokens(t *testing.T) {
+	type tcase struct {
+		str         string
+		expected    string
+		expectedErr error
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			out, err := uppercaseTokens(tc.str)
+			if err != nil {
+				if tc.expectedErr.Error() != err.Error() {
+					t.Errorf("unexpected error, expected %v got %v", tc.expectedErr, err)
+					return
+				}
+
+				return
+			}
+
+			if out != tc.expected {
+				t.Errorf("expected \n \t%v\n out \n \t%v", tc.expected, out)
+				return
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"uppercase tokens": {
+			str:      "this !lower! case !STrInG! should uppercase !TOKENS!",
+			expected: "this !LOWER! case !STRING! should uppercase !TOKENS!",
+		},
+		"no tokens": {
+			str:      "no token",
+			expected: "no token",
+		},
+		"empty string": {
+			str:      "",
+			expected: "",
+		},
+		"unclosed token": {
+			str:         "unclosed !token",
+			expectedErr: ErrUnclosedToken("unclosed !token"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
 	}
 }
 

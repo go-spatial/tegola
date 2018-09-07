@@ -12,16 +12,17 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 - Native geometry processing (simplification, clipping, make valid, intersection, contains, scaling, translation)
 - [Mapbox Vector Tile v2 specification](https://github.com/mapbox/vector-tile-spec) compliant.
 - Embedded viewer with auto generated style for quick data visualization and inspection.
-- Support for PostGIS as a data provider. Extensible to support additional data providers.
-- Local filesystem caching. Extensible design to support additional cache backends.
-- Cache seeding to fill the cache prior to web requests.
+- Support for PostGIS and GeoPackage data providers. Extensible design to support additional data providers.
+- Support for several cache backends: [file](cache/file), [s3](cache/s3), [redis](cache/redis), [azure blob store](cache/azblob).
+- Cache seeding and invalidation via individual tiles (ZXY), lat / lon bounds and ZXY tile list.
 - Parallelized tile serving and geometry processing.
 - Support for Web Mercator (3857) and WGS84 (4326) projections.
+- Support for [AWS Lambda](cmd/tegola_lambda).
 
 ## Usage
 ```
 tegola is a vector tile server
-Version: v0.6.0 
+Version: v0.7.0 
 
 Usage:
   tegola [command]
@@ -41,8 +42,7 @@ Use "tegola [command] --help" for more information about a command.
 
 ## Running tegola as a vector tile server
 1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/go-spatial/tegola/releases).
-2. After the download you will need to make the binary executable. The binary, will be name `tegola_$OS_$ARCH`, to follow along with the instructions make sure to rename it to `tegola`.
-2. Setup your config file and run. Tegola expects a `config.toml` to be in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
+2. Setup your config file and run. Dy default tegola looks for a `config.toml` in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
 ./tegola serve --config=/path/to/config.toml
@@ -126,15 +126,16 @@ ssl_mode = "prefer"        # PostgreSQL SSL mode*. Default is "disable". (option
 
 	[[providers.layers]]
 	name = "landuse"                    # will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857"  # sql or table_name are required
+	tablename = "gis.zoning_base_3857"  # sql or tablename are required
 	geometry_fieldname = "geom"         # geom field. default is geom
 	id_fieldname = "gid"                # geom id field. default is gid
 	srid = 4326                         # the srid of table's geo data. Defaults to WebMercator (3857)
 
 	[[providers.layers]]
 	name = "roads"                      # will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857"  # sql or table_name are required
+	tablename = "gis.zoning_base_3857"  # sql or tablename are required
 	geometry_fieldname = "geom"         # geom field. default is geom
+	geometry_type = "linestring"        # geometry type. if not set, tables are inspected at startup to try and infer the gemetry type
 	id_fieldname = "gid"                # geom id field. default is gid
 	fields = [ "class", "name" ]        # Additional fields to include in the select statement.
 
@@ -145,6 +146,14 @@ ssl_mode = "prefer"        # PostgreSQL SSL mode*. Default is "disable". (option
 	# Custom sql to be used for this layer. Note: that the geometery field is wraped
 	# in a ST_AsBinary() and the use of the !BBOX! token
 	sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
+
+	[[providers.layers]]
+	name = "buildings"                  # will be encoded as the layer name in the tile
+	geometry_fieldname = "geom"         # geom field. default is geom
+	id_fieldname = "gid"                # geom id field. default is gid
+	# Custom sql to be used for this layer as a sub query. ST_AsBinary and
+	# !BBOX! filter are applied automatically.
+	sql = "(SELECT gid, geom, type FROM buildings WHERE scalerank = !ZOOM! LIMIT 1000) AS sub"
 
 # maps are made up of layers
 [[maps]]
@@ -200,7 +209,7 @@ max_connections = "${POSTGIS_MAX_CONN}"
 #### SQL Debugging
 The following environment variables can be used for debugging:
 
-`SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
+`TEGOLA_SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
 
 - `LAYER_SQL`: print layer SQL as they are parsed from the config file.
 - `EXECUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
@@ -208,12 +217,12 @@ The following environment variables can be used for debugging:
 #### Usage
 
 ```bash
-$ SQL_DEBUG=LAYER_SQL tegola -config=/path/to/conf.toml
+$ TEGOLA_SQL_DEBUG=LAYER_SQL tegola serve --config=/path/to/conf.toml
 ```
 
-The following environment variables can be use to control various runtime options:
+The following environment variables can be used to control various runtime options:
 
-`TEGOLA_OPTIONS` specify a set of options comma (or space) seperated options.
+`TEGOLA_OPTIONS` specify a set of options comma or space delimited. Supports the following options
 
 - `DontSimplifyGeo` to turn off simplification for all layers.
 - `SimplifyMaxZoom={{int}}` to set the max zoom that simplification will apply to. (14 is default)
@@ -246,11 +255,13 @@ You will now have a binary named `tegola` in the current directory which is [rea
 **Build Flags**
 The following build flags can be used to turn off certain features of tegola:
 
+- `noAzblobCache` - turn off the Azure Blob cache back end.
 - `noS3Cache` - turn off the AWS S3 cache back end.
 - `noRedisCache` - turn off the Redis cache back end.
 - `noPostgisProvider` - turn off the PostGIS data provider.
 - `noGpkgProvider` - turn off the GeoPackage data provider. Note, GeoPackage uses CGO and will be turned off if the environment variable `CGO_ENABLED=0` is set prior to building.
 - `noViewer` - turn off the built in viewer.
+- `pprof` - enable [Go profiler](https://golang.org/pkg/net/http/pprof/). Start profile server by setting the environment `TEGOLA_HTTP_PPROF_BIND` environment (e.g. `TEGOLA_HTTP_PPROF_BIND=localhost:6060`).
 
 Example of using the build flags to turn of the Redis cache back end, the GeoPackage provider and the built in viewer.
 
