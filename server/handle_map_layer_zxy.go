@@ -94,7 +94,7 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 }
 
 func logAndError(w http.ResponseWriter, code int, format string, vals ...interface{}) {
-	msg := fmt.Sprintf(format, vals)
+	msg := fmt.Sprintf(format, vals...)
 	log.Info(msg)
 	http.Error(w, msg, code)
 }
