@@ -80,8 +80,8 @@ const (
 // !BBOX! - the bounding box of the tile
 // !ZOOM! - the tile Z value
 // !SCALE_DENOMINATOR! - scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
-// !PIXEL_WIDTH!       - the pixel width in m, assuming 256x256 tiles
-// !PIXEL_HEIGHT!      - the pixel height in m, assuming 256x256 tiles
+// !PIXEL_WIDTH! - the pixel width in meters, assuming 256x256 tiles
+// !PIXEL_HEIGHT! - the pixel height in meters, assuming 256x256 tiles
 func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
 	bufferedExtent, _ := tile.BufferedExtent()
