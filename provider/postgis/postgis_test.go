@@ -223,151 +223,227 @@ func TestTileFeatures(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
 	type tcase struct {
-		config               dict.Dict
+		layerConfig          map[string]interface{}
 		tile                 *slippy.Tile
 		expectedFeatureCount int
+		expectedTags         []string
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		p, err := postgis.NewTileProvider(tc.config)
+		config := dict.Dict{
+			postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+			postgis.ConfigKeyPort:        port,
+			postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+			postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+			postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+			postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+			postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+			postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+			postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+		}
+
+		config[postgis.ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
+
+		p, err := postgis.NewTileProvider(config)
 		if err != nil {
 			t.Errorf("unexpected error; unable to create a new provider, expected: nil Got %v", err)
 			return
 		}
 
-		// iterate our configured layers
-		for _, tcLayer := range tc.config[postgis.ConfigKeyLayers].([]map[string]interface{}) {
-			layerName := tcLayer[postgis.ConfigKeyLayerName].(string)
+		layerName := tc.layerConfig[postgis.ConfigKeyLayerName].(string)
 
-			var featureCount int
-			err := p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
-				featureCount++
-
-				return nil
-			})
-			if err != nil {
-				t.Errorf("unexpected err: %v", err)
-				return
+		var featureCount int
+		err = p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
+			// only verify tags on first feature
+			if featureCount == 0 {
+				for _, tag := range tc.expectedTags {
+					if _, ok := f.Tags[tag]; !ok {
+						t.Errorf("expected tag %v in %v", tag, f.Tags)
+						return nil
+					}
+				}
 			}
 
-			if featureCount != tc.expectedFeatureCount {
-				t.Errorf("feature count, expected %v got %v", tc.expectedFeatureCount, featureCount)
-				return
-			}
+			featureCount++
+
+			return nil
+		})
+		if err != nil {
+			t.Errorf("unexpected err: %v", err)
+			return
+		}
+
+		if featureCount != tc.expectedFeatureCount {
+			t.Errorf("feature count, expected %v got %v", tc.expectedFeatureCount, featureCount)
+			return
 		}
 	}
 
 	tests := map[string]tcase{
-		"land query": {
-			config: dict.Dict{
-				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:        port,
-				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
-				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
-				postgis.ConfigKeyLayers: []map[string]interface{}{
-					{
-						postgis.ConfigKeyLayerName: "land",
-						postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
-					},
-				},
+		"tablename query": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
 			},
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 4032,
+			expectedTags:         []string{"scalerank", "featurecla"},
 		},
-		"scalerank test": {
-			config: dict.Dict{
-				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:        port,
-				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
-				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
-				postgis.ConfigKeyLayers: []map[string]interface{}{
-					{
-						postgis.ConfigKeyLayerName: "land",
-						postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) AS geom FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
-					},
-				},
+		"tablename query with fields": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
+				postgis.ConfigKeyFields:    []string{"scalerank"},
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 4032,
+			expectedTags:         []string{"scalerank"},
+		},
+		"SQL sub-query": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
+		"SQL sub-query multi line": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL: ` ( 
+					SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100
+				) AS sub`,
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
+		"SQL sub-query and tablename": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+				postgis.ConfigKeyTablename: "not_good_name",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
+		"SQL sub-query space after prens": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "(  SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
+		"SQL sub-query space before prens": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "   (SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
+		"SQL sub-query with comments": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       " -- this is a comment\n-- accross multiple lines\n (SELECT gid, geom, scalerank FROM ne_10m_land_scale_rank LIMIT 100) AS sub -- another comment at the end",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"scalerank"},
+		},
+		"SQL sub-query with *": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "(SELECT * FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"scalerank", "featurecla"},
+		},
+		"SQL sub-query with * and fields": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "(SELECT * FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+				postgis.ConfigKeyFields:    []string{"scalerank"},
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"scalerank"},
+		},
+		"SQL with !ZOOM!": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) AS geom FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 98,
+		},
+		"SQL sub-query with token in SELECT": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeyGeomType:  "polygon", // required to disable SQL inspection
+				postgis.ConfigKeySQL:       "(SELECT gid, geom, !ZOOM! * 2 AS doublezoom FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 98,
+			expectedTags:         []string{"doublezoom"},
+		},
+		"SQL sub-query with fields": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "(SELECT gid, geom, 1 AS a, '2' AS b, 3 AS c FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",
+				postgis.ConfigKeyFields:    []string{"gid", "a", "b"},
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 98,
+			expectedTags:         []string{"a", "b"},
+			// expectedTags:         []string{"gid", "a", "b"}, TODO #383
+		},
+		"SQL with comments": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       " -- this is a comment\n -- accross multiple lines \n \tSELECT gid, -- gid \nST_AsBinary(geom) AS geom -- geom \n FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX! -- comment at the end",
 			},
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 98,
 		},
 		"decode numeric(x,x) types": {
-			config: dict.Dict{
-				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:        port,
-				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
-				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
-				postgis.ConfigKeyLayers: []map[string]interface{}{
-					{
-						postgis.ConfigKeyLayerName:   "buildings",
-						postgis.ConfigKeyGeomIDField: "osm_id",
-						postgis.ConfigKeyGeomField:   "geometry",
-						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, nullif(as_numeric(height),-1) AS height, type FROM osm_buildings_test WHERE geometry && !BBOX!",
-					},
-				},
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName:   "buildings",
+				postgis.ConfigKeyGeomIDField: "osm_id",
+				postgis.ConfigKeyGeomField:   "geometry",
+				postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, nullif(as_numeric(height),-1) AS height, type FROM osm_buildings_test WHERE geometry && !BBOX!",
 			},
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 101,
+			expectedTags:         []string{"name", "type"}, // height can be null and therefore missing from the tags
 		},
 		"gracefully handle 3d point": {
-			config: dict.Dict{
-				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:        port,
-				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
-				postgis.ConfigKeyLayers: []map[string]interface{}{
-					{
-						postgis.ConfigKeyLayerName:   "three_d_points",
-						postgis.ConfigKeyGeomIDField: "id",
-						postgis.ConfigKeyGeomField:   "geom",
-						postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geom) AS geom, id FROM three_d_test WHERE geom && !BBOX!",
-					},
-				},
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName:   "three_d_points",
+				postgis.ConfigKeyGeomIDField: "id",
+				postgis.ConfigKeyGeomField:   "geom",
+				postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geom) AS geom, id FROM three_d_test WHERE geom && !BBOX!",
 			},
 			tile:                 slippy.NewTile(0, 0, 0, 64, tegola.WebMercator),
 			expectedFeatureCount: 0,
 		},
 		"gracefully handle null geometry": {
-			config: dict.Dict{
-				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
-				postgis.ConfigKeyPort:        port,
-				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
-				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
-				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
-				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
-				postgis.ConfigKeyLayers: []map[string]interface{}{
-					{
-						postgis.ConfigKeyLayerName:   "null_geom",
-						postgis.ConfigKeyGeomIDField: "id",
-						postgis.ConfigKeyGeomField:   "geometry",
-						// this SQL is a workaround the normal !BBOX! WHERE clause. we're simulating a null geometry lookup in the table and don't want to filter by bounding box
-						postgis.ConfigKeySQL: "SELECT id, ST_AsBinary(geometry) AS geometry, !BBOX! as bbox FROM null_geom_test",
-					},
-				},
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName:   "null_geom",
+				postgis.ConfigKeyGeomIDField: "id",
+				postgis.ConfigKeyGeomField:   "geometry",
+				// this SQL is a workaround the normal !BBOX! WHERE clause. we're simulating a null geometry lookup in the table and don't want to filter by bounding box
+				postgis.ConfigKeySQL: "SELECT id, ST_AsBinary(geometry) AS geometry, !BBOX! as bbox FROM null_geom_test",
 			},
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 1,
+			expectedTags:         []string{"bbox"},
 		},
 	}
 
