@@ -230,8 +230,7 @@ func TestTileFeatures(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		var config dict.Dict
-		config = map[string]interface{}{
+		config := dict.Dict{
 			postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
 			postgis.ConfigKeyPort:        port,
 			postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
@@ -255,14 +254,16 @@ func TestTileFeatures(t *testing.T) {
 
 		var featureCount int
 		err = p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
+			// only verify tags on first feature
 			if featureCount == 0 {
-				// only verify tags on first feature
 				for _, tag := range tc.expectedTags {
 					if _, ok := f.Tags[tag]; !ok {
 						t.Errorf("expected tag %v in %v", tag, f.Tags)
+						return nil
 					}
 				}
 			}
+
 			featureCount++
 
 			return nil
@@ -307,6 +308,45 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
+		"SQL sub-query multi line": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL: ` ( 
+					SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100
+				) AS sub`,
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
+		"SQL sub-query and tablename": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+				postgis.ConfigKeyTablename: "not_good_name",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
+		"SQL sub-query space after prens": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "(  SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
+		"SQL sub-query space before prens": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "land",
+				postgis.ConfigKeySQL:       "   (SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
+			},
+			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			expectedFeatureCount: 100,
+			expectedTags:         []string{"featurecla"},
+		},
 		"SQL sub-query with comments": {
 			layerConfig: map[string]interface{}{
 				postgis.ConfigKeyLayerName: "land",
@@ -343,7 +383,7 @@ func TestTileFeatures(t *testing.T) {
 			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 98,
 		},
-		"SQL with token in SELECT": {
+		"SQL sub-query with token in SELECT": {
 			layerConfig: map[string]interface{}{
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeyGeomType:  "polygon", // required to disable SQL inspection
@@ -353,7 +393,7 @@ func TestTileFeatures(t *testing.T) {
 			expectedFeatureCount: 98,
 			expectedTags:         []string{"doublezoom"},
 		},
-		"SQL with fields": {
+		"SQL sub-query with fields": {
 			layerConfig: map[string]interface{}{
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, 1 AS a, '2' AS b, 3 AS c FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",

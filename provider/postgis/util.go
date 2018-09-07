@@ -18,12 +18,14 @@ import (
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
 func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
-	if len(flds) == 0 {
-		// We need to hit the database to see what the fields are.
 
+	// we need to hit the database to see what the fields are.
+	if len(flds) == 0 {
 		sql := fmt.Sprintf(fldsSQL, tblname)
 
-		// replace SQL tokens for sub-query tablenames
+		//	if a subquery is set in the 'sql' config the subquery is set to the layer's
+		//	'tablename' param. because of this case normal SQL token replacement needs to be
+		//	applied to tablename SQL generation
 		tile := slippy.NewTile(0, 0, 0, 64, tegola.WebMercator)
 		sql, err = replaceTokens(sql, 3857, tile)
 		if err != nil {
@@ -40,12 +42,14 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		if len(fdescs) == 0 {
 			return "", fmt.Errorf("No fields were returned for table %v", tblname)
 		}
+
 		// to avoid field names possibly colliding with Postgres keywords,
 		// we wrap the field names in quotes
 		for i := range fdescs {
 			flds = append(flds, fdescs[i].Name)
 		}
 	}
+
 	for i := range flds {
 		flds[i] = fmt.Sprintf(`"%v"`, flds[i])
 	}

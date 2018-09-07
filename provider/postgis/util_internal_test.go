@@ -41,7 +41,6 @@ func TestReplaceTokens(t *testing.T) {
 			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390624933,1.017529720390625e+07,3857)",
 		},
 		"replace BBOX and ZOOM 1": {
-
 			sql:      "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
 			tile:     slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
