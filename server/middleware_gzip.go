@@ -1,20 +1,48 @@
 package server
 
 import (
+	"bytes"
 	"compress/gzip"
 	"io"
 	"net/http"
 	"strings"
 )
 
+// GZipHandler is responsible for determining if the incoming request should be served gzipped data.
+// All response data is assumed to be compressed prior to being passed to this handler.
+//
+// If the incoming request has the "Accept-Encoding" header set with the values of "gzip" or "*"
+// the response header "Content-Encoding: gzip" is set and the compressed data is returned.
+//
+// If no "Accept-Encoding" header is present or "Accept-Encoding" has a value of "gzip;q=0" or
+// "*;q=0" the response is decompressed prior to being sent to the client.
 func GZipHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// check for gzip header. if it's not present move on
-		if !strings.Contains(strings.ToLower(r.Header.Get("Accept-Encoding")), "gzip") {
-			next.ServeHTTP(w, r)
+		acceptEncoding := r.Header.Get("Accept-Encoding")
+		if acceptEncoding == "" {
+			// decompress
+			next.ServeHTTP(&gzipDecompressResponseWriter{resp: w}, r)
 			return
 		}
+
+		for _, v := range strings.Split(acceptEncoding, ",") {
+			v = strings.ToLower(v)
+			if strings.Contains(v, "gzip") || strings.Contains(v, "*") {
+				if strings.HasSuffix(v, ";q=0") {
+					//	decompress
+					next.ServeHTTP(&gzipDecompressResponseWriter{resp: w}, r)
+					return
+				}
+			} else {
+				//	decompress
+				next.ServeHTTP(&gzipDecompressResponseWriter{resp: w}, r)
+				return
+			}
+		}
+
+		// set appropriate header
+		w.Header().Set("Content-Encoding", "gzip")
 
 		next.ServeHTTP(w, r)
 
@@ -22,35 +50,40 @@ func GZipHandler(next http.Handler) http.Handler {
 	})
 }
 
-type gzipResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
-	sniffDone bool
+// gzipDecompressResponseWriter is responsible for decompressing responses
+// when the http status code == 200.
+type gzipDecompressResponseWriter struct {
+	status int
+	resp   http.ResponseWriter
 }
 
-func (w *gzipResponseWriter) Write(b []byte) (int, error) {
-	if !w.sniffDone {
-		if w.Header().Get("Content-Type") == "" {
-			w.Header().Set("Content-Type", http.DetectContentType(b))
-		}
-		w.sniffDone = true
+func (w *gzipDecompressResponseWriter) Header() http.Header {
+	return w.resp.Header()
+}
+
+func (w *gzipDecompressResponseWriter) Write(b []byte) (int, error) {
+	//	check that we have an OK response, if not, don't process the body
+	if w.status != http.StatusOK {
+		return w.resp.Write(b)
 	}
-	return w.Writer.Write(b)
+
+	//	setup new gzip reader
+	r, err := gzip.NewReader(bytes.NewReader(b))
+	if err != nil {
+		return 0, err
+	}
+	defer r.Close()
+
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, r)
+	if err != nil {
+		return 0, err
+	}
+
+	return w.resp.Write(buf.Bytes())
 }
 
-// Wrap a http.Handler to support transparent gzip encoding.
-func GzipHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Vary", "Accept-Encoding")
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			h.ServeHTTP(w, r)
-			return
-		}
-
-		w.Header().Set("Content-Encoding", "gzip")
-		gz := gzip.NewWriter(w)
-		defer gz.Close()
-
-		h.ServeHTTP(&gzipResponseWriter{Writer: gz, ResponseWriter: w}, r)
-	})
+func (w *gzipDecompressResponseWriter) WriteHeader(i int) {
+	w.status = i
+	w.resp.WriteHeader(i)
 }

@@ -1,7 +1,10 @@
 package atlas_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"io"
 	"reflect"
 	"testing"
 
@@ -220,9 +223,23 @@ func TestEncode(t *testing.T) {
 			continue
 		}
 
+		// decompress our output
+		var buf bytes.Buffer
+		r, err := gzip.NewReader(bytes.NewReader(out))
+		if err != nil {
+			t.Errorf("[%v] err: %v", i, err)
+			continue
+		}
+
+		_, err = io.Copy(&buf, r)
+		if err != nil {
+			t.Errorf("[%v] err: %v", i, err)
+			continue
+		}
+
 		var tile vectorTile.Tile
 
-		if err = proto.Unmarshal(out, &tile); err != nil {
+		if err = proto.Unmarshal(buf.Bytes(), &tile); err != nil {
 			t.Errorf("[%v] error unmarshalling output: %v", i, err)
 			continue
 		}
