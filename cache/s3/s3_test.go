@@ -121,13 +121,12 @@ func TestSetGetPurge(t *testing.T) {
 			t.Errorf("expected %v got %v", tc.expected, output)
 			return
 		}
-		/*
-			// test purge
-			if err = fc.Purge(&tc.key); err != nil {
-				t.Errorf("purge failed. err: %v", err)
-				return
-			}
-		*/
+
+		// test purge
+		if err = fc.Purge(&tc.key); err != nil {
+			t.Errorf("purge failed. err: %v", err)
+			return
+		}
 	}
 
 	tests := map[string]tcase{
