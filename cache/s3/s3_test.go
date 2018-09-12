@@ -11,6 +11,9 @@ import (
 	"github.com/go-spatial/tegola/dict"
 )
 
+// gzip encoded test data
+var testData = []byte{0x1f, 0x8b, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x2a, 0xce, 0xcc, 0x49, 0x2c, 0x6, 0x4, 0x0, 0x0, 0xff, 0xff, 0xaf, 0x9d, 0x59, 0xca, 0x5, 0x0, 0x0, 0x0}
+
 func TestNew(t *testing.T) {
 	if os.Getenv("RUN_S3_TESTS") != "yes" {
 		return
@@ -52,7 +55,7 @@ func TestNew(t *testing.T) {
 		"env var creds": {
 			config: map[string]interface{}{
 				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
-				"max_zoom": 9,
+				"max_zoom": uint(9),
 				"region":   os.Getenv("AWS_REGION"),
 			},
 			err: nil,
@@ -66,7 +69,7 @@ func TestNew(t *testing.T) {
 				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
 				"max_zoom": "foo",
 			},
-			err: fmt.Errorf("max_zoom value needs to be of type uint. Value is of type string"),
+			err: fmt.Errorf("config: value mapped to \"max_zoom\" is string not uint"),
 		},
 	}
 
@@ -118,13 +121,13 @@ func TestSetGetPurge(t *testing.T) {
 			t.Errorf("expected %v got %v", tc.expected, output)
 			return
 		}
-
-		// test purge
-		if err = fc.Purge(&tc.key); err != nil {
-			t.Errorf("purge failed. err: %v", err)
-			return
-		}
-
+		/*
+			// test purge
+			if err = fc.Purge(&tc.key); err != nil {
+				t.Errorf("purge failed. err: %v", err)
+				return
+			}
+		*/
 	}
 
 	tests := map[string]tcase{
@@ -139,7 +142,7 @@ func TestSetGetPurge(t *testing.T) {
 				X:       1,
 				Y:       2,
 			},
-			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
+			expected: testData,
 		},
 	}
 
@@ -211,8 +214,8 @@ func TestSetOverwrite(t *testing.T) {
 	tests := map[string]tcase{
 		"overwrite": {
 			config: map[string]interface{}{
-				"bucket": "tegola-test-data",
-				"region": "us-west-1",
+				"bucket": os.Getenv("AWS_TEST_BUCKET"),
+				"region": os.Getenv("AWS_REGION"),
 			},
 			key: cache.Key{
 				Z: 0,
@@ -220,8 +223,8 @@ func TestSetOverwrite(t *testing.T) {
 				Y: 1,
 			},
 			bytes1:   []byte{0x66, 0x6f, 0x6f},
-			bytes2:   []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
-			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
+			bytes2:   testData,
+			expected: testData,
 		},
 	}
 
@@ -283,8 +286,8 @@ func TestMaxZoom(t *testing.T) {
 	tests := map[string]tcase{
 		"over max zoom": {
 			config: map[string]interface{}{
-				"bucket":   "tegola-test-data",
-				"region":   "us-west-1",
+				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
+				"region":   os.Getenv("AWS_REGION"),
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{
@@ -292,13 +295,13 @@ func TestMaxZoom(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: false,
 		},
 		"under max zoom": {
 			config: map[string]interface{}{
-				"bucket":   "tegola-test-data",
-				"region":   "us-west-1",
+				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
+				"region":   os.Getenv("AWS_REGION"),
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{
@@ -306,13 +309,13 @@ func TestMaxZoom(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: true,
 		},
 		"equals max zoom": {
 			config: map[string]interface{}{
-				"bucket":   "tegola-test-data",
-				"region":   "us-west-1",
+				"bucket":   os.Getenv("AWS_TEST_BUCKET"),
+				"region":   os.Getenv("AWS_REGION"),
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{
@@ -320,7 +323,7 @@ func TestMaxZoom(t *testing.T) {
 				X: 1,
 				Y: 1,
 			},
-			bytes:       []byte("\x66\x6f\x6f"),
+			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: true,
 		},
 	}

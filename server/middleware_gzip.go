@@ -27,13 +27,14 @@ func GZipHandler(next http.Handler) http.Handler {
 		}
 
 		for _, v := range strings.Split(acceptEncoding, ",") {
-			v = strings.ToLower(v)
+			v = strings.TrimSpace(strings.ToLower(v))
 			if strings.Contains(v, "gzip") || strings.Contains(v, "*") {
 				if strings.HasSuffix(v, ";q=0") {
 					//	decompress
 					next.ServeHTTP(&gzipDecompressResponseWriter{resp: w}, r)
 					return
 				}
+				break
 			} else {
 				//	decompress
 				next.ServeHTTP(&gzipDecompressResponseWriter{resp: w}, r)
