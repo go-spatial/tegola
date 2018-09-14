@@ -397,7 +397,7 @@ var providers []Provider
 
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
-	log.Printf("cleaning up gpkg providers")
+	log.Infof("cleaning up gpkg providers")
 
 	for i := range providers {
 		if err := providers[i].Close(); err != nil {
