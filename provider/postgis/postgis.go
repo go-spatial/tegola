@@ -595,7 +595,7 @@ func (p *Provider) Close() {
 	p.pool.Close()
 }
 
-// reference to all instantiated proivders
+// reference to all instantiated providers
 var providers []Provider
 
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
