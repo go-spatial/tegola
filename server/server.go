@@ -75,7 +75,20 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 
 	// start our server
 	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
-	go func() { log.Error(srv.ListenAndServe()) }()
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			switch err {
+			case http.ErrServerClosed:
+				log.Info("http server closed")
+				return
+			default:
+				log.Fatal(err)
+				return
+			}
+		}
+		return
+	}()
+
 	return srv
 }
 

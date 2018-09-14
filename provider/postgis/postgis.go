@@ -74,7 +74,7 @@ const (
 )
 
 func init() {
-	provider.Register(Name, NewTileProvider, nil)
+	provider.Register(Name, NewTileProvider, Cleanup)
 }
 
 // isSelectQuery is a regexp to check if a query starts with `SELECT`,
@@ -319,6 +319,9 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		lyrs[lname] = l
 	}
 	p.layers = lyrs
+
+	// track the provider so we can clean it up later
+	providers = append(providers, p)
 
 	return p, nil
 }
@@ -585,4 +588,23 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	}
 
 	return nil
+}
+
+// Close will close the Provider's database connectio
+func (p *Provider) Close() {
+	p.pool.Close()
+}
+
+// reference to all instantiated providers
+var providers []Provider
+
+// Cleanup will close all database connections and destroy all previously instantiated Provider instances
+func Cleanup() {
+	log.Printf("cleaning up postgis providers")
+
+	for i := range providers {
+		providers[i].Close()
+	}
+
+	providers = make([]Provider, 0)
 }
