@@ -76,9 +76,20 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 	// start our server
 	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
 
-	// TODO(arolek): should we log.Fatal here? if the server can't bind
-	// to a port the process keeps running...
-	go func() { log.Error(srv.ListenAndServe()) }()
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			switch err {
+			case http.ErrServerClosed:
+				log.Info("http server closed")
+				return
+			default:
+				log.Fatal(err)
+				return
+			}
+		}
+		return
+	}()
+
 	return srv
 }
 
