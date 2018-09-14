@@ -26,27 +26,21 @@ func GZipHandler(next http.Handler) http.Handler {
 			return
 		}
 
+		decompress := false
 		for _, v := range strings.Split(acceptEncoding, ",") {
-			v = strings.TrimSpace(strings.ToLower(v))
-			if strings.Contains(v, "gzip") || strings.Contains(v, "*") {
-				if strings.HasSuffix(v, ";q=0") {
-					//	decompress
-					next.ServeHTTP(&gzipDecompressResponseWriter{resp: w}, r)
-					return
-				}
-				break
-			} else {
-				//	decompress
-				next.ServeHTTP(&gzipDecompressResponseWriter{resp: w}, r)
-				return
+			if (strings.Contains(v, "gzip") || strings.Contains(v, "*")) && strings.HasSuffix(v, ";q=0") {
+				decompress = true
 			}
+		}
+
+		if decompress {
+			next.ServeHTTP(&gzipDecompressResponseWriter{resp: w}, r)
+			return
 		}
 
 		// set appropriate header
 		w.Header().Set("Content-Encoding", "gzip")
-
 		next.ServeHTTP(w, r)
-
 		return
 	})
 }

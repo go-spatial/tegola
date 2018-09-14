@@ -78,6 +78,15 @@ func TestMiddlewareGzipHandler(t *testing.T) {
 				"Content-Encoding": "gzip",
 			},
 		},
+		"Accept-Encoding: foo, gzip": {
+			uri: "/maps/test-map/10/2/3.pbf",
+			requestHeaders: map[string]string{
+				"Accept-Encoding": "foo, gzip",
+			},
+			expectedResponseHeaders: map[string]string{
+				"Content-Encoding": "gzip",
+			},
+		},
 		"Accept-Encoding: gzip;q=0": {
 			uri: "/maps/test-map/10/2/3.pbf",
 			requestHeaders: map[string]string{
@@ -89,6 +98,15 @@ func TestMiddlewareGzipHandler(t *testing.T) {
 			uri: "/maps/test-map/10/2/3.pbf",
 			requestHeaders: map[string]string{
 				"Accept-Encoding": "*",
+			},
+			expectedResponseHeaders: map[string]string{
+				"Content-Encoding": "gzip",
+			},
+		},
+		"Accept-Encoding: foo, *": {
+			uri: "/maps/test-map/10/2/3.pbf",
+			requestHeaders: map[string]string{
+				"Accept-Encoding": "foo, *",
 			},
 			expectedResponseHeaders: map[string]string{
 				"Content-Encoding": "gzip",
