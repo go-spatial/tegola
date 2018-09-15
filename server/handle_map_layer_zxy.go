@@ -167,8 +167,9 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// mimetype for protocol buffers
-	w.Header().Add("Content-Type", "application/x-protobuf")
+	// mimetype for mapbox vector tiles
+	// https://www.iana.org/assignments/media-types/application/vnd.mapbox-vector-tile
+	w.Header().Add("Content-Type", "application/vnd.mapbox-vector-tile")
 	w.WriteHeader(http.StatusOK)
 	w.Write(pbyte)
 

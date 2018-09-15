@@ -2,6 +2,7 @@ package s3
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 
@@ -47,6 +49,9 @@ const (
 	DefaultContentType = "application/vnd.mapbox-vector-tile"
 	DefaultEndpoint    = ""
 )
+
+// testData is used during New() to confirm the ability to write, read and purge the cache
+var testData = []byte{0x1f, 0x8b, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x2a, 0xce, 0xcc, 0x49, 0x2c, 0x6, 0x4, 0x0, 0x0, 0xff, 0xff, 0xaf, 0x9d, 0x59, 0xca, 0x5, 0x0, 0x0, 0x0}
 
 func init() {
 	cache.Register(CacheType, New)
@@ -184,8 +189,9 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		X:         0,
 		Y:         0,
 	}
-	// write a test file
-	if err := s3cache.Set(&key, []byte("\x53\x69\x6c\x61\x73")); err != nil {
+
+	// write gzip encoded test file
+	if err := s3cache.Set(&key, testData); err != nil {
 		e := cache.ErrSettingToCache{
 			CacheType: CacheType,
 			Err:       err,
@@ -260,10 +266,11 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	k := filepath.Join(s3c.Basepath, key.String())
 
 	input := s3.PutObjectInput{
-		Body:        aws.ReadSeekCloser(bytes.NewReader(val)),
-		Bucket:      aws.String(s3c.Bucket),
-		Key:         aws.String(k),
-		ContentType: aws.String(s3c.ContentType),
+		Body:            aws.ReadSeekCloser(bytes.NewReader(val)),
+		Bucket:          aws.String(s3c.Bucket),
+		Key:             aws.String(k),
+		ContentType:     aws.String(s3c.ContentType),
+		ContentEncoding: aws.String("gzip"),
 	}
 	if s3c.ACL != "" {
 		input.ACL = aws.String(s3c.ACL)
@@ -291,7 +298,11 @@ func (s3c *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 		Key:    aws.String(k),
 	}
 
-	result, err := s3c.Client.GetObject(&input)
+	// GetObjectWithContenxt is used here so the "Accept-Encoding: gzip" header can be added
+	// without this our gzip response will be decompressed by the underlying transport
+	result, err := s3c.Client.GetObjectWithContext(context.Background(), &input, func(r *request.Request) {
+		r.HTTPRequest.Header.Add("Accept-Encoding", "gzip")
+	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {

@@ -55,13 +55,13 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
 
 	// map style
 	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
 
-	//	setup viewer routes, which can excluded via build flags
+	// setup viewer routes, which can be excluded via build flags
 	setupViewer(group)
 
 	return r
@@ -75,6 +75,7 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 
 	// start our server
 	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
+
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
 			switch err {
