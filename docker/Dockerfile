@@ -26,14 +26,16 @@
 
 
 # --- Build the binary
-FROM golang:1.9.2-alpine3.7 AS build
+FROM golang:1.10.3-alpine3.7 AS build
 
 # Only needed for CGO support at time of build, results in no noticable change in binary size
 #  incurs approximately 1:30 extra build time (1:54 vs 0:27) to install packages.  Doesn't impact
 #  development as these layers are drawn from cache after the first build.
 RUN apk update
-RUN apk add musl-dev=1.1.18-r2
+RUN apk add musl-dev=1.1.18-r3
 RUN apk add gcc=6.4.0-r5
+RUN apk add git
+
 
 # Set up source for compilation
 RUN mkdir -p /opt/tegola_src
@@ -45,12 +47,15 @@ RUN ln -s /opt/tegola_src /opt/tegola_src/src/github.com/go-spatial/tegola
 # Build binary
 WORKDIR /opt/tegola_src/cmd/tegola
 ENV GOPATH=/opt/tegola_src
+RUN go get -u github.com/theckman/goconstraint/go1.8/gte
 RUN go build -v -gcflags "-N -l" -o /opt/tegola
 RUN chmod a+x /opt/tegola
 
 # --- Create minimal deployment image, just alpine & the binary
 FROM alpine:3.7
+RUN apk update
+RUN apk add ca-certificates
 LABEL maintainer="Development@JivanAmara.net"
-LABEL io.gospatial.version="0.6.0_beta"
+LABEL io.gospatial.version="0.8.0_alpha"
 COPY --from=build /opt/tegola /opt/
 CMD ["/opt/tegola", "--config", "/opt/tegola_config/config.toml", "serve"]
