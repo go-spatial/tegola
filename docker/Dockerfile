@@ -53,8 +53,7 @@ RUN chmod a+x /opt/tegola
 
 # --- Create minimal deployment image, just alpine & the binary
 FROM alpine:3.7
-RUN apk update
-RUN apk add ca-certificates
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 LABEL maintainer="Development@JivanAmara.net"
 LABEL io.gospatial.version="0.8.0_alpha"
 COPY --from=build /opt/tegola /opt/
