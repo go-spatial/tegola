@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -70,11 +71,12 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 		//	cors header
 		w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
 
-		// mimetype for protocol buffers
-		w.Header().Add("Content-Type", "application/x-protobuf")
+		// mimetype for mapbox vector tiles
+		w.Header().Add("Content-Type", mvt.MimeType)
 
 		// communicate the cache is being used
 		w.Header().Add("Tegola-Cache", "HIT")
+		w.Header().Add("Content-Length", fmt.Sprintf("%d", len(pbyte)))
 
 		w.Write(cachedTile)
 		return

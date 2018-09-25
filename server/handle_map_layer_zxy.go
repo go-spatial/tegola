@@ -15,6 +15,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/mvt"
 )
 
 type HandleMapLayerZXY struct {
@@ -169,7 +170,8 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// mimetype for mapbox vector tiles
 	// https://www.iana.org/assignments/media-types/application/vnd.mapbox-vector-tile
-	w.Header().Add("Content-Type", "application/vnd.mapbox-vector-tile")
+	w.Header().Add("Content-Type", mvt.MimeType)
+	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(pbyte)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(pbyte)
 
