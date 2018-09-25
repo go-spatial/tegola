@@ -9,6 +9,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/mvt"
 )
 
 // TileCacheHandler implements a request cache for tiles on requests when the URLs
@@ -76,7 +77,7 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 
 		// communicate the cache is being used
 		w.Header().Add("Tegola-Cache", "HIT")
-		w.Header().Add("Content-Length", fmt.Sprintf("%d", len(pbyte)))
+		w.Header().Add("Content-Length", fmt.Sprintf("%d", len(cachedTile)))
 
 		w.Write(cachedTile)
 		return
