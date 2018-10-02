@@ -148,7 +148,7 @@ func (l *Layer) AddFeatures(features ...Feature) {
 	copy(b, l.features)
 
 	l.features = b
-	l.features = append(features)
+	l.features = append(l.features, features...)
 }
 
 // RemoveFeature allows you to remove one or more features, with the provided indexes.
