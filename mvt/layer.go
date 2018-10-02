@@ -143,7 +143,7 @@ func (l *Layer) Features() (f []Feature) {
 // per the spec features SHOULD have unique ids but it's not required
 func (l *Layer) AddFeatures(features ...Feature) {
 	// pre allocate memory
-	b := make([]Feature, len(l.features), len(l.features)+len(features))
+	b := make([]Feature, len(l.features)+len(features))
 
 	copy(b, l.features)
 	copy(b[len(l.features):], features)
