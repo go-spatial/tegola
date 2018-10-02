@@ -18,6 +18,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/mvt"
 )
 
 var (
@@ -46,7 +47,7 @@ const (
 	DefaultRegion      = "us-east-1"
 	DefaultAccessKey   = ""
 	DefaultSecretKey   = ""
-	DefaultContentType = "application/vnd.mapbox-vector-tile"
+	DefaultContentType = mvt.MimeType
 	DefaultEndpoint    = ""
 )
 

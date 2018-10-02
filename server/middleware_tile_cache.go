@@ -2,12 +2,14 @@ package server
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/mvt"
 )
 
 // TileCacheHandler implements a request cache for tiles on requests when the URLs
@@ -70,11 +72,12 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 		//	cors header
 		w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
 
-		// mimetype for protocol buffers
-		w.Header().Add("Content-Type", "application/x-protobuf")
+		// mimetype for mapbox vector tiles
+		w.Header().Add("Content-Type", mvt.MimeType)
 
 		// communicate the cache is being used
 		w.Header().Add("Tegola-Cache", "HIT")
+		w.Header().Add("Content-Length", fmt.Sprintf("%d", len(cachedTile)))
 
 		w.Write(cachedTile)
 		return
