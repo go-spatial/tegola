@@ -85,20 +85,20 @@ func TestEncodeGeometry(t *testing.T) {
 		return func(t *testing.T) {
 			g, gtype, err := encodeGeometry(context.Background(), tc.geo, tile, true)
 			if tc.eerr != err {
-				t.Errorf("error, Expected %v Got %v", tc.eerr, err)
+				t.Errorf("error, expected %v got %v", tc.eerr, err)
 			}
 			if gtype != tc.typ {
-				t.Errorf("geometry type, Expected %v Got %v", tc.typ, gtype)
+				t.Errorf("geometry type, expected %v got %v", tc.typ, gtype)
 			}
 			if len(g) != len(tc.egeo) {
-				t.Errorf("geometry length, Expected %v Got %v ", len(tc.egeo), len(g))
-				t.Logf("Geometries, Expected %v Got %v", tc.egeo, g)
+				t.Errorf("geometry length, expected %v got %v ", len(tc.egeo), len(g))
+				t.Logf("geometries, expected %v got %v", tc.egeo, g)
 			}
 			for j := range tc.egeo {
 
 				if j < len(g) && tc.egeo[j] != g[j] {
-					t.Errorf("Geometry at %v, Expected %v Got %v", j, tc.egeo[j], g[j])
-					t.Logf("Geometry, Expected %v Got %v", tc.egeo, g)
+					t.Errorf("geometry at %v, expected %v got %v", j, tc.egeo[j], g[j])
+					t.Logf("geometry, expected %v got %v", tc.egeo, g)
 					break
 				}
 			}

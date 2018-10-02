@@ -18,7 +18,7 @@ func TestCleanline(t *testing.T) {
 			el := cleanLine(tc.line)
 
 			if !tegola.IsLineStringEqual(el, tc.expected) {
-				t.Errorf("expected %v, Got %v", tc.line.GoString(), el.GoString())
+				t.Errorf("expected %v, got %v", tc.line.GoString(), el.GoString())
 			}
 		}
 	}

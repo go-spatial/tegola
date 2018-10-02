@@ -46,11 +46,11 @@ func TestLayer(t *testing.T) {
 		return func(t *testing.T) {
 			vt, err := tc.layer.VTileLayer(context.Background(), tile)
 			if err != tc.eerr {
-				t.Errorf("unexpected error, Expected %v Got %v", tc.eerr, err)
+				t.Errorf("unexpected error, expected %v got %v", tc.eerr, err)
 			}
 			if tc.vtlayer == nil {
 				if vt != nil {
-					t.Errorf("expected nil value, Got non-nil")
+					t.Errorf("expected nil value, got non-nil")
 				}
 				return
 			}
@@ -59,21 +59,21 @@ func TestLayer(t *testing.T) {
 				return
 			}
 			if *tc.vtlayer.Version != *vt.Version {
-				t.Errorf("versions do not match, Expected %v Got %v", *tc.vtlayer.Version, *vt.Version)
+				t.Errorf("versions do not match, expected %v got %v", *tc.vtlayer.Version, *vt.Version)
 			}
 			if *tc.vtlayer.Name != *vt.Name {
-				t.Errorf("names do not match, Expected %v Got %v", *tc.vtlayer.Name, *vt.Name)
+				t.Errorf("names do not match, expected %v got %v", *tc.vtlayer.Name, *vt.Name)
 			}
 			if *tc.vtlayer.Extent != *vt.Extent {
-				t.Errorf("extent do not match, Expected %v Got %v", *tc.vtlayer.Extent, *vt.Extent)
+				t.Errorf("extent do not match, expected %v got %v", *tc.vtlayer.Extent, *vt.Extent)
 			}
 			if len(tc.vtlayer.Features) != len(vt.Features) {
-				t.Errorf("features do not have the same length, Expected %v Got %v", len(tc.vtlayer.Features), len(vt.Features))
+				t.Errorf("features do not have the same length, expected %v got %v", len(tc.vtlayer.Features), len(vt.Features))
 			}
 
 			// TODO: Should check to see if the features are equal.
 			if len(tc.vtlayer.Values) != len(vt.Values) {
-				t.Errorf("values do not have the same length, Expected %v Got %v", len(tc.vtlayer.Values), len(vt.Values))
+				t.Errorf("values do not have the same length, expected %v got %v", len(tc.vtlayer.Values), len(vt.Values))
 			}
 
 			// TODO: Should check that the Values are equal.
