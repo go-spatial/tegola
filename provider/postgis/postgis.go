@@ -558,7 +558,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 
 		// check that we have geometry data. if not, skip the feature
 		if len(geobytes) == 0 {
-			// TODO(arolek): implement debug log
+			log.Printf("feature with id (%v) in layer (%v) has no geometry data. skipping", gid, layer)
 			continue
 		}
 
