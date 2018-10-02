@@ -224,7 +224,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
 		}
 
-		idfld := "gid"
+		idfld := ""
 		idfld, err = layer.String(ConfigKeyGeomIDField, &idfld)
 		if err != nil {
 			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)

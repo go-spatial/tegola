@@ -1,3 +1,7 @@
 package mvt
 
-const MimeType = "application/vnd.mapbox-vector-tile"
+const (
+	Version       = 2
+	DefaultExtent = 4096
+  MimeType      = "application/vnd.mapbox-vector-tile"
+)
