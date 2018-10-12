@@ -40,6 +40,12 @@ func TestReplaceTokens(t *testing.T) {
 			tile:     slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
 			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390624933,1.017529720390625e+07,3857)",
 		},
+		"replace BBOX with != in query": {
+			sql:      "SELECT * FROM foo WHERE geom && !BBOX! AND bar != 42",
+			srid:     tegola.WebMercator,
+			tile:     slippy.NewTile(2, 1, 1, 64, tegola.WebMercator),
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390624933,1.017529720390625e+07,3857) AND bar != 42",
+		},
 		"replace BBOX and ZOOM 1": {
 			sql:      "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
@@ -68,22 +74,13 @@ func TestReplaceTokens(t *testing.T) {
 
 func TestUppercaseTokens(t *testing.T) {
 	type tcase struct {
-		str         string
-		expected    string
-		expectedErr error
+		str      string
+		expected string
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			out, err := uppercaseTokens(tc.str)
-			if err != nil {
-				if tc.expectedErr.Error() != err.Error() {
-					t.Errorf("unexpected error, expected %v got %v", tc.expectedErr, err)
-					return
-				}
-
-				return
-			}
+			out := uppercaseTokens(tc.str)
 
 			if out != tc.expected {
 				t.Errorf("expected \n \t%v\n out \n \t%v", tc.expected, out)
@@ -106,8 +103,8 @@ func TestUppercaseTokens(t *testing.T) {
 			expected: "",
 		},
 		"unclosed token": {
-			str:         "unclosed !token",
-			expectedErr: ErrUnclosedToken("unclosed !token"),
+			str:      "unclosed !token",
+			expected: "unclosed !token",
 		},
 	}
 
