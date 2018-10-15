@@ -26,16 +26,15 @@
 
 
 # --- Build the binary
-FROM golang:1.10.3-alpine3.7 AS build
+FROM golang:1.11.0-alpine3.8 AS build
 
 # Only needed for CGO support at time of build, results in no noticable change in binary size
 #  incurs approximately 1:30 extra build time (1:54 vs 0:27) to install packages.  Doesn't impact
 #  development as these layers are drawn from cache after the first build.
 RUN apk update
-RUN apk add musl-dev=1.1.18-r3
-RUN apk add gcc=6.4.0-r5
+RUN apk add musl-dev=1.1.19-r10
+RUN apk add gcc=6.4.0-r9
 RUN apk add git
-
 
 # Set up source for compilation
 RUN mkdir -p /opt/tegola_src
