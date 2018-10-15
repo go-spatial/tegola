@@ -40,6 +40,7 @@ func GZipHandler(next http.Handler) http.Handler {
 
 		// set appropriate header
 		w.Header().Set("Content-Encoding", "gzip")
+
 		next.ServeHTTP(w, r)
 		return
 	})
@@ -53,6 +54,9 @@ type gzipDecompressResponseWriter struct {
 }
 
 func (w *gzipDecompressResponseWriter) Header() http.Header {
+	// delete the Content-Length header as it would give the length of the compressed tile
+	// rather than the uncompressed tile
+	w.resp.Header().Del("Content-Length")
 	return w.resp.Header()
 }
 
@@ -78,6 +82,7 @@ func (w *gzipDecompressResponseWriter) Write(b []byte) (int, error) {
 	return w.resp.Write(buf.Bytes())
 }
 
+// TODO (arolek): adjust Content-Length header on decompress
 func (w *gzipDecompressResponseWriter) WriteHeader(i int) {
 	w.status = i
 	w.resp.WriteHeader(i)

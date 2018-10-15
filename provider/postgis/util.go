@@ -60,6 +60,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		if f == `"`+l.geomField+`"` {
 			fgeom = i
 		}
+
 		if f == `"`+l.idField+`"` {
 			fgid = true
 		}
@@ -73,7 +74,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		flds[fgeom] = fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField)
 	}
 
-	if !fgid {
+	if !fgid && l.idField != "" {
 		flds = append(flds, fmt.Sprintf(`"%v"`, l.idField))
 	}
 

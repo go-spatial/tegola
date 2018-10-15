@@ -57,9 +57,3 @@ func (t *Tile) VTile(ctx context.Context, tile *tegola.Tile) (vt *vectorTile.Til
 	}
 	return vt, nil
 }
-
-//TODO: What is this functions suppose to do?
-//TileFromVTile will return a Tile object from the given vectorTile Tile object
-func TileFromVTile(t *vectorTile.Tile) (*Tile, error) {
-	return nil, nil
-}
