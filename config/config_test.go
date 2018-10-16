@@ -99,6 +99,10 @@ func TestParse(t *testing.T) {
 				port = ":8080"
 				cors_allowed_origin = "tegola.io"
 
+					[webserver.headers]
+					Access-Control-Allow-Origin = "*"
+					Access-Control-Allow-Methods = "GET, OPTIONS"
+
 				[cache]
 				type = "file"
 				basepath = "/tmp/tegola-cache"
@@ -133,9 +137,12 @@ func TestParse(t *testing.T) {
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName:          "cdn.tegola.io",
-					Port:              ":8080",
-					CORSAllowedOrigin: "tegola.io",
+					HostName: "cdn.tegola.io",
+					Port:     ":8080",
+					Headers: env.Dict{
+						"Access-Control-Allow-Origin":  "*",
+						"Access-Control-Allow-Methods": "GET, OPTIONS",
+					},
 				},
 				Cache: env.Dict{
 					"type":     "file",

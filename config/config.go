@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/internal/log"
@@ -34,9 +33,9 @@ type Config struct {
 }
 
 type Webserver struct {
-	HostName          env.String `toml:"hostname"`
-	Port              env.String `toml:"port"`
-	CORSAllowedOrigin env.String `toml:"cors_allowed_origin"`
+	HostName env.String `toml:"hostname"`
+	Port     env.String `toml:"port"`
+	Headers  env.Dict   `toml:"headers"`
 }
 
 // A Map represents a map in the Tegola Config file.
