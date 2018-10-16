@@ -17,6 +17,8 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 )
 
+var blacklistHeaders = []string{"content-encoding", "content-length", "content-type"}
+
 // Config represents a tegola config file.
 type Config struct {
 	// the tile buffer to use
@@ -122,6 +124,15 @@ func (c *Config) Validate() error {
 
 			// add the MapLayer to our map
 			mapLayers[string(m.Name)][name] = l
+		}
+	}
+
+	// check for blacklisted headers
+	for k := range c.Webserver.Headers {
+		for _, v := range blacklistHeaders {
+			if v == strings.ToLower(k) {
+				return ErrInvalidHeader{Header: k}
+			}
 		}
 	}
 

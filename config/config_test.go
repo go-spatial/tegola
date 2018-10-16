@@ -697,6 +697,76 @@ func TestValidate(t *testing.T) {
 				ProviderLayer2: "provider2.water_default_z",
 			},
 		},
+		"6 blocked headers": {
+			config: config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					Port: ":8080",
+					Headers: env.Dict{
+						"Content-Encoding": "plain/text",
+					},
+				},
+				Providers: []env.Dict{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+					{
+						"name":     "provider2",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water",
+								MinZoom:       env.UintPtr(10),
+								MaxZoom:       env.UintPtr(15),
+							},
+							{
+								ProviderLayer: "provider2.water",
+								MinZoom:       env.UintPtr(16),
+								MaxZoom:       env.UintPtr(20),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrInvalidHeader{
+				Header: "Content-Encoding",
+			},
+		},
 	}
 
 	for name, tc := range tests {

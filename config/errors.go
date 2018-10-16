@@ -52,3 +52,11 @@ type ErrMissingEnvVar struct {
 func (e ErrMissingEnvVar) Error() string {
 	return fmt.Sprintf("config: config file is referencing an environment variable that is not set (%v)", e.EnvVar)
 }
+
+type ErrInvalidHeader struct {
+	Header string
+}
+
+func (e ErrInvalidHeader) Error() string {
+	return fmt.Sprintf("config: header (%v) blacklisted", e.Header)
+}
