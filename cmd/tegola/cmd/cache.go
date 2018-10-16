@@ -29,6 +29,8 @@ var (
 	cacheZXY string
 	// read zxy values from a file
 	cacheFile string
+	// read zxy values from a file for explicit seeding
+	cacheExplicit string
 	//	filter which maps to process. default will operate on all mapps
 	cacheMap string
 	// the min zoom to cache from
@@ -310,6 +312,30 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		}
 
 		return nil
+	case cacheExplicit != "": // read xyz from a file (explicit tile list)
+		f, err := os.Open(cacheExplicit)
+		if err != nil {
+			return fmt.Errorf("unable to open file (%v): %v", cacheExplicit, err)
+		}
+
+		scanner := bufio.NewScanner(f)
+
+		for scanner.Scan() {
+			z, x, y, err := format.Parse(scanner.Text())
+			if err != nil {
+				return err
+			}
+			if gdcmd.IsCancelled() {
+				return fmt.Errorf("cache manipulation interrupted")
+			}
+			tile := slippy.NewTile(z, x, y, 0, tegola.WebMercator)
+
+			c <- tile
+
+		}
+
+		return nil
+
 	case cacheFile != "": // read xyz from a file (tile list)
 		f, err := os.Open(cacheFile)
 		if err != nil {
@@ -349,6 +375,7 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 		}
 
 		return nil
+
 	default: // bounding box caching
 		var err error
 
