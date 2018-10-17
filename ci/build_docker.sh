@@ -12,7 +12,7 @@ CI_DIR=`dirname $0`
 PROJECT_DIR="$CI_DIR/.."
 source $CI_DIR/install_go_bin.sh
 
-
+# a cat like program for filling in template vars
 go_install github.com/gdey/bastet
 
 VERSION_TAG=$TRAVIS_TAG
@@ -29,10 +29,15 @@ fi
 
 
 LDFLAGS="-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION_TAG}"
-CONTAINER_MAINTAINER="Development@JivanAmara.net"
+CONTAINER_MAINTAINER="a.rolek@gmail.com"
 
+# update our docker template with the provided variables
 bastet -o docker/Dockerfile1 docker/Dockerfile.tpl "flags=-ldflags \"${LDFLAGS}\"" "version=${VERSION_TAG}" "maintainer=${CONTAINER_MAINTAINER}"
+
+# build the container
 docker build -f docker/Dockerfile1 -t ${DOCKER_NAME}:${VERSION_TAG} .
+
+# push to docker hub
 if [ "${PUSH_TO_DOCKER}" == "yes" ] ; then
    docker tag $DOCKERHUB_ORG/$DOCKERHUB_REPO:${VERSION_TAG} $DOCKERHUB_ORG/$DOCKERHUB_REPO:latest
    docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
