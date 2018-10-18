@@ -99,6 +99,9 @@ func main() {
 	}
 	server.CORSAllowedMethods = header
 
+	// set the http reply headers
+	server.Headers = conf.Webserver.Headers
+
 	// set tile buffer
 	if conf.TileBuffer != nil {
 		server.TileBuffer = float64(*conf.TileBuffer)

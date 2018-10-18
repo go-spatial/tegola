@@ -36,7 +36,12 @@ var (
 	CORSAllowedOrigin string = "*"
 
 	// CORSAllowedMethods is the "Access-Control-Allow-Methods" CORS header.
+	// configurable via the tegola config.toml file (set in main.go)
 	CORSAllowedMethods string = "GET, OPTIONS"
+
+	// Headers is the map of http reply headers.
+	// configurable via the tegola config.toml file (set in main.go)
+	Headers map[string]interface{}
 
 	// TileBuffer is the tile buffer to use.
 	// configurable via tegola config.tomal file (set in main.go)
@@ -52,16 +57,16 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r.OptionsHandler = corsHandler
 
 	// capabilities endpoints
-	group.UsingContext().Handler("GET", "/capabilities", CORSHandler(HandleCapabilities{}))
-	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
+	group.UsingContext().Handler("GET", "/capabilities", HeadersHandler(CORSHandler(HandleCapabilities{})))
+	group.UsingContext().Handler("GET", "/capabilities/:map_name", HeadersHandler(CORSHandler(HandleMapCapabilities{})))
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HeadersHandler(CORSHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HeadersHandler(CORSHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
 
 	// map style
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HeadersHandler(CORSHandler(HandleMapStyle{})))
 
 	// setup viewer routes, which can be excluded via build flags
 	setupViewer(group)
