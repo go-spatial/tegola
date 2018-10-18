@@ -57,16 +57,16 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r.OptionsHandler = corsHandler
 
 	// capabilities endpoints
-	group.UsingContext().Handler("GET", "/capabilities", HeadersHandler(CORSHandler(HandleCapabilities{})))
-	group.UsingContext().Handler("GET", "/capabilities/:map_name", HeadersHandler(CORSHandler(HandleMapCapabilities{})))
+	group.UsingContext().Handler("GET", "/capabilities", HeadersHandler(HandleCapabilities{}))
+	group.UsingContext().Handler("GET", "/capabilities/:map_name", HeadersHandler(HandleMapCapabilities{}))
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HeadersHandler(CORSHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HeadersHandler(CORSHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
 
 	// map style
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HeadersHandler(CORSHandler(HandleMapStyle{})))
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HeadersHandler(HandleMapStyle{}))
 
 	// setup viewer routes, which can be excluded via build flags
 	setupViewer(group)
