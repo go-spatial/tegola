@@ -2,19 +2,21 @@ package cmd
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
-
-	"github.com/spf13/cobra"
 
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"
+	"github.com/spf13/cobra"
 )
 
 var (
-	serverPort      string
-	defaultHTTPPort = ":8080"
+	serverPort                string
+	defaultHTTPPort           = ":8080"
+	defaultCORSAllowedOrigin  = "*"
+	defaultCORSAllowedMethods = "GET, OPTIONS"
 )
 
 var serverCmd = &cobra.Command{
@@ -37,10 +39,19 @@ var serverCmd = &cobra.Command{
 		server.Version = Version
 		server.HostName = string(conf.Webserver.HostName)
 
-		// set the CORSAllowedOrigin if a value is provided
-		if conf.Webserver.CORSAllowedOrigin != "" {
-			server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
+		// set the CORSAllowedOrigin to configured or default value
+		header, err := conf.Webserver.Headers.String("Access-Control-Allow-Origin", &defaultCORSAllowedOrigin)
+		if err != nil {
+			log.Fatal(err)
 		}
+		server.CORSAllowedOrigin = header
+
+		// set the CORSAllowedMethods to configured or default value
+		header, err = conf.Webserver.Headers.String("Access-Control-Allow-Methods", &defaultCORSAllowedMethods)
+		if err != nil {
+			log.Fatal(err)
+		}
+		server.CORSAllowedMethods = header
 
 		// set tile buffer
 		if conf.TileBuffer != nil {

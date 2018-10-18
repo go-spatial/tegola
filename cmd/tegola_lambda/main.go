@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/arolek/algnhsa"
-
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
@@ -18,6 +17,11 @@ import (
 
 // set at build time via the CI
 var Version = "version not set"
+
+var (
+	defaultCORSAllowedOrigin  = "*"
+	defaultCORSAllowedMethods = "GET, OPTIONS"
+)
 
 func init() {
 	// override the URLRoot func with a lambda specific one
@@ -81,10 +85,19 @@ func main() {
 		server.HostName = string(conf.Webserver.HostName)
 	}
 
-	// set the CORSAllowedOrigin if a value is provided
-	if conf.Webserver.CORSAllowedOrigin != "" {
-		server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
+	// set the CORSAllowedOrigin to configured or default value
+	header, err := conf.Webserver.Headers.String("Access-Control-Allow-Origin", &defaultCORSAllowedOrigin)
+	if err != nil {
+		log.Fatal(err)
 	}
+	server.CORSAllowedOrigin = header
+
+	// set the CORSAllowedMethods to configured or default value
+	header, err = conf.Webserver.Headers.String("Access-Control-Allow-Methods", &defaultCORSAllowedMethods)
+	if err != nil {
+		log.Fatal(err)
+	}
+	server.CORSAllowedMethods = header
 
 	// set tile buffer
 	if conf.TileBuffer != nil {

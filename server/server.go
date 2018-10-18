@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
@@ -35,6 +34,9 @@ var (
 	// CORSAllowedOrigin is the "Access-Control-Allow-Origin" CORS header.
 	// configurable via the tegola config.toml file (set in main.go)
 	CORSAllowedOrigin string = "*"
+
+	// CORSAllowedMethods is the "Access-Control-Allow-Methods" CORS header.
+	CORSAllowedMethods string = "GET, OPTIONS"
 
 	// TileBuffer is the tile buffer to use.
 	// configurable via tegola config.tomal file (set in main.go)
@@ -148,6 +150,6 @@ var URLRoot = func(r *http.Request) string {
 // corsHanlder is used to respond to all OPTIONS requests for registered routes
 func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
 	w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", CORSAllowedMethods)
 	return
 }
