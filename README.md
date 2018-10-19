@@ -107,6 +107,10 @@ Under the `maps` section, map layers are associated with data provider layers an
 [webserver]
 port = ":9090"              # port to bind the web server to. defaults ":8080"
 
+	[webserver.headers]
+	Access-Control-Allow-Origin = "*"
+	Cache-Control = "no-cache, no-store, must-revalidate"
+
 [cache]                     # configure a tile cache
 type = "file"               # a file cache will cache to the local file system
 basepath = "/tmp/tegola"    # where to write the file cache

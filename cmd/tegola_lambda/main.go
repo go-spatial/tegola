@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/arolek/algnhsa"
-
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
@@ -81,10 +80,8 @@ func main() {
 		server.HostName = string(conf.Webserver.HostName)
 	}
 
-	// set the CORSAllowedOrigin if a value is provided
-	if conf.Webserver.CORSAllowedOrigin != "" {
-		server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
-	}
+	// set the http reply headers
+	server.Headers = conf.Webserver.Headers
 
 	// set tile buffer
 	if conf.TileBuffer != nil {
