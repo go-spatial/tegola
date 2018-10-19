@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
@@ -134,35 +134,17 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 		pixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', -1, 64),
 	)
 
-	uppercaseTokenSQL, err := uppercaseTokens(sql)
-	if err != nil {
-		return "", err
-	}
+	uppercaseTokenSQL := uppercaseTokens(sql)
 
 	return tokenReplacer.Replace(uppercaseTokenSQL), nil
 }
 
-//	uppercaseTokens will sniff for ! chars and uppercase everything between them
-//	if an odd number of ! are found an error is thrown
-func uppercaseTokens(str string) (string, error) {
-	rs := []rune(str)
+var tokenRe = regexp.MustCompile("![a-zA-Z0-9_-]+!")
 
-	uppercase := false
-	for i := range rs {
-		if rs[i] == '!' {
-			uppercase = !uppercase
-			continue
-		}
-		if uppercase {
-			rs[i] = unicode.ToUpper(rs[i])
-		}
-	}
-
-	if uppercase {
-		return str, ErrUnclosedToken(str)
-	}
-
-	return string(rs), nil
+//	uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can
+//	contain alphanumerics, dash and underline chars.
+func uppercaseTokens(str string) string {
+	return tokenRe.ReplaceAllStringFunc(str, strings.ToUpper)
 }
 
 func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
