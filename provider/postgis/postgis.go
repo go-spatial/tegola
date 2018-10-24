@@ -478,11 +478,7 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 		}
 	}
 
-	if rows.Err() != nil {
-		return rows.Err()
-	}
-
-	return nil
+	return rows.Err()
 }
 
 // Layer fetches an individual layer from the provider, if it's configured
@@ -591,11 +587,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		}
 	}
 
-	if rows.Err() != nil {
-		return rows.Err()
-	}
-
-	return nil
+	return rows.Err()
 }
 
 // Close will close the Provider's database connectio
