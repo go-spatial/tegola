@@ -1,6 +1,7 @@
 package postgis
 
 import (
+	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -28,30 +29,44 @@ func TestLayerGeomType(t *testing.T) {
 	port := GetTestPort(t)
 
 	type tcase struct {
-		layerConfig map[string]interface{}
-		layerName   string
-		geom        geom.Geometry
-		err         string
+		config         dict.Dict
+		configOverride map[string]string
+		layerConfig    map[string]interface{}
+		layerName      string
+		geom           geom.Geometry
+		err            string
+	}
+
+	defaultConfig := dict.Dict{
+		ConfigKeyHost:        os.Getenv("PGHOST"),
+		ConfigKeyPort:        port,
+		ConfigKeyDB:          os.Getenv("PGDATABASE"),
+		ConfigKeyUser:        os.Getenv("PGUSER"),
+		ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+		ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+		ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+		ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+		ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 	}
 
 	fn := func(t *testing.T, tc tcase) {
+		// check if we have env vars to override
+		if len(tc.configOverride) > 0 {
+			// copy the config so we don't overwrite other test configs
+			conf := tc.config
+			// set the config overrides
+			for k, v := range tc.configOverride {
+				log.Println(k, v)
+				conf[k] = v
+			}
 
-		var config dict.Dict
-		config = map[string]interface{}{
-			ConfigKeyHost:        os.Getenv("PGHOST"),
-			ConfigKeyPort:        port,
-			ConfigKeyDB:          os.Getenv("PGDATABASE"),
-			ConfigKeyUser:        os.Getenv("PGUSER"),
-			ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-			ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
-			ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-			ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-			ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+			// override the test's config with our new one
+			tc.config = conf
 		}
 
-		config[ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
+		tc.config[ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
 
-		provider, err := NewTileProvider(config)
+		provider, err := NewTileProvider(tc.config)
 		if tc.err != "" {
 			if err == nil || !strings.Contains(err.Error(), tc.err) {
 				t.Errorf("expected error with %q in NewProvider, got: %v", tc.err, err)
@@ -74,6 +89,7 @@ func TestLayerGeomType(t *testing.T) {
 
 	tests := map[string]tcase{
 		"1": {
+			config: defaultConfig,
 			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE geom && !BBOX!",
@@ -82,6 +98,7 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 		},
 		"zoom token replacement": {
+			config: defaultConfig,
 			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE gid = !ZOOM! AND geom && !BBOX!",
@@ -90,6 +107,7 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 		},
 		"configured geometry_type": {
+			config: defaultConfig,
 			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeyGeomType:  "multipolygon",
@@ -99,6 +117,7 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 		},
 		"configured geometry_type (case insensitive)": {
+			config: defaultConfig,
 			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeyGeomType:  "MultiPolyGOn",
@@ -108,6 +127,7 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 		},
 		"invalid configured geometry_type": {
+			config: defaultConfig,
 			layerConfig: map[string]interface{}{
 				ConfigKeyLayerName: "land",
 				ConfigKeyGeomType:  "invalid",
@@ -115,6 +135,19 @@ func TestLayerGeomType(t *testing.T) {
 			},
 			layerName: "land",
 			err:       "unsupported geometry_type",
+			geom:      geom.MultiPolygon{},
+		},
+		"role no access to table": {
+			config: defaultConfig,
+			configOverride: map[string]string{
+				ConfigKeyUser: os.Getenv("PGUSER_NO_ACCESS"),
+			},
+			err: "error fetching geometry type for layer (land): ERROR: permission denied for relation ne_10m_land_scale_rank (SQLSTATE 42501)",
+			layerConfig: map[string]interface{}{
+				ConfigKeyLayerName: "land",
+				ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE geom && !BBOX!",
+			},
+			layerName: "land",
 			geom:      geom.MultiPolygon{},
 		},
 	}

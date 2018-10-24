@@ -478,6 +478,10 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 		}
 	}
 
+	if rows.Err() != nil {
+		return rows.Err()
+	}
+
 	return nil
 }
 
@@ -585,6 +589,10 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		if err = fn(&feature); err != nil {
 			return err
 		}
+	}
+
+	if rows.Err() != nil {
+		return rows.Err()
 	}
 
 	return nil

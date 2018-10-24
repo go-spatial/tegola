@@ -15,6 +15,7 @@ env:
     - PGPORT=5432
     - PGDATABASE="tegola"
     - PGUSER="postgres"
+    - PGUSER_NO_ACCESS="tegola_no_access"
     - PGSSLMODE="disable"
     - PGSSLKEY=""
     - PGSSLCERT=""
