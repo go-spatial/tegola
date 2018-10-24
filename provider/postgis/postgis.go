@@ -160,17 +160,16 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
-	runtimeParams := map[string]string{
-		"default_transaction_read_only": "TRUE",
-	}
-
 	connConfig := pgx.ConnConfig{
-		Host:          host,
-		Port:          uint16(port),
-		Database:      db,
-		User:          user,
-		Password:      password,
-		RuntimeParams: runtimeParams,
+		Host:     host,
+		Port:     uint16(port),
+		Database: db,
+		User:     user,
+		Password: password,
+		RuntimeParams: map[string]string{
+			"default_transaction_read_only": "TRUE",
+			"application_name":              "tegola",
+		},
 	}
 
 	err = ConfigTLS(sslmode, sslkey, sslcert, sslrootcert, &connConfig)
