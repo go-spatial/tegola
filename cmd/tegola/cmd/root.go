@@ -33,6 +33,7 @@ func init() {
 	cacheCmd.Flags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
 	cacheCmd.Flags().StringVarP(&cacheZXY, "tile-name", "", "", "operate on a single tile formatted according to tile-name-format")
 	cacheCmd.Flags().StringVarP(&cacheFile, "tile-list", "", "", "path to a file with tile entries separated by newlines and formatted according to tile-name-format")
+	cacheCmd.Flags().StringVarP(&cacheExplicit, "explicit-list", "", "", "path to a file with tile entries separated by newlines and formatted according to tile-name-format only the tiles in the list will be seeded")
 	cacheCmd.Flags().UintVarP(&cacheMinZoom, "min-zoom", "", 0, "min zoom to seed cache from")
 	cacheCmd.Flags().UintVarP(&cacheMaxZoom, "max-zoom", "", atlas.MaxZoom, "max zoom to seed cache to")
 	cacheCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
