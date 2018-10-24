@@ -1,7 +1,6 @@
 package postgis
 
 import (
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -29,7 +28,7 @@ func TestLayerGeomType(t *testing.T) {
 	port := GetTestPort(t)
 
 	type tcase struct {
-		config         dict.Dict
+		config         map[string]interface{}
 		configOverride map[string]string
 		layerConfig    map[string]interface{}
 		layerName      string
@@ -37,7 +36,7 @@ func TestLayerGeomType(t *testing.T) {
 		err            string
 	}
 
-	defaultConfig := dict.Dict{
+	defaultConfig := map[string]interface{}{
 		ConfigKeyHost:        os.Getenv("PGHOST"),
 		ConfigKeyPort:        port,
 		ConfigKeyDB:          os.Getenv("PGDATABASE"),
@@ -52,11 +51,14 @@ func TestLayerGeomType(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		// check if we have env vars to override
 		if len(tc.configOverride) > 0 {
-			// copy the config so we don't overwrite other test configs
-			conf := tc.config
+			conf := map[string]interface{}{}
+			// copy the original config
+			for k, v := range tc.config {
+				conf[k] = v
+			}
+
 			// set the config overrides
 			for k, v := range tc.configOverride {
-				log.Println(k, v)
 				conf[k] = v
 			}
 
@@ -66,7 +68,7 @@ func TestLayerGeomType(t *testing.T) {
 
 		tc.config[ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
 
-		provider, err := NewTileProvider(tc.config)
+		provider, err := NewTileProvider(dict.Dict(tc.config))
 		if tc.err != "" {
 			if err == nil || !strings.Contains(err.Error(), tc.err) {
 				t.Errorf("expected error with %q in NewProvider, got: %v", tc.err, err)
