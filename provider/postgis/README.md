@@ -86,6 +86,7 @@ $ export PGHOST="localhost"
 $ export PGPORT=5432
 $ export PGDATABASE="tegola"
 $ export PGUSER="postgres"
+$ export PGUSER_NO_ACCESS="tegola_no_access" # used for testing errors when user does not have read permissions on a table
 $ export PGPASSWORD=""
 $ export PGSSLMODE="disable"
 ```

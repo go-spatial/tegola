@@ -15,6 +15,9 @@ configure_postgis() {
     psql -d postgres -c 'DROP DATABASE IF EXISTS "tegola"'
     pg_restore -C -d postgres $test_data
 
+    #	used for testing no access queries
+    psql -d postgres -c 'CREATE ROLE tegola_no_access LOGIN'
+
     #   clean up our test data
     rm $test_data
 }
