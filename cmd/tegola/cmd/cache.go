@@ -248,7 +248,7 @@ func SeedWorker(ctx context.Context, mt MapTile) error {
 	//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
 	runtime.GC()
 
-	log.Infof("seeding map (%v) tile (%v/%v/%v) took: %v", mt.MapName, z, x, y, time.Now().Sub(t))
+	log.Infof("seeding map (%v) tile (%v/%v/%v) took: %vms", mt.MapName, z, x, y, time.Now().Sub(t).Nanoseconds()/1000)
 
 	return nil
 }
