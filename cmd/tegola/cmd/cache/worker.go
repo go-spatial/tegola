@@ -29,6 +29,7 @@ func (s seedPurgeWorkerTileError) Error() string {
 
 func seedWorker(tileBuffer *float64, overwrite bool) func(ctx context.Context, mt MapTile) error {
 	return func(ctx context.Context, mt MapTile) error {
+		log.Infof("Started to seed %v", mt)
 		// track how long the tile generation is taking
 		t := time.Now()
 

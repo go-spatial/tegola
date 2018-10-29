@@ -41,10 +41,16 @@ var RootCmd = &cobra.Command{
 	Short: "tegola is a vector tile server",
 	Long: fmt.Sprintf(`tegola is a vector tile server
 Version: %v`, Version),
-	Args: cmdValidateConfigAndCache,
+	PersistentPreRunE: rootCmdValidatePersistent,
 }
 
-func cmdValidateConfigAndCache(cmd *cobra.Command, args []string) (err error) {
+func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
+	log.Println("running rootCmdValidatePersistent.")
+	return initConfig(configFile)
+}
+
+func initConfig(configFile string) (err error) {
+	log.Printf("Loading config file:", configFile)
 	if conf, err = config.Load(configFile); err != nil {
 		return err
 	}
@@ -68,57 +74,16 @@ func cmdValidateConfigAndCache(cmd *cobra.Command, args []string) (err error) {
 	if err = register.Maps(nil, conf.Maps, providers); err != nil {
 		return fmt.Errorf("could not register maps: %v", err)
 	}
-	if len(conf.Cache) != 0 {
-		// init cache backends
-		cache, err := register.Cache(conf.Cache)
-		if err != nil {
-			return fmt.Errorf("could not register cache: %v", err)
-		}
-		if cache != nil {
-			atlas.SetCache(cache)
-		}
+	if len(conf.Cache) == 0 {
+		return fmt.Errorf("No cache defined in config, please check your config (%v).", configFile)
+	}
+	// init cache backends
+	cache, err := register.Cache(conf.Cache)
+	if err != nil {
+		return fmt.Errorf("could not register cache: %v", err)
+	}
+	if cache != nil {
+		atlas.SetCache(cache)
 	}
 	return nil
-}
-
-func initConfig() {
-	var err error
-
-	conf, err = config.Load(configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// validate our config
-	if err = conf.Validate(); err != nil {
-		log.Fatal(err)
-	}
-
-	// init our providers
-	// but first convert []env.Map -> []dict.Dicter
-	provArr := make([]dict.Dicter, len(conf.Providers))
-	for i := range provArr {
-		provArr[i] = conf.Providers[i]
-	}
-
-	providers, err := register.Providers(provArr)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// init our maps
-	if err = register.Maps(nil, conf.Maps, providers); err != nil {
-		log.Fatal(err)
-	}
-
-	if len(conf.Cache) != 0 {
-		// init cache backends
-		cache, err := register.Cache(conf.Cache)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if cache != nil {
-			atlas.SetCache(cache)
-		}
-	}
 }

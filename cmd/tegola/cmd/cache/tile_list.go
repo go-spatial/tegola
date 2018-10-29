@@ -53,8 +53,8 @@ func tileListValidate(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	if len(args) >= 1 {
-		// we have been provided a file name.
-		// Let's set that up.
+		// we have been provided a file name
+		// let's set that up
 		if tileListFile, err = os.Open(args[0]); err != nil {
 			return err
 		}
@@ -69,7 +69,14 @@ func tileListCommand(cmd *cobra.Command, args []string) (err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer gdcmd.New().Complete()
 	gdcmd.OnComplete(provider.Cleanup)
-	gdcmd.OnComplete(cancel)
+	go func() {
+		select {
+		case <-ctx.Done():
+			return
+		case <-gdcmd.Cancelled():
+			cancel()
+		}
+	}()
 
 	var in io.Reader = os.Stdin
 	if tileListFile != nil {
@@ -81,14 +88,14 @@ func tileListCommand(cmd *cobra.Command, args []string) (err error) {
 
 	tilechannel := generateTilesForTileList(ctx, in, explicit, zooms)
 
-	// Start up workers here.
+	// start up workers here
 	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 }
 
-// generateTilesForTileList will return a channel where all the tiles in the list will be published.
-// If explicit is false and zooms is not empty, it will include the tiles above and below with in the provided zooms.
-func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicate bool, zooms []uint) *TileChannelError {
-	tce := &TileChannelError{
+// generateTilesForTileList will return a channel where all the tiles in the list will be published
+// if explicit is false and zooms is not empty, it will include the tiles above and below with in the provided zooms
+func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit bool, zooms []uint) *TileChannel {
+	tce := &TileChannel{
 		channel: make(chan *slippy.Tile),
 	}
 	go func() {
@@ -110,7 +117,7 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicate
 				return
 			}
 
-			if explicate || len(zooms) == 0 {
+			if explicit || len(zooms) == 0 {
 				select {
 				case tce.channel <- tile:
 				case <-ctx.Done():

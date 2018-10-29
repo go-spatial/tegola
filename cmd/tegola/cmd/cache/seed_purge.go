@@ -36,55 +36,61 @@ var (
 	seedPurgeMaps   []atlas.Map
 )
 
-var PurgeCmd = &cobra.Command{
-	Use:               "seed",
-	Short:             "seed the cache",
-	Long:              "command to seed the tile cache",
-	Example:           "seed --bounds lat,lng,lat,lng",
-	PersistentPreRunE: seedPurgeCmdValidatePresistent,
-	PreRunE:           seedPurgeCmdValidate,
-	RunE:              seedPurgeCommand,
-}
+var PurgeCmd = &cobra.Command{Use: "seed"}
 
-var SeedCmd = &cobra.Command{
-	Use:               "purge",
-	Short:             "purge the cache",
-	Long:              "command to purge the tile cache",
-	Example:           "purge --bounds lat,lng,lat,lng",
-	PersistentPreRunE: seedPurgeCmdValidatePresistent,
-	PreRunE:           seedPurgeCmdValidate,
-	RunE:              seedPurgeCommand,
-}
+var SeedCmd = &cobra.Command{Use: "purge"}
 
 func init() {
-	SeedCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
-	SeedCmd.PersistentFlags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
-	SeedCmd.PersistentFlags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
-	SeedCmd.PersistentFlags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
-	SeedCmd.Flags().UintVarP(&minZoom, "min-zoom", "", 0, "min zoom to seed cache from.")
-	SeedCmd.Flags().UintVarP(&maxZoom, "max-zoom", "", atlas.MaxZoom, "max zoom to see cache to")
-
-	PurgeCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
-	PurgeCmd.PersistentFlags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
-	PurgeCmd.PersistentFlags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
-	PurgeCmd.PersistentFlags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
-	PurgeCmd.Flags().UintVarP(&minZoom, "min-zoom", "", 0, "min zoom to seed cache from.")
-	PurgeCmd.Flags().UintVarP(&maxZoom, "max-zoom", "", atlas.MaxZoom, "max zoom to see cache to")
+	setupSeedPurgeCommands(SeedCmd, PurgeCmd)
 }
 
-// seedPurgeCmdValidate will validate the presistent flags and set associated variables as needed.
-func seedPurgeCmdValidatePresistent(cmd *cobra.Command, args []string) error {
+func setupSeedPurgeCommands(commands ...*cobra.Command) {
+	for _, command := range commands {
+		command.PersistentFlags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
+		command.PersistentFlags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
+		command.PersistentFlags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
+
+		command.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lng/lat bounds to seed the cache with in the format: minx, miny, maxx, maxy")
+		command.Flags().UintVarP(&minZoom, "min-zoom", "", 0, "min zoom to seed cache from.")
+		command.Flags().UintVarP(&maxZoom, "max-zoom", "", atlas.MaxZoom, "max zoom to see cache to")
+
+		command.PersistentPreRunE = seedPurgeCmdValidatePersistent
+		command.PreRunE = seedPurgeCmdValidate
+		command.RunE = seedPurgeCommand
+
+		command.Short = fmt.Sprintf("%v the cache", command.Use)
+		command.Long = fmt.Sprintf("command to %v the tile cache", command.Use)
+		command.Example = fmt.Sprintf("%v --bounds lng,lat,lng,lat", command.Use)
+
+	}
+}
+
+// seedPurgeCmdValidate will validate the presistent flags and set associated variables as needed
+func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
+
+	if cmd.HasParent() {
+		// Let's run the parents Persistent Run commands.
+		pcmd := cmd.Parent()
+		if pcmd.PersistentPreRunE != nil {
+			if err := pcmd.PersistentPreRunE(pcmd, args); err != nil {
+				return err
+			}
+		}
+	}
 
 	// check if the user defined a single map to work on
 	if cacheMap != "" {
 		m, err := atlas.GetMap(cacheMap)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		seedPurgeMaps = append(seedPurgeMaps, m)
 	} else {
 		seedPurgeMaps = atlas.AllMaps()
+		if len(seedPurgeMaps) == 0 {
+			return fmt.Errorf("expected at least one map to be defined? Is you config correct?")
+		}
 	}
 
 	switch cmdName := strings.ToLower(strings.TrimSpace(cmd.CalledAs())); cmdName {
@@ -107,7 +113,7 @@ func seedPurgeCmdValidatePresistent(cmd *cobra.Command, args []string) error {
 
 func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
 
-	// Validate and set bounds flag.
+	// validate and set bounds flag
 	boundsParts := strings.Split(strings.TrimSpace(cacheBounds), ",")
 	if len(boundsParts) != 4 {
 		return fmt.Errorf("invalid value for bounds (%v). expecting minx, miny, maxx, maxy", cacheBounds)
@@ -116,16 +122,16 @@ func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
 	var ok bool
 
 	if seedPurgeBounds[0], ok = IsValidLngString(boundsParts[0]); !ok {
-		return fmt.Errorf("invalid lng value for bounds (%v).", cacheBounds)
+		return fmt.Errorf("0: invalid lng value(%v) for bounds (%v).", boundsParts[0], cacheBounds)
 	}
 	if seedPurgeBounds[1], ok = IsValidLatString(boundsParts[1]); !ok {
-		return fmt.Errorf("invalid lat value for bounds (%v).", cacheBounds)
+		return fmt.Errorf("1: invalid lat value(%v) for bounds (%v).", boundsParts[1], cacheBounds)
 	}
 	if seedPurgeBounds[2], ok = IsValidLngString(boundsParts[2]); !ok {
-		return fmt.Errorf("invalid lng value for bounds (%v).", cacheBounds)
+		return fmt.Errorf("2: invalid lng value(%v) for bounds (%v).", boundsParts[2], cacheBounds)
 	}
 	if seedPurgeBounds[3], ok = IsValidLatString(boundsParts[3]); !ok {
-		return fmt.Errorf("invalid lat value for bounds (%v).", cacheBounds)
+		return fmt.Errorf("3: invalid lat value(%v) for bounds (%v).", boundsParts[3], cacheBounds)
 	}
 
 	// get the zoom ranges
@@ -148,19 +154,30 @@ func minMaxZoomValidate(cmd *cobra.Command, args []string) (err error) {
 func seedPurgeCommand(cmd *cobra.Command, args []string) (err error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	defer gdcmd.New().Complete()
 	gdcmd.OnComplete(provider.Cleanup)
-	gdcmd.OnComplete(cancel)
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			return
+		case <-gdcmd.Cancelled():
+			log.Info("Received kill....")
+			cancel()
+		}
+	}()
 
 	log.Info("zoom list: ", zooms)
 	tilechannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms)
+	log.Infof("Maps are: %v", seedPurgeMaps)
 	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 
 }
 
-func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint) *TileChannelError {
+func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint) *TileChannel {
 
-	tce := &TileChannelError{
+	tce := &TileChannel{
 		channel: make(chan *slippy.Tile),
 	}
 
@@ -188,18 +205,21 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 			xf = maths.Min(xf, maxXYatZ)
 			yf = maths.Min(yf, maxXYatZ)
 
+		MainLoop:
 			for x := xi; x <= xf; x++ {
 				// loop columns
 				for y := yi; y <= yf; y++ {
 					select {
 					case tce.channel <- slippy.NewTile(z, x, y, 0, tegola.WebMercator):
+						fmt.Printf("Send tile %v,%v,%v                                              \r", z, x, y)
 					case <-ctx.Done():
 						// we have been cancelled
-						return
+						break MainLoop
 					}
 				}
 			}
 		}
+		tce.Close()
 	}()
 	return tce
 }
