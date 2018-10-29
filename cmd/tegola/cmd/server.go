@@ -24,7 +24,6 @@ var serverCmd = &cobra.Command{
 	Long:    `Use tegola as a vector tile server. Maps tiles will be served at /maps/:map_name/:z/:x/:y`,
 	Run: func(cmd *cobra.Command, args []string) {
 		gdcmd.New()
-		initConfig()
 		gdcmd.OnComplete(provider.Cleanup)
 
 		// check config for server port setting
