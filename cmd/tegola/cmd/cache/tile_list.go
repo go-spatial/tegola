@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/spf13/cobra"
@@ -33,20 +32,21 @@ var format Format
 var explicit bool
 
 var TileListCmd = &cobra.Command{
-	Use:   "tile-list filename|-",
-	Short: "path to file with tile entries.",
-	RunE:  tileListCommand,
+	Use:     "tile-list filename|-",
+	Short:   "path to file with tile entries.",
+	Example: "tile-list filename",
+	PreRunE: tileListValidate,
+	RunE:    tileListCommand,
 }
 
 func init() {
-	TileListCmd.Flags().UintVarP(&minZoom, "min-zoom", "", 0, "min zoom to seed cache from.")
-	TileListCmd.Flags().UintVarP(&maxZoom, "max-zoom", "", atlas.MaxZoom, "max zoom to see cache to")
-	TileListCmd.Flags().StringVarP(&tileListFormat, "tile-name-format", "", "/zxy", "4 character string where the first character is a non-numeric delimiter followed by \"z\", \"x\" and \"y\" defining the coordinate order")
+	setupMinMaxZoomFlags(TileListCmd, 0, 0)
+	setupTileNameFormat(TileListCmd)
 }
 
 func tileListValidate(cmd *cobra.Command, args []string) (err error) {
 
-	explicit = !(cmd.Flag("min-zoom").Changed || cmd.Flag("max-zoom").Changed)
+	explicit = IsMinMaxZoomExplicit(cmd)
 	if !explicit {
 		// get the zoom ranges.
 		if err = minMaxZoomValidate(cmd, args); err != nil {
@@ -66,8 +66,7 @@ func tileListValidate(cmd *cobra.Command, args []string) (err error) {
 			return err
 		}
 	}
-	format, err = NewFormat(tileListFormat)
-	return err
+	return tileNameFormatValidate(cmd, args)
 }
 
 func tileListCommand(cmd *cobra.Command, args []string) (err error) {
@@ -105,7 +104,7 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 		channel: make(chan *slippy.Tile),
 	}
 	go func() {
-		defer close(tce.channel)
+		defer tce.Close()
 
 		var (
 			err        error

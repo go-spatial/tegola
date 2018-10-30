@@ -36,33 +36,58 @@ var (
 	seedPurgeMaps   []atlas.Map
 )
 
-var PurgeCmd = &cobra.Command{Use: "seed"}
-
-var SeedCmd = &cobra.Command{Use: "purge"}
-
-func init() {
-	setupSeedPurgeCommands(SeedCmd, PurgeCmd)
+var SeedPurgeCmd = &cobra.Command{
+	Use:     "",
+	Aliases: []string{"seed", "purge"},
+	/*
+		Short:   "[seed|purge] the cache",
+		Long:    "command to [seed|purge] the tile cache",
+	*/
+	Example: "tegola cache seed --bounds lng,lat,lng,lat",
 }
 
-func setupSeedPurgeCommands(commands ...*cobra.Command) {
-	for _, command := range commands {
-		command.PersistentFlags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
-		command.PersistentFlags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
-		command.PersistentFlags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
+func init() {
+	setupSeedPurgeCommands(SeedPurgeCmd)
+	SeedPurgeCmd.SetUsageTemplate(`Usage: {{.CommandPath}}[seed|purge] [command]{{if .HasExample}}
 
-		command.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lng/lat bounds to seed the cache with in the format: minx, miny, maxx, maxy")
-		command.Flags().UintVarP(&minZoom, "min-zoom", "", 0, "min zoom to seed cache from.")
-		command.Flags().UintVarP(&maxZoom, "max-zoom", "", atlas.MaxZoom, "max zoom to see cache to")
+Examples:
+{{.Example}}{{end}}
 
-		command.PersistentPreRunE = seedPurgeCmdValidatePersistent
-		command.PreRunE = seedPurgeCmdValidate
-		command.RunE = seedPurgeCommand
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`)
 
-		command.Short = fmt.Sprintf("%v the cache", command.Use)
-		command.Long = fmt.Sprintf("command to %v the tile cache", command.Use)
-		command.Example = fmt.Sprintf("%v --bounds lng,lat,lng,lat", command.Use)
+}
 
-		command.AddCommand(TileListCmd)
+func setupSeedPurgeCommands(cmds ...*cobra.Command) {
+	for i := range cmds {
+		cmds[i].PersistentFlags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
+		cmds[i].PersistentFlags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
+		cmds[i].PersistentFlags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
+
+		cmds[i].Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lng/lat bounds to seed the cache with in the format: minx, miny, maxx, maxy")
+
+		setupMinMaxZoomFlags(cmds[i], 0, atlas.MaxZoom)
+
+		cmds[i].PersistentPreRunE = seedPurgeCmdValidatePersistent
+		cmds[i].PreRunE = seedPurgeCmdValidate
+		cmds[i].RunE = seedPurgeCommand
+
+		/*
+			cmds[i].Short = fmt.Sprintf("[seed|purge] the cache", cmds[i].Use)
+			cmds[i].Long = fmt.Sprintf("command to %v the tile cache", cmds[i].Use)
+			cmds[i].Example = fmt.Sprintf("%v --bounds lng,lat,lng,lat", cmds[i].Use)
+		*/
+
+		cmds[i].AddCommand(TileListCmd)
+		cmds[i].AddCommand(TileNameCmd)
 
 	}
 }
@@ -141,15 +166,6 @@ func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
 		return err
 	}
 
-	return nil
-}
-
-func minMaxZoomValidate(cmd *cobra.Command, args []string) (err error) {
-
-	zooms, err = sliceFromRange(minZoom, maxZoom)
-	if err != nil {
-		return fmt.Errorf("invalid zoom range, %v", err)
-	}
 	return nil
 }
 

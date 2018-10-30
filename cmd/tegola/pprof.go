@@ -15,19 +15,32 @@ package main
 // The profiler can be completely disabled during the build with the `noPprof` build flag
 // for example from the cmd/tegola direcotry:
 //
-// go build -tags 'noPprof'
+// go build -tags 'pprof'
 
 import (
-	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
+	"strconv"
+	"strings"
+
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 func init() {
 	if bind := os.Getenv("TEGOLA_HTTP_PPROF_BIND"); bind != "" {
 		go func() {
-			log.Fatal(http.ListenAndServe(bind, nil))
+			log.Infof("Starting up profiler on %v", bind)
+			err := http.ListenAndServe(bind, nil)
+			log.Infof("Failed to start up profiler on %v : %v", bind, err)
 		}()
+		if mutexrate := os.Getenv("TEGOLA_PPROF_MUTEX_RATE"); mutexrate != "" {
+			rate, _ := strconv.Atoi(strings.TrimSpace(mutexrate))
+			if rate > 0 {
+				log.Infof("Setting Mutex Profile Fraction rate to %v", rate)
+				runtime.SetMutexProfileFraction(rate)
+			}
+		}
 	}
 }

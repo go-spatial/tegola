@@ -35,8 +35,25 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
-	Cmd.AddCommand(SeedCmd)
-	Cmd.AddCommand(PurgeCmd)
+	Cmd.AddCommand(SeedPurgeCmd)
+	//	Cmd.AddCommand(PurgeCmd)
+	Cmd.SetUsageTemplate(`Usage: {{.CommandPath}} [command]{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}
+
+Available Commands:
+  {{rpad "seed" .NamePadding}} seed tiles to the cache
+  {{rpad "purge" .NamePadding}} purge tiles from the cache{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`)
 }
 
 type TileChannel struct {
