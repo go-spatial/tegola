@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 
@@ -11,6 +10,7 @@ import (
 	cachecmd "github.com/go-spatial/tegola/cmd/tegola/cmd/cache"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 var (
@@ -49,7 +49,7 @@ func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
 }
 
 func initConfig(configFile string) (err error) {
-	log.Printf("Loading config file:", configFile)
+	log.Infof("Loading config file: %v", configFile)
 	if conf, err = config.Load(configFile); err != nil {
 		return err
 	}

@@ -24,7 +24,7 @@ func (s seedPurgeWorkerTileError) Error() string {
 	if s.Purge {
 		cmd = "purging"
 	}
-	return fmt.Sprintf("Error %v tile (%+v): %v", cmd, s.Tile, s.Err)
+	return fmt.Sprintf("error %v tile (%+v): %v", cmd, s.Tile, s.Err)
 }
 
 func seedWorker(tileBuffer *float64, overwrite bool) func(ctx context.Context, mt MapTile) error {
@@ -81,6 +81,9 @@ func seedWorker(tileBuffer *float64, overwrite bool) func(ctx context.Context, m
 
 		//	seed the tile
 		if err = atlas.SeedMapTile(ctx, m, z, x, y); err != nil {
+			if err == context.Canceled {
+				return err
+			}
 			return seedPurgeWorkerTileError{
 				Tile: *mt.Tile,
 				Err:  err,
