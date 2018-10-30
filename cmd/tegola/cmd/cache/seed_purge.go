@@ -171,7 +171,6 @@ func seedPurgeCommand(cmd *cobra.Command, args []string) (err error) {
 
 	log.Info("zoom list: ", zooms)
 	tilechannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms)
-	log.Infof("Maps are: %v", seedPurgeMaps)
 	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 
 }
