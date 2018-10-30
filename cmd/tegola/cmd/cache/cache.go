@@ -150,6 +150,7 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 					continue
 				}
 			}
+			log.Debugf("Worker %v done.", i)
 			wg.Done()
 		}(i)
 	}
