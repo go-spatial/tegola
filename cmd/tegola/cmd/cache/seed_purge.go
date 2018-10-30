@@ -17,6 +17,24 @@ import (
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 )
 
+const defaultUsage = `Usage:{{if .Runnable}}
+  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
+Aliases:
+  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+Examples:
+{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
+
 // Flag parameters
 var (
 	// the amount of concurrency to use. defaults to the number of CPUs on the machine
@@ -37,8 +55,8 @@ var (
 )
 
 var SeedPurgeCmd = &cobra.Command{
-	Use:     "",
-	Aliases: []string{"seed", "purge"},
+	Use:     "seed",
+	Aliases: []string{"purge"},
 	/*
 		Short:   "[seed|purge] the cache",
 		Long:    "command to [seed|purge] the tile cache",
@@ -48,21 +66,7 @@ var SeedPurgeCmd = &cobra.Command{
 
 func init() {
 	setupSeedPurgeCommands(SeedPurgeCmd)
-	SeedPurgeCmd.SetUsageTemplate(`Usage: {{.CommandPath}}[seed|purge] [command]{{if .HasExample}}
-
-Examples:
-{{.Example}}{{end}}
-
-Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-Flags:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
-Global Flags:
-{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
-Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`)
+	SeedPurgeCmd.SetUsageTemplate(defaultUsage)
 
 }
 
@@ -119,8 +123,11 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("expected at least one map to be defined? Is you config correct?")
 		}
 	}
+	cmdName := strings.ToLower(strings.TrimSpace(cmd.CalledAs()))
 
-	switch cmdName := strings.ToLower(strings.TrimSpace(cmd.CalledAs())); cmdName {
+	log.Infof("cmdName is %v", cmdName)
+
+	switch cmdName {
 	case "purge":
 		seedPurgeWorker = purgeWorker
 	case "seed":

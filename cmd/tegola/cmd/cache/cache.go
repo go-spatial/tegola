@@ -10,6 +10,7 @@ import (
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -195,7 +196,9 @@ TileChannelLoop:
 		}
 	}
 	// Let our workers finish up.
+	log.Info("Waiting for workers to finsish up.")
 	wg.Wait()
+	log.Info("All workers are done.")
 	err = tileChannel.Err()
 	// if we did not have an error from the tile generator
 	// return any error the workers may have had
