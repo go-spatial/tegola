@@ -62,6 +62,8 @@ func setupSeedPurgeCommands(commands ...*cobra.Command) {
 		command.Long = fmt.Sprintf("command to %v the tile cache", command.Use)
 		command.Example = fmt.Sprintf("%v --bounds lng,lat,lng,lat", command.Use)
 
+		command.AddCommand(TileListCmd)
+
 	}
 }
 
@@ -163,7 +165,6 @@ func seedPurgeCommand(cmd *cobra.Command, args []string) (err error) {
 		case <-ctx.Done():
 			return
 		case <-gdcmd.Cancelled():
-			log.Info("Received kill....")
 			cancel()
 		}
 	}()
@@ -211,7 +212,6 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 				for y := yi; y <= yf; y++ {
 					select {
 					case tce.channel <- slippy.NewTile(z, x, y, 0, tegola.WebMercator):
-						fmt.Printf("Send tile %v,%v,%v                                              \r", z, x, y)
 					case <-ctx.Done():
 						// we have been cancelled
 						break MainLoop

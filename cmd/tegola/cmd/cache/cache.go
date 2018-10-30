@@ -10,7 +10,6 @@ import (
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
-	"github.com/go-spatial/tegola/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -50,10 +49,8 @@ type TileChannel struct {
 
 func (tc *TileChannel) Channel() <-chan *slippy.Tile {
 	if tc == nil {
-		log.Infof("Returning nil for TileChannel")
 		return nil
 	}
-	log.Infof("Returning tileChannel %v", tc.channel)
 	return tc.channel
 }
 
@@ -113,7 +110,6 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 	for i := 0; i < concurrency; i++ {
 		go func(i int) {
 			var cleanup bool
-			log.Infof("%03v: Starting up worker for tiler...", i)
 			// range our channel to listen for jobs
 			for mt := range tiler {
 				errLock.RLock()
@@ -133,7 +129,6 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 			}
 			if cleanup {
 				for _ = range tiler {
-					log.Infof("%03v: Cleanup the tiler...", i)
 					continue
 				}
 			}
@@ -141,12 +136,10 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 		}(i)
 	}
 
-	log.Infof("Staring up TileChannelLoop")
 	// Run through the incoming tiles, and generate the tileMaps as needed.
 TileChannelLoop:
 	for tile := range tileChannel.Channel() {
 		for m := range maps {
-			log.Info("Working on map for tile")
 
 			if ctx.Err() != nil {
 				cleanup = true
@@ -168,34 +161,34 @@ TileChannelLoop:
 				Tile:    tile,
 			}
 
-			log.Info("Going to wait on tiler")
 			select {
 			case tiler <- mapTile:
 			case <-ctx.Done():
-				log.Info("Got done from context for tiler.")
 				cleanup = true
 				break TileChannelLoop
 			}
 		}
 	}
-	log.Info("Closing out tiler....")
 
 	close(tiler)
 	if cleanup {
 		// want to soak up any messages.
 		for _ = range tileChannel.Channel() {
-			log.Info("Soking up the tilChannel...")
 			continue
 		}
 	}
 	// Let our workers finish up.
 	wg.Wait()
-	if err = tileChannel.Err(); err != nil {
-		return err
-	}
+	err = tileChannel.Err()
 	// if we did not have an error from the tile generator
 	// return any error the workers may have had
-	return tileMapErr
+	if err == nil {
+		err = tileMapErr
+	}
+	if err == context.Canceled {
+		return nil
+	}
+	return err
 }
 
 func IsValidLat(f64 float64) bool { return -90.0 <= f64 && f64 <= 90.0 }

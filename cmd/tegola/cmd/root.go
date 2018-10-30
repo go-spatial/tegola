@@ -45,7 +45,6 @@ Version: %v`, Version),
 }
 
 func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
-	log.Println("running rootCmdValidatePersistent.")
 	return initConfig(configFile)
 }
 

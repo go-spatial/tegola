@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
@@ -32,8 +33,9 @@ var format Format
 var explicit bool
 
 var TileListCmd = &cobra.Command{
-	Use:   "tile-list [filename|-]",
+	Use:   "tile-list filename|-",
 	Short: "path to file with tile entries.",
+	RunE:  tileListCommand,
 }
 
 func init() {
@@ -52,16 +54,20 @@ func tileListValidate(cmd *cobra.Command, args []string) (err error) {
 		}
 	}
 
-	if len(args) >= 1 {
+	if len(args) == 0 {
+		return fmt.Errorf("Filename must be provided.")
+	}
+	fname := strings.TrimSpace(args[0])
+	// - is used to indicate the use of stdin.
+	if fname != "-" {
 		// we have been provided a file name
 		// let's set that up
 		if tileListFile, err = os.Open(args[0]); err != nil {
 			return err
 		}
 	}
-
-	return nil
-
+	format, err = NewFormat(tileListFormat)
+	return err
 }
 
 func tileListCommand(cmd *cobra.Command, args []string) (err error) {
