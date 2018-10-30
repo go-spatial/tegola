@@ -3,9 +3,11 @@ package cache
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
@@ -146,6 +148,7 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 				}
 			}
 			if cleanup {
+				log.Debugf("Worker %v waiting on clean of tiler.", i)
 				for _ = range tiler {
 					continue
 				}
@@ -198,6 +201,11 @@ TileChannelLoop:
 	}
 	// Let our workers finish up.
 	log.Info("Waiting for workers to finsish up.")
+	go func() {
+		<-time.After(60 * time.Second)
+		log.Info("60 seconds passed killing.")
+		os.Exit(1)
+	}()
 	wg.Wait()
 	log.Info("All workers are done.")
 	err = tileChannel.Err()
