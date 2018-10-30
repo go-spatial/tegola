@@ -42,5 +42,12 @@ func init() {
 				runtime.SetMutexProfileFraction(rate)
 			}
 		}
+		if blockrate := os.Getenv("TEGOLA_PPROF_BLOCK_RATE"); blockrate != "" {
+			rate, _ := strconv.Atoi(strings.TrimSpace(blockrate))
+			if rate > 0 {
+				log.Infof("Setting Block Profile rate to %v", rate)
+				runtime.SetMutexProfileFraction(rate)
+			}
+		}
 	}
 }
