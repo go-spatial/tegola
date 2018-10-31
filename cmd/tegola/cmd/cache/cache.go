@@ -3,13 +3,16 @@ package cache
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -35,8 +38,25 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
-	Cmd.AddCommand(SeedCmd)
-	Cmd.AddCommand(PurgeCmd)
+	Cmd.AddCommand(SeedPurgeCmd)
+	//	Cmd.AddCommand(PurgeCmd)
+	Cmd.SetUsageTemplate(`Usage: {{.CommandPath}} [command]{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}
+
+Available Commands:
+  {{rpad "seed" .NamePadding}} seed tiles to the cache
+  {{rpad "purge" .NamePadding}} purge tiles from the cache{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`)
 }
 
 type TileChannel struct {
@@ -128,10 +148,12 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 				}
 			}
 			if cleanup {
+				log.Debugf("Worker %v waiting on clean of tiler.", i)
 				for _ = range tiler {
 					continue
 				}
 			}
+			log.Debugf("Worker %v done.", i)
 			wg.Done()
 		}(i)
 	}
@@ -178,7 +200,14 @@ TileChannelLoop:
 		}
 	}
 	// Let our workers finish up.
+	log.Info("Waiting for workers to finsish up.")
+	go func() {
+		<-time.After(60 * time.Second)
+		log.Info("60 seconds passed killing.")
+		os.Exit(1)
+	}()
 	wg.Wait()
+	log.Info("All workers are done.")
 	err = tileChannel.Err()
 	// if we did not have an error from the tile generator
 	// return any error the workers may have had
