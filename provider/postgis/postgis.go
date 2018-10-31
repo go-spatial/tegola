@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync/atomic"
 
 	"github.com/jackc/pgx"
 
@@ -509,7 +510,7 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 	return ls, nil
 }
 
-var connCount = 0
+var connCount int32
 
 // TileFeatures adheres to the provider.Tiler interface
 func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
@@ -534,12 +535,11 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	}
 
 	//	temp hack to see if we can get the connection to stop clogging
-	if connCount == 100 {
+	if atomic.CompareAndSwapInt32(&connCount, 100, 0) {
 		log.Println("calling reset on connection pool")
 		p.pool.Reset()
-		connCount = 0
 	} else {
-		connCount++
+		atomic.AddInt32(&connCount, 1)
 	}
 
 	log.Printf("started query %+v", p.pool.Stat())
