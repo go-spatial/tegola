@@ -509,6 +509,8 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 	return ls, nil
 }
 
+var connCount = 0
+
 // TileFeatures adheres to the provider.Tiler interface
 func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
 	// fetch the provider layer
@@ -529,6 +531,14 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	// context check
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+
+	//	temp hack to see if we can get the connection to stop clogging
+	if connCount == 100 {
+		p.pool.Reset()
+		connCount = 0
+	} else {
+		connCount++
 	}
 
 	log.Printf("started query %+v", p.pool.Stat())
