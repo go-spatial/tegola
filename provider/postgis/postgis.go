@@ -535,6 +535,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 
 	//	temp hack to see if we can get the connection to stop clogging
 	if connCount == 100 {
+		log.Println("calling reset on connection pool")
 		p.pool.Reset()
 		connCount = 0
 	} else {
@@ -625,7 +626,9 @@ var providers []Provider
 
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
-	log.Printf("cleaning up postgis providers")
+	if len(providers) > 0 {
+		log.Printf("cleaning up postgis providers")
+	}
 
 	for i := range providers {
 		providers[i].Close()
