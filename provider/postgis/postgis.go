@@ -170,6 +170,8 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		Database: db,
 		User:     user,
 		Password: password,
+		Logger:   NewLogger(),
+		LogLevel: pgx.LogLevelInfo,
 		RuntimeParams: map[string]string{
 			"default_transaction_read_only": "TRUE",
 			"application_name":              "tegola",
