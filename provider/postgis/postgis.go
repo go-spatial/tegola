@@ -171,7 +171,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		User:     user,
 		Password: password,
 		Logger:   NewLogger(),
-		LogLevel: pgx.LogLevelInfo,
+		LogLevel: pgx.LogLevelWarn,
 		RuntimeParams: map[string]string{
 			"default_transaction_read_only": "TRUE",
 			"application_name":              "tegola",
@@ -531,15 +531,20 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		return err
 	}
 
+	log.Printf("started query %+v", p.pool.Stat())
 	rows, err := p.pool.Query(sql)
 	if err != nil {
+		log.Println("err querying")
 		return fmt.Errorf("error running layer (%v) SQL (%v): %v", layer, sql, err)
 	}
+	defer log.Println("closing rows")
 	defer rows.Close()
+	log.Println("query completed")
 
 	// fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 
+	log.Println("start processing rows")
 	for rows.Next() {
 		// context check
 		if err := ctx.Err(); err != nil {
@@ -587,11 +592,15 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			Tags:     tags,
 		}
 
+		log.Println("started calling vistor")
 		// pass the feature to the provided callback
 		if err = fn(&feature); err != nil {
+			log.Println("err calling visitor")
 			return err
 		}
+		log.Println("finished calling visitor")
 	}
+	log.Println("finished processing rows")
 
 	return rows.Err()
 }
