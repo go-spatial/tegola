@@ -1,7 +1,6 @@
 package pgx
 
 import (
-	"database/sql/driver"
 	"math"
 	"reflect"
 	"time"
@@ -24,7 +23,7 @@ type FieldDescription struct {
 	DataType        pgtype.OID
 	DataTypeSize    int16
 	DataTypeName    string
-	Modifier        int32
+	Modifier        uint32
 	FormatCode      int16
 }
 
@@ -53,10 +52,6 @@ func (fd FieldDescription) PrecisionScale() (precision, scale int64, ok bool) {
 
 func (fd FieldDescription) Type() reflect.Type {
 	switch fd.DataType {
-	case pgtype.Float8OID:
-		return reflect.TypeOf(float64(0))
-	case pgtype.Float4OID:
-		return reflect.TypeOf(float32(0))
 	case pgtype.Int8OID:
 		return reflect.TypeOf(int64(0))
 	case pgtype.Int4OID:
@@ -167,12 +162,6 @@ func appendBind(
 	buf = append(buf, preparedStatement...)
 	buf = append(buf, 0)
 
-	var err error
-	arguments, err = convertDriverValuers(arguments)
-	if err != nil {
-		return nil, err
-	}
-
 	buf = pgio.AppendInt16(buf, int16(len(parameterOIDs)))
 	for i, oid := range parameterOIDs {
 		buf = pgio.AppendInt16(buf, chooseParameterFormatCode(connInfo, oid, arguments[i]))
@@ -194,22 +183,6 @@ func appendBind(
 	pgio.SetInt32(buf[sp:], int32(len(buf[sp:])))
 
 	return buf, nil
-}
-
-func convertDriverValuers(args []interface{}) ([]interface{}, error) {
-	for i, arg := range args {
-		switch arg := arg.(type) {
-		case pgtype.BinaryEncoder:
-		case pgtype.TextEncoder:
-		case driver.Valuer:
-			v, err := callValuerValue(arg)
-			if err != nil {
-				return nil, err
-			}
-			args[i] = v
-		}
-	}
-	return args, nil
 }
 
 // appendExecute appends a PostgreSQL wire protocol execute message to buf and returns it.

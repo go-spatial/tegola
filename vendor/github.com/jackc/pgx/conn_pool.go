@@ -2,7 +2,6 @@ package pgx
 
 import (
 	"context"
-	"io"
 	"sync"
 	"time"
 
@@ -39,12 +38,6 @@ type ConnPoolStat struct {
 	MaxConnections       int // max simultaneous connections to use
 	CurrentConnections   int // current live connections
 	AvailableConnections int // unused live connections
-}
-
-// CheckedOutConnections returns the amount of connections that are currently
-// checked out from the pool.
-func (stat *ConnPoolStat) CheckedOutConnections() int {
-	return stat.CurrentConnections - stat.AvailableConnections
 }
 
 // ErrAcquireTimeout occurs when an attempt to acquire a connection times out.
@@ -122,14 +115,10 @@ func (p *ConnPool) acquire(deadline *time.Time) (*Conn, error) {
 	}
 
 	// A connection is available
-	// The pool works like a queue. Available connection will be returned
-	// from the head. A new connection will be added to the tail.
-	numAvailable := len(p.availableConnections)
-	if numAvailable > 0 {
-		c := p.availableConnections[0]
+	if len(p.availableConnections) > 0 {
+		c := p.availableConnections[len(p.availableConnections)-1]
 		c.poolResetCount = p.resetCount
-		copy(p.availableConnections, p.availableConnections[1:])
-		p.availableConnections = p.availableConnections[:numAvailable-1]
+		p.availableConnections = p.availableConnections[:len(p.availableConnections)-1]
 		return c, nil
 	}
 
@@ -550,28 +539,6 @@ func (p *ConnPool) CopyFrom(tableName Identifier, columnNames []string, rowSrc C
 	defer p.Release(c)
 
 	return c.CopyFrom(tableName, columnNames, rowSrc)
-}
-
-// CopyFromReader acquires a connection, delegates the call to that connection, and releases the connection
-func (p *ConnPool) CopyFromReader(r io.Reader, sql string) error {
-	c, err := p.Acquire()
-	if err != nil {
-		return err
-	}
-	defer p.Release(c)
-
-	return c.CopyFromReader(r, sql)
-}
-
-// CopyToWriter acquires a connection, delegates the call to that connection, and releases the connection
-func (p *ConnPool) CopyToWriter(w io.Writer, sql string, args ...interface{}) error {
-	c, err := p.Acquire()
-	if err != nil {
-		return err
-	}
-	defer p.Release(c)
-
-	return c.CopyToWriter(w, sql, args...)
 }
 
 // BeginBatch acquires a connection and begins a batch on that connection. When
