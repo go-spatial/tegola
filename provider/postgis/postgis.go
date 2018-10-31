@@ -595,16 +595,16 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 }
 
 // Close will close the Provider's database connectio
-func (p *Provider) Close() {
-	p.pool.Close()
-}
+func (p *Provider) Close() { p.pool.Close() }
 
 // reference to all instantiated providers
 var providers []Provider
 
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
-	log.Printf("cleaning up postgis providers")
+	if len(providers) > 0 {
+		log.Printf("cleaning up postgis providers")
+	}
 
 	for i := range providers {
 		providers[i].Close()
