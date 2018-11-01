@@ -12,8 +12,8 @@ package main
 // To show all allocated space:
 //   % go tool pprof -alloc_space -web http://localhost:6060/debug/pprof/heap
 
-// The profiler can be completely disabled during the build with the `noPprof` build flag
-// for example from the cmd/tegola direcotry:
+// The profiler is disabled by default during build. To enable it, use the builg tag 'pprof'.
+// For example, from the cmd/tegola direcotry:
 //
 // go build -tags 'pprof'
 
