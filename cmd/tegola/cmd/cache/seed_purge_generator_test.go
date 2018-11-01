@@ -1,10 +1,10 @@
 package cache
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
@@ -44,8 +44,7 @@ func (st sTiles) IsEqual(ost sTiles) bool {
 }
 
 func (st sTiles) GoString() string {
-	var b strings.Builder
-	b.WriteString("[")
+	var b = bytes.NewBufferString("[")
 	addComma := false
 	for _, v := range st {
 		if addComma {
@@ -53,13 +52,13 @@ func (st sTiles) GoString() string {
 		} else {
 			addComma = true
 		}
-		fmt.Fprintf(&b, "%#v", v)
+		fmt.Fprintf(b, "%#v", v)
 	}
 	b.WriteString("]")
 	return b.String()
 }
 func (st sTiles) String() string {
-	var b strings.Builder
+	var b = bytes.NewBufferString("[")
 	b.WriteString("[")
 	addComma := false
 	for _, v := range st {
@@ -69,7 +68,7 @@ func (st sTiles) String() string {
 			addComma = true
 		}
 		z, x, y := v.ZXY()
-		fmt.Fprintf(&b, "%v/%v/%v", z, x, y)
+		fmt.Fprintf(b, "%v/%v/%v", z, x, y)
 	}
 	b.WriteString("]")
 	return b.String()
