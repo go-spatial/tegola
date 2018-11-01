@@ -22,11 +22,10 @@ var defaultTileNameFormat = Format{
 	Sep: "/",
 }
 
-// The variable should
 type ErrTileNameFormat string
 
 func (e ErrTileNameFormat) Error() string {
-	return "invalid formatStr " + string(e)
+	return "invalid tile name format " + string(e)
 }
 
 func NewFormat(format string) (Format, error) {
@@ -35,7 +34,7 @@ func NewFormat(format string) (Format, error) {
 		return defaultTileNameFormat, nil
 	}
 
-	// assert length of formatStr string is 4
+	// assert length of format string is 4
 	if len(format) != 4 {
 		return defaultTileNameFormat, ErrTileNameFormat(format)
 	}

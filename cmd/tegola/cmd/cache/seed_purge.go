@@ -35,7 +35,7 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `
 
-// Flag parameters
+// flag parameters
 var (
 	// the amount of concurrency to use. defaults to the number of CPUs on the machine
 	cacheConcurrency int
@@ -47,7 +47,7 @@ var (
 	cacheMap string
 )
 
-// Variables that are not flags but set by the command.
+// variables that are not flags but set by the command.
 var (
 	seedPurgeWorker func(context.Context, MapTile) error
 	seedPurgeBounds [4]float64
@@ -57,10 +57,6 @@ var (
 var SeedPurgeCmd = &cobra.Command{
 	Use:     "seed",
 	Aliases: []string{"purge"},
-	/*
-		Short:   "[seed|purge] the cache",
-		Long:    "command to [seed|purge] the tile cache",
-	*/
 	Example: "tegola cache seed --bounds lng,lat,lng,lat",
 }
 
@@ -84,23 +80,17 @@ func setupSeedPurgeCommands(cmds ...*cobra.Command) {
 		cmds[i].PreRunE = seedPurgeCmdValidate
 		cmds[i].RunE = seedPurgeCommand
 
-		/*
-			cmds[i].Short = fmt.Sprintf("[seed|purge] the cache", cmds[i].Use)
-			cmds[i].Long = fmt.Sprintf("command to %v the tile cache", cmds[i].Use)
-			cmds[i].Example = fmt.Sprintf("%v --bounds lng,lat,lng,lat", cmds[i].Use)
-		*/
-
 		cmds[i].AddCommand(TileListCmd)
 		cmds[i].AddCommand(TileNameCmd)
 
 	}
 }
 
-// seedPurgeCmdValidate will validate the presistent flags and set associated variables as needed
+// seedPurgeCmdValidatePersistent will validate the presistent flags and set associated variables as needed
 func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 
 	if cmd.HasParent() {
-		// Let's run the parents Persistent Run commands.
+		// run the parents Persistent Run commands.
 		pcmd := cmd.Parent()
 		if pcmd.PersistentPreRunE != nil {
 			if err := pcmd.PersistentPreRunE(pcmd, args); err != nil {
@@ -120,12 +110,12 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 	} else {
 		seedPurgeMaps = atlas.AllMaps()
 		if len(seedPurgeMaps) == 0 {
-			return fmt.Errorf("expected at least one map to be defined? Is you config correct?")
+			return fmt.Errorf("expected at least one map to be defined. check your config")
 		}
 	}
 	cmdName := strings.ToLower(strings.TrimSpace(cmd.CalledAs()))
 
-	log.Infof("cmdName is %v", cmdName)
+	// log.Infof("cmdName is %v", cmdName)
 
 	switch cmdName {
 	case "purge":
@@ -138,7 +128,7 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 		}
 		seedPurgeWorker = seedWorker(pf64, cacheOverwrite)
 	default:
-		return fmt.Errorf("expected purge/seed got %v for command name.", cmdName)
+		return fmt.Errorf("expected purge/seed got (%v) for command name.", cmdName)
 	}
 
 	return nil
@@ -194,8 +184,8 @@ func seedPurgeCommand(cmd *cobra.Command, args []string) (err error) {
 
 	log.Info("zoom list: ", zooms)
 	tilechannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms)
-	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 
+	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 }
 
 func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint) *TileChannel {
@@ -217,6 +207,7 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 			maxXYatZ := uint(maths.Exp2(uint64(z))) - 1
 
 			// ensure the initials are smaller than finals
+			// this breaks at the anti meridian: https://github.com/go-spatial/tegola/issues/500
 			if xi > xf {
 				xi, xf = xf, xi
 			}

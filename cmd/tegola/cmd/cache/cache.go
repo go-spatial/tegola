@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// The config from the main app
+// the config from the main app
 var Config *config.Config
 
 var Cmd = &cobra.Command{
@@ -25,7 +25,7 @@ var Cmd = &cobra.Command{
 	Long:  "command to manage the cache",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.HasParent() {
-			// Let's run the parents Persistent Run commands.
+			// run the parents Persistent Run commands.
 			pcmd := cmd.Parent()
 			if pcmd.PersistentPreRunE != nil {
 				if err := pcmd.PersistentPreRunE(pcmd, args); err != nil {
@@ -39,7 +39,6 @@ var Cmd = &cobra.Command{
 
 func init() {
 	Cmd.AddCommand(SeedPurgeCmd)
-	//	Cmd.AddCommand(PurgeCmd)
 	Cmd.SetUsageTemplate(`Usage: {{.CommandPath}} [command]{{if .HasExample}}
 
 Examples:
@@ -119,13 +118,13 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 	tiler := make(chan MapTile)
 	var cleanup bool
 	var errLock sync.RWMutex
-	var tileMapErr error
+	var mapTileErr error
 
 	if len(maps) == 0 {
-		return fmt.Errorf("No maps defined.")
+		return fmt.Errorf("no maps defined")
 	}
 
-	// Set up the workers
+	// set up the workers
 	wg.Add(concurrency)
 	for i := 0; i < concurrency; i++ {
 		go func(i int) {
@@ -133,7 +132,7 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 			// range our channel to listen for jobs
 			for mt := range tiler {
 				errLock.RLock()
-				e := tileMapErr
+				e := mapTileErr
 				errLock.RUnlock()
 				if e != nil {
 					cleanup = true
@@ -142,23 +141,23 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 				if err := worker(ctx, mt); err != nil {
 					cleanup = true
 					errLock.Lock()
-					tileMapErr = err
+					mapTileErr = err
 					errLock.Unlock()
 					break
 				}
 			}
 			if cleanup {
-				log.Debugf("Worker %v waiting on clean of tiler.", i)
+				log.Debugf("worker %v waiting on clean up of tiler", i)
 				for _ = range tiler {
 					continue
 				}
 			}
-			log.Debugf("Worker %v done.", i)
+			log.Debugf("worker %v done", i)
 			wg.Done()
 		}(i)
 	}
 
-	// Run through the incoming tiles, and generate the tileMaps as needed.
+	// run through the incoming tiles, and generate the mapTiles as needed.
 TileChannelLoop:
 	for tile := range tileChannel.Channel() {
 		for m := range maps {
@@ -168,9 +167,9 @@ TileChannelLoop:
 				break
 			}
 
-			{ // Worker error occured.
+			{ // worker error occured.
 				errLock.RLock()
-				e := tileMapErr
+				e := mapTileErr
 				errLock.RUnlock()
 				if e != nil {
 					cleanup = true
@@ -200,19 +199,19 @@ TileChannelLoop:
 		}
 	}
 	// Let our workers finish up.
-	log.Info("Waiting for workers to finsish up.")
+	log.Info("waiting for workers to finsish up")
 	go func() {
 		<-time.After(60 * time.Second)
-		log.Info("60 seconds passed killing.")
+		log.Info("60 seconds passed killing")
 		os.Exit(1)
 	}()
 	wg.Wait()
-	log.Info("All workers are done.")
+	log.Info("all workers are done")
 	err = tileChannel.Err()
 	// if we did not have an error from the tile generator
 	// return any error the workers may have had
 	if err == nil {
-		err = tileMapErr
+		err = mapTileErr
 	}
 	if err == context.Canceled {
 		return nil
