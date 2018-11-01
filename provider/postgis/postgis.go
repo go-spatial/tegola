@@ -617,9 +617,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 }
 
 // Close will close the Provider's database connectio
-func (p *Provider) Close() {
-	p.pool.Close()
-}
+func (p *Provider) Close() { p.pool.Close() }
 
 // reference to all instantiated providers
 var providers []Provider

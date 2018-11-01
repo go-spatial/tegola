@@ -193,23 +193,25 @@ TileChannelLoop:
 
 	close(tiler)
 	if cleanup {
-		// want to soak up any messages.
+		// want to soak up any messages
 		for _ = range tileChannel.Channel() {
 			continue
 		}
 	}
-	// Let our workers finish up.
+	// let our workers finish up
 	log.Info("waiting for workers to finsish up")
+	shouldExit := true
 	go func() {
 		<-time.After(60 * time.Second)
-		log.Info("60 seconds passed killing")
-		os.Exit(1)
+		if !shouldExit {
+			log.Info("60 seconds passed killing")
+			os.Exit(1)
+		}
 	}()
 	wg.Wait()
 	log.Info("all workers are done")
+	shouldExit = false
 	err = tileChannel.Err()
-	// if we did not have an error from the tile generator
-	// return any error the workers may have had
 	if err == nil {
 		err = mapTileErr
 	}

@@ -20,12 +20,16 @@ import (
 const defaultUsage = `Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
+
 Aliases:
   {{.NameAndAliases}}{{end}}{{if .HasExample}}
+
 Examples:
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+  {{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+
 Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
   {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
 Flags:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
 Global Flags:
@@ -57,36 +61,30 @@ var (
 var SeedPurgeCmd = &cobra.Command{
 	Use:     "seed",
 	Aliases: []string{"purge"},
+	Short:   "seed or pruge tiles from the cache",
+	Long:    "command to seed or purge tiles from the cache",
 	Example: "tegola cache seed --bounds lng,lat,lng,lat",
 }
 
 func init() {
-	setupSeedPurgeCommands(SeedPurgeCmd)
+	setupMinMaxZoomFlags(SeedPurgeCmd, 0, atlas.MaxZoom)
+	SeedPurgeCmd.PersistentFlags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
+	SeedPurgeCmd.PersistentFlags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
+	SeedPurgeCmd.PersistentFlags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
+
+	SeedPurgeCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lng/lat bounds to seed the cache with in the format: minx, miny, maxx, maxy")
+
+	SeedPurgeCmd.PersistentPreRunE = seedPurgeCmdValidatePersistent
+	SeedPurgeCmd.PreRunE = seedPurgeCmdValidate
+	SeedPurgeCmd.RunE = seedPurgeCommand
+
 	SeedPurgeCmd.SetUsageTemplate(defaultUsage)
 
+	SeedPurgeCmd.AddCommand(TileListCmd)
+	SeedPurgeCmd.AddCommand(TileNameCmd)
 }
 
-func setupSeedPurgeCommands(cmds ...*cobra.Command) {
-	for i := range cmds {
-		cmds[i].PersistentFlags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
-		cmds[i].PersistentFlags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
-		cmds[i].PersistentFlags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
-
-		cmds[i].Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lng/lat bounds to seed the cache with in the format: minx, miny, maxx, maxy")
-
-		setupMinMaxZoomFlags(cmds[i], 0, atlas.MaxZoom)
-
-		cmds[i].PersistentPreRunE = seedPurgeCmdValidatePersistent
-		cmds[i].PreRunE = seedPurgeCmdValidate
-		cmds[i].RunE = seedPurgeCommand
-
-		cmds[i].AddCommand(TileListCmd)
-		cmds[i].AddCommand(TileNameCmd)
-
-	}
-}
-
-// seedPurgeCmdValidatePersistent will validate the presistent flags and set associated variables as needed
+// seedPurgeCmdValidate will validate the presistent flags and set associated variables as needed
 func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 
 	if cmd.HasParent() {
@@ -115,8 +113,6 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 	}
 	cmdName := strings.ToLower(strings.TrimSpace(cmd.CalledAs()))
 
-	// log.Infof("cmdName is %v", cmdName)
-
 	switch cmdName {
 	case "purge":
 		seedPurgeWorker = purgeWorker
@@ -128,7 +124,8 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 		}
 		seedPurgeWorker = seedWorker(pf64, cacheOverwrite)
 	default:
-		return fmt.Errorf("expected purge/seed got (%v) for command name.", cmdName)
+
+		return fmt.Errorf("expected purge/seed got (%v) for command name", cmdName)
 	}
 
 	return nil
@@ -195,6 +192,7 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 	}
 
 	go func() {
+		defer tce.Close()
 		for _, z := range zooms {
 			// get the tiles at the corners given the bounds and zoom
 			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0], 0, tegola.WebMercator)

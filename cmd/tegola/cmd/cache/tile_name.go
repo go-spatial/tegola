@@ -17,13 +17,14 @@ var tileNameTile *slippy.Tile
 var TileNameCmd = &cobra.Command{
 	Use:     "tile-name z/x/y",
 	Short:   "operate on a single tile formatted according to --format",
+	Example: "tile-name 0/0/0",
 	PreRunE: tileListValidate,
 	RunE:    tileNameCommand,
 }
 
 func init() {
 	setupMinMaxZoomFlags(TileNameCmd, 0, 0)
-	TileNameCmd.Flags().StringVarP(&tileListFormat, "format", "", "/zxy", "4 character string where the first character is a non-numeric delimiter followed by \"z\", \"x\" and \"y\" defining the coordinate order")
+	TileNameCmd.Flags().StringVarP(&tileListFormat, "format", "", "/zxy", "4 character string where the first character is a non-numeric delimiter followed by 'z', 'x' and 'y' defining the coordinate order")
 }
 
 func tileNameValidate(cmd *cobra.Command, args []string) (err error) {
@@ -37,14 +38,14 @@ func tileNameValidate(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	if len(args) == 0 {
-		return fmt.Errorf("tile must be provided.")
+		return fmt.Errorf("tile must be provided")
 	}
 	if err = tileNameFormatValidate(cmd, args); err != nil {
 		return err
 	}
 	tileString := strings.TrimSpace(args[0])
 	if tileString == "" {
-		return fmt.Errorf("tile must be provided.")
+		return fmt.Errorf("tile must be provided")
 	}
 	tileNameTile, err = format.ParseTile(tileString)
 	if err != nil {
@@ -70,7 +71,7 @@ func tileNameCommand(cmd *cobra.Command, args []string) (err error) {
 	log.Info("zoom list: ", zooms)
 	tilechannel := generateTilesForTileName(ctx, tileNameTile, explicit, zooms)
 
-	// start up workers here
+	// start up workers
 	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 
 }
@@ -94,8 +95,8 @@ func generateTilesForTileName(ctx context.Context, tile *slippy.Tile, explicit b
 			return
 		}
 		for _, zoom := range zooms {
-			// Range will include the original tile.
-			err := tile.RangeFamilyAt(zoom, func(Tile *slippy.Tile) error {
+			// range will include the original tile.
+			err := tile.RangeFamilyAt(zoom, func(tile *slippy.Tile) error {
 				select {
 				case tce.channel <- tile:
 				case <-ctx.Done():

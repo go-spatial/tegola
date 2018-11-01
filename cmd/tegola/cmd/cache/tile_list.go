@@ -21,20 +21,20 @@ var (
 	maxZoom uint
 	// the maximum zoom to cache to
 	minZoom uint
-	// the zoom ranges
+	// the zoom range
 	zooms []uint
 	// input string format
 	tileListFormat string
 )
 
 var tileListFile *os.File
-var format Format
+var format Format = defaultTileNameFormat
 var explicit bool
 
 var TileListCmd = &cobra.Command{
 	Use:     "tile-list filename|-",
-	Short:   "path to file with tile entries.",
-	Example: "tile-list filename",
+	Short:   "operate on a list of tile names separated by new lines",
+	Example: "tile-list my-tile-list.txt",
 	PreRunE: tileListValidate,
 	RunE:    tileListCommand,
 }
@@ -55,7 +55,7 @@ func tileListValidate(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	if len(args) == 0 {
-		return fmt.Errorf("Filename must be provided.")
+		return fmt.Errorf("filename must be provided.")
 	}
 	fname := strings.TrimSpace(args[0])
 	// - is used to indicate the use of stdin.
@@ -91,7 +91,7 @@ func tileListCommand(cmd *cobra.Command, args []string) (err error) {
 
 	log.Info("zoom list: ", zooms)
 
-	tilechannel := generateTilesForTileList(ctx, in, explicit, zooms)
+	tilechannel := generateTilesForTileList(ctx, in, explicit, zooms, format)
 
 	// start up workers here
 	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
@@ -99,7 +99,7 @@ func tileListCommand(cmd *cobra.Command, args []string) (err error) {
 
 // generateTilesForTileList will return a channel where all the tiles in the list will be published
 // if explicit is false and zooms is not empty, it will include the tiles above and below with in the provided zooms
-func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit bool, zooms []uint) *TileChannel {
+func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit bool, zooms []uint, format Format) *TileChannel {
 	tce := &TileChannel{
 		channel: make(chan *slippy.Tile),
 	}
@@ -116,9 +116,10 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 
 		for scanner.Scan() {
 			lineNumber++
-			tile, err = format.ParseTile(scanner.Text())
+			txt := scanner.Text()
+			tile, err = format.ParseTile(txt)
 			if err != nil {
-				tce.setError(fmt.Errorf("Failed to parse line[%v]: %v", lineNumber, err))
+				tce.setError(fmt.Errorf("failed to parse line [%v]: %v", lineNumber, err))
 				return
 			}
 
@@ -133,8 +134,8 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 			}
 
 			for _, zoom := range zooms {
-				// Range will include the original tile.
-				err = tile.RangeFamilyAt(zoom, func(Tile *slippy.Tile) error {
+				// range will include the original tile.
+				err = tile.RangeFamilyAt(zoom, func(tile *slippy.Tile) error {
 					select {
 					case tce.channel <- tile:
 					case <-ctx.Done():

@@ -7,7 +7,7 @@ import (
 )
 
 func setupMinMaxZoomFlags(cmd *cobra.Command, min, max uint) {
-	cmd.Flags().UintVarP(&minZoom, "min-zoom", "", min, "min zoom to seed cache from.")
+	cmd.Flags().UintVarP(&minZoom, "min-zoom", "", min, "min zoom to seed cache from")
 	cmd.Flags().UintVarP(&maxZoom, "max-zoom", "", max, "max zoom to seed cache to")
 }
 
