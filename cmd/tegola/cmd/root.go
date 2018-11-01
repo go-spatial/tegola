@@ -2,15 +2,15 @@ package cmd
 
 import (
 	"fmt"
-	"log"
-	"runtime"
 
 	"github.com/spf13/cobra"
 
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
+	cachecmd "github.com/go-spatial/tegola/cmd/tegola/cmd/cache"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 var (
@@ -28,22 +28,12 @@ func init() {
 	// server
 	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
 	RootCmd.AddCommand(serverCmd)
-
 	// cache seed / purge
-	cacheCmd.Flags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
-	cacheCmd.Flags().StringVarP(&cacheZXY, "tile-name", "", "", "operate on a single tile formatted according to tile-name-format")
-	cacheCmd.Flags().StringVarP(&cacheFile, "tile-list", "", "", "path to a file with tile entries separated by newlines and formatted according to tile-name-format")
-	cacheCmd.Flags().UintVarP(&cacheMinZoom, "min-zoom", "", 0, "min zoom to seed cache from")
-	cacheCmd.Flags().UintVarP(&cacheMaxZoom, "max-zoom", "", atlas.MaxZoom, "max zoom to seed cache to")
-	cacheCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lat / long bounds to seed the cache with in the format: minx, miny, maxx, maxy")
-	cacheCmd.Flags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
-	cacheCmd.Flags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
-	cacheCmd.Flags().StringVarP(&cacheFormat, "tile-name-format", "", "/zxy", "4 character string where the first character is a non-numeric delimiter followed by \"z\", \"x\" and \"y\" defining the coordinate order")
-
-	RootCmd.AddCommand(cacheCmd)
-
+	cachecmd.Config = &conf
+	RootCmd.AddCommand(cachecmd.Cmd)
 	// version
 	RootCmd.AddCommand(versionCmd)
+
 }
 
 var RootCmd = &cobra.Command{
@@ -51,19 +41,20 @@ var RootCmd = &cobra.Command{
 	Short: "tegola is a vector tile server",
 	Long: fmt.Sprintf(`tegola is a vector tile server
 Version: %v`, Version),
+	PersistentPreRunE: rootCmdValidatePersistent,
 }
 
-func initConfig() {
-	var err error
+func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
+	return initConfig(configFile)
+}
 
-	conf, err = config.Load(configFile)
-	if err != nil {
-		log.Fatal(err)
+func initConfig(configFile string) (err error) {
+	log.Infof("Loading config file: %v", configFile)
+	if conf, err = config.Load(configFile); err != nil {
+		return err
 	}
-
-	// validate our config
 	if err = conf.Validate(); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// init our providers
@@ -75,22 +66,23 @@ func initConfig() {
 
 	providers, err := register.Providers(provArr)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("could not register providers: %v", err)
 	}
 
 	// init our maps
 	if err = register.Maps(nil, conf.Maps, providers); err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("could not register maps: %v", err)
 	}
-
-	if len(conf.Cache) != 0 {
-		// init cache backends
-		cache, err := register.Cache(conf.Cache)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if cache != nil {
-			atlas.SetCache(cache)
-		}
+	if len(conf.Cache) == 0 {
+		return fmt.Errorf("No cache defined in config, please check your config (%v).", configFile)
 	}
+	// init cache backends
+	cache, err := register.Cache(conf.Cache)
+	if err != nil {
+		return fmt.Errorf("could not register cache: %v", err)
+	}
+	if cache != nil {
+		atlas.SetCache(cache)
+	}
+	return nil
 }

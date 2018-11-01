@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync/atomic"
 
 	"github.com/jackc/pgx"
 
@@ -170,6 +171,8 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		Database: db,
 		User:     user,
 		Password: password,
+		Logger:   NewLogger(),
+		LogLevel: pgx.LogLevelWarn,
 		RuntimeParams: map[string]string{
 			"default_transaction_read_only": "TRUE",
 			"application_name":              "tegola",
@@ -507,6 +510,8 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 	return ls, nil
 }
 
+var connCount int32
+
 // TileFeatures adheres to the provider.Tiler interface
 func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
 	// fetch the provider layer
@@ -529,15 +534,28 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		return err
 	}
 
+	//	temp hack to see if we can get the connection to stop clogging
+	if atomic.CompareAndSwapInt32(&connCount, 100, 0) {
+		log.Println("calling reset on connection pool")
+		p.pool.Reset()
+	} else {
+		atomic.AddInt32(&connCount, 1)
+	}
+
+	log.Printf("started query %+v", p.pool.Stat())
 	rows, err := p.pool.Query(sql)
 	if err != nil {
+		log.Println("err querying")
 		return fmt.Errorf("error running layer (%v) SQL (%v): %v", layer, sql, err)
 	}
+	defer log.Println("closing rows")
 	defer rows.Close()
+	log.Println("query completed")
 
 	// fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 
+	log.Println("start processing rows")
 	for rows.Next() {
 		// context check
 		if err := ctx.Err(); err != nil {
@@ -585,26 +603,30 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			Tags:     tags,
 		}
 
+		log.Println("started calling vistor")
 		// pass the feature to the provided callback
 		if err = fn(&feature); err != nil {
+			log.Println("err calling visitor")
 			return err
 		}
+		log.Println("finished calling visitor")
 	}
+	log.Println("finished processing rows")
 
 	return rows.Err()
 }
 
 // Close will close the Provider's database connectio
-func (p *Provider) Close() {
-	p.pool.Close()
-}
+func (p *Provider) Close() { p.pool.Close() }
 
 // reference to all instantiated providers
 var providers []Provider
 
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
-	log.Printf("cleaning up postgis providers")
+	if len(providers) > 0 {
+		log.Printf("cleaning up postgis providers")
+	}
 
 	for i := range providers {
 		providers[i].Close()
