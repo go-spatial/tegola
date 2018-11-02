@@ -47,6 +47,9 @@ tablename = "gis.zoning_base_3857"
 - `sql` (string): [*Required] custom SQL to use use. Required if `tablename` is not defined. Supports the following tokens:
   - `!BBOX!` - [Required] will be replaced with the bounding box of the tile before the query is sent to the database. `!bbox!` and`!BOX!` are supported as well for compatibilitiy with queries from Mapnik and MapServer styles.
   - `!ZOOM!` - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
+  - `!SCALE_DENOMINATOR!` - [Optional] scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
+  - `!PIXEL_WIDTH!` - [Optional] the pixel width in meters, assuming 256x256 tiles
+  - `!PIXEL_HEIGHT!` - [Optional] the pixel height in meters, assuming 256x256 tiles
 
 `*Required`: either the `tablename` or `sql` must be defined, but not both.
 
@@ -83,6 +86,7 @@ $ export PGHOST="localhost"
 $ export PGPORT=5432
 $ export PGDATABASE="tegola"
 $ export PGUSER="postgres"
+$ export PGUSER_NO_ACCESS="tegola_no_access" # used for testing errors when user does not have read permissions on a table
 $ export PGPASSWORD=""
 $ export PGSSLMODE="disable"
 ```

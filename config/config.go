@@ -12,11 +12,12 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/internal/log"
 )
+
+var blacklistHeaders = []string{"content-encoding", "content-length", "content-type"}
 
 // Config represents a tegola config file.
 type Config struct {
@@ -34,9 +35,9 @@ type Config struct {
 }
 
 type Webserver struct {
-	HostName          env.String `toml:"hostname"`
-	Port              env.String `toml:"port"`
-	CORSAllowedOrigin env.String `toml:"cors_allowed_origin"`
+	HostName env.String `toml:"hostname"`
+	Port     env.String `toml:"port"`
+	Headers  env.Dict   `toml:"headers"`
 }
 
 // A Map represents a map in the Tegola Config file.
@@ -123,6 +124,15 @@ func (c *Config) Validate() error {
 
 			// add the MapLayer to our map
 			mapLayers[string(m.Name)][name] = l
+		}
+	}
+
+	// check for blacklisted headers
+	for k := range c.Webserver.Headers {
+		for _, v := range blacklistHeaders {
+			if v == strings.ToLower(k) {
+				return ErrInvalidHeader{Header: k}
+			}
 		}
 	}
 

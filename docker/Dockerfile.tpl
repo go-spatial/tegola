@@ -26,28 +26,34 @@
 
 
 # --- Build the binary
-FROM golang:1.10.0-alpine3.7 AS build
+FROM golang:1.11.0-alpine3.8 AS build
 
 # Only needed for CGO support at time of build, results in no noticable change in binary size
-#  incurs approximately 1:30 extra build time (1:54 vs 0:27) to install packages.  Doesn't impact
-#  development as these layers are drawn from cache after the first build.
-RUN apk update
-RUN apk add musl-dev=1.1.18-r3
-RUN apk add gcc=6.4.0-r5
+# incurs approximately 1:30 extra build time (1:54 vs 0:27) to install packages.  Doesn't impact
+# development as these layers are drawn from cache after the first build.
+RUN apk update \ 
+	&& apk add musl-dev=1.1.19-r10 \
+	&& apk add gcc=6.4.0-r9
 
 # Set up source for compilation
-RUN mkdir -p /opt/tegola_src/src/github.com/go-spatial/tegola
-COPY . /opt/tegola_src/src/github.com/go-spatial/tegola
+RUN mkdir -p /go/src/github.com/go-spatial/tegola
+COPY . /go/src/github.com/go-spatial/tegola
 
 # Build binary
-WORKDIR /opt/tegola_src/src/github.com/go-spatial/tegola/cmd/tegola
-ENV GOPATH=/opt/tegola_src
-RUN go build -v {{.flags}} -gcflags "-N -l" -o /opt/tegola github.com/go-spatial/tegola/cmd/tegola
-RUN chmod a+x /opt/tegola
+RUN cd /go/src/github.com/go-spatial/tegola/cmd/tegola \
+	&& go build -v {{.flags}} -gcflags "-N -l" -o /opt/tegola \ 
+	&& chmod a+x /opt/tegola
 
 # --- Create minimal deployment image, just alpine & the binary
-FROM alpine:3.7
+FROM alpine:3.8
+
+RUN apk update \
+	&& apk add ca-certificates \
+	&& rm -rf /var/cache/apk/*
+
 LABEL maintainer="{{.maintainer}}"
 LABEL io.go-spatial.version="{{.version}}"
+
 COPY --from=build /opt/tegola /opt/
-CMD ["/opt/tegola", "--config", "/opt/tegola_config/config.toml", "serve"]
+WORKDIR /opt
+ENTRYPOINT ["/opt/tegola"]

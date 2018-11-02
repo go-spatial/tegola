@@ -15,6 +15,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/mvt"
 )
 
 type HandleMapLayerZXY struct {
@@ -94,7 +95,7 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 }
 
 func logAndError(w http.ResponseWriter, code int, format string, vals ...interface{}) {
-	msg := fmt.Sprintf(format, vals)
+	msg := fmt.Sprintf(format, vals...)
 	log.Info(msg)
 	http.Error(w, msg, code)
 }
@@ -167,13 +168,15 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// mimetype for protocol buffers
-	w.Header().Add("Content-Type", "application/x-protobuf")
+	// mimetype for mapbox vector tiles
+	// https://www.iana.org/assignments/media-types/application/vnd.mapbox-vector-tile
+	w.Header().Add("Content-Type", mvt.MimeType)
+	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(pbyte)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(pbyte)
 
 	// check for tile size warnings
 	if len(pbyte) > MaxTileSize {
-		log.Infof("tile z:%v, x:%v, y:%v is rather large - %v", req.z, req.x, req.y, len(pbyte))
+		log.Infof("tile z:%v, x:%v, y:%v is rather large - %vKb", req.z, req.x, req.y, len(pbyte)/1024)
 	}
 }

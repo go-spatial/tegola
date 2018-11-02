@@ -12,22 +12,42 @@ package main
 // To show all allocated space:
 //   % go tool pprof -alloc_space -web http://localhost:6060/debug/pprof/heap
 
-// The profiler can be completely disabled during the build with the `noPprof` build flag
-// for example from the cmd/tegola direcotry:
+// The profiler is disabled by default during build. To enable it, use the builg tag 'pprof'.
+// For example, from the cmd/tegola direcotry:
 //
-// go build -tags 'noPprof'
+// go build -tags 'pprof'
 
 import (
-	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
+	"strconv"
+	"strings"
+
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 func init() {
 	if bind := os.Getenv("TEGOLA_HTTP_PPROF_BIND"); bind != "" {
 		go func() {
-			log.Fatal(http.ListenAndServe(bind, nil))
+			log.Infof("Starting up profiler on %v", bind)
+			err := http.ListenAndServe(bind, nil)
+			log.Infof("Failed to start up profiler on %v : %v", bind, err)
 		}()
+		if mutexrate := os.Getenv("TEGOLA_PPROF_MUTEX_RATE"); mutexrate != "" {
+			rate, _ := strconv.Atoi(strings.TrimSpace(mutexrate))
+			if rate > 0 {
+				log.Infof("Setting Mutex Profile Fraction rate to %v", rate)
+				runtime.SetMutexProfileFraction(rate)
+			}
+		}
+		if blockrate := os.Getenv("TEGOLA_PPROF_BLOCK_RATE"); blockrate != "" {
+			rate, _ := strconv.Atoi(strings.TrimSpace(blockrate))
+			if rate > 0 {
+				log.Infof("Setting Block Profile rate to %v", rate)
+				runtime.SetMutexProfileFraction(rate)
+			}
+		}
 	}
 }

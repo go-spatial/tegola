@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync/atomic"
 
 	"github.com/jackc/pgx"
 
@@ -74,8 +75,12 @@ const (
 )
 
 func init() {
-	provider.Register(Name, NewTileProvider, nil)
+	provider.Register(Name, NewTileProvider, Cleanup)
 }
+
+// isSelectQuery is a regexp to check if a query starts with `SELECT`,
+// case-insensitive and ignoring any preceeding whitespace and SQL comments.
+var isSelectQuery = regexp.MustCompile(`(?i)^((\s*)(--.*\n)?)*select`)
 
 // NewTileProvider instantiates and returns a new postgis provider or an error.
 // The function will validate that the config object looks good before
@@ -166,6 +171,12 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		Database: db,
 		User:     user,
 		Password: password,
+		Logger:   NewLogger(),
+		LogLevel: pgx.LogLevelWarn,
+		RuntimeParams: map[string]string{
+			"default_transaction_read_only": "TRUE",
+			"application_name":              "tegola",
+		},
 	}
 
 	err = ConfigTLS(sslmode, sslkey, sslcert, sslrootcert, &connConfig)
@@ -220,7 +231,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
 		}
 
-		idfld := "gid"
+		idfld := ""
 		idfld, err = layer.String(ConfigKeyGeomIDField, &idfld)
 		if err != nil {
 			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
@@ -263,6 +274,13 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			srid:      uint64(lsrid),
 		}
 
+		if sql != "" && !isSelectQuery.MatchString(sql) {
+			// if it is not a SELECT query, then we assume we have a sub-query
+			// (`(select ...) as foo`) which we can handle like a tablename
+			tblName = sql
+			sql = ""
+		}
+
 		if sql != "" {
 			// convert !BOX! (MapServer) and !bbox! (Mapnik) to !BBOX! for compatibility
 			sql := strings.Replace(strings.Replace(sql, "!BOX!", "!BBOX!", -1), "!bbox!", "!BBOX!", -1)
@@ -281,7 +299,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 
 			l.sql = sql
 		} else {
-			// Tablename and Fields will be used to
+			// Tablename and Fields will be used to build the query.
 			// We need to do some work. We need to check to see Fields contains the geom and gid fields
 			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field list.
 			l.sql, err = genSQL(&l, p.pool, tblName, fields)
@@ -308,6 +326,9 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		lyrs[lname] = l
 	}
 	p.layers = lyrs
+
+	// track the provider so we can clean it up later
+	providers = append(providers, p)
 
 	return p, nil
 }
@@ -464,7 +485,7 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 		}
 	}
 
-	return nil
+	return rows.Err()
 }
 
 // Layer fetches an individual layer from the provider, if it's configured
@@ -489,6 +510,8 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 	return ls, nil
 }
 
+var connCount int32
+
 // TileFeatures adheres to the provider.Tiler interface
 func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
 	// fetch the provider layer
@@ -511,15 +534,28 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		return err
 	}
 
+	//	temp hack to see if we can get the connection to stop clogging
+	if atomic.CompareAndSwapInt32(&connCount, 100, 0) {
+		log.Println("calling reset on connection pool")
+		p.pool.Reset()
+	} else {
+		atomic.AddInt32(&connCount, 1)
+	}
+
+	log.Printf("started query %+v", p.pool.Stat())
 	rows, err := p.pool.Query(sql)
 	if err != nil {
+		log.Println("err querying")
 		return fmt.Errorf("error running layer (%v) SQL (%v): %v", layer, sql, err)
 	}
+	defer log.Println("closing rows")
 	defer rows.Close()
+	log.Println("query completed")
 
 	// fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 
+	log.Println("start processing rows")
 	for rows.Next() {
 		// context check
 		if err := ctx.Err(); err != nil {
@@ -544,7 +580,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 
 		// check that we have geometry data. if not, skip the feature
 		if len(geobytes) == 0 {
-			// TODO(arolek): implement debug log
+			log.Printf("feature with id (%v) in layer (%v) has no geometry data. skipping", gid, layer)
 			continue
 		}
 
@@ -567,11 +603,34 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			Tags:     tags,
 		}
 
+		log.Println("started calling vistor")
 		// pass the feature to the provided callback
 		if err = fn(&feature); err != nil {
+			log.Println("err calling visitor")
 			return err
 		}
+		log.Println("finished calling visitor")
+	}
+	log.Println("finished processing rows")
+
+	return rows.Err()
+}
+
+// Close will close the Provider's database connectio
+func (p *Provider) Close() { p.pool.Close() }
+
+// reference to all instantiated providers
+var providers []Provider
+
+// Cleanup will close all database connections and destroy all previously instantiated Provider instances
+func Cleanup() {
+	if len(providers) > 0 {
+		log.Printf("cleaning up postgis providers")
 	}
 
-	return nil
+	for i := range providers {
+		providers[i].Close()
+	}
+
+	providers = make([]Provider, 0)
 }

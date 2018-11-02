@@ -3,6 +3,7 @@
 package gpkg
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -20,8 +21,11 @@ import (
 	"github.com/go-spatial/tegola/provider"
 )
 
+var colFinder *regexp.Regexp
+
 func init() {
 	provider.Register(Name, NewTileProvider, Cleanup)
+	colFinder = regexp.MustCompile(`^(([a-zA-Z_][a-zA-Z0-9_]*)|"([^"]+)")\s`)
 }
 
 // Metadata for feature tables in gpkg database
@@ -82,29 +86,73 @@ func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
 	return conf, nil
 }
 
-func extractColsFromSQL(sql string) []string {
-	// Get names of all columns
-	// Extract column definitions from sql.
-	colDefsPattern := `CREATE.*?\(\s+(.*)$`
-	colDefsFinder := regexp.MustCompile(colDefsPattern)
+// extractColsAndPKFromSQL extracts all column names and the primary key colum
+// from an SQL definition string.
+func extractColsAndPKFromSQL(sql string) ([]string, string) {
+	defs := extractColDefsFromSQL(sql)
 
-	colPattern := `"(.+?)"`
-	colFinder := regexp.MustCompile(colPattern)
+	var pkCol string
+	colNames := make([]string, 0, len(defs))
 
-	// Get all column names (drop "CREATE TABLE (" portion)
-	colDefs := colDefsFinder.FindStringSubmatch(sql)[1]
-	colMatches := colFinder.FindAllString(colDefs, -1)
+	// match unquoted (`column_name`) or quoted (`"column name"`) indentifiers
+	for _, def := range defs {
+		matches := colFinder.FindStringSubmatch(def)
+		if matches == nil {
+			continue
+		}
+		colName := matches[2] + matches[3] // either from unquoted, or quoted submatch
+		colNames = append(colNames, colName)
 
-	colNames := make([]string, 0, 10)
-	for i := 0; i < len(colMatches); i++ {
-		// The matches will all have quotes around them at this point, remove them
-		dequoted := colFinder.ReplaceAllString(colMatches[i], "$1")
-		colNames = append(colNames, dequoted)
+		if strings.Contains(strings.ToLower(def), "primary key") {
+			pkCol = colName
+		}
 	}
 	// Sort colNames for consistent output to facilitate testing
 	sort.Strings(colNames)
 
-	return colNames
+	return colNames, pkCol
+}
+
+// extractColDefsFromSQL extracts all column definitions an SQL definition string.
+func extractColDefsFromSQL(sql string) []string {
+	// Simple parser for SQL definitions. Skips everything before the first
+	// parentheses, splits definitions at comma, but ignores commas between
+	// subsequent parentheses.
+
+	// Does not handle comments or quoted commas.
+
+	var defs []string
+	var col bytes.Buffer
+	p := 0 // count number of open parentheses
+
+	for _, r := range sql {
+
+		if r == ')' && p == 1 {
+			// closing outer brace of column definitions
+			defs = append(defs, strings.TrimSpace(col.String()))
+			col.Reset()
+			break
+		}
+		if r == ',' && p == 1 {
+			// next definition
+			defs = append(defs, strings.TrimSpace(col.String()))
+			col.Reset()
+			continue
+		}
+
+		col.WriteRune(r)
+		if r == '(' {
+			if p == 0 {
+				// start of column definitions, ignore CREATE TABLE ...
+				col.Reset()
+			}
+			p++
+		}
+		if r == ')' {
+			p--
+		}
+	}
+	return defs
 }
 
 // Collect meta data about all feature tables in opened gpkg.
@@ -129,10 +177,6 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 	// container for tracking metadata for each table with a geometry
 	geomTableDetails := make(map[string]featureTableDetails)
 
-	// Find the primary key column name from the table's creation sql.
-	pkPattern := `"(.+)" .*?PRIMARY KEY`
-	pkFinder := regexp.MustCompile(pkPattern)
-
 	// iterate each row extracting meta data about each table
 	for rows.Next() {
 		var tablename, geomCol, geomType, tableSql sql.NullString
@@ -146,11 +190,6 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 			return nil, fmt.Errorf("invalid sql for table '%v'", tablename)
 		}
 
-		// extract the table's primary key from it's creation sql
-		pkMatches := pkFinder.FindStringSubmatch(tableSql.String)
-		// matches[0] is tableSql.String
-		pkCol := pkMatches[1]
-
 		// map the returned geom type to a tegola geom type
 		tg, err := geomNameToGeom(geomType.String)
 		if err != nil {
@@ -163,7 +202,7 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 			[2]float64{maxX.Float64, maxY.Float64},
 		)
 
-		colNames := extractColsFromSQL(tableSql.String)
+		colNames, pkCol := extractColsAndPKFromSQL(tableSql.String)
 
 		geomTableDetails[tablename.String] = featureTableDetails{
 			colNames:      colNames,
@@ -353,11 +392,15 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	return &p, err
 }
 
-// reference to all instantiated proivders
+// reference to all instantiated providers
 var providers []Provider
 
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
+	if len(providers) > 0 {
+		log.Infof("cleaning up gpkg providers")
+	}
+
 	for i := range providers {
 		if err := providers[i].Close(); err != nil {
 			log.Errorf("err closing connection: %v", err)

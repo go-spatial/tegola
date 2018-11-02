@@ -139,38 +139,20 @@ func (l *Layer) Features() (f []Feature) {
 	return f
 }
 
-//AddFeatures will add one or more Features to the Layer, if a features ID is a the same as
-//Any already in the Layer, it will ignore those features.
-//If the id fields is nil, the feature will always be added.
-func (l *Layer) AddFeatures(features ...Feature) (skipped bool) {
+// AddFeatures will add one or more Features to the Layer
+// per the spec features SHOULD have unique ids but it's not required
+func (l *Layer) AddFeatures(features ...Feature) {
+	// pre allocate memory
+	b := make([]Feature, len(l.features)+len(features))
 
-	b := make([]Feature, len(l.features), len(l.features)+len(features))
 	copy(b, l.features)
+	copy(b[len(l.features):], features)
+
 	l.features = b
-FEATURES_LOOP:
-	for _, f := range features {
-		if f.ID == nil {
-			l.features = append(l.features, f)
-			continue
-		}
-		for _, cf := range l.features {
-			if cf.ID == nil {
-				continue
-			}
-			// We matched, we skip
-			if *cf.ID == *f.ID {
-				skipped = true
-				continue FEATURES_LOOP
-			}
-		}
-		// There were no matches, let's add it to our list.
-		l.features = append(l.features, f)
-	}
-	return skipped
 }
 
-//RemoveFeature allows you to remove one or more features, with the provided indexes.
-//To figure out the indexes, use the indexs from the Features array.
+// RemoveFeature allows you to remove one or more features, with the provided indexes.
+// To figure out the indexes, use the indexs from the Features array.
 func (l *Layer) RemoveFeature(idxs ...int) {
 	var features = make([]Feature, 0, len(l.features))
 SKIP:
