@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"strings"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/maths"
@@ -27,7 +27,6 @@ type ErrTileNameFormat string
 func (e ErrTileNameFormat) Error() string {
 	return "invalid formatStr " + string(e)
 }
-
 
 func NewFormat(format string) (Format, error) {
 	// if empty return default
@@ -54,7 +53,7 @@ func NewFormat(format string) (Format, error) {
 
 	// 0 + 1 + 2 = 3
 	// strings.Index returns -1 if the substring is not in the string
-	if ix + iy + iz != 3 {
+	if ix+iy+iz != 3 {
 		return defaultTileNameFormat, ErrTileNameFormat(format)
 	}
 

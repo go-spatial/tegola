@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-spatial/cobra" // The config from the main app
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/spf13/cobra"
 )
 
 // the config from the main app
@@ -199,7 +199,7 @@ TileChannelLoop:
 		}
 	}
 	// let our workers finish up
-	log.Info("waiting for workers to finsish up")
+	log.Info("waiting for workers to finish up")
 	shouldExit := true
 	go func() {
 		<-time.After(60 * time.Second)

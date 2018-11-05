@@ -5,8 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/spf13/cobra"
-
+	"github.com/go-spatial/cobra"
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"

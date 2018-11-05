@@ -3,7 +3,7 @@ package cache
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
+	"github.com/go-spatial/cobra"
 )
 
 func setupMinMaxZoomFlags(cmd *cobra.Command, min, max uint) {

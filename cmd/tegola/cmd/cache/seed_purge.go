@@ -6,13 +6,13 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/spf13/cobra"
 
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 )
@@ -111,8 +111,19 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("expected at least one map to be defined. check your config")
 		}
 	}
-	cmdName := strings.ToLower(strings.TrimSpace(cmd.CalledAs()))
 
+	// Find the seed command and find out what it was called as.
+	seedcmd := cmd
+	cmdName := ""
+	for seedcmd != nil {
+		if seedcmd.Name() == "seed" {
+			cmdName = seedcmd.CalledAs()
+			break
+		}
+		seedcmd = seedcmd.Parent()
+	}
+
+	//cmdName := strings.ToLower(strings.TrimSpace(cmd.CalledAs()))
 	switch cmdName {
 	case "purge":
 		seedPurgeWorker = purgeWorker

@@ -9,8 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
-
+	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"

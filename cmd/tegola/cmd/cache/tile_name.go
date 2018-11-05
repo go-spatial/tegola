@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/spf13/cobra"
 )
 
 var tileNameTile *slippy.Tile
@@ -18,7 +18,7 @@ var TileNameCmd = &cobra.Command{
 	Use:     "tile-name z/x/y",
 	Short:   "operate on a single tile formatted according to --format",
 	Example: "tile-name 0/0/0",
-	PreRunE: tileListValidate,
+	PreRunE: tileNameValidate,
 	RunE:    tileNameCommand,
 }
 
@@ -55,6 +55,8 @@ func tileNameValidate(cmd *cobra.Command, args []string) (err error) {
 }
 
 func tileNameCommand(cmd *cobra.Command, args []string) (err error) {
+
+	log.Infof("Running TileNameCommand: %v", args)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer gdcmd.New().Complete()

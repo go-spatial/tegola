@@ -3,8 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
-
+	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	cachecmd "github.com/go-spatial/tegola/cmd/tegola/cmd/cache"

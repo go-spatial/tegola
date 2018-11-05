@@ -8,12 +8,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
+	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/spf13/cobra"
-
-	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 )
 
 var (
