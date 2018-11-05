@@ -18,12 +18,14 @@ import (
 
 // the config from the main app
 var Config *config.Config
+var RequireCache bool
 
 var Cmd = &cobra.Command{
 	Use:   "cache",
 	Short: "command to manage the cache",
 	Long:  "command to manage the cache",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		RequireCache = true
 		if cmd.HasParent() {
 			// run the parents Persistent Run commands.
 			pcmd := cmd.Parent()

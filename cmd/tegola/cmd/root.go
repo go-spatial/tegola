@@ -18,6 +18,9 @@ var (
 	Version = "version not set"
 	// parsed config
 	conf config.Config
+
+	// require cache
+	RequireCache bool
 )
 
 func init() {
@@ -44,10 +47,12 @@ Version: %v`, Version),
 }
 
 func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
-	return initConfig(configFile)
+	requireCache := RequireCache || cachecmd.RequireCache
+
+	return initConfig(configFile, requireCache)
 }
 
-func initConfig(configFile string) (err error) {
+func initConfig(configFile string, cacheRequired bool) (err error) {
 	log.Infof("Loading config file: %v", configFile)
 	if conf, err = config.Load(configFile); err != nil {
 		return err
@@ -72,16 +77,18 @@ func initConfig(configFile string) (err error) {
 	if err = register.Maps(nil, conf.Maps, providers); err != nil {
 		return fmt.Errorf("could not register maps: %v", err)
 	}
-	if len(conf.Cache) == 0 {
+	if len(conf.Cache) == 0 && cacheRequired {
 		return fmt.Errorf("No cache defined in config, please check your config (%v).", configFile)
 	}
-	// init cache backends
-	cache, err := register.Cache(conf.Cache)
-	if err != nil {
-		return fmt.Errorf("could not register cache: %v", err)
-	}
-	if cache != nil {
-		atlas.SetCache(cache)
+	if len(conf.Cache) > 0 {
+		// init cache backends
+		cache, err := register.Cache(conf.Cache)
+		if err != nil {
+			return fmt.Errorf("could not register cache: %v", err)
+		}
+		if cache != nil {
+			atlas.SetCache(cache)
+		}
 	}
 	return nil
 }
