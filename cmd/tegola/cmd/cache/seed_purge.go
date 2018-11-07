@@ -104,7 +104,7 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		seedPurgeMaps = append(seedPurgeMaps, m)
+		seedPurgeMaps = []atlas.Map{m}
 	} else {
 		seedPurgeMaps = atlas.AllMaps()
 		if len(seedPurgeMaps) == 0 {
