@@ -1,3 +1,7 @@
+## 0.8.1 (2018-11-07)
+**Bug Fixes**
+- fixed double seeding when using tegola cache seed tile-list with the --map flag (#553 @arolek)
+
 ## 0.8.0 (2018-11-01)
 **Features**
 - provider/gpkg: use aliases and quotes in query for all column names (#486 @olt)
