@@ -392,11 +392,15 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	return &p, err
 }
 
-// reference to all instantiated proivders
+// reference to all instantiated providers
 var providers []Provider
 
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
+	if len(providers) > 0 {
+		log.Infof("cleaning up gpkg providers")
+	}
+
 	for i := range providers {
 		if err := providers[i].Close(); err != nil {
 			log.Errorf("err closing connection: %v", err)

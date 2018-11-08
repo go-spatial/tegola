@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
 
+	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
@@ -17,9 +19,20 @@ import (
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
 func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
 
+	// we need to hit the database to see what the fields are.
 	if len(flds) == 0 {
-		// We need to hit the database to see what the fields are.
-		rows, err := pool.Query(fmt.Sprintf(fldsSQL, tblname))
+		sql := fmt.Sprintf(fldsSQL, tblname)
+
+		//	if a subquery is set in the 'sql' config the subquery is set to the layer's
+		//	'tablename' param. because of this case normal SQL token replacement needs to be
+		//	applied to tablename SQL generation
+		tile := slippy.NewTile(0, 0, 0, 64, tegola.WebMercator)
+		sql, err = replaceTokens(sql, 3857, tile)
+		if err != nil {
+			return "", err
+		}
+
+		rows, err := pool.Query(sql)
 		if err != nil {
 			return "", err
 		}
@@ -29,12 +42,14 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		if len(fdescs) == 0 {
 			return "", fmt.Errorf("No fields were returned for table %v", tblname)
 		}
+
 		// to avoid field names possibly colliding with Postgres keywords,
 		// we wrap the field names in quotes
 		for i := range fdescs {
 			flds = append(flds, fdescs[i].Name)
 		}
 	}
+
 	for i := range flds {
 		flds[i] = fmt.Sprintf(`"%v"`, flds[i])
 	}
@@ -45,6 +60,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		if f == `"`+l.geomField+`"` {
 			fgeom = i
 		}
+
 		if f == `"`+l.idField+`"` {
 			fgid = true
 		}
@@ -58,7 +74,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		flds[fgeom] = fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField)
 	}
 
-	if !fgid {
+	if !fgid && l.idField != "" {
 		flds = append(flds, fmt.Sprintf(`"%v"`, l.idField))
 	}
 
@@ -118,35 +134,17 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 		pixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', -1, 64),
 	)
 
-	uppercaseTokenSQL, err := uppercaseTokens(sql)
-	if err != nil {
-		return "", err
-	}
+	uppercaseTokenSQL := uppercaseTokens(sql)
 
 	return tokenReplacer.Replace(uppercaseTokenSQL), nil
 }
 
-//	uppercaseTokens will sniff for ! chars and uppercase everything between them
-//	if an odd number of ! are found an error is thrown
-func uppercaseTokens(str string) (string, error) {
-	rs := []rune(str)
+var tokenRe = regexp.MustCompile("![a-zA-Z0-9_-]+!")
 
-	uppercase := false
-	for i := range rs {
-		if rs[i] == '!' {
-			uppercase = !uppercase
-			continue
-		}
-		if uppercase {
-			rs[i] = unicode.ToUpper(rs[i])
-		}
-	}
-
-	if uppercase {
-		return str, ErrUnclosedToken(str)
-	}
-
-	return string(rs), nil
+//	uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can
+//	contain alphanumerics, dash and underline chars.
+func uppercaseTokens(str string) string {
+	return tokenRe.ReplaceAllStringFunc(str, strings.ToUpper)
 }
 
 func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {

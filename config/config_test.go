@@ -99,6 +99,10 @@ func TestParse(t *testing.T) {
 				port = ":8080"
 				cors_allowed_origin = "tegola.io"
 
+					[webserver.headers]
+					Access-Control-Allow-Origin = "*"
+					Access-Control-Allow-Methods = "GET, OPTIONS"
+
 				[cache]
 				type = "file"
 				basepath = "/tmp/tegola-cache"
@@ -133,9 +137,12 @@ func TestParse(t *testing.T) {
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName:          "cdn.tegola.io",
-					Port:              ":8080",
-					CORSAllowedOrigin: "tegola.io",
+					HostName: "cdn.tegola.io",
+					Port:     ":8080",
+					Headers: env.Dict{
+						"Access-Control-Allow-Origin":  "*",
+						"Access-Control-Allow-Methods": "GET, OPTIONS",
+					},
 				},
 				Cache: env.Dict{
 					"type":     "file",
@@ -688,6 +695,20 @@ func TestValidate(t *testing.T) {
 			expectedErr: config.ErrOverlappingLayerZooms{
 				ProviderLayer1: "provider1.water_default_z",
 				ProviderLayer2: "provider2.water_default_z",
+			},
+		},
+		"6 blocked headers": {
+			config: config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					Port: ":8080",
+					Headers: env.Dict{
+						"Content-Encoding": "plain/text",
+					},
+				},
+			},
+			expectedErr: config.ErrInvalidHeader{
+				Header: "Content-Encoding",
 			},
 		},
 	}

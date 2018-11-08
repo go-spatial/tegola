@@ -5,8 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
-
+	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/tegola/provider"
 
 	_ "github.com/go-spatial/tegola/provider/postgis"

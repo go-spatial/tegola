@@ -177,7 +177,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 				}
 
 			case pLayer.geomFieldname:
-				log.Debugf("extracting geopackage geometry header.", vals[i])
+				log.Debug("extracting geopackage geometry header.", vals[i])
 
 				geomData, ok := vals[i].([]byte)
 				if !ok {

@@ -7,11 +7,11 @@ import (
 	"os"
 
 	"github.com/arolek/algnhsa"
-
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/server"
 )
 
@@ -80,10 +80,8 @@ func main() {
 		server.HostName = string(conf.Webserver.HostName)
 	}
 
-	// set the CORSAllowedOrigin if a value is provided
-	if conf.Webserver.CORSAllowedOrigin != "" {
-		server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
-	}
+	// set the http reply headers
+	server.Headers = conf.Webserver.Headers
 
 	// set tile buffer
 	if conf.TileBuffer != nil {
@@ -93,11 +91,11 @@ func main() {
 	// http route setup
 	mux := server.NewRouter(nil)
 
-	// the second argument here tells algnhasa to watch for "application/x-protobuf" Content-Type headers
+	// the second argument here tells algnhasa to watch for the MVT MimeType Content-Type headers
 	// if it detects this in the response the payload will be base64 encoded. Lambda needs to be configured
 	// to handle binary responses so it can convert the base64 encoded payload back into binary prior
 	// to sending to the client
-	algnhsa.ListenAndServe(mux, []string{"application/x-protobuf"})
+	algnhsa.ListenAndServe(mux, []string{mvt.MimeType})
 }
 
 // URLRoot overrides the default server.URLRoot function in order to include the "stage" part of the root

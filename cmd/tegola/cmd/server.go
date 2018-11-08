@@ -5,8 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/spf13/cobra"
-
+	"github.com/go-spatial/cobra"
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"
@@ -24,7 +23,6 @@ var serverCmd = &cobra.Command{
 	Long:    `Use tegola as a vector tile server. Maps tiles will be served at /maps/:map_name/:z/:x/:y`,
 	Run: func(cmd *cobra.Command, args []string) {
 		gdcmd.New()
-		initConfig()
 		gdcmd.OnComplete(provider.Cleanup)
 
 		// check config for server port setting
@@ -37,10 +35,8 @@ var serverCmd = &cobra.Command{
 		server.Version = Version
 		server.HostName = string(conf.Webserver.HostName)
 
-		// set the CORSAllowedOrigin if a value is provided
-		if conf.Webserver.CORSAllowedOrigin != "" {
-			server.CORSAllowedOrigin = string(conf.Webserver.CORSAllowedOrigin)
-		}
+		// set the http reply headers
+		server.Headers = conf.Webserver.Headers
 
 		// set tile buffer
 		if conf.TileBuffer != nil {

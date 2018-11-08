@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
@@ -36,6 +35,14 @@ var (
 	// configurable via the tegola config.toml file (set in main.go)
 	CORSAllowedOrigin string = "*"
 
+	// CORSAllowedMethods is the "Access-Control-Allow-Methods" CORS header.
+	// configurable via the tegola config.toml file (set in main.go)
+	CORSAllowedMethods string = "GET, OPTIONS"
+
+	// Headers is the map of http reply headers.
+	// configurable via the tegola config.toml file (set in main.go)
+	Headers map[string]interface{}
+
 	// TileBuffer is the tile buffer to use.
 	// configurable via tegola config.tomal file (set in main.go)
 	TileBuffer float64 = tegola.DefaultTileBuffer
@@ -50,18 +57,18 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r.OptionsHandler = corsHandler
 
 	// capabilities endpoints
-	group.UsingContext().Handler("GET", "/capabilities", CORSHandler(HandleCapabilities{}))
-	group.UsingContext().Handler("GET", "/capabilities/:map_name", CORSHandler(HandleMapCapabilities{}))
+	group.UsingContext().Handler("GET", "/capabilities", HeadersHandler(HandleCapabilities{}))
+	group.UsingContext().Handler("GET", "/capabilities/:map_name", HeadersHandler(HandleMapCapabilities{}))
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", CORSHandler(TileCacheHandler(a, hMapLayerZXY)))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
+	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
 
 	// map style
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", CORSHandler(HandleMapStyle{}))
+	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HeadersHandler(HandleMapStyle{}))
 
-	//	setup viewer routes, which can excluded via build flags
+	// setup viewer routes, which can be excluded via build flags
 	setupViewer(group)
 
 	return r
@@ -75,7 +82,21 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 
 	// start our server
 	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
-	go func() { log.Error(srv.ListenAndServe()) }()
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			switch err {
+			case http.ErrServerClosed:
+				log.Info("http server closed")
+				return
+			default:
+				log.Fatal(err)
+				return
+			}
+		}
+		return
+	}()
+
 	return srv
 }
 
@@ -134,6 +155,6 @@ var URLRoot = func(r *http.Request) string {
 // corsHanlder is used to respond to all OPTIONS requests for registered routes
 func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
 	w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", CORSAllowedMethods)
 	return
 }

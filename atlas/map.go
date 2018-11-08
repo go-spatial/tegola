@@ -1,6 +1,8 @@
 package atlas
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"log"
@@ -102,7 +104,7 @@ func (m Map) FilterLayersByZoom(zoom uint) Map {
 	return m
 }
 
-// FilterLayersByName returns a copy of a Map witha subset of layers that match the supplied list of layer names
+// FilterLayersByName returns a copy of a Map with a subset of layers that match the supplied list of layer names
 func (m Map) FilterLayersByName(names ...string) Map {
 	var layers []Layer
 
@@ -228,6 +230,27 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 		return nil, err
 	}
 
-	// encode the tile
-	return proto.Marshal(vtile)
+	// encode our mvt tile
+	tileBytes, err := proto.Marshal(vtile)
+	if err != nil {
+		return nil, err
+	}
+
+	// buffer to store our compressed bytes
+	var gzipBuf bytes.Buffer
+
+	// compress the encoded bytes
+	w := gzip.NewWriter(&gzipBuf)
+	_, err = w.Write(tileBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	// flush and close the writer
+	if err = w.Close(); err != nil {
+		return nil, err
+	}
+
+	// return encoded, gzipped tile
+	return gzipBuf.Bytes(), nil
 }

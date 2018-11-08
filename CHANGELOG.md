@@ -1,3 +1,34 @@
+## 0.8.1 (2018-11-07)
+**Bug Fixes**
+- fixed double seeding when using tegola cache seed tile-list with the --map flag (#553 @arolek)
+
+## 0.8.0 (2018-11-01)
+**Features**
+- provider/gpkg: use aliases and quotes in query for all column names (#486 @olt)
+- provider/gpkg: improve column name extraction (#486 @olt)
+- provider/postgis: added support for `!pixel_width!`, `!pixel_height!` and `!scale_denominator!` SQL tokens (#477 @olt)
+- provider/postgis: Support for sub-queries as "tablename" (#467 @olt)
+- provider/postgis: Set default_transaction_read_only when connecting to PostgreSQL (#369)
+- cache/s3: added default mime-type of `application/vnd.mapbox-vector-tile` and made it configurable (#459 @stvno)
+- mvt: don't require IDs for mvt features. (#337, #338 @ARolek)
+- server: gzip encoding of tiles (#438 @ARolek)
+- server: set proper MIME type for vector tiles (#511 @ARolek)
+- server: configurable response headers (#519 @tierpod, @ARolek)
+- server: Improve display of tile rendering times (#484 @ARolek)
+- docker: Add CA certificates to Docker container. Refactored container and pipeline (#385 @gdey, @stvno, @ARolek)
+- cmd: added support for `TEGOLA_PPROF_MUTEX_RATE` and `TEGOLA_PPROF_BLOCK_RATE` env vars when `pprof` is enabled. (@gdey)
+
+**Bug Fixes**
+- provider/gpkg: fixed index query for geomFieldname != geom (#486 @olt)
+- provider/postgis: fixed error not thrown if the database user does not have permissions to access table (#538 @ARolek)
+- cache seeding: invalid value for bounds () with 10e3 notation (#539 @gdey)
+- fixed the way cache seed / purge with a tile-list or tile-name works. min and max zooms now must be provided for tegola to include parent and child tiles (@gdey)
+
+**Breaking Changes**
+- **IMPORTANT**: if you have a current tile cache in place, you will need to purge it entirely as tegola now expects the cache to persist gzipped tiles.
+- `cors_allowed_origin` is no longer supported under the `webserver` config section. The same functionality can be implemented using the `[webserver.headers]` config which allows for configuring almost any response header. Use `Access-Control-Allow-Origin = "yourdomain.com"` in the config moving forward.
+- Docker container now uses the `ENTRYPOINT` command. Users of the Docker container will need to update the commands they're passing to the container.
+
 ## 0.7.0 (2018-08-10)
 
 - `Documentation`: Typo, grammar, clarity fixes. (#345 @erictheise)

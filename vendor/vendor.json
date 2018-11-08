@@ -273,6 +273,12 @@
 			"revisionTime": "2018-02-15T11:00:54Z"
 		},
 		{
+			"checksumSHA1": "7b4awLXPsgOTRSfdU8o5R0XtXHg=",
+			"path": "github.com/go-spatial/cobra",
+			"revision": "68194e4fbcc69d60782fc493ff80bc949aed88bd",
+			"revisionTime": "2018-11-05T18:39:26Z"
+		},
+		{
 			"checksumSHA1": "emOt2FUM4JKwUVHT2T8cG3fkHpw=",
 			"path": "github.com/go-spatial/geom",
 			"revision": "9f44ee7bbd6a17160b0ebe7666a9ae5f2fc92add",
@@ -341,12 +347,12 @@
 			"revisionTime": "2014-10-17T20:07:13Z"
 		},
 		{
-			"checksumSHA1": "MCQRBIXmcwHCqR33QoGUx4PWb4A=",
+			"checksumSHA1": "KQCH1oFtZHYZp6l6gtMdioNUdkY=",
 			"path": "github.com/jackc/pgx",
-			"revision": "93ee40e691def90ce1489b113ac99450239dfb82",
-			"revisionTime": "2018-07-24T14:53:07Z",
-			"version": "v3.1.0",
-			"versionExact": "v3.1.0"
+			"revision": "89f1e6ac7276b61d885db5e5aed6fcbedd1c7e31",
+			"revisionTime": "2018-08-07T14:28:28Z",
+			"version": "v3.2.0",
+			"versionExact": "v3.2.0"
 		},
 		{
 			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",
@@ -389,12 +395,6 @@
 			"path": "github.com/pkg/errors",
 			"revision": "816c9085562cd7ee03e7f8188a1cfd942858cded",
 			"revisionTime": "2018-03-11T21:45:15Z"
-		},
-		{
-			"checksumSHA1": "imvfVf7lRxu0Fz7V2G43CUC6Ff0=",
-			"path": "github.com/spf13/cobra",
-			"revision": "cd30c2a7e91a1d63fd9a0027accf18a681e9d50b",
-			"revisionTime": "2018-04-08T16:17:36Z"
 		},
 		{
 			"checksumSHA1": "g1VezbyCUd4iV39jBQLunuAsLZ4=",
