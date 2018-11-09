@@ -5,13 +5,15 @@ The server package is responsible for handling webserver requests for map tiles 
 ```toml
 [webserver]
 port = ":9090" # set something different than default ":8080"
+
+[webserver.headers]
+Access-Control-Allow-Origin = "*"
 ```
 
 ### Config properties
 
 - `port` (string): [Optional] Port and bind string. For example ":9090" or "127.0.0.1:9090". Defaults to ":8080"
 - `hostname` (string): [Optional] The hostname to use in the various JSON endpoints. This is useful if tegola is behind a proxy and can't read the API consumer's request host directly.
-- `cors_allowed_origin` (string): [Optional] The value to include with the Cross Origin Resource Sharing (CORS) `Access-Control-Allow-Origin` header. Defaults to `*`.
 
 ## Local development of the embedded viewer
 
