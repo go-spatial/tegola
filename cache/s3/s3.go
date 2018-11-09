@@ -267,18 +267,11 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	k := filepath.Join(s3c.Basepath, key.String())
 
 	input := s3.PutObjectInput{
-<<<<<<< HEAD
-		Body:        aws.ReadSeekCloser(bytes.NewReader(val)),
-		Bucket:      aws.String(s3c.Bucket),
-		Key:         aws.String(k),
-		ContentType: aws.String(s3c.ContentType),
-=======
 		Body:            aws.ReadSeekCloser(bytes.NewReader(val)),
 		Bucket:          aws.String(s3c.Bucket),
 		Key:             aws.String(k),
 		ContentType:     aws.String(s3c.ContentType),
 		ContentEncoding: aws.String("gzip"),
->>>>>>> origin
 	}
 	if s3c.ACL != "" {
 		input.ACL = aws.String(s3c.ACL)

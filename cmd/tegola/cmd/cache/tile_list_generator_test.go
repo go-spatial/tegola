@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 )
 
 func TestGenerateTilesForTileList(t *testing.T) {
@@ -82,12 +81,12 @@ func TestGenerateTilesForTileList(t *testing.T) {
 			format:       defaultTileNameFormat,
 			zooms:        []uint{13, 14, 15},
 			tiles: sTiles{
-				slippy.NewTile(13, 150, 390, 0, tegola.WebMercator),
-				slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
-				slippy.NewTile(15, 600, 1562, 0, tegola.WebMercator),
-				slippy.NewTile(15, 600, 1563, 0, tegola.WebMercator),
-				slippy.NewTile(15, 601, 1562, 0, tegola.WebMercator),
-				slippy.NewTile(15, 601, 1563, 0, tegola.WebMercator),
+				slippy.NewTile(13, 150, 390),
+				slippy.NewTile(14, 300, 781),
+				slippy.NewTile(15, 600, 1562),
+				slippy.NewTile(15, 600, 1563),
+				slippy.NewTile(15, 601, 1562),
+				slippy.NewTile(15, 601, 1563),
 			},
 		},
 		{
@@ -95,7 +94,7 @@ func TestGenerateTilesForTileList(t *testing.T) {
 			format:       defaultTileNameFormat,
 			explicit:     true,
 			tiles: sTiles{
-				slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
+				slippy.NewTile(14, 300, 781),
 			},
 		},
 	}

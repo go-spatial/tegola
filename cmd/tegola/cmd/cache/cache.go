@@ -93,6 +93,7 @@ func (tc *TileChannel) setError(err error) {
 	tc.err = err
 	tc.l.Unlock()
 }
+
 func (tc *TileChannel) Close() {
 	var isClosed bool
 	tc.cl.RLock()

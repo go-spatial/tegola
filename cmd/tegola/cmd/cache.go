@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spf13/cobra"
+	"github.com/go-spatial/cobra"
 
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
@@ -26,7 +25,8 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		//	if a subquery is set in the 'sql' config the subquery is set to the layer's
 		//	'tablename' param. because of this case normal SQL token replacement needs to be
 		//	applied to tablename SQL generation
-		tile := slippy.NewTile(0, 0, 0, 64, tegola.WebMercator)
+		sTile := slippy.NewTile(0, 0, 0)
+		tile := provider.TileFromSlippy(sTile, 64) // convert to provider iface
 		sql, err = replaceTokens(sql, 3857, tile)
 		if err != nil {
 			return "", err
