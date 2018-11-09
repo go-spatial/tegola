@@ -29,6 +29,7 @@ func init() {
 
 	// server
 	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
+	serverCmd.Flags().BoolVarP(&serverNoCache, "no-cache", "n", false, "turn off the cache")
 	RootCmd.AddCommand(serverCmd)
 	// cache seed / purge
 	cachecmd.Config = &conf
@@ -80,7 +81,9 @@ func initConfig(configFile string, cacheRequired bool) (err error) {
 	if len(conf.Cache) == 0 && cacheRequired {
 		return fmt.Errorf("No cache defined in config, please check your config (%v).", configFile)
 	}
-	if len(conf.Cache) > 0 {
+	if serverNoCache {
+		log.Info("Turn off the cache.")
+	} else if len(conf.Cache) > 0 {
 		// init cache backends
 		cache, err := register.Cache(conf.Cache)
 		if err != nil {
