@@ -84,9 +84,7 @@ func main() {
 	server.Headers = conf.Webserver.Headers
 
 	// set tile buffer
-	if conf.TileBuffer != nil {
-		server.TileBuffer = float64(*conf.TileBuffer)
-	}
+	server.TileBuffers = conf.TileBuffersMap()
 
 	// http route setup
 	mux := server.NewRouter(nil)

@@ -47,6 +47,7 @@ type Map struct {
 	Bounds      []env.Float  `toml:"bounds"`
 	Center      [3]env.Float `toml:"center"`
 	Layers      []MapLayer   `toml:"layers"`
+	TileBuffer  *env.Int     `toml:"tile_buffer"`
 }
 
 type MapLayer struct {
@@ -193,4 +194,20 @@ func LoadAndValidate(filename string) (cfg Config, err error) {
 	}
 	// validate our config
 	return cfg, cfg.Validate()
+}
+
+// TileBuffersMap returns map where key is the map name, value is the tile_buffer
+func (c *Config) TileBuffersMap() map[string]float64 {
+	tileBuffers := make(map[string]float64)
+	for _, m := range c.Maps {
+		if m.TileBuffer == nil && c.TileBuffer != nil {
+			tileBuffers[string(m.Name)] = float64(*c.TileBuffer)
+			continue
+		}
+
+		if m.TileBuffer != nil {
+			tileBuffers[string(m.Name)] = float64(*m.TileBuffer)
+		}
+	}
+	return tileBuffers
 }

@@ -720,3 +720,54 @@ func TestValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestTileBuffersMap(t *testing.T) {
+	type tcase struct {
+		config   string
+		expected map[string]float64
+	}
+
+	tests := map[string]tcase{
+		"1 with global tile_buffer": tcase{
+			config: `
+				tile_buffer = 12
+
+				[[maps]]
+				name = "map-with-tilebuffer"
+				tile_buffer = 32
+			
+				[[maps]]
+				name = "map-without-tilebuffer"`,
+			expected: map[string]float64{
+				"map-with-tilebuffer":    32.0,
+				"map-without-tilebuffer": 12.0,
+			},
+		},
+		"2 without global tile_buffer": tcase{
+			config: `
+				[[maps]]
+				name = "map-with-tilebuffer"
+				tile_buffer = 32
+			
+				[[maps]]
+				name = "map-without-tilebuffer"`,
+			expected: map[string]float64{
+				"map-with-tilebuffer": 32.0,
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		r := strings.NewReader(tc.config)
+
+		conf, err := config.Parse(r, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		tileBuffers := conf.TileBuffersMap()
+		if !reflect.DeepEqual(tileBuffers, tc.expected) {
+			t.Fatalf("TestTileBuffersMap (%v): expected '%+v', got '%+v'", name, tc.expected, tileBuffers)
+		}
+	}
+}

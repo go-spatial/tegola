@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
@@ -138,7 +137,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tile := slippy.NewTile(req.z, req.x, req.y, TileBuffer, tegola.WebMercator)
+	tile := slippy.NewTile(req.z, req.x, req.y, chooseTileBuffer(req.mapName), tegola.WebMercator)
 
 	{
 		// Check to see that the zxy is within the bounds of the map.
@@ -179,4 +178,17 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(pbyte) > MaxTileSize {
 		log.Infof("tile z:%v, x:%v, y:%v is rather large - %vKb", req.z, req.x, req.y, len(pbyte)/1024)
 	}
+}
+
+func chooseTileBuffer(name string) float64 {
+	if TileBuffers == nil {
+		return tegola.DefaultTileBuffer
+	}
+
+	v, ok := TileBuffers[name]
+	if ok {
+		return v
+	}
+
+	return tegola.DefaultTileBuffer
 }
