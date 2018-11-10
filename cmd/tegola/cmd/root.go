@@ -82,7 +82,7 @@ func initConfig(configFile string, cacheRequired bool) (err error) {
 		return fmt.Errorf("No cache defined in config, please check your config (%v).", configFile)
 	}
 	if serverNoCache {
-		log.Info("Turn off the cache.")
+		log.Info("Cache explicitly turned off by user via command line")
 	} else if len(conf.Cache) > 0 {
 		// init cache backends
 		cache, err := register.Cache(conf.Cache)
