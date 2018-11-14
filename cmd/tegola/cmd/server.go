@@ -13,6 +13,7 @@ import (
 
 var (
 	serverPort      string
+	serverNoCache   bool
 	defaultHTTPPort = ":8080"
 )
 
