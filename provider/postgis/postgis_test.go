@@ -223,7 +223,7 @@ func TestTileFeatures(t *testing.T) {
 
 	type tcase struct {
 		layerConfig          map[string]interface{}
-		tile                 *slippy.Tile
+		tile                 provider.Tile
 		expectedFeatureCount int
 		expectedTags         []string
 	}
@@ -294,7 +294,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
 				postgis.ConfigKeyFields:    []string{"scalerank"},
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 4032,
 			expectedTags:         []string{"scalerank"},
 		},
@@ -303,7 +303,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -314,7 +314,7 @@ func TestTileFeatures(t *testing.T) {
 					SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100
 				) AS sub`,
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -324,7 +324,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 				postgis.ConfigKeyTablename: "not_good_name",
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -333,7 +333,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "(  SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -342,7 +342,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "   (SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -351,7 +351,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       " -- this is a comment\n-- accross multiple lines\n (SELECT gid, geom, scalerank FROM ne_10m_land_scale_rank LIMIT 100) AS sub -- another comment at the end",
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"scalerank"},
 		},
@@ -360,7 +360,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "(SELECT * FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"scalerank", "featurecla"},
 		},
@@ -370,7 +370,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeySQL:       "(SELECT * FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 				postgis.ConfigKeyFields:    []string{"scalerank"},
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"scalerank"},
 		},
@@ -379,7 +379,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) AS geom FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 98,
 		},
 		"SQL sub-query with token in SELECT": {
@@ -388,7 +388,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyGeomType:  "polygon", // required to disable SQL inspection
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, !ZOOM! * 2 AS doublezoom FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 98,
 			expectedTags:         []string{"doublezoom"},
 		},
@@ -398,7 +398,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, 1 AS a, '2' AS b, 3 AS c FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",
 				postgis.ConfigKeyFields:    []string{"gid", "a", "b"},
 			},
-			tile:                 slippy.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.TileFromSlippy(slippy.NewTile(1, 1, 1), 64),
 			expectedFeatureCount: 98,
 			expectedTags:         []string{"a", "b"},
 			// expectedTags:         []string{"gid", "a", "b"}, TODO #383

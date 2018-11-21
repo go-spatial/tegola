@@ -45,7 +45,7 @@ func TestReplaceTokens(t *testing.T) {
 			sql:      "SELECT * FROM foo WHERE geom && !BBOX! AND bar != 42",
 			srid:     tegola.WebMercator,
 			tile:     provider.TileFromSlippy(slippy.NewTile(2, 1, 1), 64),
-			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390624933,1.017529720390625e+07,3857) AND bar != 42",
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390625,1.017529720390625e+07,3857) AND bar != 42",
 		},
 		"replace BBOX and ZOOM 1": {
 			sql:      "SELECT id, scalerank=!ZOOM! FROM foo WHERE geom && !BBOX!",
@@ -63,7 +63,7 @@ func TestReplaceTokens(t *testing.T) {
 			sql:      "SELECT id, !pixel_width! as width, !pixel_height! as height, !scale_denominator! as scale_denom FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
 			tile:     provider.TileFromSlippy(slippy.NewTile(11, 1070, 676), 64),
-			expected: "SELECT id, 76.43702827453626 as width, 76.43702827453671 as height, 272989.3866947724 as scale_denom FROM foo WHERE geom && ST_MakeEnvelope(899816.6968478388,6.789748347570495e+06,919996.0723123164,6.809927723034973e+06,3857)",
+			expected: "SELECT id, 76.43702827453671 as width, 76.43702827453671 as height, 272989.38669477403 as scale_denom FROM foo WHERE geom && ST_MakeEnvelope(899816.6968478388,6.789748347570495e+06,919996.0723123164,6.809927723034973e+06,3857)",
 		},
 	}
 
