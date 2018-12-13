@@ -83,7 +83,7 @@ func TestEncodeGeometry(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			g, gtype, err := encodeGeometry(context.Background(), tc.geo, tile, true)
+			g, gtype, err := encodeGeometry(context.Background(), tc.geo, tile, true, true)
 			if tc.eerr != err {
 				t.Errorf("error, expected %v got %v", tc.eerr, err)
 			}
