@@ -147,6 +147,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 			mvtLayer := mvt.Layer{
 				Name:         l.MVTName(),
 				DontSimplify: l.DontSimplify,
+				DontClip: l.DontClip,
 			}
 
 			// on completion let the wait group know

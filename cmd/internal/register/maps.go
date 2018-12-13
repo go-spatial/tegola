@@ -156,6 +156,7 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 				DefaultTags:       defaultTags,
 				GeomType:          layerGeomType,
 				DontSimplify:      bool(l.DontSimplify),
+				DontClip:      	   bool(l.DontClip),
 			})
 		}
 

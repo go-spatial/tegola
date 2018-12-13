@@ -19,6 +19,9 @@ type Layer struct {
 	// DontSimplify indicates wheather feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify
 	DontSimplify bool
+	// DontClip indicates wheather feature clipping should be applied.
+	// We use a negative in the name so the default is to clipping
+	DontClip bool
 }
 
 // MVTName will return the value that will be encoded in the Name field when the layer is encoded as MVT

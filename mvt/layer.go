@@ -56,6 +56,8 @@ type Layer struct {
 	DontSimplify bool
 	// MaxSimplificationZoom is the zoom level at which point simplification is turned off. if value is zero Max is set to 14. If you do not want to simplify at any level set DontSimplify to true.
 	MaxSimplificationZoom uint
+	// DontClip truns off clipping for this layer.
+	DontClip bool
 }
 
 func valMapToVTileValue(valMap []interface{}) (vt []*vectorTile.Tile_Value) {
@@ -84,7 +86,7 @@ func (l *Layer) VTileLayer(ctx context.Context, tile *tegola.Tile) (*vectorTile.
 
 		simplify = simplify && tile.Z < l.MaxSimplificationZoom
 
-		vtf, err := f.VTileFeature(ctx, kmap, vmap, tile, simplify)
+		vtf, err := f.VTileFeature(ctx, kmap, vmap, tile, simplify, !l.DontClip)
 		if err != nil {
 			switch err {
 			case context.Canceled:
