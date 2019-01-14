@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
-
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
@@ -20,6 +18,7 @@ import (
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
+	"github.com/golang/protobuf/proto"
 )
 
 // NewMap creates a new map with the necessary default values
@@ -31,7 +30,7 @@ func NewWebMercatorMap(name string) Map {
 		Layers:     []Layer{},
 		SRID:       tegola.WebMercator,
 		TileExtent: 4096,
-		TileBuffer: 64,
+		TileBuffer: uint64(tegola.DefaultTileBuffer),
 	}
 }
 

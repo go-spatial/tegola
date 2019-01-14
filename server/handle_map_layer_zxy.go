@@ -137,7 +137,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tile := slippy.NewTile(req.z, req.x, req.y, chooseTileBuffer(req.mapName), tegola.WebMercator)
+	tile := slippy.NewTile(req.z, req.x, req.y, float64(m.TileBuffer), tegola.WebMercator)
 
 	{
 		// Check to see that the zxy is within the bounds of the map.

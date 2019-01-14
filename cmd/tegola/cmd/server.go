@@ -38,9 +38,6 @@ var serverCmd = &cobra.Command{
 		// set the http reply headers
 		server.Headers = conf.Webserver.Headers
 
-		// set tile buffers
-		server.TileBuffers = conf.TileBuffersMap()
-
 		// start our webserver
 		srv := server.Start(nil, serverPort)
 		shutdown(srv)

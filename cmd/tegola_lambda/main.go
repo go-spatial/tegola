@@ -83,9 +83,6 @@ func main() {
 	// set the http reply headers
 	server.Headers = conf.Webserver.Headers
 
-	// set tile buffer
-	server.TileBuffers = conf.TileBuffersMap()
-
 	// http route setup
 	mux := server.NewRouter(nil)
 

@@ -145,6 +145,7 @@ func Parse(reader io.Reader, location string) (conf Config, err error) {
 	// decode conf file, don't care about the meta data.
 	_, err = toml.DecodeReader(reader, &conf)
 	conf.LocationName = location
+	conf.ConfigureTileBuffers()
 
 	return conf, err
 }
@@ -196,18 +197,16 @@ func LoadAndValidate(filename string) (cfg Config, err error) {
 	return cfg, cfg.Validate()
 }
 
-// TileBuffersMap returns map where key is the map name, value is the tile_buffer
-func (c *Config) TileBuffersMap() map[string]float64 {
-	tileBuffers := make(map[string]float64)
-	for _, m := range c.Maps {
-		if m.TileBuffer == nil && c.TileBuffer != nil {
-			tileBuffers[string(m.Name)] = float64(*c.TileBuffer)
-			continue
-		}
-
-		if m.TileBuffer != nil {
-			tileBuffers[string(m.Name)] = float64(*m.TileBuffer)
+func (c *Config) ConfigureTileBuffers() {
+	for mapKey, m := range c.Maps {
+		if m.TileBuffer == nil {
+			if c.TileBuffer == nil {
+				c.Maps[mapKey].TileBuffer = env.IntPtr(env.Int(tegola.DefaultTileBuffer))
+			} else {
+				c.Maps[mapKey].TileBuffer = c.TileBuffer
+			}
+		} else {
+			c.Maps[mapKey].TileBuffer = m.TileBuffer
 		}
 	}
-	return tileBuffers
 }
