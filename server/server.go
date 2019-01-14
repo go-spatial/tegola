@@ -41,10 +41,6 @@ var (
 	// Headers is the map of http reply headers.
 	// configurable via the tegola config.toml file (set in main.go)
 	Headers map[string]interface{}
-
-	// TileBuffers is the tile buffers to use (key is the map name).
-	// configurable via tegola config.tomal file (set in main.go)
-	TileBuffers map[string]float64
 )
 
 // NewRouter set's up the our routes.

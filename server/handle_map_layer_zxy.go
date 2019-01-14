@@ -179,16 +179,3 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Infof("tile z:%v, x:%v, y:%v is rather large - %vKb", req.z, req.x, req.y, len(pbyte)/1024)
 	}
 }
-
-func chooseTileBuffer(name string) float64 {
-	if TileBuffers == nil {
-		return tegola.DefaultTileBuffer
-	}
-
-	v, ok := TileBuffers[name]
-	if ok {
-		return v
-	}
-
-	return tegola.DefaultTileBuffer
-}
