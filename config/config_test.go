@@ -173,6 +173,7 @@ func TestParse(t *testing.T) {
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						TileBuffer:  env.IntPtr(env.Int(12)),
 						Layers: []config.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
@@ -282,6 +283,7 @@ func TestParse(t *testing.T) {
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{ENV_TEST_CENTER_X, ENV_TEST_CENTER_Y, ENV_TEST_CENTER_Z},
+						TileBuffer:  env.IntPtr(env.Int(64)),
 						Layers: []config.MapLayer{
 							{
 								Name:          "water",
@@ -302,6 +304,7 @@ func TestParse(t *testing.T) {
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						TileBuffer:  env.IntPtr(env.Int(64)),
 						Layers: []config.MapLayer{
 							{
 								Name:          "water",
@@ -709,6 +712,107 @@ func TestValidate(t *testing.T) {
 			},
 			expectedErr: config.ErrInvalidHeader{
 				Header: "Content-Encoding",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
+	}
+}
+
+func TestConfigureTileBuffers(t *testing.T) {
+	type tcase struct {
+		config   config.Config
+		expected config.Config
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
+		tc.config.ConfigureTileBuffers()
+		if !reflect.DeepEqual(tc.expected, tc.config) {
+			t.Errorf("expected \n\n %+v \n\n got \n\n %+v", tc.expected, tc.config)
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		"1 tilebuffer is not set": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name: "osm",
+					},
+				},
+			},
+			expected: config.Config{
+				Maps: []config.Map{
+					{
+						Name:       "osm",
+						TileBuffer: env.IntPtr(env.Int(64)),
+					},
+				},
+			},
+		},
+		"2 tilebuffer is set in global section": {
+			config: config.Config{
+				TileBuffer: env.IntPtr(env.Int(32)),
+				Maps: []config.Map{
+					{
+						Name: "osm",
+					},
+				},
+			},
+			expected: config.Config{
+				TileBuffer: env.IntPtr(env.Int(32)),
+				Maps: []config.Map{
+					{
+						Name:       "osm",
+						TileBuffer: env.IntPtr(env.Int(32)),
+					},
+				},
+			},
+		},
+		"3 tilebuffer is set in map section": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name:       "osm",
+						TileBuffer: env.IntPtr(env.Int(16)),
+					},
+				},
+			},
+			expected: config.Config{
+				Maps: []config.Map{
+					{
+						Name:       "osm",
+						TileBuffer: env.IntPtr(env.Int(16)),
+					},
+				},
+			},
+		},
+		"4 tilebuffer is set in global and map sections": {
+			config: config.Config{
+				TileBuffer: env.IntPtr(env.Int(32)),
+				Maps: []config.Map{
+					{
+						Name:       "osm",
+						TileBuffer: env.IntPtr(env.Int(16)),
+					},
+				},
+			},
+			expected: config.Config{
+				TileBuffer: env.IntPtr(env.Int(32)),
+				Maps: []config.Map{
+					{
+						Name:       "osm",
+						TileBuffer: env.IntPtr(env.Int(16)),
+					},
+				},
 			},
 		},
 	}

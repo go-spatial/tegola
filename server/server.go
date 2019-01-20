@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 )
@@ -42,10 +41,6 @@ var (
 	// Headers is the map of http reply headers.
 	// configurable via the tegola config.toml file (set in main.go)
 	Headers map[string]interface{}
-
-	// TileBuffer is the tile buffer to use.
-	// configurable via tegola config.tomal file (set in main.go)
-	TileBuffer float64 = tegola.DefaultTileBuffer
 )
 
 // NewRouter set's up the our routes.
