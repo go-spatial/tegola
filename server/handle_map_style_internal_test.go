@@ -1,6 +1,8 @@
 package server
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestStringToColorHex(t *testing.T) {
 	testcases := []struct {

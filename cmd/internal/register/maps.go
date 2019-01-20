@@ -78,6 +78,12 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			)
 		}
 
+		if m.TileBuffer == nil {
+			newMap.TileBuffer = tegola.DefaultTileBuffer
+		} else {
+			newMap.TileBuffer = uint64(*m.TileBuffer)
+		}
+
 		// iterate our layers
 		for _, l := range m.Layers {
 			// split our provider name (provider.layer) into [provider,layer]

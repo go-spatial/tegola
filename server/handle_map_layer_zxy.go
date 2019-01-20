@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
@@ -138,7 +137,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tile := slippy.NewTile(req.z, req.x, req.y, TileBuffer, tegola.WebMercator)
+	tile := slippy.NewTile(req.z, req.x, req.y, float64(m.TileBuffer), tegola.WebMercator)
 
 	{
 		// Check to see that the zxy is within the bounds of the map.

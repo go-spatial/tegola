@@ -47,6 +47,7 @@ type Map struct {
 	Bounds      []env.Float  `toml:"bounds"`
 	Center      [3]env.Float `toml:"center"`
 	Layers      []MapLayer   `toml:"layers"`
+	TileBuffer  *env.Int     `toml:"tile_buffer"`
 }
 
 type MapLayer struct {
@@ -144,6 +145,7 @@ func Parse(reader io.Reader, location string) (conf Config, err error) {
 	// decode conf file, don't care about the meta data.
 	_, err = toml.DecodeReader(reader, &conf)
 	conf.LocationName = location
+	conf.ConfigureTileBuffers()
 
 	return conf, err
 }
@@ -193,4 +195,18 @@ func LoadAndValidate(filename string) (cfg Config, err error) {
 	}
 	// validate our config
 	return cfg, cfg.Validate()
+}
+
+func (c *Config) ConfigureTileBuffers() {
+	for mapKey, m := range c.Maps {
+		if m.TileBuffer == nil {
+			if c.TileBuffer == nil {
+				c.Maps[mapKey].TileBuffer = env.IntPtr(env.Int(tegola.DefaultTileBuffer))
+			} else {
+				c.Maps[mapKey].TileBuffer = c.TileBuffer
+			}
+		} else {
+			c.Maps[mapKey].TileBuffer = m.TileBuffer
+		}
+	}
 }
