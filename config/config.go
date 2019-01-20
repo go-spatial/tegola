@@ -140,6 +140,27 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// ConfigTileBuffers handles setting the tile buffer for a Map
+func (c *Config) ConfigureTileBuffers() {
+	// range our configured maps
+	for mapKey, m := range c.Maps {
+		// if there is a tile buffer config for this map, use it
+		if m.TileBuffer != nil {
+			c.Maps[mapKey].TileBuffer = m.TileBuffer
+			return
+		}
+
+		// if there is a global tile buffer config, use it
+		if c.TileBuffer != nil {
+			c.Maps[mapKey].TileBuffer = c.TileBuffer
+			return
+		}
+
+		// tile buffer is not configured, use default
+		c.Maps[mapKey].TileBuffer = env.IntPtr(env.Int(tegola.DefaultTileBuffer))
+	}
+}
+
 // Parse will parse the Tegola config file provided by the io.Reader.
 func Parse(reader io.Reader, location string) (conf Config, err error) {
 	// decode conf file, don't care about the meta data.
@@ -195,18 +216,4 @@ func LoadAndValidate(filename string) (cfg Config, err error) {
 	}
 	// validate our config
 	return cfg, cfg.Validate()
-}
-
-func (c *Config) ConfigureTileBuffers() {
-	for mapKey, m := range c.Maps {
-		if m.TileBuffer == nil {
-			if c.TileBuffer == nil {
-				c.Maps[mapKey].TileBuffer = env.IntPtr(env.Int(tegola.DefaultTileBuffer))
-			} else {
-				c.Maps[mapKey].TileBuffer = c.TileBuffer
-			}
-		} else {
-			c.Maps[mapKey].TileBuffer = m.TileBuffer
-		}
-	}
 }
