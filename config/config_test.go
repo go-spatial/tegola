@@ -765,6 +765,9 @@ func TestConfigureTileBuffers(t *testing.T) {
 					{
 						Name: "osm",
 					},
+					{
+						Name: "osm-2",
+					},
 				},
 			},
 			expected: config.Config{
@@ -772,6 +775,10 @@ func TestConfigureTileBuffers(t *testing.T) {
 				Maps: []config.Map{
 					{
 						Name:       "osm",
+						TileBuffer: env.IntPtr(env.Int(32)),
+					},
+					{
+						Name:       "osm-2",
 						TileBuffer: env.IntPtr(env.Int(32)),
 					},
 				},
@@ -784,6 +791,10 @@ func TestConfigureTileBuffers(t *testing.T) {
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),
 					},
+					{
+						Name:       "osm-2",
+						TileBuffer: env.IntPtr(env.Int(32)),
+					},
 				},
 			},
 			expected: config.Config{
@@ -791,6 +802,10 @@ func TestConfigureTileBuffers(t *testing.T) {
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),
+					},
+					{
+						Name:       "osm-2",
+						TileBuffer: env.IntPtr(env.Int(32)),
 					},
 				},
 			},

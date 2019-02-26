@@ -147,13 +147,13 @@ func (c *Config) ConfigureTileBuffers() {
 		// if there is a tile buffer config for this map, use it
 		if m.TileBuffer != nil {
 			c.Maps[mapKey].TileBuffer = m.TileBuffer
-			return
+			continue
 		}
 
 		// if there is a global tile buffer config, use it
 		if c.TileBuffer != nil {
 			c.Maps[mapKey].TileBuffer = c.TileBuffer
-			return
+			continue
 		}
 
 		// tile buffer is not configured, use default
