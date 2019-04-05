@@ -153,6 +153,12 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 			// fetch layer from data provider
 			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
+				// skip row if geometry collection empty.
+				g, ok := geometry.(geom.Collection)
+				if ok && len(g.Geometries()) == 0 {
+					continue
+				}
+
 				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package
 				geo, err := convert.ToTegola(f.Geometry)
 				if err != nil {

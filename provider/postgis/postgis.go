@@ -592,12 +592,6 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			}
 		}
 
-		// skip row if geometry collection empty.
-		g, ok := geometry.(geom.Collection)
-		if ok && len(g.Geometries()) == 0 {
-			continue
-		}
-
 		feature := provider.Feature{
 			ID:       gid,
 			Geometry: geometry,
