@@ -154,9 +154,9 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 			// fetch layer from data provider
 			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
 				// skip row if geometry collection empty.
-				g, ok := geometry.(geom.Collection)
+				g, ok := f.Geometry.(geom.Collection)
 				if ok && len(g.Geometries()) == 0 {
-					continue
+					return nil
 				}
 
 				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package

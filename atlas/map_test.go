@@ -14,8 +14,9 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/p"
-	"github.com/go-spatial/tegola/mvt/vector_tile"
+	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 	"github.com/go-spatial/tegola/provider/test"
+	"github.com/go-spatial/tegola/provider/test/emptycollection"
 )
 
 func TestMapFilterLayersByZoom(t *testing.T) {
@@ -142,12 +143,138 @@ func TestEncode(t *testing.T) {
 	// linestring := vectorTile.Tile_LINESTRING
 	polygon := vectorTile.Tile_POLYGON
 
-	testcases := []struct {
+	type tcase struct {
 		grid     atlas.Map
 		tile     *slippy.Tile
 		expected vectorTile.Tile
-	}{
-		{
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			out, err := tc.grid.Encode(context.Background(), tc.tile)
+			if err != nil {
+				t.Errorf("err: %v", err)
+				return
+			}
+
+			// decompress our output
+			var buf bytes.Buffer
+			r, err := gzip.NewReader(bytes.NewReader(out))
+			if err != nil {
+				t.Errorf("err: %v", err)
+				return
+			}
+
+			_, err = io.Copy(&buf, r)
+			if err != nil {
+				t.Errorf("err: %v", err)
+				return
+			}
+
+			var tile vectorTile.Tile
+
+			if err = proto.Unmarshal(buf.Bytes(), &tile); err != nil {
+				t.Errorf("error unmarshalling output: %v", err)
+				return
+			}
+
+			// check the layer lengths match
+			if len(tile.Layers) != len(tc.expected.Layers) {
+				t.Errorf("expected (%d) layers, got (%d)", len(tc.expected.Layers), len(tile.Layers))
+				return
+			}
+
+			for j, tileLayer := range tile.Layers {
+				expectedLayer := tc.expected.Layers[j]
+
+				if *tileLayer.Version != *expectedLayer.Version {
+					t.Errorf("expected %v got %v", *tileLayer.Version, *expectedLayer.Version)
+					return
+				}
+
+				if *tileLayer.Name != *expectedLayer.Name {
+					t.Errorf("expected %v got %v", *tileLayer.Name, *expectedLayer.Name)
+					return
+				}
+
+				// features check
+				for k, tileLayerFeature := range tileLayer.Features {
+					expectedTileLayerFeature := expectedLayer.Features[k]
+
+					if *tileLayerFeature.Id != *expectedTileLayerFeature.Id {
+						t.Errorf("expected %v got %v", *tileLayerFeature.Id, *expectedTileLayerFeature.Id)
+						return
+					}
+
+					// the vector tile layer tags output is not always consistent since it's generated from a map.
+					// because of that we're going to check everything but the tags values
+
+					// if !reflect.DeepEqual(tileLayerFeature.Tags, expectedTileLayerFeature.Tags) {
+					//  t.Errorf("expected %v got %v", tileLayerFeature.Tags, expectedTileLayerFeature.Tags)
+					// 	return
+					// }
+
+					if *tileLayerFeature.Type != *expectedTileLayerFeature.Type {
+						t.Errorf("expected %v got %v", *tileLayerFeature.Type, *expectedTileLayerFeature.Type)
+						return
+					}
+
+					if !reflect.DeepEqual(tileLayerFeature.Geometry, expectedTileLayerFeature.Geometry) {
+						t.Errorf("expected %v got %v", tileLayerFeature.Geometry, expectedTileLayerFeature.Geometry)
+						return
+					}
+				}
+
+				if len(tileLayer.Keys) != len(expectedLayer.Keys) {
+					t.Errorf("layer keys length, expected %v got %v", len(expectedLayer.Keys), len(tileLayer.Keys))
+					return
+				}
+				{
+					var keysmaps = make(map[string]struct{})
+					for _, k := range expectedLayer.Keys {
+						keysmaps[k] = struct{}{}
+					}
+					var ferr bool
+					for _, k := range tileLayer.Keys {
+						if _, ok := keysmaps[k]; !ok {
+							t.Errorf("did not find key, expected %v got nil", k)
+							ferr = true
+						}
+					}
+					if ferr {
+						return
+					}
+				}
+
+				if *tileLayer.Extent != *expectedLayer.Extent {
+					t.Errorf("expected %v got %v", *tileLayer.Extent, *expectedLayer.Extent)
+					return
+				}
+
+				if len(expectedLayer.Keys) != len(tileLayer.Keys) {
+					t.Errorf("key len expected %v got %v", len(expectedLayer.Keys), len(tileLayer.Keys))
+					return
+
+				}
+
+				var gotmap = make(map[string]interface{})
+				var expmap = make(map[string]interface{})
+				for i, k := range tileLayer.Keys {
+					gotmap[k] = tileLayer.Values[i]
+				}
+				for i, k := range expectedLayer.Keys {
+					expmap[k] = expectedLayer.Values[i]
+				}
+
+				if !reflect.DeepEqual(expmap, gotmap) {
+					t.Errorf("constructed map expected %v got %v", expmap, gotmap)
+				}
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"test_provider": {
 			grid: atlas.Map{
 				Layers: []atlas.Layer{
 					{
@@ -214,123 +341,34 @@ func TestEncode(t *testing.T) {
 				},
 			},
 		},
+		"empty_collection": {
+			grid: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:     "empty_geom_collection",
+						MinZoom:  0,
+						MaxZoom:  2,
+						Provider: &emptycollection.TileProvider{},
+					},
+				},
+			},
+			tile: slippy.NewTile(2, 3, 4, 64, tegola.WebMercator),
+			expected: vectorTile.Tile{
+				Layers: []*vectorTile.Tile_Layer{
+					{
+						Version:  p.Uint32(2),
+						Name:     p.String("empty_geom_collection"),
+						Features: []*vectorTile.Tile_Feature{},
+						Keys:     []string{},
+						Values:   []*vectorTile.Tile_Value{},
+						Extent:   p.Uint32(vectorTile.Default_Tile_Layer_Extent),
+					},
+				},
+			},
+		},
 	}
 
-	for i, tc := range testcases {
-		out, err := tc.grid.Encode(context.Background(), tc.tile)
-		if err != nil {
-			t.Errorf("[%v] err: %v", i, err)
-			continue
-		}
-
-		// decompress our output
-		var buf bytes.Buffer
-		r, err := gzip.NewReader(bytes.NewReader(out))
-		if err != nil {
-			t.Errorf("[%v] err: %v", i, err)
-			continue
-		}
-
-		_, err = io.Copy(&buf, r)
-		if err != nil {
-			t.Errorf("[%v] err: %v", i, err)
-			continue
-		}
-
-		var tile vectorTile.Tile
-
-		if err = proto.Unmarshal(buf.Bytes(), &tile); err != nil {
-			t.Errorf("[%v] error unmarshalling output: %v", i, err)
-			continue
-		}
-
-		for j, tileLayer := range tile.Layers {
-			expectedLayer := tc.expected.Layers[j]
-
-			if *tileLayer.Version != *expectedLayer.Version {
-				t.Errorf("[%v] expected %v got %v", i, *tileLayer.Version, *expectedLayer.Version)
-				continue
-			}
-
-			if *tileLayer.Name != *expectedLayer.Name {
-				t.Errorf("[%v] expected %v got %v", i, *tileLayer.Name, *expectedLayer.Name)
-				continue
-			}
-
-			// features check
-			for k, tileLayerFeature := range tileLayer.Features {
-				expectedTileLayerFeature := expectedLayer.Features[k]
-
-				if *tileLayerFeature.Id != *expectedTileLayerFeature.Id {
-					t.Errorf("[%v] expected %v got %v", i, *tileLayerFeature.Id, *expectedTileLayerFeature.Id)
-					continue
-				}
-
-				/*
-					// the vector tile layer tags output is not always consistent since it's generated from a map.
-					// because of that we're going to check everything but the tags values
-
-					if !reflect.DeepEqual(tileLayerFeature.Tags, expectedTileLayerFeature.Tags) {
-						t.Errorf("[%v] expected %v got %v", i, tileLayerFeature.Tags, expectedTileLayerFeature.Tags)
-						continue
-					}
-				*/
-
-				if *tileLayerFeature.Type != *expectedTileLayerFeature.Type {
-					t.Errorf("[%v] expected %v got %v", i, *tileLayerFeature.Type, *expectedTileLayerFeature.Type)
-					continue
-				}
-
-				if !reflect.DeepEqual(tileLayerFeature.Geometry, expectedTileLayerFeature.Geometry) {
-					t.Errorf("[%v] expected %v got %v", i, tileLayerFeature.Geometry, expectedTileLayerFeature.Geometry)
-					continue
-				}
-			}
-
-			if len(tileLayer.Keys) != len(expectedLayer.Keys) {
-				t.Errorf("[%v] layer keys length, expected %v got %v", i, len(expectedLayer.Keys), len(tileLayer.Keys))
-				continue
-			}
-			{
-				var keysmaps = make(map[string]struct{})
-				for _, k := range expectedLayer.Keys {
-					keysmaps[k] = struct{}{}
-				}
-				var ferr bool
-				for _, k := range tileLayer.Keys {
-					if _, ok := keysmaps[k]; !ok {
-						t.Errorf("[%v] did not find key, expected %v got nil", i, k)
-						ferr = true
-					}
-				}
-				if ferr {
-					continue
-				}
-			}
-
-			if *tileLayer.Extent != *expectedLayer.Extent {
-				t.Errorf("[%v] expected %v got %v", i, *tileLayer.Extent, *expectedLayer.Extent)
-				continue
-			}
-
-			if len(expectedLayer.Keys) != len(tileLayer.Keys) {
-				t.Errorf("[%v] key len expected %v got %v", i, len(expectedLayer.Keys), len(tileLayer.Keys))
-				continue
-
-			}
-
-			var gotmap = make(map[string]interface{})
-			var expmap = make(map[string]interface{})
-			for i, k := range tileLayer.Keys {
-				gotmap[k] = tileLayer.Values[i]
-			}
-			for i, k := range expectedLayer.Keys {
-				expmap[k] = expectedLayer.Values[i]
-			}
-			if !reflect.DeepEqual(expmap, gotmap) {
-				t.Errorf("[%v] constructed map expected %v got %v", i, expmap, gotmap)
-			}
-
-		}
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
 	}
 }

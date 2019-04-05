@@ -458,16 +458,15 @@ func TestTileFeatures(t *testing.T) {
 				LayerName:     "missing_geom_field_name",
 			},
 		},
-		"gracefully handle empty geometry collection": {
+		"empty geometry collection": {
 			layerConfig: map[string]interface{}{
 				postgis.ConfigKeyLayerName: "empty_geometry_collection",
 				postgis.ConfigKeyGeomField: "geom",
 				postgis.ConfigKeyGeomType:  "polygon", // bypass the geometry type sniff on init
 				postgis.ConfigKeySQL:       "SELECT ST_AsBinary(ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')) AS geom, !BBOX! AS bbox",
 			},
-			tile: slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
-			// the test query returns a single geometry but it's ignored so our cout is 0
-			expectedFeatureCount: 0,
+			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			expectedFeatureCount: 1,
 			expectedTags:         []string{},
 		},
 	}
