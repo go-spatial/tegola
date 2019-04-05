@@ -539,6 +539,21 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	// fetch rows FieldDescriptions. this gives us the OID for the data types returned to aid in decoding
 	fdescs := rows.FieldDescriptions()
 
+	// loop our field descriptions looking for the geometry field
+	var geomFieldFound bool
+	for i := range fdescs {
+		if fdescs[i].Name == plyr.GeomFieldName() {
+			geomFieldFound = true
+			break
+		}
+	}
+	if !geomFieldFound {
+		return ErrGeomFieldNotFound{
+			GeomFieldName: plyr.GeomFieldName(),
+			LayerName:     plyr.Name(),
+		}
+	}
+
 	for rows.Next() {
 		// context check
 		if err := ctx.Err(); err != nil {
