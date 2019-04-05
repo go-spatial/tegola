@@ -225,6 +225,7 @@ func TestTileFeatures(t *testing.T) {
 	type tcase struct {
 		layerConfig          map[string]interface{}
 		tile                 *slippy.Tile
+		expectedErr          error
 		expectedFeatureCount int
 		expectedTags         []string
 	}
@@ -268,8 +269,8 @@ func TestTileFeatures(t *testing.T) {
 
 			return nil
 		})
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
+		if err != tc.expectedErr {
+			t.Errorf("expected err (%v) got err (%v)", tc.expectedErr, err)
 			return
 		}
 
@@ -439,11 +440,23 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyGeomIDField: "id",
 				postgis.ConfigKeyGeomField:   "geometry",
 				// this SQL is a workaround the normal !BBOX! WHERE clause. we're simulating a null geometry lookup in the table and don't want to filter by bounding box
-				postgis.ConfigKeySQL: "SELECT id, ST_AsBinary(geometry) AS geometry, !BBOX! as bbox FROM null_geom_test",
+				postgis.ConfigKeySQL: "SELECT id, ST_AsBinary(geometry) AS geometry, !BBOX! AS bbox FROM null_geom_test",
 			},
 			tile:                 slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
 			expectedFeatureCount: 1,
 			expectedTags:         []string{"bbox"},
+		},
+		"missing geom field name": {
+			layerConfig: map[string]interface{}{
+				postgis.ConfigKeyLayerName: "missing_geom_field_name",
+				postgis.ConfigKeyGeomField: "geom",
+				postgis.ConfigKeySQL:       "SELECT ST_AsBinary(geom) FROM three_d_test WHERE geom && !BBOX!",
+			},
+			tile: slippy.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			expectedErr: postgis.ErrGeomFieldNotFound{
+				GeomFieldName: "geom",
+				LayerName:     "missing_geom_field_name",
+			},
 		},
 	}
 
