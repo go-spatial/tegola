@@ -581,14 +581,8 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			continue
 		}
 
-		// skip row if geometry collection empty.
-		g, ok := geometry.(geom.Collection)
-		if ok && len(g.Geometries()) == 0 {
-			continue
-		}
-
 		// decode our WKB
-		geom, err := wkb.DecodeBytes(geobytes)
+		geometry, err := wkb.DecodeBytes(geobytes)
 		if err != nil {
 			switch err.(type) {
 			case wkb.ErrUnknownGeometryType:
@@ -598,9 +592,15 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			}
 		}
 
+		// skip row if geometry collection empty.
+		g, ok := geometry.(geom.Collection)
+		if ok && len(g.Geometries()) == 0 {
+			continue
+		}
+
 		feature := provider.Feature{
 			ID:       gid,
-			Geometry: geom,
+			Geometry: geometry,
 			SRID:     plyr.SRID(),
 			Tags:     tags,
 		}
