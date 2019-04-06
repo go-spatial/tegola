@@ -20,7 +20,7 @@ type Layer struct {
 	// We use a negative in the name so the default is to simplify
 	DontSimplify bool
 	// DontClip indicates wheather feature clipping should be applied.
-	// We use a negative in the name so the default is to clipping
+	// We use a negative in the name so the default is to clip
 	DontClip bool
 }
 

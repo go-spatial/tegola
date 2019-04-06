@@ -96,16 +96,14 @@ func scaleMultiPolygon(p tegola.MultiPolygon, factor float64) (bmp basic.MultiPo
 	return bmp
 }
 
-func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent, clipGeometry bool) (geo tegola.Geometry, err error) {
+// CleanGeometry will apply various geoprocessing algorithems to the provided geometry.
+// the extent will be used as a clipping region. if no clipping is desired, pass in a nil extent.
+func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent) (geo tegola.Geometry, err error) {
 	if g == nil {
 		return nil, nil
 	}
 	switch gg := g.(type) {
 	case tegola.Polygon:
-		if !clipGeometry {
-			extent = nil
-		}
-
 		expp := scalePolygon(gg, 10.0)
 		ext := extent.ScaleBy(10.0)
 		hm := hitmap.NewFromGeometry(expp)
@@ -116,10 +114,6 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent, 
 		return scaleMultiPolygon(mp, 0.10), nil
 
 	case tegola.MultiPolygon:
-		if !clipGeometry {
-			extent = nil
-		}
-
 		expp := scaleMultiPolygon(gg, 10.0)
 		ext := extent.ScaleBy(10.0)
 		hm := hitmap.NewFromGeometry(expp)
@@ -130,10 +124,6 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent, 
 		return scaleMultiPolygon(mp, 0.10), nil
 
 	case tegola.MultiLine:
-		if !clipGeometry {
-			return g, nil
-		}
-
 		var ml basic.MultiLine
 		lns := gg.Lines()
 		for i := range lns {
@@ -146,10 +136,6 @@ func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent, 
 		}
 		return ml, nil
 	case tegola.LineString:
-		if !clipGeometry {
-			return g, nil
-		}
-
 		// 	log.Println("Clip LineString Buff", buff)
 		nls, err := clip.LineString(gg, extent)
 		return basic.MultiLine(nls), err

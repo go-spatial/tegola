@@ -15,7 +15,7 @@ import (
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/points"
 	"github.com/go-spatial/tegola/maths/validate"
-	"github.com/go-spatial/tegola/mvt/vector_tile"
+	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 )
 
 // errors
@@ -592,9 +592,14 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
-	ext := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 
-	geometry, err = validate.CleanGeometry(ctx, sg, ext, clip)
+	// check if we need to clip and if we do build the extent
+	var ext *geom.Extent
+	if clip {
+		ext = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+	}
+
+	geometry, err = validate.CleanGeometry(ctx, sg, ext)
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
