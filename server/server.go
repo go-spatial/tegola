@@ -151,5 +151,8 @@ var URLRoot = func(r *http.Request) string {
 func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
 	w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
 	w.Header().Set("Access-Control-Allow-Methods", CORSAllowedMethods)
+
+	addUserDefinedHeaders(w)
+
 	return
 }

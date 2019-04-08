@@ -2,6 +2,7 @@ package server
 
 import "net/http"
 
+// HeadersHandler is middleware for adding user defined response headers
 func HeadersHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -9,15 +10,19 @@ func HeadersHandler(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", CORSAllowedMethods)
 
-		for name, value := range Headers {
-			v, ok := value.(string)
-			if ok {
-				w.Header().Set(name, v)
-			}
-		}
+		addUserDefinedHeaders(w)
 
 		next.ServeHTTP(w, r)
 
 		return
 	})
+}
+
+func addUserDefinedHeaders(w http.ResponseWriter) {
+	for name, value := range Headers {
+		v, ok := value.(string)
+		if ok {
+			w.Header().Set(name, v)
+		}
+	}
 }
