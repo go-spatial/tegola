@@ -379,6 +379,13 @@
 			"revisionTime": "2018-04-16T08:30:54Z"
 		},
 		{
+			"checksumSHA1": "Qk7VIdrRPxkPBRG31IV/AtUsD64=",
+			"origin": "github.com/go-spatial/tegola/vendor/github.com/mattn/go-sqlite3",
+			"path": "github.com/mattn/go-sqlite3",
+			"revision": "31f5bb843b7852e28d5a66d1d539c042c3bb623a",
+			"revisionTime": "2019-03-15T08:37:29Z"
+		},
+		{
 			"checksumSHA1": "+ArBDwAK19OC1iDy1yEbXOC9sgQ=",
 			"path": "github.com/mattn/goveralls",
 			"revision": "b71a1e4855f87991aff01c2c833a75a07059c61c",
