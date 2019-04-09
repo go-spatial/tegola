@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -80,8 +81,17 @@ func main() {
 		server.HostName = string(conf.Webserver.HostName)
 	}
 
-	// set the http reply headers
-	server.Headers = conf.Webserver.Headers
+	// set user defined response headers
+	for name, value := range conf.Webserver.Headers {
+		// cast to string
+		val := fmt.Sprintf("%v", value)
+		// check that we have a value set
+		if val == "" {
+			log.Fatalf("webserver.header (%v) has no configured value", val)
+		}
+
+		server.Headers[name] = val
+	}
 
 	// http route setup
 	mux := server.NewRouter(nil)

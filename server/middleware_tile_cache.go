@@ -69,9 +69,6 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 			return
 		}
 
-		//	cors header
-		w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
-
 		// mimetype for mapbox vector tiles
 		w.Header().Add("Content-Type", mvt.MimeType)
 

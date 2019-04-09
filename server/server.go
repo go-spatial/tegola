@@ -1,4 +1,4 @@
-//  Package server implements the http frontend
+// Package server implements the http frontend
 package server
 
 import (
@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 )
@@ -30,17 +31,15 @@ var (
 	// configurable via the tegola config.toml file (set in main.go)
 	Port string
 
-	// CORSAllowedOrigin is the "Access-Control-Allow-Origin" CORS header.
+	// Headers is the map of user defined response headers.
 	// configurable via the tegola config.toml file (set in main.go)
-	CORSAllowedOrigin string = "*"
+	Headers = map[string]string{}
 
-	// CORSAllowedMethods is the "Access-Control-Allow-Methods" CORS header.
-	// configurable via the tegola config.toml file (set in main.go)
-	CORSAllowedMethods string = "GET, OPTIONS"
-
-	// Headers is the map of http reply headers.
-	// configurable via the tegola config.toml file (set in main.go)
-	Headers map[string]interface{}
+	// DefaultCORSHeaders define the default CORS response headers added to all requests
+	DefaultCORSHeaders = map[string]string{
+		"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Methods": "GET, OPTIONS",
+	}
 )
 
 // NewRouter set's up the our routes.
@@ -149,7 +148,27 @@ var URLRoot = func(r *http.Request) string {
 
 // corsHanlder is used to respond to all OPTIONS requests for registered routes
 func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
-	w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
-	w.Header().Set("Access-Control-Allow-Methods", CORSAllowedMethods)
+	setHeaders(w)
 	return
+}
+
+// setHeaders sets deafult headers and user defined headers
+func setHeaders(w http.ResponseWriter) {
+	// add our default CORS headers
+	for name, val := range DefaultCORSHeaders {
+		if val == "" {
+			log.Warnf("default CORS header (%v) has no value", name)
+		}
+
+		w.Header().Set(name, val)
+	}
+
+	// set user defined headers
+	for name, val := range Headers {
+		if val == "" {
+			log.Warnf("header (%v) has no value", name)
+		}
+
+		w.Header().Set(name, val)
+	}
 }
