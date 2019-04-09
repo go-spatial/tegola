@@ -29,13 +29,15 @@ func TestExtractColsAndPKFromSQL(t *testing.T) {
 		expectedPK   string
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		cols, pk := extractColsAndPKFromSQL(tc.sql)
-		if !reflect.DeepEqual(cols, tc.expectedCols) {
-			t.Errorf("extract col, expected %v got %v", tc.expectedCols, cols)
-		}
-		if pk != tc.expectedPK {
-			t.Errorf("extract PK, expected %v got %v", tc.expectedPK, pk)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			cols, pk := extractColsAndPKFromSQL(tc.sql)
+			if !reflect.DeepEqual(cols, tc.expectedCols) {
+				t.Errorf("extract col, expected %v got %v", tc.expectedCols, cols)
+			}
+			if pk != tc.expectedPK {
+				t.Errorf("extract PK, expected %v got %v", tc.expectedPK, pk)
+			}
 		}
 	}
 
@@ -181,10 +183,7 @@ func TestExtractColsAndPKFromSQL(t *testing.T) {
 	}
 
 	for testName, tc := range tests {
-		tc := tc
-		t.Run(testName, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(testName, fn(tc))
 	}
 }
 
@@ -217,25 +216,27 @@ func TestFeatureTableMetaData(t *testing.T) {
 		expectedFtd map[string]featureTableDetails
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		db, err := sql.Open("sqlite3", tc.gpkgPath)
-		if err != nil {
-			panic(fmt.Sprintf("problem opening gpkg %v, err: %v", tc.gpkgPath, err))
-		}
-		defer db.Close()
-
-		ftmd, err := featureTableMetaData(db)
-		if err != nil {
-			t.Errorf("unexpected error, expected nil got %v", err)
-		}
-
-		for tname, ftd := range ftmd {
-			expectedFtd, ok := tc.expectedFtd[tname]
-			if !ok {
-				t.Errorf(" %v in featureTableDetails, expected true got false", tname)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			db, err := sql.Open("sqlite3", tc.gpkgPath)
+			if err != nil {
+				panic(fmt.Sprintf("problem opening gpkg %v, err: %v", tc.gpkgPath, err))
 			}
-			if pass, errstr := ftdEqual(tname, ftd, expectedFtd); !pass {
-				t.Error(errstr)
+			defer db.Close()
+
+			ftmd, err := featureTableMetaData(db)
+			if err != nil {
+				t.Errorf("unexpected error, expected nil got %v", err)
+			}
+
+			for tname, ftd := range ftmd {
+				expectedFtd, ok := tc.expectedFtd[tname]
+				if !ok {
+					t.Errorf(" %v in featureTableDetails, expected true got false", tname)
+				}
+				if pass, errstr := ftdEqual(tname, ftd, expectedFtd); !pass {
+					t.Error(errstr)
+				}
 			}
 		}
 	}
@@ -1062,8 +1063,7 @@ func TestFeatureTableMetaData(t *testing.T) {
 	}
 
 	for tname, tc := range tests {
-		tc := tc
-		t.Run(tname, func(t *testing.T) { fn(t, tc) })
+		t.Run(tname, fn(tc))
 	}
 }
 
@@ -1072,23 +1072,25 @@ func TestCleanup(t *testing.T) {
 		config dict.Dict
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		_, err := NewTileProvider(tc.config)
-		if err != nil {
-			t.Fatalf("err creating NewTileProvider: %v", err)
-			return
-		}
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			_, err := NewTileProvider(tc.config)
+			if err != nil {
+				t.Fatalf("err creating NewTileProvider: %v", err)
+				return
+			}
 
-		if len(providers) != 1 {
-			t.Errorf("expecting 1 providers, got %v", len(providers))
-			return
-		}
+			if len(providers) != 1 {
+				t.Errorf("expecting 1 providers, got %v", len(providers))
+				return
+			}
 
-		Cleanup()
+			Cleanup()
 
-		if len(providers) != 0 {
-			t.Errorf("expecting 0 providers, got %v", len(providers))
-			return
+			if len(providers) != 0 {
+				t.Errorf("expecting 0 providers, got %v", len(providers))
+				return
+			}
 		}
 	}
 
@@ -1107,8 +1109,6 @@ func TestCleanup(t *testing.T) {
 
 	for name, tc := range tests {
 		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
