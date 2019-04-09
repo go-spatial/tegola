@@ -1,4 +1,4 @@
-//  Package server implements the http frontend
+// Package server implements the http frontend
 package server
 
 import (
@@ -30,17 +30,15 @@ var (
 	// configurable via the tegola config.toml file (set in main.go)
 	Port string
 
-	// CORSAllowedOrigin is the "Access-Control-Allow-Origin" CORS header.
-	// configurable via the tegola config.toml file (set in main.go)
-	CORSAllowedOrigin string = "*"
-
-	// CORSAllowedMethods is the "Access-Control-Allow-Methods" CORS header.
-	// configurable via the tegola config.toml file (set in main.go)
-	CORSAllowedMethods string = "GET, OPTIONS"
-
-	// Headers is the map of http reply headers.
+	// Headers is the map of user defined response headers.
 	// configurable via the tegola config.toml file (set in main.go)
 	Headers map[string]interface{}
+
+	// DefaultCORSHeaders define the default CORS response headers added to all requests
+	DefaultCORSHeaders = map[string]interface{}{
+		"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Methods": "GET, OPTIONS",
+	}
 )
 
 // NewRouter set's up the our routes.
@@ -149,10 +147,25 @@ var URLRoot = func(r *http.Request) string {
 
 // corsHanlder is used to respond to all OPTIONS requests for registered routes
 func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
-	w.Header().Set("Access-Control-Allow-Origin", CORSAllowedOrigin)
-	w.Header().Set("Access-Control-Allow-Methods", CORSAllowedMethods)
-
-	addUserDefinedHeaders(w)
-
+	setHeaders(w)
 	return
+}
+
+// setHeaders sets deafult headers and user defined headers
+func setHeaders(w http.ResponseWriter) {
+	// add our default CORS headers
+	for name, value := range DefaultCORSHeaders {
+		v, ok := value.(string)
+		if ok {
+			w.Header().Set(name, v)
+		}
+	}
+
+	// set user defined headers
+	for name, value := range Headers {
+		v, ok := value.(string)
+		if ok {
+			w.Header().Set(name, v)
+		}
+	}
 }

@@ -62,8 +62,8 @@ func TestMiddlewareHeaders(t *testing.T) {
 			httpMethod:    http.MethodGet,
 			customHeaders: map[string]interface{}{},
 			expectedResponseHeaders: map[string]string{
-				"Access-Control-Allow-Origin":  server.CORSAllowedOrigin,
-				"Access-Control-Allow-Methods": server.CORSAllowedMethods,
+				"Access-Control-Allow-Origin":  DefaultCORSAllowedOrigin,
+				"Access-Control-Allow-Methods": DefaultCORSAllowedMethods,
 			},
 		},
 		"user defined headers GET": {
@@ -73,8 +73,8 @@ func TestMiddlewareHeaders(t *testing.T) {
 				"Test-Header": "tegola",
 			},
 			expectedResponseHeaders: map[string]string{
-				"Access-Control-Allow-Origin":  server.CORSAllowedOrigin,
-				"Access-Control-Allow-Methods": server.CORSAllowedMethods,
+				"Access-Control-Allow-Origin":  DefaultCORSAllowedOrigin,
+				"Access-Control-Allow-Methods": DefaultCORSAllowedMethods,
 				"Test-Header":                  "tegola",
 			},
 		},
@@ -95,8 +95,8 @@ func TestMiddlewareHeaders(t *testing.T) {
 			httpMethod:    http.MethodOptions,
 			customHeaders: map[string]interface{}{},
 			expectedResponseHeaders: map[string]string{
-				"Access-Control-Allow-Origin":  server.CORSAllowedOrigin,
-				"Access-Control-Allow-Methods": server.CORSAllowedMethods,
+				"Access-Control-Allow-Origin":  DefaultCORSAllowedOrigin,
+				"Access-Control-Allow-Methods": DefaultCORSAllowedMethods,
 			},
 		},
 		"user defined headers OPTIONS": {
@@ -106,8 +106,8 @@ func TestMiddlewareHeaders(t *testing.T) {
 				"Test-Header": "tegola",
 			},
 			expectedResponseHeaders: map[string]string{
-				"Access-Control-Allow-Origin":  server.CORSAllowedOrigin,
-				"Access-Control-Allow-Methods": server.CORSAllowedMethods,
+				"Access-Control-Allow-Origin":  DefaultCORSAllowedOrigin,
+				"Access-Control-Allow-Methods": DefaultCORSAllowedMethods,
 				"Test-Header":                  "tegola",
 			},
 		},
