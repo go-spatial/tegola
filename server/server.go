@@ -166,7 +166,7 @@ func setHeaders(w http.ResponseWriter) {
 	// set user defined headers
 	for name, val := range Headers {
 		if val == "" {
-			log.Warnf("header (%v) has no value")
+			log.Warnf("header (%v) has no value", val)
 		}
 
 		w.Header().Set(name, val)
