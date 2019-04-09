@@ -1108,7 +1108,6 @@ func TestCleanup(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
 		t.Run(name, fn(tc))
 	}
 }

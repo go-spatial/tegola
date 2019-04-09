@@ -11,7 +11,6 @@ configure_postgis() {
     # fetch our test data
     curl $test_data_url > $test_data
 
-
     # import the data to postgres
     psql -d postgres -c 'DROP DATABASE IF EXISTS "tegola"'
 
