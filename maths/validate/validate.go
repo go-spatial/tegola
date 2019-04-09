@@ -96,6 +96,8 @@ func scaleMultiPolygon(p tegola.MultiPolygon, factor float64) (bmp basic.MultiPo
 	return bmp
 }
 
+// CleanGeometry will apply various geoprocessing algorithems to the provided geometry.
+// the extent will be used as a clipping region. if no clipping is desired, pass in a nil extent.
 func CleanGeometry(ctx context.Context, g tegola.Geometry, extent *geom.Extent) (geo tegola.Geometry, err error) {
 	if g == nil {
 		return nil, nil

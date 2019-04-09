@@ -132,7 +132,8 @@ func TestParse(t *testing.T) {
 					provider_layer = "provider1.water"
 					min_zoom = 10
 					max_zoom = 20
-					dont_simplify = true`,
+					dont_simplify = true
+					dont_clip = true`,
 			expected: config.Config{
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
@@ -180,6 +181,7 @@ func TestParse(t *testing.T) {
 								MinZoom:       env.UintPtr(10),
 								MaxZoom:       env.UintPtr(20),
 								DontSimplify:  true,
+								DontClip:  true,
 							},
 						},
 					},

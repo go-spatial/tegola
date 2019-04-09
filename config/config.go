@@ -61,6 +61,9 @@ type MapLayer struct {
 	// DontSimplify indicates wheather feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify
 	DontSimplify env.Bool `toml:"dont_simplify"`
+	// DontClip indicates wheather feature clipping should be applied.
+	// We use a negative in the name so the default is to clipping
+	DontClip env.Bool `toml:"dont_clip"`
 }
 
 // GetName helper to get the name we care about.
