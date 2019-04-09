@@ -2,6 +2,8 @@ language: go
 # Does nothing when building on go-spatial/tegola, but makes builds work cleanly on forks.
 go_import_path: github.com/go-spatial/tegola
 
+dist: xenial
+
 git:
   depth: 3
 
@@ -33,15 +35,15 @@ env:
 
 matrix:
   include:
+    - go: "1.12.x"
+      env: CGO_ENABLED=0
     - go: "1.11.x"
       env: CGO_ENABLED=0
     - go: "1.10.x"
       env: CGO_ENABLED=0
-    - go: "1.9.x"
-      env: CGO_ENABLED=0
+    - go: "1.12.x"
     - go: "1.11.x"
     - go: "1.10.x"
-    - go: "1.9.x"
 
 services:
   - docker
@@ -52,7 +54,7 @@ addons:
   postgresql: "9.6"
   apt:
     packages:
-    - postgresql-9.6-postgis-2.3
+    - postgresql-9.6-postgis-2.4
 
 install:
   - echo $TRAVIS_GO_VERSION
@@ -82,7 +84,7 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-    condition: "$TRAVIS_GO_VERSION =~ ^1\\.10(\\..+)?$"
+    condition: "$TRAVIS_GO_VERSION =~ ^1\\.12(\\..+)?$"
 
 notifications:
   email:
