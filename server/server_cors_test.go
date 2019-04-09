@@ -9,6 +9,11 @@ import (
 	"github.com/go-spatial/tegola/server"
 )
 
+const (
+	DefaultCORSAllowedOrigin  = "*"
+	DefaultCORSAllowedMethods = "GET, OPTIONS"
+)
+
 type CORSTestCase struct {
 	hostname string
 	port     string
@@ -40,8 +45,8 @@ func CORSTest(t *testing.T, tc CORSTestCase) {
 
 	headers := w.Header()
 
-	if !reflect.DeepEqual(headers["Access-Control-Allow-Origin"], []string{server.CORSAllowedOrigin}) {
-		t.Errorf("wrong header for Access-Control-Allow-Origin. expected %v got %v", server.CORSAllowedOrigin, headers["Access-Control-Allow-Origin"])
+	if !reflect.DeepEqual(headers["Access-Control-Allow-Origin"], []string{DefaultCORSAllowedOrigin}) {
+		t.Errorf("wrong header for Access-Control-Allow-Origin. expected %v got %v", DefaultCORSAllowedOrigin, headers["Access-Control-Allow-Origin"])
 		return
 	}
 
