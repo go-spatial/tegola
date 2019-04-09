@@ -6,7 +6,7 @@
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/go-spatial/tegola)
 [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/go-spatial/tegola/blob/master/LICENSE.md)
 
-Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) with support for PostGIS and GeoPackage data providers.
+Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) with support for [PostGIS](https://postgis.net/) and [GeoPackage](https://www.geopackage.org/) data providers. User documentation can be found at [tegola.io](https://tegola.io)
 
 ## Features
 - Native geometry processing (simplification, clipping, make valid, intersection, contains, scaling, translation)
@@ -22,7 +22,7 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 ## Usage
 ```
 tegola is a vector tile server
-Version: v0.7.0 
+Version: v0.9.0 
 
 Usage:
   tegola [command]
@@ -185,12 +185,6 @@ name = "zoning"                              # used in the URL to reference this
 
 \* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#environment-variables) on injecting environment variables into the config.
 
-### Supported PostGIS SQL tokens
-The following tokens are supported in custom SQL queries for the PostGIS data provider:
-
-- `!BBOX!` - [required] Will convert the z/x/y values into a bounding box to query the feature table with.
-- `!ZOOM!` - [optional] Pass in the zoom value for the request. Useful for filtering feature results by zoom.
-
 ## Environment Variables
 
 #### Config TOML
@@ -234,6 +228,7 @@ The following environment variables can be used to control various runtime optio
 
 
 ## Client side debugging
+
 When debugging client side, it's often helpful to to see an outline of a tile along with it's Z/X/Y values. To encode a debug layer into every tile add the query string variable `debug=true` to the URL template being used to request tiles. For example:
 
 ```

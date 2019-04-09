@@ -1,3 +1,19 @@
+## 0.9.0 (2019-04-09)
+**Features**
+* Add support for --no-cache command line flag override (#517 @tierpod)
+* Add support for per map tile buffers (#501 @tierpod)
+* Added map config option dont_clip to turn off layer clipping (#562 @paumas)
+
+**Bug Fixes**
+* Removed superfluous `sort.Int` to improve geoprocessing performance (#567 @vahid-sohrabloo)
+* provider/postgis: no error thrown when geoFieldname is missing (#590 @ARolek)
+* server: User defined http response headers are not added to OPTIONS requests (#594 @ARolek)
+* atlas: Handle empty geometry collections (#429 @paumas, @ARolek)
+
+**Maintenance**
+* Update sqlite driver. Driver understands strings now. (@gdey)
+* Updated CI to use Xenil (@gdey)
+
 ## 0.8.1 (2018-11-07)
 **Bug Fixes**
 - fixed double seeding when using tegola cache seed tile-list with the --map flag (#553 @arolek)
