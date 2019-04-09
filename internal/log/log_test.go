@@ -5,76 +5,143 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 )
 
+const ExpectedFilename = "log_test.go"
+
 func TestSetLevel(t *testing.T) {
-	// Check default level is INFO & Is* flags are set appropriately
-	if level != INFO || !IsError || !IsWarn || !IsInfo || IsDebug || IsTrace {
-		fmt.Println("Default level is not set as expected")
-		t.Fail()
+
+	type tcase struct {
+		isDefault bool
+		lvl       Level
+		tst       func() bool
+	}
+	fn := func(tc tcase) (string, func(*testing.T)) {
+
+		name := "Default"
+		if !tc.isDefault {
+			name = tc.lvl.String()
+		}
+
+		return name, func(t *testing.T) {
+
+			if !tc.isDefault {
+				l := level
+				SetLogLevel(tc.lvl)
+				// Restore the level back
+				defer SetLogLevel(l)
+			}
+
+			if tc.tst() {
+				t.Errorf("%v , expected level to be set correctly, got %v", name, level)
+			}
+
+		}
 	}
 
-	// Check TRACE
-	SetLogLevel(TRACE)
-	if level != TRACE || !IsError || !IsWarn || !IsInfo || !IsDebug || !IsTrace {
-		fmt.Println("TRACE level is not set as expected")
-		t.Fail()
+	// Order is import as we are dealing with setting a global.
+	tests := [...]tcase{
+		{
+			isDefault: true,
+			tst: func() bool {
+				return level != INFO || !IsError || !IsWarn || !IsInfo || IsDebug || IsTrace
+			},
+		},
+		{
+			lvl: TRACE,
+			tst: func() bool {
+				return level != TRACE || !IsError || !IsWarn || !IsInfo || !IsDebug || !IsTrace
+			},
+		},
+		{
+			lvl: DEBUG,
+			tst: func() bool {
+				return level != DEBUG || !IsError || !IsWarn || !IsInfo || !IsDebug || IsTrace
+			},
+		},
+		{
+			lvl: INFO,
+			tst: func() bool {
+				return level != INFO || !IsError || !IsWarn || !IsInfo || IsDebug || IsTrace
+			},
+		},
+		{
+			lvl: WARN,
+			tst: func() bool {
+				return level != WARN || !IsError || !IsWarn || IsInfo || IsDebug || IsTrace
+			},
+		},
+		{
+			lvl: ERROR,
+			tst: func() bool {
+				return level != ERROR || !IsError || IsWarn || IsInfo || IsDebug || IsTrace
+			},
+		},
+		{
+			lvl: FATAL,
+			tst: func() bool {
+				return level != FATAL || IsError || IsWarn || IsInfo || IsDebug || IsTrace
+			},
+		},
 	}
 
-	// Check DEBUG
-	SetLogLevel(DEBUG)
-	if level != DEBUG || !IsError || !IsWarn || !IsInfo || !IsDebug || IsTrace {
-		fmt.Println("DEBUG level is not set as expected")
-		t.Fail()
+	for _, tc := range tests {
+		t.Run(fn(tc))
+	}
+}
+
+type testLoggingFTCase struct {
+	loggerLevel Level
+	msgLevel    Level
+	msg         string
+	msgArgs     []interface{}
+	expected    string // regex pattern
+}
+
+//go:noinline
+func testLoggingF(tc testLoggingFTCase) (string, func(*testing.T)) {
+
+	loggerCalls := map[Level]func(string, ...interface{}){
+		FATAL: Fatalf,
+		ERROR: Errorf,
+		WARN:  Warnf,
+		INFO:  Infof,
+		DEBUG: Debugf,
+		TRACE: Tracef,
 	}
 
-	// Check INFO
-	SetLogLevel(INFO)
-	if level != INFO || !IsError || !IsWarn || !IsInfo || IsDebug || IsTrace {
-		fmt.Println("INFO level is not set as expected")
-		t.Fail()
-	}
+	msg := tc.msg
 
-	// Check WARN
-	SetLogLevel(WARN)
-	if level != WARN || !IsError || !IsWarn || IsInfo || IsDebug || IsTrace {
-		fmt.Println("WARN level is not set as expected")
-		t.Fail()
-	}
+	name := fmt.Sprintf("%s %s %s", tc.loggerLevel, tc.msgLevel, msg)
+	return name, func(t *testing.T) {
+		testOut := bytes.NewBufferString("")
+		SetOutput(testOut)
+		SetLogLevel(tc.loggerLevel)
 
-	// Check ERROR
-	SetLogLevel(ERROR)
-	if level != ERROR || !IsError || IsWarn || IsInfo || IsDebug || IsTrace {
-		fmt.Println("ERROR level is not set as expected")
-		t.Fail()
-	}
+		loggerCalls[tc.msgLevel](tc.msg, tc.msgArgs...)
 
-	// Check FATAL
-	SetLogLevel(FATAL)
-	if level != FATAL || IsError || IsWarn || IsInfo || IsDebug || IsTrace {
-		fmt.Println("FATAL level is not set as expected")
-		t.Fail()
+		resultMsg := testOut.String()
+
+		matched, err := regexp.MatchString(tc.expected, resultMsg)
+		if err != nil || !matched {
+			t.Errorf("failed, expected:\n %v \ngot\n %v\n", tc.expected, resultMsg)
+		}
 	}
 }
 
 func TestLoggingF(t *testing.T) {
 	// Tests Tracef(), Debugf(), Infof(), Warnf(), Errorf() logging methods.
-	type TestCase struct {
-		loggerLevel Level
-		msgLevel    Level
-		msg         string
-		msgArgs     []interface{}
-		expected    string // regex pattern
-	}
+	type tcase = testLoggingFTCase
 
-	testCases := []TestCase{
+	tests := [...]tcase{
 		// These test cases use ".*" to avoid specifics of timestamp, file location, and line number.
 		{
 			loggerLevel: INFO,
 			msgLevel:    INFO,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v.*[INFO].*log_test.go:.*Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[INFO].*"+ExpectedFilename+".*Hello", TimestampRegex),
 		},
 		// Logging with logger's level set higher than message should result in no output.
 		{
@@ -87,31 +154,31 @@ func TestLoggingF(t *testing.T) {
 			loggerLevel: TRACE,
 			msgLevel:    TRACE,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v.*[TRACE].*log_test.go:.*Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[TRACE].*"+ExpectedFilename+".*Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    DEBUG,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v.*[DEBUG].*log_test.go:.*Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[DEBUG].*"+ExpectedFilename+".*Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    INFO,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v.*[INFO].*log_test.go.*Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[INFO].*"+ExpectedFilename+".*Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    WARN,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v.*[WARN].*log_test.go.*Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[WARN].*"+ExpectedFilename+".*Hello", TimestampRegex),
 		},
 		{
 			loggerLevel: TRACE,
 			msgLevel:    ERROR,
 			msg:         "Hello",
-			expected:    fmt.Sprintf("%v.*[ERROR].*log_test.go.*Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[ERROR].*"+ExpectedFilename+".*Hello", TimestampRegex),
 		},
 		// Check use of formatting args.
 		{
@@ -119,78 +186,17 @@ func TestLoggingF(t *testing.T) {
 			msgLevel:    ERROR,
 			msg:         "Hello #%v %v",
 			msgArgs:     []interface{}{1, "Joe"},
-			expected:    fmt.Sprintf("%v.*[ERROR].*log_test.go.*Hello", TimestampRegex),
+			expected:    fmt.Sprintf("%v.*[ERROR].*"+ExpectedFilename+".*Hello", TimestampRegex),
 		},
 	}
 
-	loggerCalls := map[Level]func(string, ...interface{}){
-		FATAL: Fatalf,
-		ERROR: Errorf,
-		WARN:  Warnf,
-		INFO:  Infof,
-		DEBUG: Debugf,
-		TRACE: Tracef,
-	}
-
-	for i, tc := range testCases {
-		testOut := bytes.NewBufferString("")
-		SetOutput(testOut)
-		SetLogLevel(tc.loggerLevel)
-
-		loggerCalls[tc.msgLevel](tc.msg, tc.msgArgs...)
-
-		resultMsg := testOut.String()
-
-		matched, err := regexp.MatchString(tc.expected, resultMsg)
-		if err != nil || !matched {
-			t.Errorf("TestCase[%v] failed, expected:\n %v \ngot\n %v\n", i, tc.expected, resultMsg)
-			continue
-		}
+	for _, tc := range tests {
+		t.Run(testLoggingF(tc))
 	}
 }
 
-func TestLogging(t *testing.T) {
-	// Tests Trace(), Debug(), Info(), Warn(), Error() logging methods.
-	type TestCase struct {
-		loggerLevel Level
-		msgLevel    Level
-		msgArgs     []interface{}
-		expected    string // regex pattern
-	}
-
-	var testCases []TestCase = []TestCase{
-		// These test cases use regex ".*" to avoid specifics of file location, and line number.
-		{ // Check string as arg
-			loggerLevel: TRACE,
-			msgLevel:    ERROR,
-			msgArgs:     []interface{}{"Hello"},
-			expected:    fmt.Sprintf("%v.*[ERROR].*log_test.go.*Hello", TimestampRegex),
-		},
-		{ // Check numbers as args
-			loggerLevel: INFO,
-			msgLevel:    INFO,
-			msgArgs:     []interface{}{1, 2, 3.3, "joe"},
-			expected:    fmt.Sprintf("%v.*[INFO].*log_test.go.*1 2 3.3", TimestampRegex),
-		},
-		{ // Check error as arg
-			loggerLevel: INFO,
-			msgLevel:    INFO,
-			msgArgs:     []interface{}{errors.New("Test error message")},
-			expected:    fmt.Sprintf("%v.*[INFO].*log_test.go.*Test error message", TimestampRegex),
-		},
-		{ // Check mix of numbers, errors, and strings as args
-			loggerLevel: TRACE,
-			msgLevel:    TRACE,
-			msgArgs:     []interface{}{1.1, errors.New("Test error message"), 42, " is the answer"},
-			expected:    fmt.Sprintf("%v.*[TRACE].*log_test.go.*1.1 Test error message 42 is the answer", TimestampRegex),
-		},
-		{ // Check that a format string gets interpretted literally
-			loggerLevel: TRACE,
-			msgLevel:    TRACE,
-			msgArgs:     []interface{}{"This %v could be a %v format string"},
-			expected:    fmt.Sprintf("%v.*[TRACE].*log_test.go.*This %%v could be a %%v format string", TimestampRegex),
-		},
-	}
+//go:noinline
+func testLogging(tc testLoggingFTCase) (string, func(*testing.T)) {
 
 	loggerCalls := map[Level]func(...interface{}){
 		FATAL: Fatal,
@@ -201,17 +207,69 @@ func TestLogging(t *testing.T) {
 		TRACE: Trace,
 	}
 
-	for i, tc := range testCases {
+	var msgs = make([]string, len(tc.msgArgs))
+	for _, a := range tc.msgArgs {
+		msgs = append(msgs, fmt.Sprintf("%v", a))
+	}
+	msg := strings.Join(msgs, "_")
+
+	name := fmt.Sprintf("%s %s %s", tc.loggerLevel, tc.msgLevel, msg)
+	return name, func(t *testing.T) {
 		testOut := bytes.NewBufferString("")
 		SetOutput(testOut)
 		SetLogLevel(tc.loggerLevel)
+
 		loggerCalls[tc.msgLevel](tc.msgArgs...)
 
 		resultMsg := testOut.String()
+
 		matched, err := regexp.MatchString(tc.expected, resultMsg)
 		if err != nil || !matched {
-			fmt.Printf("TestCase[%v] failed, \n'%v'\ndoesn't match\n'%v'\n", i, tc.expected, resultMsg)
-			t.Fail()
+			t.Errorf("failed, expected:\n %v \ngot\n %v\n", tc.expected, resultMsg)
 		}
 	}
+}
+
+func TestLogging(t *testing.T) {
+	// Tests Trace(), Debug(), Info(), Warn(), Error() logging methods.
+	type tcase = testLoggingFTCase
+
+	tests := [...]tcase{
+		// These test cases use regex ".*" to avoid specifics of file location, and line number.
+		{ // Check string as arg
+			loggerLevel: TRACE,
+			msgLevel:    ERROR,
+			msgArgs:     []interface{}{"Hello"},
+			expected:    fmt.Sprintf("%v.*[ERROR].*"+ExpectedFilename+".*Hello", TimestampRegex),
+		},
+		{ // Check numbers as args
+			loggerLevel: INFO,
+			msgLevel:    INFO,
+			msgArgs:     []interface{}{1, 2, 3.3, "joe"},
+			expected:    fmt.Sprintf("%v.*[INFO].*"+ExpectedFilename+".*1 2 3.3", TimestampRegex),
+		},
+		{ // Check error as arg
+			loggerLevel: INFO,
+			msgLevel:    INFO,
+			msgArgs:     []interface{}{errors.New("Test error message")},
+			expected:    fmt.Sprintf("%v.*[INFO].*"+ExpectedFilename+".*Test error message", TimestampRegex),
+		},
+		{ // Check mix of numbers, errors, and strings as args
+			loggerLevel: TRACE,
+			msgLevel:    TRACE,
+			msgArgs:     []interface{}{1.1, errors.New("Test error message"), 42, " is the answer"},
+			expected:    fmt.Sprintf("%v.*[TRACE].*"+ExpectedFilename+".*1.1 Test error message 42 is the answer", TimestampRegex),
+		},
+		{ // Check that a format string gets interpretted literally
+			loggerLevel: TRACE,
+			msgLevel:    TRACE,
+			msgArgs:     []interface{}{"This %v could be a %v format string"},
+			expected:    fmt.Sprintf("%v.*[TRACE].*"+ExpectedFilename+".*This %%v could be a %%v format string", TimestampRegex),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(testLogging(tc))
+	}
+
 }

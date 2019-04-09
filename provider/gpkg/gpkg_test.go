@@ -82,14 +82,16 @@ func TestAutoConfig(t *testing.T) {
 		expectedConf map[string]interface{}
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		conf, err := gpkg.AutoConfig(tc.gpkgPath)
-		if err != nil {
-			t.Errorf("problem getting config for '%v': %v", tc.gpkgPath, err)
-		}
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			conf, err := gpkg.AutoConfig(tc.gpkgPath)
+			if err != nil {
+				t.Errorf("problem getting config for '%v': %v", tc.gpkgPath, err)
+			}
 
-		if !confEqual(t, conf, tc.expectedConf) {
-			t.Errorf("config doesn't match expected")
+			if !confEqual(t, conf, tc.expectedConf) {
+				t.Errorf("config doesn't match expected")
+			}
 		}
 	}
 
@@ -166,10 +168,7 @@ func TestAutoConfig(t *testing.T) {
 	}
 
 	for tname, tc := range tests {
-		tc := tc
-		t.Run(tname, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(tname, fn(tc))
 	}
 }
 
@@ -180,26 +179,28 @@ func TestNewTileProvider(t *testing.T) {
 		expectedErr        error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		p, err := gpkg.NewTileProvider(tc.config)
-		if err != nil {
-			if err.Error() != tc.expectedErr.Error() {
-				t.Errorf("expectedErr %v got %v", tc.expectedErr, err)
+			p, err := gpkg.NewTileProvider(tc.config)
+			if err != nil {
+				if err.Error() != tc.expectedErr.Error() {
+					t.Errorf("expectedErr %v got %v", tc.expectedErr, err)
+				}
+				return
 			}
-			return
-		}
 
-		lys, err := p.Layers()
-		if err != nil {
-			t.Errorf("unable to fetch provider layers: %v", err)
-			return
-		}
+			lys, err := p.Layers()
+			if err != nil {
+				t.Errorf("unable to fetch provider layers: %v", err)
+				return
+			}
 
-		if tc.expectedLayerCount != len(lys) {
-			t.Errorf("expected %v got %v", tc.expectedLayerCount, len(lys))
-			return
+			if tc.expectedLayerCount != len(lys) {
+				t.Errorf("expected %v got %v", tc.expectedLayerCount, len(lys))
+				return
+			}
 		}
 	}
 
@@ -230,10 +231,7 @@ func TestNewTileProvider(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -260,28 +258,30 @@ func TestTileFeatures(t *testing.T) {
 		expectedFeatureCount int
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		p, err := gpkg.NewTileProvider(tc.config)
-		if err != nil {
-			t.Fatalf("new tile, expected nil got %v", err)
-			return
-		}
+			p, err := gpkg.NewTileProvider(tc.config)
+			if err != nil {
+				t.Fatalf("new tile, expected nil got %v", err)
+				return
+			}
 
-		var featureCount int
-		err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
-			featureCount++
-			return nil
-		})
-		if err != nil {
-			t.Errorf("err fetching features: %v", err)
-			return
-		}
+			var featureCount int
+			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+				featureCount++
+				return nil
+			})
+			if err != nil {
+				t.Errorf("err fetching features: %v", err)
+				return
+			}
 
-		if tc.expectedFeatureCount != featureCount {
-			t.Errorf("expected %v got %v", tc.expectedFeatureCount, featureCount)
-			return
+			if tc.expectedFeatureCount != featureCount {
+				t.Errorf("expected %v got %v", tc.expectedFeatureCount, featureCount)
+				return
+			}
 		}
 	}
 
@@ -396,10 +396,7 @@ func TestTileFeatures(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -411,39 +408,41 @@ func TestConfigs(t *testing.T) {
 		expectedTags map[uint64]map[string]interface{}
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		p, err := gpkg.NewTileProvider(tc.config)
-		if err != nil {
-			t.Fatalf("err creating NewTileProvider: %v", err)
-			return
-		}
-
-		err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
-			// check if the feature is part of the test
-			if _, ok := tc.expectedTags[f.ID]; !ok {
-				return nil
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			p, err := gpkg.NewTileProvider(tc.config)
+			if err != nil {
+				t.Fatalf("err creating NewTileProvider: %v", err)
+				return
 			}
 
-			expectedTagCount := len(tc.expectedTags[f.ID])
-			actualTagCount := len(f.Tags)
-
-			if actualTagCount != expectedTagCount {
-				return fmt.Errorf("expected %v tags, got %v", expectedTagCount, actualTagCount)
-			}
-
-			// Check that expected tags are present and their values match expected values.
-			for tName, tValue := range f.Tags {
-				exTagValue := tc.expectedTags[f.ID][tName]
-				if exTagValue != nil && exTagValue != tValue {
-					return fmt.Errorf("feature ID: %v - %v: %v != %v", f.ID, tName, tValue, exTagValue)
+			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+				// check if the feature is part of the test
+				if _, ok := tc.expectedTags[f.ID]; !ok {
+					return nil
 				}
-			}
 
-			return nil
-		})
-		if err != nil {
-			t.Errorf("err fetching features: %v", err)
-			return
+				expectedTagCount := len(tc.expectedTags[f.ID])
+				actualTagCount := len(f.Tags)
+
+				if actualTagCount != expectedTagCount {
+					return fmt.Errorf("expected %v tags, got %v", expectedTagCount, actualTagCount)
+				}
+
+				// Check that expected tags are present and their values match expected values.
+				for tName, tValue := range f.Tags {
+					exTagValue := tc.expectedTags[f.ID][tName]
+					if exTagValue != nil && exTagValue != tValue {
+						return fmt.Errorf("feature ID: %v - %v: %v != %v", f.ID, tName, tValue, exTagValue)
+					}
+				}
+
+				return nil
+			})
+			if err != nil {
+				t.Errorf("err fetching features: %v", err)
+				return
+			}
 		}
 	}
 
@@ -574,10 +573,7 @@ func TestConfigs(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -588,11 +584,20 @@ func TestOpenNonExistantFile(t *testing.T) {
 		config dict.Dict
 		err    error
 	}
+
 	const (
 		NONEXISTANTFILE = "testdata/nonexistant.gpkg"
 	)
 
 	os.Remove(NONEXISTANTFILE)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			_, err := gpkg.NewTileProvider(tc.config)
+			if reflect.TypeOf(err) != reflect.TypeOf(tc.err) {
+				t.Errorf("expected error, expected %v got %v", tc.err, err)
+			}
+		}
+	}
 
 	tests := map[string]tcase{
 		"empty": tcase{
@@ -611,13 +616,7 @@ func TestOpenNonExistantFile(t *testing.T) {
 	}
 
 	for k, tc := range tests {
-		tc := tc
-		t.Run(k, func(t *testing.T) {
-			_, err := gpkg.NewTileProvider(tc.config)
-			if reflect.TypeOf(err) != reflect.TypeOf(tc.err) {
-				t.Errorf("expected error, expected %v got %v", tc.err, err)
-			}
-		})
+		t.Run(k, fn(tc))
 	}
 
 }

@@ -15,12 +15,14 @@ func TestReplaceTokens(t *testing.T) {
 		expected string
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		output := replaceTokens(tc.qtext, tc.zoom, tc.extent)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			output := replaceTokens(tc.qtext, tc.zoom, tc.extent)
 
-		if tc.expected != output {
-			t.Errorf("expected %v\n got\n %v", tc.expected, output)
-			return
+			if tc.expected != output {
+				t.Errorf("expected %v\n got\n %v", tc.expected, output)
+				return
+			}
 		}
 	}
 
@@ -86,9 +88,6 @@ func TestReplaceTokens(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }

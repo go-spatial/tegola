@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+// CallerSkipLevel is the number of levels to skip
+// https://godoc.org/runtime#Caller
+const CallerSkipLevel = 3
+
 var (
 	gologstderr   = goLog.New(os.Stderr, "", 0)
 	gologstdout   = goLog.New(os.Stdout, "", 0)
@@ -26,7 +30,7 @@ func (_ Standard) SetOutput(w io.Writer) {
 }
 
 func StdErrOutput(level string, args ...interface{}) {
-	_, file, line, _ := runtime.Caller(4)
+	_, file, line, _ := runtime.Caller(CallerSkipLevel)
 	pkgs := strings.Split(file, "/")
 
 	logMsg := fmt.Sprint(args...)
@@ -40,7 +44,7 @@ func StdErrOutput(level string, args ...interface{}) {
 }
 
 func StdOutOutput(level string, args ...interface{}) {
-	_, file, line, _ := runtime.Caller(4)
+	_, file, line, _ := runtime.Caller(CallerSkipLevel)
 	pkgs := strings.Split(file, "/")
 
 	logMsg := fmt.Sprint(args...)
