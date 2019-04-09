@@ -13,7 +13,7 @@ func TestMiddlewareHeaders(t *testing.T) {
 	type tcase struct {
 		uri                     string
 		httpMethod              string
-		customHeaders           map[string]interface{}
+		customHeaders           map[string]string
 		expectedResponseHeaders map[string]string
 	}
 
@@ -60,7 +60,7 @@ func TestMiddlewareHeaders(t *testing.T) {
 		"default headers GET": {
 			uri:           "/maps/test-map/10/2/3.pbf",
 			httpMethod:    http.MethodGet,
-			customHeaders: map[string]interface{}{},
+			customHeaders: map[string]string{},
 			expectedResponseHeaders: map[string]string{
 				"Access-Control-Allow-Origin":  DefaultCORSAllowedOrigin,
 				"Access-Control-Allow-Methods": DefaultCORSAllowedMethods,
@@ -69,7 +69,7 @@ func TestMiddlewareHeaders(t *testing.T) {
 		"user defined headers GET": {
 			uri:        "/maps/test-map/10/2/3.pbf",
 			httpMethod: http.MethodGet,
-			customHeaders: map[string]interface{}{
+			customHeaders: map[string]string{
 				"Test-Header": "tegola",
 			},
 			expectedResponseHeaders: map[string]string{
@@ -81,7 +81,7 @@ func TestMiddlewareHeaders(t *testing.T) {
 		"user defined cors override GET": {
 			uri:        "/maps/test-map/10/2/3.pbf",
 			httpMethod: http.MethodGet,
-			customHeaders: map[string]interface{}{
+			customHeaders: map[string]string{
 				"Access-Control-Allow-Origin":  "tegola.io",
 				"Access-Control-Allow-Methods": "GET, POST",
 			},
@@ -93,7 +93,7 @@ func TestMiddlewareHeaders(t *testing.T) {
 		"default headers OPTIONS": {
 			uri:           "/maps/test-map/10/2/3.pbf",
 			httpMethod:    http.MethodOptions,
-			customHeaders: map[string]interface{}{},
+			customHeaders: map[string]string{},
 			expectedResponseHeaders: map[string]string{
 				"Access-Control-Allow-Origin":  DefaultCORSAllowedOrigin,
 				"Access-Control-Allow-Methods": DefaultCORSAllowedMethods,
@@ -102,7 +102,7 @@ func TestMiddlewareHeaders(t *testing.T) {
 		"user defined headers OPTIONS": {
 			uri:        "/maps/test-map/10/2/3.pbf",
 			httpMethod: http.MethodOptions,
-			customHeaders: map[string]interface{}{
+			customHeaders: map[string]string{
 				"Test-Header": "tegola",
 			},
 			expectedResponseHeaders: map[string]string{
@@ -114,7 +114,7 @@ func TestMiddlewareHeaders(t *testing.T) {
 		"user defined cors override OPTIONS": {
 			uri:        "/maps/test-map/10/2/3.pbf",
 			httpMethod: http.MethodOptions,
-			customHeaders: map[string]interface{}{
+			customHeaders: map[string]string{
 				"Access-Control-Allow-Origin":  "tegola.io",
 				"Access-Control-Allow-Methods": "GET, POST",
 			},

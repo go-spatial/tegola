@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 )
@@ -32,10 +33,10 @@ var (
 
 	// Headers is the map of user defined response headers.
 	// configurable via the tegola config.toml file (set in main.go)
-	Headers map[string]interface{}
+	Headers = map[string]string{}
 
 	// DefaultCORSHeaders define the default CORS response headers added to all requests
-	DefaultCORSHeaders = map[string]interface{}{
+	DefaultCORSHeaders = map[string]string{
 		"Access-Control-Allow-Origin":  "*",
 		"Access-Control-Allow-Methods": "GET, OPTIONS",
 	}
@@ -154,18 +155,20 @@ func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]strin
 // setHeaders sets deafult headers and user defined headers
 func setHeaders(w http.ResponseWriter) {
 	// add our default CORS headers
-	for name, value := range DefaultCORSHeaders {
-		v, ok := value.(string)
-		if ok {
-			w.Header().Set(name, v)
+	for name, val := range DefaultCORSHeaders {
+		if val == "" {
+			log.Warn("default CORS header (%v) has no value")
 		}
+
+		w.Header().Set(name, val)
 	}
 
 	// set user defined headers
-	for name, value := range Headers {
-		v, ok := value.(string)
-		if ok {
-			w.Header().Set(name, v)
+	for name, val := range Headers {
+		if val == "" {
+			log.Warn("header (%v) has no value")
 		}
+
+		w.Header().Set(name, val)
 	}
 }

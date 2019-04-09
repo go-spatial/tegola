@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -36,8 +38,17 @@ var serverCmd = &cobra.Command{
 		server.Version = Version
 		server.HostName = string(conf.Webserver.HostName)
 
-		// set the http reply headers
-		server.Headers = conf.Webserver.Headers
+		// set user defined response headers
+		for name, value := range conf.Webserver.Headers {
+			// cast to string
+			val := fmt.Sprintf("%v", value)
+			// check that we have a value set
+			if val == "" {
+				log.Fatalf("webserver.header (%v) has no configured value", val)
+			}
+
+			server.Headers[name] = val
+		}
 
 		// start our webserver
 		srv := server.Start(nil, serverPort)
