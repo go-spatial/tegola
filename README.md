@@ -178,6 +178,7 @@ name = "zoning"                              # used in the URL to reference this
 	                                         # It can also be used to group multiple ProviderLayers under the same namespace.
 	provider_layer = "test_postgis.rivers"   # must match a data provider layer
 	dont_simplify = true                     # optionally, turn off simplification for this layer. Default is false.
+	dont_clip = true                         # optionally, turn off clipping for this layer. Default is false.
 	min_zoom = 10                            # minimum zoom level to include this layer
 	max_zoom = 18                            # maximum zoom level to include this layer
 ```

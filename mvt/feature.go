@@ -15,7 +15,7 @@ import (
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/points"
 	"github.com/go-spatial/tegola/maths/validate"
-	"github.com/go-spatial/tegola/mvt/vector_tile"
+	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 )
 
 // errors
@@ -87,7 +87,7 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, tile *tegola.Tile, simplify bool) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, tile *tegola.Tile, simplify bool, clip bool) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 
@@ -95,7 +95,7 @@ func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interf
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(ctx, f.Geometry, tile, simplify)
+	geo, gtype, err := encodeGeometry(ctx, f.Geometry, tile, simplify, clip)
 	if err != nil {
 		return tf, err
 	}
@@ -570,7 +570,7 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry type and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.Tile, simplify bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.Tile, simplify bool, clip bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 
 	if geometry == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
@@ -592,7 +592,12 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.
 	if err != nil {
 		return nil, vectorTile.Tile_UNKNOWN, err
 	}
-	ext := geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+
+	// check if we need to clip and if we do build the extent
+	var ext *geom.Extent
+	if clip {
+		ext = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+	}
 
 	geometry, err = validate.CleanGeometry(ctx, sg, ext)
 	if err != nil {
