@@ -220,7 +220,8 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 }
 
 func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
-	log.Infof("%v", config)
+
+	log.Debugf("config: %v", config)
 
 	filepath, err := config.String(ConfigKeyFilePath, nil)
 	if err != nil {
