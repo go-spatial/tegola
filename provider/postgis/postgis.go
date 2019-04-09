@@ -582,7 +582,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		}
 
 		// decode our WKB
-		geom, err := wkb.DecodeBytes(geobytes)
+		geometry, err := wkb.DecodeBytes(geobytes)
 		if err != nil {
 			switch err.(type) {
 			case wkb.ErrUnknownGeometryType:
@@ -594,7 +594,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 
 		feature := provider.Feature{
 			ID:       gid,
-			Geometry: geom,
+			Geometry: geometry,
 			SRID:     plyr.SRID(),
 			Tags:     tags,
 		}
