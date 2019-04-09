@@ -3,3 +3,6 @@
 documents
 *.toml*.out
 .env
+.cover
+*.env
+tmp

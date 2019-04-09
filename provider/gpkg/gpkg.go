@@ -209,6 +209,9 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 					feature.Tags[cols[i]] = string(asBytes)
 				case int64:
 					feature.Tags[cols[i]] = v
+				case string:
+					feature.Tags[cols[i]] = v
+
 				default:
 					// TODO(arolek): return this error?
 					log.Errorf("unexpected type for sqlite column data: %v: %T", cols[i], v)

@@ -22,6 +22,7 @@ source $CI_DIR/install_go_bin.sh
 workdir=.cover
 coverprofilename=default
 
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --coverprofilename=*)
