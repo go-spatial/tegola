@@ -28,32 +28,34 @@ func TestHeaderFlag(t *testing.T) {
 		Endian     binary.ByteOrder
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
-		if tc.header.IsEmpty() != tc.IsEmpty {
-			t.Errorf("is empty, expected %v got %v", tc.IsEmpty, tc.header.IsEmpty())
-		}
-		if tc.header.IsStandard() != tc.IsStandard {
-			t.Errorf("is standard, expected %v got %v", tc.IsStandard, tc.header.IsStandard())
-		}
-		if tc.header.Endian() != tc.Endian {
-			t.Errorf("byte order, expected %v got %v", tc.Endian, tc.header.Endian())
-		}
-		if tc.header.Envelope() != tc.Envelope {
-			t.Errorf("envelope type, expected %v got %v", tc.Envelope, tc.header.Envelope())
-		}
-		// The following two tests are just for coverage. :P The bottom two functions are of course
-		// will always pass if the above one passes. The one that really needs to be tested for is
-		// the NumberOfElements, but that is tested with binaryheader and is really just a table lookup.
-		if tc.header.Envelope().String() != tc.Envelope.String() {
-			t.Errorf("envelope type name, expected %v got %v", tc.Envelope, tc.header.Envelope())
-		}
-		if tc.header.Envelope().NumberOfElements() != tc.Envelope.NumberOfElements() {
-			t.Errorf("envelope type name, expected %v got %v", tc.Envelope.NumberOfElements(), tc.header.Envelope().NumberOfElements())
+	fn := func(tc tcase) (string, func(*testing.T)) {
+		return tcheader(tc.header), func(t *testing.T) {
+			t.Parallel()
+			if tc.header.IsEmpty() != tc.IsEmpty {
+				t.Errorf("is empty, expected %v got %v", tc.IsEmpty, tc.header.IsEmpty())
+			}
+			if tc.header.IsStandard() != tc.IsStandard {
+				t.Errorf("is standard, expected %v got %v", tc.IsStandard, tc.header.IsStandard())
+			}
+			if tc.header.Endian() != tc.Endian {
+				t.Errorf("byte order, expected %v got %v", tc.Endian, tc.header.Endian())
+			}
+			if tc.header.Envelope() != tc.Envelope {
+				t.Errorf("envelope type, expected %v got %v", tc.Envelope, tc.header.Envelope())
+			}
+			// The following two tests are just for coverage. :P The bottom two functions are of course
+			// will always pass if the above one passes. The one that really needs to be tested for is
+			// the NumberOfElements, but that is tested with binaryheader and is really just a table lookup.
+			if tc.header.Envelope().String() != tc.Envelope.String() {
+				t.Errorf("envelope type name, expected %v got %v", tc.Envelope, tc.header.Envelope())
+			}
+			if tc.header.Envelope().NumberOfElements() != tc.Envelope.NumberOfElements() {
+				t.Errorf("envelope type name, expected %v got %v", tc.Envelope.NumberOfElements(), tc.header.Envelope().NumberOfElements())
+			}
 		}
 	}
 
-	tests := []tcase{
+	tests := [...]tcase{
 		{
 			header:     0x00, // 00 0 0 000 0
 			IsStandard: true,
@@ -162,9 +164,8 @@ func TestHeaderFlag(t *testing.T) {
 		// 0x21-0x2F are the various iterations of 0x02-0x0F but with IsExtention bit set to true
 		// No need to test the high bits 0x30-0xFF as the are reserved.
 	}
-	for i := range tests {
-		test := tests[i]
-		t.Run(tcheader(tests[i].header), func(t *testing.T) { fn(t, test) })
+	for _, tc := range tests {
+		t.Run(fn(tc))
 	}
 }
 
@@ -181,51 +182,53 @@ func TestBinaryHeader(t *testing.T) {
 		standard     bool
 		err          error
 	}
-	fn := func(t *testing.T, tc tcase) {
-		var bh *BinaryHeader
-		var err error
-		if tc.bytes != nil {
-			bh, err = NewBinaryHeader(tc.bytes)
-		}
-		if tc.err != nil {
-			if err == nil {
-				t.Errorf("error, expected %v got nil", tc.err)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			var bh *BinaryHeader
+			var err error
+			if tc.bytes != nil {
+				bh, err = NewBinaryHeader(tc.bytes)
+			}
+			if tc.err != nil {
+				if err == nil {
+					t.Errorf("error, expected %v got nil", tc.err)
+					return
+				}
+				if tc.err.Error() != err.Error() {
+					t.Errorf("error, expected %v got %v", tc.err.Error(), err.Error())
+				}
 				return
 			}
-			if tc.err.Error() != err.Error() {
-				t.Errorf("error, expected %v got %v", tc.err.Error(), err.Error())
+			if err != nil {
+				t.Errorf("error, expected nil got %v", err.Error())
+				return
+
 			}
-			return
-		}
-		if err != nil {
-			t.Errorf("error, expected nil got %v", err.Error())
-			return
 
-		}
-
-		if bh.Version() != tc.version {
-			t.Errorf("version, expected %v got %v", tc.version, bh.Version())
-		}
-		if bh.SRSId() != tc.srsid {
-			t.Errorf("SRS Id, expected %v got %v", tc.srsid, bh.SRSId())
-		}
-		if bh.EnvelopeType() != tc.envelopetype {
-			t.Errorf("envelope type, expected %v got %v", tc.envelopetype, bh.EnvelopeType())
-		}
-		if !reflect.DeepEqual(bh.Envelope(), tc.envelope) {
-			t.Errorf("envelope, expected %v got %v", tc.envelope, bh.Envelope())
-		}
-		if !reflect.DeepEqual(bh.Magic(), Magic) {
-			t.Errorf("magic, expected %v got %v", Magic, bh.Magic())
-		}
-		if bh.IsGeometryEmpty() != tc.empty {
-			t.Errorf("empty geometry, expected %v got %v", tc.empty, bh.IsGeometryEmpty())
-		}
-		if bh.IsStandardGeometry() != tc.standard {
-			t.Errorf("standard geometry, expected %v got %v", tc.standard, bh.IsStandardGeometry())
-		}
-		if bh.Size() != tc.size {
-			t.Errorf("header size, expected %v got %v", tc.size, bh.Size())
+			if bh.Version() != tc.version {
+				t.Errorf("version, expected %v got %v", tc.version, bh.Version())
+			}
+			if bh.SRSId() != tc.srsid {
+				t.Errorf("SRS Id, expected %v got %v", tc.srsid, bh.SRSId())
+			}
+			if bh.EnvelopeType() != tc.envelopetype {
+				t.Errorf("envelope type, expected %v got %v", tc.envelopetype, bh.EnvelopeType())
+			}
+			if !reflect.DeepEqual(bh.Envelope(), tc.envelope) {
+				t.Errorf("envelope, expected %v got %v", tc.envelope, bh.Envelope())
+			}
+			if !reflect.DeepEqual(bh.Magic(), Magic) {
+				t.Errorf("magic, expected %v got %v", Magic, bh.Magic())
+			}
+			if bh.IsGeometryEmpty() != tc.empty {
+				t.Errorf("empty geometry, expected %v got %v", tc.empty, bh.IsGeometryEmpty())
+			}
+			if bh.IsStandardGeometry() != tc.standard {
+				t.Errorf("standard geometry, expected %v got %v", tc.standard, bh.IsStandardGeometry())
+			}
+			if bh.Size() != tc.size {
+				t.Errorf("header size, expected %v got %v", tc.size, bh.Size())
+			}
 		}
 	}
 	tests := map[string]tcase{
@@ -303,7 +306,6 @@ func TestBinaryHeader(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
