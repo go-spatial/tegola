@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
@@ -14,11 +13,12 @@ import (
 const CacheType = "redis"
 
 const (
-	ConfigKeyNetwork  = "network"
-	ConfigKeyAddress  = "address"
-	ConfigKeyPassword = "password"
-	ConfigKeyDB       = "db"
-	ConfigKeyMaxZoom  = "max_zoom"
+	ConfigKeyNetwork    = "network"
+	ConfigKeyAddress    = "address"
+	ConfigKeyPassword   = "password"
+	ConfigKeyDB         = "db"
+	ConfigKeyMaxZoom    = "max_zoom"
+	ConfigKeyExpiration = "expiration"
 )
 
 func init() {
@@ -33,6 +33,7 @@ func New(config dict.Dicter) (rcache cache.Interface, err error) {
 	defaultPassword := ""
 	defaultDB := 0
 	defaultMaxZoom := uint(tegola.MaxZ)
+	defaultExpiration := 0
 
 	c := config
 
@@ -79,9 +80,15 @@ func New(config dict.Dicter) (rcache cache.Interface, err error) {
 		return nil, err
 	}
 
+	expiration, err := c.Int(ConfigKeyExpiration, &defaultExpiration)
+	if err != nil {
+		return nil, err
+	}
+
 	return &RedisCache{
-		Redis:   client,
-		MaxZoom: maxZoom,
+		Redis:      client,
+		MaxZoom:    maxZoom,
+		Expiration: time.Duration(expiration) * time.Second,
 	}, nil
 }
 
