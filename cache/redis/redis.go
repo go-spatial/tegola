@@ -13,12 +13,12 @@ import (
 const CacheType = "redis"
 
 const (
-	ConfigKeyNetwork    = "network"
-	ConfigKeyAddress    = "address"
-	ConfigKeyPassword   = "password"
-	ConfigKeyDB         = "db"
-	ConfigKeyMaxZoom    = "max_zoom"
-	ConfigKeyExpiration = "expiration"
+	ConfigKeyNetwork  = "network"
+	ConfigKeyAddress  = "address"
+	ConfigKeyPassword = "password"
+	ConfigKeyDB       = "db"
+	ConfigKeyMaxZoom  = "max_zoom"
+	ConfigKeyTTL      = "ttl"
 )
 
 func init() {
@@ -33,7 +33,7 @@ func New(config dict.Dicter) (rcache cache.Interface, err error) {
 	defaultPassword := ""
 	defaultDB := 0
 	defaultMaxZoom := uint(tegola.MaxZ)
-	defaultExpiration := 0
+	defaultTTL := 0
 
 	c := config
 
@@ -80,7 +80,7 @@ func New(config dict.Dicter) (rcache cache.Interface, err error) {
 		return nil, err
 	}
 
-	expiration, err := c.Int(ConfigKeyExpiration, &defaultExpiration)
+	ttl, err := c.Int(ConfigKeyTTL, &defaultTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func New(config dict.Dicter) (rcache cache.Interface, err error) {
 	return &RedisCache{
 		Redis:      client,
 		MaxZoom:    maxZoom,
-		Expiration: time.Duration(expiration) * time.Second,
+		Expiration: time.Duration(ttl) * time.Second,
 	}, nil
 }
 

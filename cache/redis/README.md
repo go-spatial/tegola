@@ -15,4 +15,4 @@ The rediscache config supports the following properties:
 - `password` (string): [Optional] password for the Redis instance. Defaults to '' (no password).
 - `db` (int): [Optional] the database within the Redis instance to cache to.
 - `max_zoom` (int): [Optional] the max zoom the cache should cache to. After this zoom, Set() calls will return before doing work.
-- `expiration` (int): [Optional] the key expiration time in seconds. Defaults to 0 (the key has no expiration time).
+- `ttl` (int): [Optional] the key ttl time in seconds. Defaults to 0 (the key has no expiration time).
