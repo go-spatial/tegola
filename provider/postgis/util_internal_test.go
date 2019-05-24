@@ -20,16 +20,18 @@ func TestReplaceTokens(t *testing.T) {
 		expected string
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		sql, err := replaceTokens(tc.sql, tc.srid, tc.tile)
-		if err != nil {
-			t.Errorf("unexpected error, Expected nil Got %v", err)
-			return
-		}
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			sql, err := replaceTokens(tc.sql, tc.srid, tc.tile)
+			if err != nil {
+				t.Errorf("unexpected error, Expected nil Got %v", err)
+				return
+			}
 
-		if sql != tc.expected {
-			t.Errorf("incorrect sql,\n Expected \n \t%v\n Got \n \t%v", tc.expected, sql)
-			return
+			if sql != tc.expected {
+				t.Errorf("incorrect sql,\n Expected \n \t%v\n Got \n \t%v", tc.expected, sql)
+				return
+			}
 		}
 	}
 
@@ -67,8 +69,7 @@ func TestReplaceTokens(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -136,54 +137,56 @@ func TestDecipherFields(t *testing.T) {
 	}
 	defer conn.Close()
 
-	fn := func(t *testing.T, tc tcase) {
-		rows, err := conn.Query(tc.sql)
-		defer rows.Close()
-		if err != nil {
-			t.Errorf("Error performing query: %v", err)
-			return
-		}
-
-		var rowCount int
-		for rows.Next() {
-			geoFieldname := "geom"
-			idFieldname := "id"
-			descriptions := rows.FieldDescriptions()
-
-			vals, err := rows.Values()
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			rows, err := conn.Query(tc.sql)
+			defer rows.Close()
 			if err != nil {
-				t.Errorf("unexepcted error reading row Values: %v", err)
+				t.Errorf("Error performing query: %v", err)
 				return
 			}
 
-			_, _, tags, err := decipherFields(context.TODO(), geoFieldname, idFieldname, descriptions, vals)
-			if err != nil {
-				t.Errorf("unexepcted error running decipherFileds: %v", err)
-				return
-			}
+			var rowCount int
+			for rows.Next() {
+				geoFieldname := "geom"
+				idFieldname := "id"
+				descriptions := rows.FieldDescriptions()
 
-			if len(tags) != len(tc.expectedTags) {
-				t.Errorf("got %v tags, expecting %v: %#v, %#v", len(tags), len(tc.expectedTags), tags, tc.expectedTags)
-				return
-			}
-
-			for k, v := range tags {
-				if tc.expectedTags[k] != v {
-					t.Errorf("missing or bad value for tag %v: %v (%T) != %v (%T)", k, v, v, tc.expectedTags[k], tc.expectedTags[k])
+				vals, err := rows.Values()
+				if err != nil {
+					t.Errorf("unexepcted error reading row Values: %v", err)
 					return
 				}
+
+				_, _, tags, err := decipherFields(context.TODO(), geoFieldname, idFieldname, descriptions, vals)
+				if err != nil {
+					t.Errorf("unexepcted error running decipherFileds: %v", err)
+					return
+				}
+
+				if len(tags) != len(tc.expectedTags) {
+					t.Errorf("got %v tags, expecting %v: %#v, %#v", len(tags), len(tc.expectedTags), tags, tc.expectedTags)
+					return
+				}
+
+				for k, v := range tags {
+					if tc.expectedTags[k] != v {
+						t.Errorf("missing or bad value for tag %v: %v (%T) != %v (%T)", k, v, v, tc.expectedTags[k], tc.expectedTags[k])
+						return
+					}
+				}
+
+				rowCount++
+			}
+			if rows.Err() != nil {
+				t.Errorf("unexpected err: %v", rows.Err())
+				return
 			}
 
-			rowCount++
-		}
-		if rows.Err() != nil {
-			t.Errorf("unexpected err: %v", rows.Err())
-			return
-		}
-
-		if rowCount != tc.expectedRowCount {
-			t.Errorf("invalid row count. expected %v. got %v", tc.expectedRowCount, rowCount)
-			return
+			if rowCount != tc.expectedRowCount {
+				t.Errorf("invalid row count. expected %v. got %v", tc.expectedRowCount, rowCount)
+				return
+			}
 		}
 	}
 
@@ -208,7 +211,6 @@ func TestDecipherFields(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }

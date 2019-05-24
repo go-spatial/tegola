@@ -33,17 +33,19 @@ func TestTLSConfig(t *testing.T) {
 		shouldError bool
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		err := postgis.ConfigTLS(tc.sslMode, tc.sslKey, tc.sslCert, tc.sslRootCert, &testConnConfig)
-		if !tc.shouldError && err != nil {
-			t.Errorf("unable to create a new provider: %v", err)
-			return
-		} else if tc.shouldError && err == nil {
-			t.Errorf("Error expected but got no error")
-			return
-		}
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			err := postgis.ConfigTLS(tc.sslMode, tc.sslKey, tc.sslCert, tc.sslRootCert, &testConnConfig)
+			if !tc.shouldError && err != nil {
+				t.Errorf("unable to create a new provider: %v", err)
+				return
+			} else if tc.shouldError && err == nil {
+				t.Errorf("Error expected but got no error")
+				return
+			}
 
-		tc.testFunc(testConnConfig)
+			tc.testFunc(testConnConfig)
+		}
 	}
 
 	tests := map[string]tcase{
@@ -171,8 +173,7 @@ func TestTLSConfig(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -183,11 +184,13 @@ func TestNewTileProvider(t *testing.T) {
 		config dict.Dict
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		_, err := postgis.NewTileProvider(tc.config)
-		if err != nil {
-			t.Errorf("unable to create a new provider. err: %v", err)
-			return
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			_, err := postgis.NewTileProvider(tc.config)
+			if err != nil {
+				t.Errorf("unable to create a new provider. err: %v", err)
+				return
+			}
 		}
 	}
 
@@ -214,8 +217,7 @@ func TestNewTileProvider(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -230,53 +232,55 @@ func TestTileFeatures(t *testing.T) {
 		expectedTags         []string
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		config := dict.Dict{
-			postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
-			postgis.ConfigKeyPort:        port,
-			postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
-			postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
-			postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-			postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
-			postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-			postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-			postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
-		}
-
-		config[postgis.ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
-
-		p, err := postgis.NewTileProvider(config)
-		if err != nil {
-			t.Errorf("unexpected error; unable to create a new provider, expected: nil Got %v", err)
-			return
-		}
-
-		layerName := tc.layerConfig[postgis.ConfigKeyLayerName].(string)
-
-		var featureCount int
-		err = p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
-			// only verify tags on first feature
-			if featureCount == 0 {
-				for _, tag := range tc.expectedTags {
-					if _, ok := f.Tags[tag]; !ok {
-						t.Errorf("expected tag %v in %v", tag, f.Tags)
-						return nil
-					}
-				}
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			config := dict.Dict{
+				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
+				postgis.ConfigKeyPort:        port,
+				postgis.ConfigKeyDB:          os.Getenv("PGDATABASE"),
+				postgis.ConfigKeyUser:        os.Getenv("PGUSER"),
+				postgis.ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
+				postgis.ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
+				postgis.ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
+				postgis.ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
+				postgis.ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 			}
 
-			featureCount++
+			config[postgis.ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
 
-			return nil
-		})
-		if err != tc.expectedErr {
-			t.Errorf("expected err (%v) got err (%v)", tc.expectedErr, err)
-			return
-		}
+			p, err := postgis.NewTileProvider(config)
+			if err != nil {
+				t.Errorf("unexpected error; unable to create a new provider, expected: nil Got %v", err)
+				return
+			}
 
-		if featureCount != tc.expectedFeatureCount {
-			t.Errorf("feature count, expected %v got %v", tc.expectedFeatureCount, featureCount)
-			return
+			layerName := tc.layerConfig[postgis.ConfigKeyLayerName].(string)
+
+			var featureCount int
+			err = p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
+				// only verify tags on first feature
+				if featureCount == 0 {
+					for _, tag := range tc.expectedTags {
+						if _, ok := f.Tags[tag]; !ok {
+							t.Errorf("expected tag %v in %v", tag, f.Tags)
+							return nil
+						}
+					}
+				}
+
+				featureCount++
+
+				return nil
+			})
+			if err != tc.expectedErr {
+				t.Errorf("expected err (%v) got err (%v)", tc.expectedErr, err)
+				return
+			}
+
+			if featureCount != tc.expectedFeatureCount {
+				t.Errorf("feature count, expected %v got %v", tc.expectedFeatureCount, featureCount)
+				return
+			}
 		}
 	}
 
@@ -472,7 +476,6 @@ func TestTileFeatures(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
