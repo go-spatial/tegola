@@ -48,44 +48,46 @@ func TestLayerGeomType(t *testing.T) {
 		ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		// check if we have env vars to override
-		if len(tc.configOverride) > 0 {
-			conf := map[string]interface{}{}
-			// copy the original config
-			for k, v := range tc.config {
-				conf[k] = v
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			// check if we have env vars to override
+			if len(tc.configOverride) > 0 {
+				conf := map[string]interface{}{}
+				// copy the original config
+				for k, v := range tc.config {
+					conf[k] = v
+				}
+
+				// set the config overrides
+				for k, v := range tc.configOverride {
+					conf[k] = v
+				}
+
+				// override the test's config with our new one
+				tc.config = conf
 			}
 
-			// set the config overrides
-			for k, v := range tc.configOverride {
-				conf[k] = v
+			tc.config[ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
+
+			provider, err := NewTileProvider(dict.Dict(tc.config))
+			if tc.err != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.err) {
+					t.Errorf("expected error with %q in NewProvider, got: %v", tc.err, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("NewProvider unexpected error: %v", err)
+				return
 			}
 
-			// override the test's config with our new one
-			tc.config = conf
-		}
+			p := provider.(Provider)
+			layer := p.layers[tc.layerName]
 
-		tc.config[ConfigKeyLayers] = []map[string]interface{}{tc.layerConfig}
-
-		provider, err := NewTileProvider(dict.Dict(tc.config))
-		if tc.err != "" {
-			if err == nil || !strings.Contains(err.Error(), tc.err) {
-				t.Errorf("expected error with %q in NewProvider, got: %v", tc.err, err)
+			if !reflect.DeepEqual(tc.geom, layer.geomType) {
+				t.Errorf("geom type, expected %v got %v", tc.geom, layer.geomType)
+				return
 			}
-			return
-		}
-		if err != nil {
-			t.Errorf("NewProvider unexpected error: %v", err)
-			return
-		}
-
-		p := provider.(Provider)
-		layer := p.layers[tc.layerName]
-
-		if !reflect.DeepEqual(tc.geom, layer.geomType) {
-			t.Errorf("geom type, expected %v got %v", tc.geom, layer.geomType)
-			return
 		}
 	}
 
@@ -155,7 +157,6 @@ func TestLayerGeomType(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
