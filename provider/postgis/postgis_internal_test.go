@@ -27,7 +27,7 @@ func GetTestPort(t *testing.T) int {
 func TestLayerGeomType(t *testing.T) {
 	port := GetTestPort(t)
 
-	type testCase struct {
+	type tcase struct {
 		config         map[string]interface{}
 		configOverride map[string]string
 		layerConfig    map[string]interface{}
@@ -48,7 +48,7 @@ func TestLayerGeomType(t *testing.T) {
 		ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
 	}
 
-	fn := func(tc testCase) func(t *testing.T) {
+	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			// check if we have env vars to override
 			if len(tc.configOverride) > 0 {
@@ -91,7 +91,7 @@ func TestLayerGeomType(t *testing.T) {
 		}
 	}
 
-	tests := map[string]testCase{
+	tests := map[string]tcase{
 		"1": {
 			config: defaultConfig,
 			layerConfig: map[string]interface{}{

@@ -13,14 +13,14 @@ import (
 )
 
 func TestReplaceTokens(t *testing.T) {
-	type testCase struct {
+	type tcase struct {
 		sql      string
 		srid     uint64
 		tile     *slippy.Tile
 		expected string
 	}
 
-	fn := func(tc testCase) func(t *testing.T) {
+	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			sql, err := replaceTokens(tc.sql, tc.srid, tc.tile)
 			if err != nil {
@@ -35,7 +35,7 @@ func TestReplaceTokens(t *testing.T) {
 		}
 	}
 
-	tests := map[string]testCase{
+	tests := map[string]tcase{
 		"replace BBOX": {
 			sql:      "SELECT * FROM foo WHERE geom && !BBOX!",
 			srid:     tegola.WebMercator,
@@ -74,12 +74,12 @@ func TestReplaceTokens(t *testing.T) {
 }
 
 func TestUppercaseTokens(t *testing.T) {
-	type testCase struct {
+	type tcase struct {
 		str      string
 		expected string
 	}
 
-	fn := func(tc testCase) func(t *testing.T) {
+	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			out := uppercaseTokens(tc.str)
 
@@ -90,7 +90,7 @@ func TestUppercaseTokens(t *testing.T) {
 		}
 	}
 
-	tests := map[string]testCase{
+	tests := map[string]tcase{
 		"uppercase tokens": {
 			str:      "this !lower! case !STrInG! should uppercase !TOKENS!",
 			expected: "this !LOWER! case !STRING! should uppercase !TOKENS!",
@@ -117,7 +117,7 @@ func TestUppercaseTokens(t *testing.T) {
 func TestDecipherFields(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
-	type testCase struct {
+	type tcase struct {
 		sql              string
 		expectedRowCount int
 		expectedTags     map[string]interface{}
@@ -137,7 +137,7 @@ func TestDecipherFields(t *testing.T) {
 	}
 	defer conn.Close()
 
-	fn := func(tc testCase) func(t *testing.T) {
+	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			rows, err := conn.Query(tc.sql)
 			defer rows.Close()
@@ -190,7 +190,7 @@ func TestDecipherFields(t *testing.T) {
 		}
 	}
 
-	tests := map[string]testCase{
+	tests := map[string]tcase{
 		"hstore 1": {
 			sql:              "SELECT id, tags, int8_test FROM hstore_test WHERE id = 1;",
 			expectedRowCount: 1,

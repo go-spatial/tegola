@@ -24,7 +24,7 @@ func TestTLSConfig(t *testing.T) {
 		Password: "testpassword",
 	}
 
-	type testCase struct {
+	type tcase struct {
 		sslMode     string
 		sslKey      string
 		sslCert     string
@@ -33,7 +33,7 @@ func TestTLSConfig(t *testing.T) {
 		shouldError bool
 	}
 
-	fn := func(tc testCase) func(t *testing.T) {
+	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			err := postgis.ConfigTLS(tc.sslMode, tc.sslKey, tc.sslCert, tc.sslRootCert, &testConnConfig)
 			if !tc.shouldError && err != nil {
@@ -48,7 +48,7 @@ func TestTLSConfig(t *testing.T) {
 		}
 	}
 
-	tests := map[string]testCase{
+	tests := map[string]tcase{
 		"1": {
 			sslMode:     "",
 			sslKey:      "",
@@ -180,11 +180,11 @@ func TestTLSConfig(t *testing.T) {
 func TestNewTileProvider(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
-	type testCase struct {
+	type tcase struct {
 		config dict.Dict
 	}
 
-	fn := func(tc testCase) func(t *testing.T) {
+	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			_, err := postgis.NewTileProvider(tc.config)
 			if err != nil {
@@ -194,7 +194,7 @@ func TestNewTileProvider(t *testing.T) {
 		}
 	}
 
-	tests := map[string]testCase{
+	tests := map[string]tcase{
 		"1": {
 			config: dict.Dict{
 				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
@@ -224,7 +224,7 @@ func TestNewTileProvider(t *testing.T) {
 func TestTileFeatures(t *testing.T) {
 	port := postgis.GetTestPort(t)
 
-	type testCase struct {
+	type tcase struct {
 		layerConfig          map[string]interface{}
 		tile                 *slippy.Tile
 		expectedErr          error
@@ -232,7 +232,7 @@ func TestTileFeatures(t *testing.T) {
 		expectedTags         []string
 	}
 
-	fn := func(tc testCase) func(t *testing.T) {
+	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			config := dict.Dict{
 				postgis.ConfigKeyHost:        os.Getenv("PGHOST"),
@@ -284,7 +284,7 @@ func TestTileFeatures(t *testing.T) {
 		}
 	}
 
-	tests := map[string]testCase{
+	tests := map[string]tcase{
 		"tablename query": {
 			layerConfig: map[string]interface{}{
 				postgis.ConfigKeyLayerName: "land",
