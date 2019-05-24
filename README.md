@@ -243,7 +243,8 @@ The requested tile will be encode a layer with the `name` value set to `debug` a
 
 ## Building from source
 
-Tegola is written in [Go](https://golang.org/) and requires Go 1.8+ to compile from source. To build tegola from source, make sure you have Go installed and have cloned the repository to your `$GOPATH`. Navigate to the repository then run the following commands:
+Tegola is written in [Go](https://golang.org/) and requires Go 1.x to compile from source. (We support the three newest versions of Go.) To build tegola from source, make sure you have Go installed and have cloned the repository to your `$GOPATH`. Navigate to the repository then run the following commands:
+
 
 ```bash
 cd cmd/tegola/
