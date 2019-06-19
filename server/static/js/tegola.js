@@ -69,10 +69,24 @@ var app = new Vue({
 				var layers = maps[i].layers;
 				//	iterate our map layers
 				for (var j=0, l=layers.length; j<l; j++){
-					if ((typeof this.map.getLayer(layers[j].name) !== "undefined")) {
-						var color = this.map.getPaintProperty(layers[j].name, 'line-color') ||
-							this.map.getPaintProperty(layers[j].name, 'fill-outline-color') ||
-							this.map.getPaintProperty(layers[j].name, 'circle-color');
+					console.log(layers[j].name);
+					if ((typeof this.map.getLayer(layers[j].name) !== 'undefined')) {
+
+						// these try/catch blocks are because mapbox gl throws an error
+						// if we try to ask for a paint property that does not apply to the feature type
+						// https://github.com/mapbox/mapbox-gl-js/issues/6033
+						var color;
+						try {
+							color = this.map.getPaintProperty(layers[j].name, 'line-color');
+						} catch(e){}
+
+						try {
+							color = this.map.getPaintProperty(layers[j].name, 'fill-outline-color');
+						} catch(e){}
+
+						try {
+							color = this.map.getPaintProperty(layers[j].name, 'circle-color');
+						} catch(e){}
 
 						mapItem.layers.push({
 							name: layers[j].name,
@@ -116,7 +130,7 @@ var app = new Vue({
 				me.map.setStyle('/maps/'+mapRec.name+'/style.json');
 			}
 
-			me.map.on('load', me.setData);
+			me.map.on('styledata', me.setData);
 			me.map.on('zoomend', me.setData);
 			me.map.on('click', me.showFeatureData);
 
