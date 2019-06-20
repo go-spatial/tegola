@@ -69,24 +69,20 @@ var app = new Vue({
 				var layers = maps[i].layers;
 				//	iterate our map layers
 				for (var j=0, l=layers.length; j<l; j++){
-					console.log(layers[j].name);
 					if ((typeof this.map.getLayer(layers[j].name) !== 'undefined')) {
 
 						// these try/catch blocks are because mapbox gl throws an error
 						// if we try to ask for a paint property that does not apply to the feature type
 						// https://github.com/mapbox/mapbox-gl-js/issues/6033
 						var color;
-						try {
-							color = this.map.getPaintProperty(layers[j].name, 'line-color');
-						} catch(e){}
+						var properties = ['line-color', 'fill-outline-color', 'circle-color'];
 
-						try {
-							color = this.map.getPaintProperty(layers[j].name, 'fill-outline-color');
-						} catch(e){}
-
-						try {
-							color = this.map.getPaintProperty(layers[j].name, 'circle-color');
-						} catch(e){}
+						for (var k=0, ll=properties.length; k<ll; k++) {
+							try {
+								color = this.map.getPaintProperty(layers[j].name, properties[k]);
+								break
+							} catch(e){}
+						}
 
 						mapItem.layers.push({
 							name: layers[j].name,
