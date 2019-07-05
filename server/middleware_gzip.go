@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -54,9 +55,6 @@ type gzipDecompressResponseWriter struct {
 }
 
 func (w *gzipDecompressResponseWriter) Header() http.Header {
-	// delete the Content-Length header as it would give the length of the compressed tile
-	// rather than the uncompressed tile
-	w.resp.Header().Del("Content-Length")
 	return w.resp.Header()
 }
 
@@ -73,17 +71,17 @@ func (w *gzipDecompressResponseWriter) Write(b []byte) (int, error) {
 	}
 	defer r.Close()
 
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, r)
+	var respSize int64
+	respSize, err = io.Copy(w.resp, r)
 	if err != nil {
 		return 0, err
 	}
-
-	return w.resp.Write(buf.Bytes())
+	w.resp.Header().Set("Content-Length", fmt.Sprintf("%d", respSize))
+	return int(respSize), nil
 }
 
-// TODO (arolek): adjust Content-Length header on decompress
 func (w *gzipDecompressResponseWriter) WriteHeader(i int) {
+	w.resp.Header().Del("Content-Length")
 	w.status = i
 	w.resp.WriteHeader(i)
 }
