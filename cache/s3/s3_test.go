@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-spatial/tegola/cache"
@@ -14,10 +15,28 @@ import (
 // gzip encoded test data
 var testData = []byte{0x1f, 0x8b, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x2a, 0xce, 0xcc, 0x49, 0x2c, 0x6, 0x4, 0x0, 0x0, 0xff, 0xff, 0xaf, 0x9d, 0x59, 0xca, 0x5, 0x0, 0x0, 0x0}
 
-func TestNew(t *testing.T) {
-	if os.Getenv("RUN_S3_TESTS") != "yes" {
-		return
+// skipS3Test will check the environment to see if the test should be skipped
+func skipS3Tests(t *testing.T) {
+	if strings.TrimSpace(strings.ToLower(os.Getenv("RUN_S3_TESTS"))) != "yes" {
+		t.Skipf("skipping %v, RUN_S3_TESTS not set to 'yes'", t.Name())
 	}
+	// Test for static Credentials as well. If there are not there we skip the tests
+
+	var config dict.Dict = map[string]interface{}{
+		"bucket":                os.Getenv("AWS_TEST_BUCKET"),
+		"region":                os.Getenv("AWS_REGION"),
+		"aws_access_key_id":     os.Getenv("AWS_ACCESS_KEY_ID"),
+		"aws_secret_access_key": os.Getenv("AWS_SECRET_ACCESS_KEY"),
+	}
+	_, err := s3.New(config)
+	if err != nil {
+		t.Skipf("skipping %v, static ENV's not set or correct", t.Name())
+	}
+
+}
+
+func TestNew(t *testing.T) {
+	skipS3Tests(t)
 
 	type tcase struct {
 		config dict.Dict
@@ -82,9 +101,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestSetGetPurge(t *testing.T) {
-	if os.Getenv("RUN_S3_TESTS") != "yes" {
-		return
-	}
+	skipS3Tests(t)
 
 	type tcase struct {
 		config   dict.Dict
@@ -154,9 +171,7 @@ func TestSetGetPurge(t *testing.T) {
 }
 
 func TestSetOverwrite(t *testing.T) {
-	if os.Getenv("RUN_S3_TESTS") != "yes" {
-		return
-	}
+	skipS3Tests(t)
 
 	type tcase struct {
 		config   dict.Dict
@@ -236,9 +251,7 @@ func TestSetOverwrite(t *testing.T) {
 }
 
 func TestMaxZoom(t *testing.T) {
-	if os.Getenv("RUN_S3_TESTS") != "yes" {
-		return
-	}
+	skipS3Tests(t)
 
 	type tcase struct {
 		config      dict.Dict
