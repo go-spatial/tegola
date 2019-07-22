@@ -121,7 +121,6 @@ func Maps(a *atlas.Atlas, conf config.Config, providers map[string]provider.Tile
 
 			// read the provider's layer names
 			layerInfos, err := provider.Layers()
-			fmt.Println("printing provider layers:", layerInfos)
 
 			if err != nil {
 				return ErrFetchingLayerInfo{
