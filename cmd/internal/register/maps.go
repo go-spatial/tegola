@@ -59,10 +59,7 @@ func (e ErrDefaultTagsInvalid) Error() string {
 
 // Maps registers maps with with atlas
 // note that we are pulling the full config file to get both providers (to check if auto) and maps
-
-func Maps(a *atlas.Atlas, conf config.Config, providers map[string]provider.Tiler) error {
-
-	maps := conf.Maps
+func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler) error {
 
 	// iterate our maps
 	for _, m := range maps {
@@ -93,7 +90,7 @@ func Maps(a *atlas.Atlas, conf config.Config, providers map[string]provider.Tile
 		// iterate our layers
 		for _, l := range m.Layers {
 			// split our provider name (provider.layer) into [provider,layer]
-			providerLayer := strings.Split(string(l.ProviderLayer), ".")
+			providerLayer := strings.SplitN(string(l.ProviderLayer), ".", 2)
 
 			// we're expecting two params in the provider layer definition
 			if len(providerLayer) != 2 {
@@ -105,18 +102,11 @@ func Maps(a *atlas.Atlas, conf config.Config, providers map[string]provider.Tile
 
 			// lookup our proivder
 			provider, ok := providers[providerLayer[0]]
-
-			// determine if layers should automatically be created from provider regex
-			auto := false
-			for _, p := range conf.Providers {
-				if p["name"] == providerLayer[0] && p["auto"] == true {
-					auto = true
-				}
-			}
-
 			if !ok {
 				return ErrProviderNotFound{providerLayer[0]}
 			}
+
+			fmt.Println("printing provider:", provider)
 
 			// read the provider's layer names
 			layerInfos, err := provider.Layers()
@@ -128,49 +118,40 @@ func Maps(a *atlas.Atlas, conf config.Config, providers map[string]provider.Tile
 			}
 
 			// confirm our providerLayer name is registered
-			var found bool
 			// this must be an array because auto providers may have multiple layers that match regex
 			var provLayers []string
 			var layerGeomType tegola.Geometry
-			for i, info := range layerInfos {
-				// check if provider layers are automatically generated
-				if auto {
-					// regex to check against. ^ to match only beginning of phrase
-					exp := fmt.Sprintf("^%v", providerLayer[1])
-					// if * (wildcard), select all
-					if exp == "^*" {
-						provLayers = append(provLayers, info.Name())
-						found = true
-						layerGeomType = info.GeomType()
-					} else {
-						// must compile the regex first before testing phrase
-						r, err := regexp.Compile(exp)
-						if err != nil {
-							log.Printf("Error when parsing regex (layer: %v): %v", info.Name(), err)
-						} else {
-							// if regex matches, push provider layer. Note that there is no break--we need to find all layers that match
-							if r.MatchString(info.Name()) {
-								provLayers = append(provLayers, info.Name())
-								found = true
-								// because this is the same for all auto provider layers, we don't need to worry about which loop we are on
-								layerGeomType = info.GeomType()
-							}
-						}
+			var isregex bool
+		LayerLoop:
+			for _, info := range layerInfos {
+				if providerLayer[1] == "*" {
+					// return all the layers:
+					provLayers = append(provLayers, info.Name())
+					layerGeomType = info.GeomType()
+					continue
+				}
+				// check to see if string contains regex
+				isregex = len(strings.Split(regexp.QuoteMeta(providerLayer[1]), "\\")) > 1
+				if isregex {
+					r, err := regexp.Compile("^" + providerLayer[1])
+					if err != nil {
+						log.Printf("Error when parsing regex (layer: %v): %v", info.Name(), err)
+						continue LayerLoop // add a Providers label at 111
 					}
-
+					if !r.MatchString(info.Name()) {
+						continue
+					}
+					provLayers = append(provLayers, info.Name())
+					layerGeomType = info.GeomType()
 				} else {
-					if layerInfos[i].Name() == providerLayer[1] {
-						found = true
-						provLayers = append(provLayers, providerLayer[1])
-						// read the layerGeomType
-						layerGeomType = layerInfos[i].GeomType()
-						break
-
+					if info.Name() == providerLayer[1] {
+						provLayers = append(provLayers, info.Name())
+						layerGeomType = info.GeomType()
 					}
 				}
 			}
 
-			if !found {
+			if len(provLayers) == 0 {
 				return ErrProviderLayerNotRegistered{
 					MapName:       string(m.Name),
 					ProviderLayer: string(l.ProviderLayer),
@@ -203,7 +184,7 @@ func Maps(a *atlas.Atlas, conf config.Config, providers map[string]provider.Tile
 			// this is a loop to capture auto provider layers with multiple layers that match regex
 			for _, name := range provLayers {
 				var lname string
-				if auto {
+				if string(l.Name) == "" || isregex == true {
 					lname = name
 				} else {
 					lname = string(l.Name)

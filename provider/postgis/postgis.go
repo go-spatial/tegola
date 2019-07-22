@@ -63,7 +63,6 @@ const (
 )
 
 const (
-	ConfigKeyAuto          = "auto"
 	ConfigKeyAutoConfig    = "auto_config"
 	ConfigKeyAutoGeomField = "geom"
 	ConfigKeyAutoIDField   = "objectid"
@@ -143,12 +142,6 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
-	auto := DefaultAuto
-	auto, err = config.Bool(ConfigKeyAuto, &auto)
-	if err != nil {
-		return nil, err
-	}
-
 	sslmode := DefaultSSLMode
 	sslmode, err = config.String(ConfigKeySSLMode, &sslmode)
 
@@ -205,7 +198,6 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 
 	p := Provider{
 		srid: uint64(srid),
-		auto: auto,
 		config: pgx.ConnPoolConfig{
 			ConnConfig:     connConfig,
 			MaxConnections: int(maxcon),
@@ -219,6 +211,11 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	layers, err := config.MapSlice(ConfigKeyLayers)
 	if err != nil {
 		return nil, err
+	}
+
+	auto := DefaultAuto
+	if len(layers) == 0 {
+		auto = true
 	}
 
 	// check if provider layer are automatically generated

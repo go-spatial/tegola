@@ -62,9 +62,6 @@ func initConfig(configFile string, cacheRequired bool) (err error) {
 		return err
 	}
 
-	// code here must do 2 things: 1) add provider layers to config for each provider and 2) add in a corresponding map with map layers
-	// map will have same name as provider,
-
 	// init our providers
 	// but first convert []env.Map -> []dict.Dicter
 	provArr := make([]dict.Dicter, len(conf.Providers))
@@ -79,7 +76,7 @@ func initConfig(configFile string, cacheRequired bool) (err error) {
 
 	// init our maps
 	// note that we are sending the whole config file to include both maps and providers
-	if err = register.Maps(nil, conf, providers); err != nil {
+	if err = register.Maps(nil, conf.Maps, providers); err != nil {
 		return fmt.Errorf("could not register maps: %v", err)
 	}
 	if len(conf.Cache) == 0 && cacheRequired {
