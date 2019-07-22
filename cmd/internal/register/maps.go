@@ -105,7 +105,6 @@ func Maps(a *atlas.Atlas, conf config.Config, providers map[string]provider.Tile
 
 			// lookup our proivder
 			provider, ok := providers[providerLayer[0]]
-			fmt.Println("printing provider:", provider)
 
 			// determine if layers should automatically be created from provider regex
 			auto := false
