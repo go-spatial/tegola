@@ -31,6 +31,7 @@ type Provider struct {
 	// map of layer name and corresponding sql
 	layers     map[string]Layer
 	srid       uint64
+	auto       bool
 	firstlayer string
 }
 
@@ -40,9 +41,19 @@ const (
 
 	// SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
 	fldsSQL = `SELECT * FROM %[1]v LIMIT 0;`
+
+	// SQL to find the geometry column if none provided
+	idxSQL = `SELECT column_name FROM information_schema.columns WHERE table_name = '%v' AND is_identity = 'YES' LIMIT 1`
+
+	// SQL to find the index column if none provided
+	geomSQL = `SELECT column_name FROM information_schema.columns WHERE table_name = '%v' AND udt_name = 'geometry' LIMIT 1`
+
+	// SQL to find all table names from information_schema
+	lyrsSQL = `SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema = 'public' AND table_name != 'spatial_ref_sys'`
 )
 
 const (
+	DefaultAuto    = false
 	DefaultPort    = 5432
 	DefaultSRID    = tegola.WebMercator
 	DefaultMaxConn = 100
@@ -52,25 +63,29 @@ const (
 )
 
 const (
-	ConfigKeyHost        = "host"
-	ConfigKeyPort        = "port"
-	ConfigKeyDB          = "database"
-	ConfigKeyUser        = "user"
-	ConfigKeyPassword    = "password"
-	ConfigKeySSLMode     = "ssl_mode"
-	ConfigKeySSLKey      = "ssl_key"
-	ConfigKeySSLCert     = "ssl_cert"
-	ConfigKeySSLRootCert = "ssl_root_cert"
-	ConfigKeyMaxConn     = "max_connections"
-	ConfigKeySRID        = "srid"
-	ConfigKeyLayers      = "layers"
-	ConfigKeyLayerName   = "name"
-	ConfigKeyTablename   = "tablename"
-	ConfigKeySQL         = "sql"
-	ConfigKeyFields      = "fields"
-	ConfigKeyGeomField   = "geometry_fieldname"
-	ConfigKeyGeomIDField = "id_fieldname"
-	ConfigKeyGeomType    = "geometry_type"
+	ConfigKeyAuto          = "auto"
+	ConfigKeyAutoConfig    = "auto_config"
+	ConfigKeyAutoGeomField = "geom"
+	ConfigKeyAutoIDField   = "objectid"
+	ConfigKeyHost          = "host"
+	ConfigKeyPort          = "port"
+	ConfigKeyDB            = "database"
+	ConfigKeyUser          = "user"
+	ConfigKeyPassword      = "password"
+	ConfigKeySSLMode       = "ssl_mode"
+	ConfigKeySSLKey        = "ssl_key"
+	ConfigKeySSLCert       = "ssl_cert"
+	ConfigKeySSLRootCert   = "ssl_root_cert"
+	ConfigKeyMaxConn       = "max_connections"
+	ConfigKeySRID          = "srid"
+	ConfigKeyLayers        = "layers"
+	ConfigKeyLayerName     = "name"
+	ConfigKeyTablename     = "tablename"
+	ConfigKeySQL           = "sql"
+	ConfigKeyFields        = "fields"
+	ConfigKeyGeomField     = "geometry_fieldname"
+	ConfigKeyGeomIDField   = "id_fieldname"
+	ConfigKeyGeomType      = "geometry_type"
 )
 
 func init() {
@@ -124,6 +139,12 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	}
 
 	password, err := config.String(ConfigKeyPassword, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	auto := DefaultAuto
+	auto, err = config.Bool(ConfigKeyAuto, &auto)
 	if err != nil {
 		return nil, err
 	}
@@ -184,6 +205,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 
 	p := Provider{
 		srid: uint64(srid),
+		auto: auto,
 		config: pgx.ConnPoolConfig{
 			ConnConfig:     connConfig,
 			MaxConnections: int(maxcon),
@@ -199,14 +221,49 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 		return nil, err
 	}
 
+	// check if provider layer are automatically generated
+	var autoTables []string
+	if auto {
+		// get auto config settings
+		// *NOTE: I'm guessing this should be a map, not a map slice (we only want 1 auto config per provider) but couldn't get it to work
+		autoConfig, err := config.MapSlice(ConfigKeyAutoConfig)
+
+		if err != nil {
+			return nil, err
+		}
+		// generate layers from information_schema of provider
+		autoTables, err = genLayers(p.pool)
+		for i := 0; i < len(autoTables); i++ {
+
+			// this is very hacky. I was having problems creating an empty dict.Dicter
+			defaultLayer, err := config.Map("")
+			if err != nil {
+				log.Println(err)
+			}
+			if len(autoConfig) > 0 {
+				// use auto config details to fill in layer info
+				defaultLayer = autoConfig[0]
+			}
+			// add auto config layer
+			layers = append(layers, defaultLayer)
+		}
+	}
+
 	lyrs := make(map[string]Layer)
 	lyrsSeen := make(map[string]int)
 
 	for i, layer := range layers {
 
-		lname, err := layer.String(ConfigKeyLayerName, nil)
-		if err != nil {
-			return nil, fmt.Errorf("For layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
+		var lname string
+
+		// if auto, get layername from automatically generated layernames
+		if auto {
+			lname = autoTables[i]
+		} else {
+			lname, err = layer.String(ConfigKeyLayerName, nil)
+			if err != nil {
+				return nil, fmt.Errorf("For layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
+			}
 		}
 
 		if j, ok := lyrsSeen[lname]; ok {
@@ -223,19 +280,30 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
 		}
 
-		geomfld := "geom"
+		geomfld := ""
 		geomfld, err = layer.String(ConfigKeyGeomField, &geomfld)
 		if err != nil {
 			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
 		}
+		if geomfld == "" {
+			// if no geometry field exists, search information schema
+			geomfld, err = genField(p.pool, geomSQL, lname)
+			if err != nil {
+				return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
+			}
+		}
 
 		idfld := ""
 		idfld, err = layer.String(ConfigKeyGeomIDField, &idfld)
-		if err != nil {
-			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
-		}
-		if idfld == geomfld {
-			return nil, fmt.Errorf("for layer (%v) %v: %v (%v) and %v field (%v) is the same", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+		if idfld == "" {
+			// if no index field exists, search information schema
+			idfld, err = genField(p.pool, idxSQL, lname)
+			if err != nil {
+				return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
+			}
+			if idfld == geomfld {
+				return nil, fmt.Errorf("for layer (%v) %v: %v (%v) and %v field (%v) is the same", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+			}
 		}
 
 		geomType := ""
@@ -301,6 +369,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			// We need to do some work. We need to check to see Fields contains the geom and gid fields
 			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field list.
 			l.sql, err = genSQL(&l, p.pool, tblName, fields)
+
 			if err != nil {
 				return nil, fmt.Errorf("could not generate sql, for layer(%v): %v", lname, err)
 			}

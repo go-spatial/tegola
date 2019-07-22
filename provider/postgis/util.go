@@ -16,6 +16,58 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
+// find all tables for a given provider
+func genLayers(pool *pgx.ConnPool) (layers []string, err error) {
+
+	// we need to hit the database information_schema to find the table names
+	var flds []string
+
+	rows, err := pool.Query(lyrsSQL)
+	if err != nil {
+		return []string{""}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var n string
+		err = rows.Scan(&n)
+		if err != nil {
+			return []string{""}, err
+		}
+		flds = append(flds, n)
+	}
+
+	// Any errors encountered by rows.Next or rows.Scan will be returned here
+	if rows.Err() != nil {
+		return []string{""}, err
+	}
+
+	for i := range flds {
+		flds[i] = fmt.Sprintf(`%v`, flds[i])
+	}
+
+	return flds, err
+}
+
+// finds a column name that matches a SQL command
+func genField(pool *pgx.ConnPool, rawSQL string, tablename string) (fldName string, err error) {
+	sql := fmt.Sprintf(rawSQL, tablename)
+
+	rows, err := pool.Query(sql)
+
+	for rows.Next() {
+		var n string
+		err = rows.Scan(&n)
+		fldName = n
+	}
+
+	// Any errors encountered by rows.Next or rows.Scan will be returned here
+	if rows.Err() != nil {
+		return "", fmt.Errorf("for layer %v : %v", tablename, err)
+	}
+	return fldName, err
+}
+
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
 func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {
 

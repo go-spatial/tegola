@@ -6,3 +6,5 @@ documents
 .cover
 *.env
 tmp
+cmd/tegola_lambda/config.toml
+cmd/tegola/config.toml

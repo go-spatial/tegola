@@ -16,6 +16,8 @@ type Layer struct {
 	geomType geom.Geometry
 	// The SRID that the data in the table is stored in. This will default to WebMercator
 	srid uint64
+	// Whether layer tables are automatically configured based on postgres information_schema
+	auto bool
 }
 
 func (l Layer) Name() string {
