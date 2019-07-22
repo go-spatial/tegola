@@ -31,7 +31,6 @@ type Provider struct {
 	// map of layer name and corresponding sql
 	layers     map[string]Layer
 	srid       uint64
-	auto       bool
 	firstlayer string
 }
 

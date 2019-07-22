@@ -59,8 +59,7 @@ func main() {
 	}
 
 	// register the maps
-	// note that we are sending the whole config file to include both maps and providers
-	if err = register.Maps(nil, conf, providers); err != nil {
+	if err = register.Maps(nil, conf.Maps, providers); err != nil {
 		log.Fatal(err)
 	}
 
