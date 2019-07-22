@@ -75,7 +75,6 @@ func initConfig(configFile string, cacheRequired bool) (err error) {
 	}
 
 	// init our maps
-	// note that we are sending the whole config file to include both maps and providers
 	if err = register.Maps(nil, conf.Maps, providers); err != nil {
 		return fmt.Errorf("could not register maps: %v", err)
 	}
