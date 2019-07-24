@@ -12,6 +12,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/stdmn/tegola/internal/env"
 )
 
 type ErrProviderLayerInvalid struct {
@@ -57,9 +58,46 @@ func (e ErrDefaultTagsInvalid) Error() string {
 	return fmt.Sprintf("'default_tags' for 'provider_layer' (%v) should be a TOML table", e.ProviderLayer)
 }
 
+func AutoConfigMapLayers(providers map[string]provider.Tiler) []config.MapLayer {
+	mapLayers := []config.MapLayer{}
+	for pname, p := range providers {
+		// log.Println(p.String("name", nil))
+		provLayers, err := p.Layers()
+		if err != nil {
+			log.Println(err)
+		}
+
+		for _, l := range provLayers {
+			providerLayer := fmt.Sprintf("%v.%v", pname, l.Name())
+			mapLayers = append(mapLayers, config.MapLayer{
+				ProviderLayer: env.String(providerLayer),
+				Name:          env.String(l.Name()),
+			})
+		}
+	}
+
+	return mapLayers
+}
+
+func AutoConfigMap(providers map[string]provider.Tiler) []config.Map {
+	singleMap := []config.Map{}
+
+	mapName := "Default"
+	layers := AutoConfigMapLayers(providers)
+	singleMap = append(singleMap, config.Map{Name: env.String(mapName), Layers: layers})
+
+	return singleMap
+}
+
 // Maps registers maps with with atlas
 // note that we are pulling the full config file to get both providers (to check if auto) and maps
-func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler) error {
+func Maps(a *atlas.Atlas, confMaps []config.Map, providers map[string]provider.Tiler) error {
+
+	maps := confMaps
+
+	if len(maps) == 0 {
+		maps = AutoConfigMap(providers)
+	}
 
 	// iterate our maps
 	for _, m := range maps {
@@ -87,8 +125,14 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			newMap.TileBuffer = uint64(*m.TileBuffer)
 		}
 
+		mapLayers := m.Layers
+
+		if len(mapLayers) == 0 {
+			mapLayers = AutoConfigMapLayers(providers)
+		}
+
 		// iterate our layers
-		for _, l := range m.Layers {
+		for _, l := range mapLayers {
 			// split our provider name (provider.layer) into [provider,layer]
 			providerLayer := strings.SplitN(string(l.ProviderLayer), ".", 2)
 
