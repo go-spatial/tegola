@@ -175,8 +175,10 @@ func Maps(a *atlas.Atlas, confMaps []config.Map, providers map[string]provider.T
 					continue
 				}
 				// check to see if string contains regex
-				isregex = len(strings.Split(regexp.QuoteMeta(providerLayer[1]), "\\")) > 1
-				if isregex {
+				isregex = len(providerLayer[1]) != len(regexp.QuoteMeta(providerLayer[1]))
+
+				switch {
+				case isregex:
 					r, err := regexp.Compile("^" + providerLayer[1])
 					if err != nil {
 						log.Printf("Error when parsing regex (layer: %v): %v", info.Name(), err)
@@ -185,14 +187,15 @@ func Maps(a *atlas.Atlas, confMaps []config.Map, providers map[string]provider.T
 					if !r.MatchString(info.Name()) {
 						continue
 					}
-					provLayers = append(provLayers, info.Name())
-					layerGeomType = info.GeomType()
-				} else {
-					if info.Name() == providerLayer[1] {
-						provLayers = append(provLayers, info.Name())
-						layerGeomType = info.GeomType()
-					}
+				case info.Name() == providerLayer[1]:
+					// do nothing
+				default:
+					// ignore this layer
+					continue
+
 				}
+				provLayers = append(provLayers, info.Name())
+				layerGeomType = info.GeomType()
 			}
 
 			if len(provLayers) == 0 {
