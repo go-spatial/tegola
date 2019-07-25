@@ -11,8 +11,12 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/stdmn/tegola/internal/env"
+)
+
+const (
+	DefaultMapName = env.String("Default")
 )
 
 type ErrProviderLayerInvalid struct {
@@ -59,34 +63,24 @@ func (e ErrDefaultTagsInvalid) Error() string {
 }
 
 func AutoConfigMapLayers(providers map[string]provider.Tiler) []config.MapLayer {
-	mapLayers := []config.MapLayer{}
-	for pname, p := range providers {
-		// log.Println(p.String("name", nil))
-		provLayers, err := p.Layers()
-		if err != nil {
-			log.Println(err)
+	mapLayers := make([]config.MapLayer, len(providers))
+	count := 0
+	for pname := range providers {
+		mapLayers[count] = config.MapLayer{
+			ProviderLayer: env.String(fmt.Sprintf("%s.*", pname)),
 		}
-
-		for _, l := range provLayers {
-			providerLayer := fmt.Sprintf("%v.%v", pname, l.Name())
-			mapLayers = append(mapLayers, config.MapLayer{
-				ProviderLayer: env.String(providerLayer),
-				Name:          env.String(l.Name()),
-			})
-		}
+		count++
 	}
-
 	return mapLayers
 }
 
 func AutoConfigMap(providers map[string]provider.Tiler) []config.Map {
-	singleMap := []config.Map{}
-
-	mapName := "Default"
-	layers := AutoConfigMapLayers(providers)
-	singleMap = append(singleMap, config.Map{Name: env.String(mapName), Layers: layers})
-
-	return singleMap
+	return []config.Map{
+		{
+			Name:   DefaultMapName,
+			Layers: AutoConfigMapLayers(providers),
+		},
+	}
 }
 
 // Maps registers maps with with atlas
@@ -217,12 +211,12 @@ func Maps(a *atlas.Atlas, confMaps []config.Map, providers map[string]provider.T
 				}
 			}
 
-			var minZoom uint
+			minZoom := uint(1)
 			if l.MinZoom != nil {
 				minZoom = uint(*l.MinZoom)
 			}
 
-			var maxZoom uint
+			maxZoom := uint(20)
 			if l.MaxZoom != nil {
 				maxZoom = uint(*l.MaxZoom)
 			}
