@@ -27,7 +27,7 @@ func (s seedPurgeWorkerTileError) Error() string {
 	return fmt.Sprintf("error %v tile (%+v): %v", cmd, s.Tile, s.Err)
 }
 
-func seedWorker(tileBuffer *float64, overwrite bool) func(ctx context.Context, mt MapTile) error {
+func seedWorker(overwrite bool) func(ctx context.Context, mt MapTile) error {
 	return func(ctx context.Context, mt MapTile) error {
 		// track how long the tile generation is taking
 		t := time.Now()
@@ -72,11 +72,6 @@ func seedWorker(tileBuffer *float64, overwrite bool) func(ctx context.Context, m
 				log.Infof("cache seed set to not overwrite existing tiles. skipping map (%v) tile (%v/%v/%v)", mt.MapName, z, x, y)
 				return nil
 			}
-		}
-
-		//	set tile buffer if it was configured by the user
-		if tileBuffer != nil {
-			mt.Tile.Buffer = float64(*tileBuffer)
 		}
 
 		//	seed the tile
