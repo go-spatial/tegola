@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 )
 
 func TestGenerateTilesForTileName(t *testing.T) {
@@ -52,29 +51,29 @@ func TestGenerateTilesForTileName(t *testing.T) {
 
 	tests := map[string]tcase{
 		"max_zoom=0 tile-name=0/0/0": {
-			tile:     slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
+			tile:     slippy.NewTile(0, 0, 0),
 			explicit: true,
 			tiles: sTiles{
-				slippy.NewTile(0, 0, 0, 0, tegola.WebMercator),
+				slippy.NewTile(0, 0, 0),
 			},
 		},
 		"max_zoom=0 tile-name=14/300/781": {
-			tile:     slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
+			tile:     slippy.NewTile(14, 300, 781),
 			explicit: true,
 			tiles: sTiles{
-				slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
+				slippy.NewTile(14, 300, 781),
 			},
 		},
 		"min_zoom= 13 max_zoom=15 tile-name=14/300/781": {
-			tile:  slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
+			tile:  slippy.NewTile(14, 300, 781),
 			zooms: []uint{13, 14, 15},
 			tiles: sTiles{
-				slippy.NewTile(13, 150, 390, 0, tegola.WebMercator),
-				slippy.NewTile(14, 300, 781, 0, tegola.WebMercator),
-				slippy.NewTile(15, 600, 1562, 0, tegola.WebMercator),
-				slippy.NewTile(15, 600, 1563, 0, tegola.WebMercator),
-				slippy.NewTile(15, 601, 1562, 0, tegola.WebMercator),
-				slippy.NewTile(15, 601, 1563, 0, tegola.WebMercator),
+				slippy.NewTile(13, 150, 390),
+				slippy.NewTile(14, 300, 781),
+				slippy.NewTile(15, 600, 1562),
+				slippy.NewTile(15, 600, 1563),
+				slippy.NewTile(15, 601, 1562),
+				slippy.NewTile(15, 601, 1563),
 			},
 		},
 	}

@@ -74,11 +74,6 @@ func seedWorker(tileBuffer *float64, overwrite bool) func(ctx context.Context, m
 			}
 		}
 
-		//	set tile buffer if it was configured by the user
-		if tileBuffer != nil {
-			mt.Tile.Buffer = float64(*tileBuffer)
-		}
-
 		//	seed the tile
 		if err = atlas.SeedMapTile(ctx, m, z, x, y); err != nil {
 			if err == context.Canceled {
