@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
@@ -147,7 +146,7 @@ func drawCommand(cmd *cobra.Command, args []string) {
 func drawFeatures(pname string, tiler provider.Tiler, layers []string, gid int, dfn *drawFilename) error {
 	ctx := context.Background()
 	ttile := tegola.NewTile(dfn.z, dfn.x, dfn.y)
-	slippyTile := slippy.NewTile(dfn.z, dfn.x, dfn.y, tegola.DefaultTileBuffer, tegola.WebMercator)
+	slippyTile := provider.NewTile(dfn.z, dfn.x, dfn.y, tegola.DefaultTileBuffer, tegola.WebMercator)
 	for _, name := range layers {
 		count := 0
 		err := tiler.TileFeatures(ctx, name, slippyTile, func(f *provider.Feature) error {

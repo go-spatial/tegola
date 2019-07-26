@@ -3,205 +3,133 @@ package slippy
 import (
 	"math"
 
+	"errors"
+
 	"github.com/go-spatial/geom"
 )
 
-func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {
+// MaxZoom is the lowest zoom (furthest in)
+const MaxZoom = 22
+
+// NewTile returns a Tile of Z,X,Y passed in
+func NewTile(z, x, y uint) *Tile {
 	return &Tile{
-		z:      z,
-		x:      x,
-		y:      y,
-		Buffer: buffer,
-		SRID:   srid,
+		Z: z,
+		X: x,
+		Y: y,
 	}
 }
 
 // Tile describes a slippy tile.
 type Tile struct {
 	// zoom
-	z uint
+	Z uint
 	// column
-	x uint
+	X uint
 	// row
-	y uint
-	// buffer will add a buffer to the tile bounds. this buffer is expected to use the same units as the SRID
-	// of the projected tile (i.e. WebMercator = pixels, 3395 = meters)
-	Buffer float64
-	// spatial reference id
-	SRID uint64
+	Y uint
 }
 
-func NewTileLatLon(z uint, lat, lon, buffer float64, srid uint64) *Tile {
+// NewTileMinMaxer returns the smallest tile which fits the
+// geom.MinMaxer. Note: it assumes the values of ext are
+// EPSG:4326 (lng/lat)
+func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
+	upperLeft := NewTileLatLon(MaxZoom, ext.MaxY(), ext.MinX())
+	point := &geom.Point{ext.MaxX(), ext.MinY()}
+
+	var ret *Tile
+
+	for z := uint(MaxZoom); int(z) >= 0 && ret == nil; z-- {
+		upperLeft.RangeFamilyAt(z, func(tile *Tile) error {
+			if tile.Extent4326().Contains(point) {
+				ret = tile
+				return errors.New("stop iter")
+			}
+
+			return nil
+		})
+
+	}
+	return ret
+}
+
+// NewTileLatLon instantiates a tile containing the coordinate with the specified zoom
+func NewTileLatLon(z uint, lat, lon float64) *Tile {
 	x := Lon2Tile(z, lon)
 	y := Lat2Tile(z, lat)
 
 	return &Tile{
-		z:      z,
-		x:      x,
-		y:      y,
-		Buffer: buffer,
-		SRID:   srid,
+		Z: z,
+		X: x,
+		Y: y,
 	}
 }
 
-func (t *Tile) ZXY() (uint, uint, uint) { return t.z, t.x, t.y }
-
-func Lat2Tile(zoom uint, lat float64) (y uint) {
-	lat_rad := lat * math.Pi / 180
-
-	return uint(math.Exp2(float64(zoom))*
-		(1.0-math.Log(
-			math.Tan(lat_rad)+
-				(1/math.Cos(lat_rad)))/math.Pi)) /
-		2.0
-
+func minmax(a, b uint) (uint, uint) {
+	if a > b {
+		return b, a
+	}
+	return a, b
 }
 
-func Lon2Tile(zoom uint, lon float64) (x uint) {
-	return uint(math.Exp2(float64(zoom)) * (lon + 180.0) / 360.0)
-}
-
-// Tile2Lon will return the west most longitude
-func Tile2Lon(x, z uint) float64 { return float64(x)/math.Exp2(float64(z))*360.0 - 180.0 }
-
-// Tile2Lat will return the east most Latitude
-func Tile2Lat(y, z uint) float64 {
-	var n float64 = math.Pi
-	if y != 0 {
-		n = math.Pi - 2.0*math.Pi*float64(y)/math.Exp2(float64(z))
+// FromBounds returns a list of tiles that make up the bound given. The bounds should be defined as the following lng/lat points [4]float64{west,south,east,north}
+func FromBounds(bounds *geom.Extent, z uint) []Tile {
+	if bounds == nil {
+		return nil
 	}
 
-	return 180.0 / math.Pi * math.Atan(0.5*(math.Exp(n)-math.Exp(-n)))
+	minx, maxx := minmax(Lon2Tile(z, bounds[0]), Lon2Tile(z, bounds[2]))
+	miny, maxy := minmax(Lat2Tile(z, bounds[1]), Lat2Tile(z, bounds[3]))
+	// tiles := make([]Tile, (maxx-minx)*(maxy-miny))
+	var tiles []Tile
+	for x := minx; x <= maxx; x++ {
+		for y := miny; y <= maxy; y++ {
+			tiles = append(tiles, Tile{Z: z, X: x, Y: y})
+		}
+	}
+	return tiles
+
 }
 
-// Bounds returns the bounds of the Tile as defined by the East most longitude, North most latitude, West most longitude, South most latitude.
-func (t *Tile) Bounds() [4]float64 {
-	east := Tile2Lon(t.x, t.z)
-	west := Tile2Lon(t.x+1, t.z)
-	north := Tile2Lat(t.y, t.z)
-	south := Tile2Lat(t.y+1, t.z)
+// ZXY returns back the z,x,y of the tile
+func (t Tile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
-	return [4]float64{east, north, west, south}
-}
-
-/*
-	// Keep this comment as it is a guide for how we can take bounds and a srid and convert it to Extents and Buffereded Extents.
-	// This is how we convert from the Bounds, and TileSize to Extent for Webmercator.
-	bounds := t.Bounds()
-	east,north,west, south := bounds[0],bounds[1],bounds[2],bounds[3]
-
-	TileSize := 4096.0
-	// Convert bounds to coordinates in webmercator.
-	c, err := webmercator.PToXY(east, north, west, south)
-	log.Println("c", c, "err", err)
-
-	// Turn the Coordinates into an Extent (minx, miny, maxx, maxy)
-	// Here is where the origin flip happens if there is one.
-	extent := geom.NewBBox(
-		[2]float64{c[0], c[1]},
-		[2]float64{c[2], c[3]},
-	)
-
-	// A Span is just MaxX - MinX
-	xspan := extent.XSpan()
-	yspan := extent.YSpan()
-
-	log.Println("Extent", extent, "MinX", extent.MinX(), "MinY", extent.MinY(), "xspan", xspan, "yspan", yspan)
-
-	// To get the Buffered Extent, we just need the extent and the Buffer size.
-	// Convert to tile coordinates. Convert the meters (WebMercator) into pixels of the tile..
-	nx := float64(int64((c[0] - extent.MinX()) * TileSize / xspan))
-	ny := float64(int64((c[1] - extent.MinY()) * TileSize / yspan))
-	mx := float64(int64((c[2] - extent.MinX()) * TileSize / xspan))
-	my := float64(int64((c[3] - extent.MinY()) * TileSize / yspan))
-
-	// Expend by the that number of pixels. We could also do the Expand on the Extent instead, of the Bounding Box on the Pixel.
-	mextent := geom.NewBBox([2]float64{nx, ny}, [2]float64{mx, my}).ExpandBy(64)
-	log.Println("mxy[", nx, ny, mx, my, "]", "err", err, "mext", mextent)
-
-	// Convert Pixel back to meters.
-	bext := geom.NewBBox(
-		[2]float64{
-			(mextent.MinX() * xspan / TileSize) + extent.MinX(),
-			(mextent.MinY() * yspan / TileSize) + extent.MinY(),
-		},
-		[2]float64{
-			(mextent.MaxX() * xspan / TileSize) + extent.MinX(),
-			(mextent.MaxY() * yspan / TileSize) + extent.MinY(),
-		},
-	)
-	log.Println("bext", bext)
-*/
-
-// TODO(arolek): support alternative SRIDs. Currently this assumes 3857
-// Extent will return the tile extent excluding the tile's buffer and the Extent's SRID
-func (t *Tile) Extent() (extent *geom.Extent, srid uint64) {
-	max := 20037508.34
-
-	// resolution
-	res := (max * 2) / math.Exp2(float64(t.z))
-
-	// unbuffered extent
+// Extent3857 returns the tile's extent in EPSG:3857 (aka Web Mercator) projection
+func (t Tile) Extent3857() *geom.Extent {
 	return geom.NewExtent(
-		[2]float64{
-			-max + (float64(t.x) * res), // MinX
-			max - (float64(t.y) * res),  // Miny
-		},
-		[2]float64{
-			-max + (float64(t.x) * res) + res, // MaxX
-			max - (float64(t.y) * res) - res,  // MaxY
-		},
-	), t.SRID
-}
-
-// BufferedExtent will return the tile extent including the tile's buffer and the Extent's SRID
-func (t *Tile) BufferedExtent() (bufferedExtent *geom.Extent, srid uint64) {
-	extent, _ := t.Extent()
-
-	// TODO(arolek): the following value is hard coded for MVT, but this concept needs to be abstracted to support different projections
-	mvtTileWidthHeight := 4096.0
-	// the bounds / extent
-	mvtTileExtent := [4]float64{
-		0 - t.Buffer, 0 - t.Buffer,
-		mvtTileWidthHeight + t.Buffer, mvtTileWidthHeight + t.Buffer,
-	}
-
-	xspan := extent.MaxX() - extent.MinX()
-	yspan := extent.MaxY() - extent.MinY()
-
-	bufferedExtent = geom.NewExtent(
-		[2]float64{
-			(mvtTileExtent[0] * xspan / mvtTileWidthHeight) + extent.MinX(),
-			(mvtTileExtent[1] * yspan / mvtTileWidthHeight) + extent.MinY(),
-		},
-		[2]float64{
-			(mvtTileExtent[2] * xspan / mvtTileWidthHeight) + extent.MinX(),
-			(mvtTileExtent[3] * yspan / mvtTileWidthHeight) + extent.MinY(),
-		},
+		[2]float64{Tile2WebX(t.Z, t.X), Tile2WebY(t.Z, t.Y+1)},
+		[2]float64{Tile2WebX(t.Z, t.X+1), Tile2WebY(t.Z, t.Y)},
 	)
-	return bufferedExtent, t.SRID
 }
 
-// TODO (ear7h): sibling support
+// Extent4326 returns the tile's extent in EPSG:4326 (aka lat/long)
+func (t Tile) Extent4326() *geom.Extent {
+	return geom.NewExtent(
+		[2]float64{Tile2Lon(t.Z, t.X), Tile2Lat(t.Z, t.Y+1)},
+		[2]float64{Tile2Lon(t.Z, t.X+1), Tile2Lat(t.Z, t.Y)},
+	)
+}
+
 // RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
-func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
+// TODO (ear7h): sibling support
+func (t Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
 	// handle ancestors and self
-	if zoom <= t.z {
-		mag := t.z - zoom
-		arg := NewTile(zoom, t.x>>mag, t.y>>mag, t.Buffer, t.SRID)
+	if zoom <= t.Z {
+		mag := t.Z - zoom
+		arg := NewTile(zoom, t.X>>mag, t.Y>>mag)
 		return f(arg)
 	}
 
 	// handle descendants
-	mag := zoom - t.z
+	mag := zoom - t.Z
 	delta := uint(math.Exp2(float64(mag)))
 
-	leastX := t.x << mag
-	leastY := t.y << mag
+	leastX := t.X << mag
+	leastY := t.Y << mag
 
 	for x := leastX; x < leastX+delta; x++ {
 		for y := leastY; y < leastY+delta; y++ {
-			err := f(NewTile(zoom, x, y, 0, geom.WebMercator))
+			err := f(NewTile(zoom, x, y))
 			if err != nil {
 				return err
 			}

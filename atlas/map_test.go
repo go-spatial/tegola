@@ -11,7 +11,6 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/p"
 	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
@@ -294,7 +293,7 @@ func TestEncode(t *testing.T) {
 					},
 				},
 			},
-			tile: slippy.NewTile(2, 3, 4, 64, tegola.WebMercator),
+			tile: slippy.NewTile(2, 3, 4),
 			expected: vectorTile.Tile{
 				Layers: []*vectorTile.Tile_Layer{
 					{
@@ -352,7 +351,7 @@ func TestEncode(t *testing.T) {
 					},
 				},
 			},
-			tile: slippy.NewTile(2, 3, 4, 64, tegola.WebMercator),
+			tile: slippy.NewTile(2, 3, 4),
 			expected: vectorTile.Tile{
 				Layers: []*vectorTile.Tile_Layer{
 					{

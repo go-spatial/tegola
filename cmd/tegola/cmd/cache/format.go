@@ -97,6 +97,6 @@ func (f Format) ParseTile(val string) (tile *slippy.Tile, err error) {
 	if err != nil {
 		return nil, err
 	}
-	tile = slippy.NewTile(z, x, y, 0, tegola.WebMercator)
+	tile = slippy.NewTile(z, x, y)
 	return tile, nil
 }
