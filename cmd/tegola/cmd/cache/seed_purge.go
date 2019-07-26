@@ -127,12 +127,7 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 	case "purge":
 		seedPurgeWorker = purgeWorker
 	case "seed":
-		var pf64 *float64
-		if Config.TileBuffer != nil {
-			f64 := float64(*Config.TileBuffer)
-			pf64 = &f64
-		}
-		seedPurgeWorker = seedWorker(pf64, cacheOverwrite)
+		seedPurgeWorker = seedWorker(cacheOverwrite)
 	default:
 
 		return fmt.Errorf("expected purge/seed got (%v) for command name", cmdName)
