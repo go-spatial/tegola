@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
@@ -128,12 +127,7 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 	case "purge":
 		seedPurgeWorker = purgeWorker
 	case "seed":
-		var pf64 *float64
-		if Config.TileBuffer != nil {
-			f64 := float64(*Config.TileBuffer)
-			pf64 = &f64
-		}
-		seedPurgeWorker = seedWorker(pf64, cacheOverwrite)
+		seedPurgeWorker = seedWorker(cacheOverwrite)
 	default:
 
 		return fmt.Errorf("expected purge/seed got (%v) for command name", cmdName)
@@ -206,8 +200,8 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 		defer tce.Close()
 		for _, z := range zooms {
 			// get the tiles at the corners given the bounds and zoom
-			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0], 0, tegola.WebMercator)
-			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2], 0, tegola.WebMercator)
+			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0])
+			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2])
 
 			// x,y initials and finals
 			_, xi, yi := corner1.ZXY()
@@ -233,7 +227,7 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 				// loop columns
 				for y := yi; y <= yf; y++ {
 					select {
-					case tce.channel <- slippy.NewTile(z, x, y, 0, tegola.WebMercator):
+					case tce.channel <- slippy.NewTile(z, x, y):
 					case <-ctx.Done():
 						// we have been cancelled
 						break MainLoop

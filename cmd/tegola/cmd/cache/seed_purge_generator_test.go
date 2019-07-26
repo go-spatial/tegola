@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 )
 
 type sTiles []*slippy.Tile
@@ -119,16 +118,16 @@ func TestGenerateTilesForBounds(t *testing.T) {
 		"max_zoom=0": {
 			zooms:  []uint{0},
 			bounds: worldBounds,
-			tiles:  sTiles{slippy.NewTile(0, 0, 0, 0, tegola.WebMercator)},
+			tiles:  sTiles{slippy.NewTile(0, 0, 0)},
 		},
 		"min_zoom=1 max_zoom=1": {
 			zooms:  []uint{1},
 			bounds: worldBounds,
 			tiles: sTiles{
-				slippy.NewTile(1, 0, 0, 0, tegola.WebMercator),
-				slippy.NewTile(1, 0, 1, 0, tegola.WebMercator),
-				slippy.NewTile(1, 1, 0, 0, tegola.WebMercator),
-				slippy.NewTile(1, 1, 1, 0, tegola.WebMercator),
+				slippy.NewTile(1, 0, 0),
+				slippy.NewTile(1, 0, 1),
+				slippy.NewTile(1, 1, 0),
+				slippy.NewTile(1, 1, 1),
 			},
 		},
 		"min_zoom=1 max_zoom=1 bounds=180,90,0,0": {
@@ -140,7 +139,7 @@ func TestGenerateTilesForBounds(t *testing.T) {
 				 * produced as 1/1/0 and not 1/1/1 but the code is identical, so not sure
 				 * what the difference is.
 				 */
-				slippy.NewTile(1, 1, 1, 0, tegola.WebMercator),
+				slippy.NewTile(1, 1, 1),
 			},
 		},
 	}

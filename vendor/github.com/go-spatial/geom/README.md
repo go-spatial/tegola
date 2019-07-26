@@ -1,3 +1,5 @@
+[![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/go-spatial/geom)
+
 # geom
 Geometry interfaces to help drive interoperability within the Go geospatial community. This package focuses on 2D geometries.
 

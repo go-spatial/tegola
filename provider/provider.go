@@ -6,10 +6,44 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
+
+// TODO(@ear7h) remove this atrocity from the code base
+// tile_t is an implementation of the Tile interface, it is
+// named as such as to not confuse from the 4 other possible meanings
+// of the symbol "tile" in this code base. It should be removed after
+// the geom port is mostly done as part of issue #499 (removing the
+// Tile interface in this package)
+type tile_t struct {
+	slippy.Tile
+	buffer uint
+}
+
+func NewTile(z, x, y, buf, srid uint) Tile {
+	return &tile_t {
+		Tile: slippy.Tile{
+			Z:z,
+			X:x,
+			Y:y,
+		},
+		buffer: buf,
+	}
+}
+
+func (tile *tile_t) Extent() (ext *geom.Extent, srid uint64) {
+	return tile.Extent3857(), 3857
+}
+
+func (tile *tile_t) BufferedExtent() (ext *geom.Extent, srid uint64) {
+	return tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, tile.buffer)), 3857
+}
+
+// Tile is an interface used by Tiler, it is an unecessary abstraction and is
+// due to be removed. The tiler interface will, instead take a, *geom.Extent.
 type Tile interface {
 	// ZXY returns the z, x and y values of the tile
 	ZXY() (uint, uint, uint)
@@ -18,6 +52,7 @@ type Tile interface {
 	// BufferedExtent returns the extent of the tile including any buffer
 	BufferedExtent() (extent *geom.Extent, srid uint64)
 }
+
 
 type Tiler interface {
 	// TileFeature will stream decoded features to the callback function fn
