@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
@@ -137,12 +136,12 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tile := slippy.NewTile(req.z, req.x, req.y, float64(m.TileBuffer), tegola.WebMercator)
+	tile := slippy.NewTile(req.z, req.x, req.y)
 
 	{
 		// Check to see that the zxy is within the bounds of the map.
-		textent := geom.Extent(tile.Bounds())
-		if !m.Bounds.Contains(&textent) {
+		textent := tile.Extent4326()
+		if !m.Bounds.Contains(textent) {
 			logAndError(w, http.StatusNotFound, "map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
 			return
 		}

@@ -2,6 +2,7 @@ package geom
 
 import "errors"
 
+// ErrNilCollection is thrown when a collection is nil but shouldn't be
 var ErrNilCollection = errors.New("geom: nil collection")
 
 // Collection is a collection of one or more geometries.

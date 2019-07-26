@@ -152,8 +152,10 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 			// on completion let the wait group know
 			defer wg.Done()
 
+			ptile := provider.NewTile(tile.Z, tile.X, tile.Y,
+				uint(m.TileBuffer), uint(m.SRID))
 			// fetch layer from data provider
-			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, tile, func(f *provider.Feature) error {
+			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, func(f *provider.Feature) error {
 				// skip row if geometry collection empty.
 				g, ok := f.Geometry.(geom.Collection)
 				if ok && len(g.Geometries()) == 0 {
