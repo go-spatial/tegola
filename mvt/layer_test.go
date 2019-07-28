@@ -7,19 +7,7 @@ import (
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/internal/p"
 	"github.com/go-spatial/tegola/mvt"
-	"github.com/go-spatial/tegola/mvt/vector_tile"
 )
-
-func newTileLayer(name string, keys []string, values []*vectorTile.Tile_Value, features []*vectorTile.Tile_Feature) *vectorTile.Tile_Layer {
-	return &vectorTile.Tile_Layer{
-		Version:  p.Uint32(mvt.Version),
-		Name:     &name,
-		Features: features,
-		Keys:     keys,
-		Values:   values,
-		Extent:   p.Uint32(mvt.DefaultExtent),
-	}
-}
 
 func TestLayerAddFeatures(t *testing.T) {
 	type tcase struct {
