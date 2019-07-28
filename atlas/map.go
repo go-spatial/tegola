@@ -9,16 +9,19 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/golang/protobuf/proto"
+
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/convert"
+	"github.com/go-spatial/tegola/maths/simplify"
+	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
-	"github.com/golang/protobuf/proto"
 )
 
 // NewMap creates a new map with the necessary default values
@@ -144,9 +147,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 		// go routine for fetching the layer concurrently
 		go func(i int, l Layer) {
 			mvtLayer := mvt.Layer{
-				Name:         l.MVTName(),
-				DontSimplify: l.DontSimplify,
-				DontClip: l.DontClip,
+				Name: l.MVTName(),
 			}
 
 			// on completion let the wait group know
@@ -154,6 +155,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 			ptile := provider.NewTile(tile.Z, tile.X, tile.Y,
 				uint(m.TileBuffer), uint(m.SRID))
+
 			// fetch layer from data provider
 			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, func(f *provider.Feature) error {
 				// skip row if geometry collection empty.
@@ -183,6 +185,42 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					if _, ok := f.Tags[k]; !ok {
 						f.Tags[k] = v
 					}
+				}
+
+				// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
+				tegolaTile := tegola.NewTile(tile.ZXY())
+
+				sg := geo
+				// multiple ways to turn off simplification. check the atlas init() function
+				// for how the second two conditions are set
+				if !l.DontSimplify && simplifyGeometries && tile.Z < simplificationMaxZoom {
+					sg = simplify.SimplifyGeometry(geo, tegolaTile.ZEpislon())
+				}
+
+				// check if we need to clip and if we do build the clip region (tile extent)
+				var clipRegion *geom.Extent
+				if !l.DontClip {
+					// CleanGeometry is expcting to operate in pixel coordinates so the clipRegion
+					// will need to be in this same coordinate system. this will change when the new
+					// make valid routing is implemented
+					pbb, err := tegolaTile.PixelBufferedBounds()
+					if err != nil {
+						return fmt.Errorf("err calculating tile pixel buffer bounds: %v", err)
+					}
+
+					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+				}
+
+				// TODO(arolek): currently the validate.CleanGeometry method does not operate
+				// well on geometries that are not scaled to tile coordinate space. this will change
+				// with the adoption of the new make valid routine. once implemented, the clipRegion
+				// calculation will need to be in the same coordinate space as the geometry the
+				// make valid function will be operating on.
+				sg = mvt.ScaleGeo(sg, tegolaTile)
+
+				geo, err = validate.CleanGeometry(ctx, sg, clipRegion)
+				if err != nil {
+					return fmt.Errorf("err making geometry valid: %v", err)
 				}
 
 				mvtLayer.AddFeatures(mvt.Feature{
@@ -224,13 +262,8 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	// add layers to our tile
 	mvtTile.AddLayers(mvtLayers...)
 
-	z, x, y := tile.ZXY()
-
-	// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-	tegolaTile := tegola.NewTile(uint(z), uint(x), uint(y))
-
-	// generate our tile
-	vtile, err := mvtTile.VTile(ctx, tegolaTile)
+	// generate the MVT tile
+	vtile, err := mvtTile.VTile(ctx)
 	if err != nil {
 		return nil, err
 	}
