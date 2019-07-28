@@ -41,6 +41,7 @@ func LineStringToSegments(l tegola.LineString) ([]maths.Line, error) {
 	ppln := tegola.LineAsPointPairs(l)
 	return maths.NewSegments(ppln)
 }
+
 func makePolygonValid(ctx context.Context, hm *hitmap.M, extent *geom.Extent, gs ...tegola.Polygon) (mp basic.MultiPolygon, err error) {
 	var plygLines [][]maths.Line
 	for _, g := range gs {
@@ -87,6 +88,7 @@ func scalePolygon(p tegola.Polygon, factor float64) (bp basic.Polygon) {
 	}
 	return bp
 }
+
 func scaleMultiPolygon(p tegola.MultiPolygon, factor float64) (bmp basic.MultiPolygon) {
 	polygons := p.Polygons()
 	bmp = make(basic.MultiPolygon, len(polygons))
