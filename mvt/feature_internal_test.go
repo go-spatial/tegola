@@ -2,103 +2,40 @@ package mvt
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"testing"
 
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/mvt/vector_tile"
+	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 )
-
-func TestScaleLinestring(t *testing.T) {
-	tile := tegola.NewTile(20, 0, 0)
-	cursor := NewCursor(tile)
-
-	newLine := func(ptpairs ...float64) (ln basic.Line) {
-		for i, j := 0, 1; j < len(ptpairs); i, j = i+2, j+2 {
-			pt, err := tile.FromPixel(tegola.WebMercator, [2]float64{ptpairs[i], ptpairs[j]})
-			if err != nil {
-				panic(fmt.Sprintf("error trying to convert %v,%v to WebMercator. %v", ptpairs[i], ptpairs[j], err))
-			}
-
-			ln = append(ln, basic.Point(pt))
-		}
-
-		return ln
-	}
-
-	type tcase struct {
-		g tegola.LineString
-		e basic.Line
-	}
-
-	fn := func(tc tcase) func(t *testing.T) {
-		return func(t *testing.T) {
-			got := cursor.scalelinestr(tc.g)
-
-			if !reflect.DeepEqual(tc.e, got) {
-				t.Errorf("expected %v got %v", tc.e, got)
-			}
-		}
-	}
-
-	tests := map[string]tcase{
-		"duplicate pt simple line": {
-			g: basic.NewLine(9.0, 9.0, 9.0, 9.0),
-		},
-		"simple line": {
-			g: newLine(10.0, 10.0, 11.0, 11.0),
-			e: basic.NewLine(9.0, 9.0, 11.0, 11.0),
-		},
-		"simple line 3pt": {
-			g: newLine(10.0, 10.0, 11.0, 10.0, 11.0, 15.0),
-			e: basic.NewLine(9.0, 9.0, 11.0, 9.0, 11.0, 14.0),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, fn(tc))
-	}
-}
 
 func TestEncodeGeometry(t *testing.T) {
 	type tcase struct {
-		desc string
-		geo  basic.Geometry
-		typ  vectorTile.Tile_GeomType
-		egeo []uint32
-		eerr error
-	}
-
-	tile := tegola.NewTile(20, 0, 0)
-	fromPixel := func(x, y float64) *basic.Point {
-		pt, err := tile.FromPixel(tegola.WebMercator, [2]float64{x, y})
-		if err != nil {
-			panic(fmt.Sprintf("error trying to convert %v,%v to WebMercator. %v", x, y, err))
-		}
-		bpt := basic.Point(pt)
-		return &bpt
+		geo          basic.Geometry
+		geomType     vectorTile.Tile_GeomType
+		expectedGeom []uint32
+		expectedErr  error
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			g, gtype, err := encodeGeometry(context.Background(), tc.geo, tile, true, true)
-			if tc.eerr != err {
-				t.Errorf("error, expected %v got %v", tc.eerr, err)
+			g, gtype, err := encodeGeometry(context.Background(), tc.geo)
+			if tc.expectedErr != err {
+				t.Errorf("error, expected %v got %v", tc.expectedErr, err)
 			}
-			if gtype != tc.typ {
-				t.Errorf("geometry type, expected %v got %v", tc.typ, gtype)
-			}
-			if len(g) != len(tc.egeo) {
-				t.Errorf("geometry length, expected %v got %v ", len(tc.egeo), len(g))
-				t.Logf("geometries, expected %v got %v", tc.egeo, g)
-			}
-			for j := range tc.egeo {
 
-				if j < len(g) && tc.egeo[j] != g[j] {
-					t.Errorf("geometry at %v, expected %v got %v", j, tc.egeo[j], g[j])
-					t.Logf("geometry, expected %v got %v", tc.egeo, g)
+			if gtype != tc.geomType {
+				t.Errorf("geometry type, expected %v got %v", tc.geomType, gtype)
+			}
+
+			if len(g) != len(tc.expectedGeom) {
+				t.Errorf("geometry length, expected %v got %v ", len(tc.expectedGeom), len(g))
+				t.Logf("geometries, expected %v got %v", tc.expectedGeom, g)
+			}
+
+			for j := range tc.expectedGeom {
+				if j < len(g) && tc.expectedGeom[j] != g[j] {
+					t.Errorf("geometry at %v, expected %v got %v", j, tc.expectedGeom[j], g[j])
+					t.Logf("geometry, expected %v got %v", tc.expectedGeom, g)
 					break
 				}
 			}
@@ -106,82 +43,92 @@ func TestEncodeGeometry(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"0": tcase{
-			geo:  nil,
-			typ:  vectorTile.Tile_UNKNOWN,
-			egeo: []uint32{},
-			eerr: ErrNilGeometryType,
+		"nil geo": tcase{
+			geo:          nil,
+			geomType:     vectorTile.Tile_UNKNOWN,
+			expectedGeom: []uint32{},
+			expectedErr:  ErrNilGeometryType,
 		},
-		"1": tcase{
-			geo:  fromPixel(1, 1),
-			typ:  vectorTile.Tile_POINT,
-			egeo: []uint32{9, 2, 2},
+		"point 1": tcase{
+			geo:          basic.Point{1, 1},
+			geomType:     vectorTile.Tile_POINT,
+			expectedGeom: []uint32{9, 2, 2},
 		},
-		"2": tcase{
-			geo:  fromPixel(25, 16),
-			typ:  vectorTile.Tile_POINT,
-			egeo: []uint32{9, 50, 32},
+		"point 2": tcase{
+			geo:          basic.Point{25, 17},
+			geomType:     vectorTile.Tile_POINT,
+			expectedGeom: []uint32{9, 50, 34},
 		},
-		"3": tcase{
-			geo:  basic.MultiPoint{*fromPixel(5, 7), *fromPixel(3, 2)},
-			typ:  vectorTile.Tile_POINT,
-			egeo: []uint32{17, 10, 14, 3, 11},
-		},
-		"4": tcase{
-			geo:  basic.Line{*fromPixel(2, 2), *fromPixel(2, 10), *fromPixel(10, 10)},
-			typ:  vectorTile.Tile_LINESTRING,
-			egeo: []uint32{9, 2, 2, 18, 0, 16, 16, 0},
-		},
-		/*
-				Disabling this for now; Currently it's getting clipped out because the transformation. scaling and clipping are intermingled with the encoding
-				process. Once that is separated out we can have a better encoding test. Issue #224
-			"5":tcase{ // 5
-				geo: basic.MultiLine{
-					basic.Line{*fromPixel(2, 2), *fromPixel(2, 10), *fromPixel(10, 10)},
-					basic.Line{*fromPixel(1, 1), *fromPixel(3, 5)},
-				},
-				typ:  vectorTile.Tile_LINESTRING,
-				egeo: []uint32{9, 2, 2, 18, 0, 16, 16, 0, 9, 15, 15, 10, 4, 8},
+		"multi point": tcase{
+			geo: basic.MultiPoint{
+				basic.Point{5, 7},
+				basic.Point{3, 2},
 			},
-			"6":tcase{ // 6
-				geo: basic.Polygon{
-					basic.Line{
-						*fromPixel(3, 6),
-						*fromPixel(8, 12),
-						*fromPixel(20, 34),
-					},
-				},
-				typ: vectorTile.Tile_POLYGON,
-				egeo: []uint32{9, 6, 12, 26, 10, 12, 24, 44, 23, 39, 15},
+			geomType:     vectorTile.Tile_POINT,
+			expectedGeom: []uint32{17, 10, 14, 3, 9},
+		},
+		"linestring": tcase{
+			geo: basic.Line{
+				basic.Point{2, 2},
+				basic.Point{2, 10},
+				basic.Point{10, 10},
 			},
-		*/
-		"7": tcase{
+			geomType:     vectorTile.Tile_LINESTRING,
+			expectedGeom: []uint32{9, 4, 4, 18, 0, 16, 16, 0},
+		},
+		"multi linestring": tcase{
+			geo: basic.MultiLine{
+				basic.Line{
+					basic.Point{2, 2},
+					basic.Point{2, 10},
+					basic.Point{10, 10},
+				},
+				basic.Line{
+					basic.Point{1, 1},
+					basic.Point{3, 5},
+				},
+			},
+			geomType:     vectorTile.Tile_LINESTRING,
+			expectedGeom: []uint32{9, 4, 4, 18, 0, 16, 16, 0, 9, 17, 17, 10, 4, 8},
+		},
+		"polygon": tcase{
+			geo: basic.Polygon{
+				basic.Line{
+					basic.Point{3, 6},
+					basic.Point{8, 12},
+					basic.Point{20, 34},
+				},
+			},
+			geomType:     vectorTile.Tile_POLYGON,
+			expectedGeom: []uint32{9, 6, 12, 18, 10, 12, 24, 44, 15},
+		},
+		"multi polygon": tcase{
 			geo: basic.MultiPolygon{
-				basic.Polygon{ // basic.Polygon len(000002).
-					basic.Line{ // basic.Line len(000004) direction(clockwise) line(00).
-						*fromPixel(0, 0),
-						*fromPixel(10, 0),
-						*fromPixel(10, 10),
-						*fromPixel(0, 10),
+				basic.Polygon{
+					basic.Line{
+						basic.Point{0, 0},
+						basic.Point{10, 0},
+						basic.Point{10, 10},
+						basic.Point{0, 10},
 					},
 				},
-				basic.Polygon{ // basic.Polygon len(000002).
-					basic.Line{ // basic.Line len(000004) direction(clockwise) line(00).
-						*fromPixel(11, 11),
-						*fromPixel(20, 11),
-						*fromPixel(20, 20),
-						*fromPixel(11, 20),
+				basic.Polygon{
+					basic.Line{
+						basic.Point{11, 11},
+						basic.Point{20, 11},
+						basic.Point{20, 20},
+						basic.Point{11, 20},
 					},
-					basic.Line{ // basic.Line len(000004) direction(counter clockwise) line(01).
-						*fromPixel(13, 13),
-						*fromPixel(13, 17),
-						*fromPixel(17, 17),
-						*fromPixel(17, 13),
+					basic.Line{
+						basic.Point{13, 13},
+						basic.Point{13, 17},
+						basic.Point{17, 17},
+						basic.Point{17, 13},
 					},
 				},
 			},
-			typ:  vectorTile.Tile_POLYGON,
-			egeo: []uint32{9, 0, 0, 26, 18, 0, 0, 18, 17, 0, 15, 9, 22, 4, 26, 18, 0, 0, 18, 17, 0, 15, 9, 2, 15, 26, 0, 8, 8, 0, 0, 7, 15},
+			geomType:     vectorTile.Tile_POLYGON,
+			expectedGeom: []uint32{9, 0, 0, 26, 20, 0, 0, 20, 19, 0, 15, 9, 22, 2, 26, 18, 0, 0, 18, 17, 0, 15, 9, 4, 13, 26, 0, 8, 8, 0, 0, 7, 15},
 		},
 	}
 
