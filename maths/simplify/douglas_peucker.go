@@ -1,16 +1,12 @@
 package simplify
 
 import (
-	"log"
-
 	"github.com/go-spatial/tegola/maths"
 )
 
 // DouglasPeucker is a geometry simplifcation routine
 // https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
 func DouglasPeucker(points []maths.Pt, tolerance float64) []maths.Pt {
-	log.Printf("tolerance: %d", tolerance)
-
 	if tolerance <= 0 || len(points) <= 2 {
 		return points
 	}
