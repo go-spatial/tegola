@@ -2,40 +2,32 @@ package mvt
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 
-	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/simplify"
-	"github.com/go-spatial/tegola/maths/validate"
 	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 )
 
 var (
 	ErrNilFeature          = fmt.Errorf("feature is nil")
 	ErrUnknownGeometryType = fmt.Errorf("unknown geometry type")
-	ErrNilGeometryType     = fmt.Errorf("nil geometry")
+	ErrNilGeometryType     = fmt.Errorf("geometry is nil")
 )
 
-// TODO: Need to put in validation for the Geometry, at current the system
+// TODO: Need to put in validation for the Geometry, as current the system
 // does not check to make sure that the geometry is following the rules as
-// laid out by the spec. It just assumes the user is good.
+// laid out by the spec (i.e. polygons must not have the same start and end
+// point).
 
 // Feature describes a feature of a Layer. A layer will contain multiple features
 // each of which has a geometry describing the interesting thing, and the metadata
 // associated with it.
 type Feature struct {
-	ID   *uint64
-	Tags map[string]interface{}
-	// does not support the collection geometry, for this you have to create a feature for each
-	// geometry in the collection.
+	ID       *uint64
+	Tags     map[string]interface{}
 	Geometry tegola.Geometry
 }
 
@@ -49,20 +41,21 @@ func wktEncode(g tegola.Geometry) string {
 	if err != nil {
 		return fmt.Sprintf("encoding error for geom geom, %v", err)
 	}
-	return s
 
+	return s
 }
 
 func (f Feature) String() string {
 	g := wktEncode(f.Geometry)
+
 	if f.ID != nil {
 		return fmt.Sprintf("{Feature: %v, GEO: %v, Tags: %+v}", *f.ID, g, f.Tags)
 	}
+
 	return fmt.Sprintf("{Feature: GEO: %v, Tags: %+v}", g, f.Tags)
 }
 
 // NewFeatures returns one or more features for the given Geometry
-// TODO: Should we consider supporting validation of polygons and multiple polygons here?
 func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature) {
 	if geo == nil {
 		return f // return empty feature set for a nil geometry
@@ -75,15 +68,17 @@ func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature)
 		}
 		return f
 	}
+
 	f = append(f, Feature{
 		Tags:     tags,
 		Geometry: geo,
 	})
+
 	return f
 }
 
 // VTileFeature will return a vectorTile.Feature that would represent the Feature
-func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}, tile *tegola.Tile, simplify bool, clip bool) (tf *vectorTile.Tile_Feature, err error) {
+func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interface{}) (tf *vectorTile.Tile_Feature, err error) {
 	tf = new(vectorTile.Tile_Feature)
 	tf.Id = f.ID
 
@@ -91,7 +86,7 @@ func (f *Feature) VTileFeature(ctx context.Context, keys []string, vals []interf
 		return tf, err
 	}
 
-	geo, gtype, err := encodeGeometry(ctx, f.Geometry, tile, simplify, clip)
+	geo, gtype, err := encodeGeometry(ctx, f.Geometry)
 	if err != nil {
 		return tf, err
 	}
@@ -147,39 +142,23 @@ func encodeZigZag(i int64) uint32 {
 }
 
 // cursor reprsents the current position, this is needed to encode the geometry.
-// 0,0 is the origin, it which is the top-left most part of the tile.
+// the origin (0,0) is the top-left of the Tile.
 type cursor struct {
 	// The coordinates — these should be int64, when they were float64 they
 	// introduced a slight drift in the coordinates.
 	x int64
 	y int64
-
-	// The tile of the screen.
-	tile *tegola.Tile
-
-	// Disabling scaling Use this when using clipping and scaling
-	DisableScaling bool
 }
 
-func NewCursor(tile *tegola.Tile) *cursor {
-	return &cursor{
-		tile: tile,
-	}
+func NewCursor() *cursor {
+	return &cursor{}
 }
 
 // GetDeltaPointAndUpdate assumes the Point is in WebMercator.
 func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	var ix, iy int64
 	var tx, ty = p.X(), p.Y()
-	// TODO: gdey — We should get rid of this, as we generally disable scaling; now.
-	if !c.DisableScaling {
-		tpt, err := c.tile.ToPixel(tegola.WebMercator, [2]float64{tx, ty})
-		if err != nil {
-			// Conversion error most likly, need to panic.
-			panic(err)
-		}
-		tx, ty = tpt[0], tpt[1]
-	}
+
 	ix, iy = int64(tx), int64(ty)
 	// compute our point delta
 	dx = ix - int64(c.x)
@@ -189,154 +168,6 @@ func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	c.x = ix
 	c.y = iy
 	return dx, dy
-}
-
-func (c *cursor) scalept(g tegola.Point) basic.Point {
-	pt, err := c.tile.ToPixel(tegola.WebMercator, [2]float64{g.X(), g.Y()})
-	if err != nil {
-		panic(err)
-	}
-	return basic.Point{pt[0], pt[1]}
-}
-
-func (c *cursor) scalelinestr(g tegola.LineString) (ls basic.Line) {
-	pts := g.Subpoints()
-	// If the linestring
-	if len(pts) < 2 {
-		// Not enought points to make a line.
-		return nil
-	}
-	ls = make(basic.Line, 0, len(pts))
-	ls = append(ls, c.scalept(pts[0]))
-	lidx := len(ls) - 1
-	for i := 1; i < len(pts); i++ {
-		npt := c.scalept(pts[i])
-		if tegola.IsPointEqual(ls[lidx], npt) {
-			// drop any duplicate points.
-			continue
-		}
-		ls = append(ls, npt)
-		lidx = len(ls) - 1
-	}
-
-	if len(ls) < 2 {
-		// Not enough points. the zoom must be too far out for this ring.
-		return nil
-	}
-	return ls
-}
-
-func (c *cursor) scalePolygon(g tegola.Polygon) (p basic.Polygon) {
-	lines := g.Sublines()
-	p = make(basic.Polygon, 0, len(lines))
-
-	if len(lines) == 0 {
-		return p
-	}
-	for i := range lines {
-		ln := c.scalelinestr(lines[i])
-		if len(ln) < 2 {
-			if debug {
-				// skip lines that have been reduced to less then 2 points.
-				log.Debug("skipping line 2", lines[i], len(ln))
-			}
-			continue
-		}
-		p = append(p, ln)
-	}
-	return p
-}
-
-// ScaleGeo converts the geometry's coordinates to tile coordinates
-func (c *cursor) ScaleGeo(geo tegola.Geometry) basic.Geometry {
-	switch g := geo.(type) {
-	case tegola.Point:
-		return c.scalept(g)
-
-	case tegola.Point3:
-		return c.scalept(g)
-
-	case tegola.MultiPoint:
-		pts := g.Points()
-		if len(pts) == 0 {
-			return nil
-		}
-		var ptmap = make(map[basic.Point]struct{})
-		var mp = make(basic.MultiPoint, 0, len(pts))
-		mp = append(mp, c.scalept(pts[0]))
-		ptmap[mp[0]] = struct{}{}
-		for i := 1; i < len(pts); i++ {
-			npt := c.scalept(pts[i])
-			if _, ok := ptmap[npt]; ok {
-				// Skip duplicate points.
-				continue
-			}
-			ptmap[npt] = struct{}{}
-			mp = append(mp, npt)
-		}
-		return mp
-
-	case tegola.LineString:
-		return c.scalelinestr(g)
-
-	case tegola.MultiLine:
-		var ml basic.MultiLine
-		for _, l := range g.Lines() {
-			nl := c.scalelinestr(l)
-			if len(nl) > 0 {
-				ml = append(ml, nl)
-			}
-		}
-		return ml
-
-	case tegola.Polygon:
-		return c.scalePolygon(g)
-
-	case tegola.MultiPolygon:
-		var mp basic.MultiPolygon
-		for _, p := range g.Polygons() {
-			np := c.scalePolygon(p)
-			if len(np) > 0 {
-				mp = append(mp, np)
-			}
-		}
-		return mp
-	}
-
-	return basic.G{}
-}
-
-type geoDebugStruct struct {
-	Min maths.Pt       `json:"min"`
-	Max maths.Pt       `json:"max"`
-	Geo basic.Geometry `json:"geo"`
-}
-
-func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
-	fln := os.Getenv("GenTestCase")
-	if fln == "" {
-		return
-	}
-	filename := fmt.Sprintf("/tmp/testcase_%v_%p.json", fln, geo)
-	bgeo, err := basic.CloneGeometry(geo)
-	if err != nil {
-		log.Errorf("failed to clone geo for test case. %v", err)
-		return
-	}
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Errorf("failed to create test file %v : %v.", filename, err)
-		return
-	}
-	defer f.Close()
-	geodebug := geoDebugStruct{
-		Max: max,
-		Min: min,
-		Geo: bgeo,
-	}
-	enc := json.NewEncoder(f)
-	enc.Encode(geodebug)
-	log.Infof("created file: %v", filename)
 }
 
 func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
@@ -372,45 +203,12 @@ func (c *cursor) ClosePath() uint32 {
 
 // encodeGeometry will take a tegola.Geometry and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(ctx context.Context, geometry tegola.Geometry, tile *tegola.Tile, shouldSimplify bool, clip bool) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(ctx context.Context, geometry tegola.Geometry) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 	if geometry == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
 
-	c := NewCursor(tile)
-
-	// We are scaling separately, no need to scale in cursor.
-	c.DisableScaling = true
-
-	// TODO: gdey: We need to separate out the transform, simplification, and clipping from the encoding process. #224
-	geo := c.ScaleGeo(geometry)
-
-	var sg tegola.Geometry
-	if shouldSimplify {
-		sg = simplify.SimplifyGeometry(geo, tile.ZEpislon())
-	} else {
-		sg = geo
-	}
-
-	pbb, err := tile.PixelBufferedBounds()
-	if err != nil {
-		return nil, vectorTile.Tile_UNKNOWN, err
-	}
-
-	// check if we need to clip and if we do build the extent
-	var ext *geom.Extent
-	if clip {
-		ext = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
-	}
-
-	geometry, err = validate.CleanGeometry(ctx, sg, ext)
-	if err != nil {
-		return nil, vectorTile.Tile_UNKNOWN, err
-	}
-
-	if geometry == nil {
-		return []uint32{}, -1, nil
-	}
+	c := NewCursor()
 
 	switch t := geometry.(type) {
 	case tegola.Point:

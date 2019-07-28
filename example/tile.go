@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"github.com/go-spatial/geom/encoding/wkb"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/mvt"
 	"github.com/golang/protobuf/proto"
@@ -78,8 +77,7 @@ func TileExample() {
 
 	// VTile is the protobuff representation of the tile. This is what you can
 	// send to the protobuff Marshal functions.
-	ttile := tegola.NewTile(0, 0, 0)
-	vtile, err := tile.VTile(context.Background(), ttile)
+	vtile, err := tile.VTile(context.Background())
 	if err != nil {
 		panic(err)
 	}

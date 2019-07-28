@@ -1,17 +1,57 @@
-/*
-Package atlas provides an abstraction for a collection of Maps.
-
-*/
+// Package atlas provides an abstraction for a collection of Maps.
 package atlas
 
 import (
 	"context"
+	"log"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 )
+
+var (
+	simplifyGeometries    bool
+	simplificationMaxZoom uint = 10
+)
+
+func init() {
+	// TODO(arolek): the following env variable processing was pulled form the mvt package when
+	// geometry processing was pulled out of the encoding package. This functionality could be
+	// deprecated/removed as it's not well documented and is really a band aid to work around
+	// some simplification issues. These concepts could just as easily live in the config file.
+	options := strings.ToLower(os.Getenv("TEGOLA_OPTIONS"))
+	if strings.Contains(options, "dontsimplifygeo") {
+		simplifyGeometries = false
+		log.Println("simplification is disable")
+	}
+
+	if strings.Contains(options, "simplifymaxzoom=") {
+		idx := strings.Index(options, "simplifymaxzoom=")
+		idx += 16
+
+		eidx := strings.IndexAny(options[idx:], ",.\t \n")
+		if eidx == -1 {
+			eidx = len(options)
+		} else {
+			eidx += idx
+		}
+
+		i, err := strconv.Atoi(options[idx:eidx])
+		if err != nil {
+			log.Printf("invalid value for SimplifyMaxZoom (%v). using default (%v).", options[idx:eidx], simplificationMaxZoom)
+			return
+		}
+
+		simplificationMaxZoom = uint(i + 1)
+
+		log.Printf("SimplifyMaxZoom set to (%v)", simplificationMaxZoom)
+	}
+}
 
 // defaultAtlas is instanitated for convenience
 var defaultAtlas = &Atlas{}
@@ -21,12 +61,10 @@ const (
 	MaxZoom = tegola.MaxZ
 )
 
-/*
-Atlas holds a collection of maps.
-If the pointer to Atlas is nil, it will make use of the default atlas; as the container for maps.
-This is equaivalent to using the functions in the package.
-An Atlas is safe to use concurrently.
-*/
+// Atlas holds a collection of maps.
+// If the pointer to Atlas is nil, it will make use of the default atlas; as the container for maps.
+// This is equaivalent to using the functions in the package.
+// An Atlas is safe to use concurrently.
 type Atlas struct {
 	// for managing current access to the map container
 	sync.RWMutex
