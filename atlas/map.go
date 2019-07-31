@@ -164,11 +164,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					return nil
 				}
 
-				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package
-				geo, err := convert.ToTegola(f.Geometry)
-				if err != nil {
-					return err
-				}
+				geo := f.Geometry
 
 				// check if the feature SRID and map SRID are different. If they are then reporject
 				if f.SRID != m.SRID {
@@ -177,7 +173,13 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					if err != nil {
 						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %v", f.SRID, f.ID, err)
 					}
-					geo = g.Geometry
+					geo = g
+				}
+
+				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package
+				tegolaGeo, err := convert.ToTegola(geo)
+				if err != nil {
+					return err
 				}
 
 				// add default tags, but don't overwrite a tag that already exists
@@ -226,7 +228,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				mvtLayer.AddFeatures(mvt.Feature{
 					ID:       &f.ID,
 					Tags:     f.Tags,
-					Geometry: geo,
+					Geometry: tegolaGeo,
 				})
 
 				return nil
