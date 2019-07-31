@@ -49,8 +49,12 @@ Version: %v`, Version),
 
 func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
 	requireCache := RequireCache || cachecmd.RequireCache
-
-	return initConfig(configFile, requireCache)
+	switch cmd.CalledAs() {
+	case "help", "version":
+		return nil
+	default:
+		return initConfig(configFile, requireCache)
+	}
 }
 
 func initConfig(configFile string, cacheRequired bool) (err error) {
