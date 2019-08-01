@@ -6,154 +6,205 @@ import (
 
 	"errors"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/maths/webmercator"
 )
 
 // ApplyToPoints applys the given function to each point in the geometry and any sub geometries, return a new transformed geometry.
-func ApplyToPoints(geometry tegola.Geometry, f func(coords ...float64) ([]float64, error)) (G, error) {
+func ApplyToPoints(geometry geom.Geometry, f func(coords ...float64) ([]float64, error)) (geom.Geometry, error) {
 	switch geo := geometry.(type) {
 	default:
-		return G{}, fmt.Errorf("Unknown Geometry: %+v", geometry)
-	case tegola.Point:
+		return nil, fmt.Errorf("unknown Geometry: %T", geometry)
+
+	case geom.Point:
 		c, err := f(geo.X(), geo.Y())
 		if err != nil {
-			return G{}, err
+			return nil, err
 		}
 		if len(c) < 2 {
-			return G{}, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 2", len(c))
+			return nil, fmt.Errorf("function did not return minimum number of coordinates got %v expected 2", len(c))
 		}
-		return G{Point{c[0], c[1]}}, nil
-	case tegola.Point3:
-		c, err := f(geo.X(), geo.Y(), geo.Z())
-		if err != nil {
-			return G{}, err
-		}
-		if len(c) < 3 {
-			return G{}, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 3", len(c))
-		}
-		return G{Point3{c[0], c[1], c[2]}}, nil
-	case tegola.MultiPoint:
-		var pts MultiPoint
-		for _, pt := range geo.Points() {
-			c, err := f(pt.X(), pt.Y())
+		return geom.Point{c[0], c[1]}, nil
+
+	case geom.MultiPoint:
+		pts := make(geom.MultiPoint, len(geo))
+
+		for i, pt := range geo {
+			c, err := f(pt[:]...)
 			if err != nil {
-				return G{}, err
+				return nil, err
 			}
 			if len(c) < 2 {
-				return G{}, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 2", len(c))
+				return nil, fmt.Errorf("function did not return minimum number of coordinates got %v expected 2", len(c))
 			}
-			pts = append(pts, Point{c[0], c[1]})
+			pts[i][0], pts[i][1] = c[0], c[1]
 		}
-		return G{pts}, nil
-	case tegola.LineString:
-		var line Line
-		for _, ptGeo := range geo.Subpoints() {
-			c, err := f(ptGeo.X(), ptGeo.Y())
+		return pts, nil
+
+	case geom.LineString:
+		line := make(geom.LineString, len(geo))
+		for i, pt := range geo {
+			c, err := f(pt[:]...)
 			if err != nil {
-				return G{}, err
+				return nil, err
 			}
 			if len(c) < 2 {
-				return G{}, fmt.Errorf("Function did not return minimum number of coordinates got %v expected 2", len(c))
+				return nil, fmt.Errorf("function did not return minimum number of coordinates got %v expected 2", len(c))
 			}
-			line = append(line, Point{c[0], c[1]})
+			line[i][0], line[i][1] = c[0], c[1]
 		}
-		return G{line}, nil
-	case tegola.MultiLine:
-		var line MultiLine
-		for i, lineGeo := range geo.Lines() {
-			geoLine, err := ApplyToPoints(lineGeo, f)
+		return line, nil
+
+	case geom.MultiLineString:
+		lines := make(geom.MultiLineString, len(geo))
+
+		for i, line := range geo {
+			// getting a geometry interface back
+			linei, err := ApplyToPoints(geom.LineString(line), f)
 			if err != nil {
-				return G{}, fmt.Errorf("Got error converting line(%v) of multiline: %v", i, err)
+				return nil, fmt.Errorf("got error converting line(%v) of multiline: %v", i, err)
 			}
-			if !geoLine.IsLine() {
-				panic("We did not get the conversion we were expecting")
+
+			// get the value
+			linev, ok := linei.(geom.LineString)
+			if !ok {
+				panic("we did not get the conversion we were expecting")
 			}
-			line = append(line, geoLine.AsLine())
+
+			lines[i] = linev
 		}
-		return G{line}, nil
-	case tegola.Polygon:
-		var poly Polygon
-		for i, line := range geo.Sublines() {
-			geoLine, err := ApplyToPoints(line, f)
+		return lines, nil
+
+	case geom.Polygon:
+		poly := make(geom.Polygon, len(geo))
+
+		for i, line := range geo {
+			// getting a geometry inteface back
+			linei, err := ApplyToPoints(geom.LineString(line), f)
 			if err != nil {
-				return G{}, fmt.Errorf("Got error converting line(%v) of polygon: %v", i, err)
+				return nil, fmt.Errorf("got error converting line(%v) of polygon: %v", i, err)
 			}
-			poly = append(poly, geoLine.AsLine())
+
+			// get the value
+			linev, ok := linei.(geom.LineString)
+			if !ok {
+				panic("we did not get the conversion we were expecting")
+			}
+
+			poly[i] = linev
 		}
-		return G{poly}, nil
-	case tegola.MultiPolygon:
-		var mpoly MultiPolygon
-		for i, poly := range geo.Polygons() {
-			geoPoly, err := ApplyToPoints(poly, f)
+		return poly, nil
+
+	case geom.MultiPolygon:
+		mpoly := make(geom.MultiPolygon, len(geo))
+
+		for i, poly := range geo {
+			// getting a geometry inteface back
+			polyi, err := ApplyToPoints(geom.Polygon(poly), f)
 			if err != nil {
-				return G{}, fmt.Errorf("Got error converting poly(%v) of multipolygon: %v", i, err)
+				return nil, fmt.Errorf("got error converting poly(%v) of multipolygon: %v", i, err)
 			}
-			mpoly = append(mpoly, geoPoly.AsPolygon())
+
+			// get the value
+			polyv, ok := polyi.(geom.Polygon)
+			if !ok {
+				panic("we did not get the conversion we were expecting")
+			}
+
+			mpoly[i] = polyv
 		}
-		return G{mpoly}, nil
+		return mpoly, nil
 	}
 }
 
 // CloneGeomtry returns a deep clone of the Geometry.
-func CloneGeometry(geometry tegola.Geometry) (G, error) {
+func CloneGeometry(geometry geom.Geometry) (geom.Geometry, error) {
 	switch geo := geometry.(type) {
 	default:
-		return G{}, fmt.Errorf("Unknown Geometry: %+v", geometry)
-	case tegola.Point:
-		return G{Point{geo.X(), geo.Y()}}, nil
-	case tegola.Point3:
-		return G{Point3{geo.X(), geo.Y(), geo.Z()}}, nil
-	case tegola.MultiPoint:
-		var pts MultiPoint
-		for _, pt := range geo.Points() {
-			pts = append(pts, Point{pt.X(), pt.Y()})
+		return nil, fmt.Errorf("unknown Geometry: %T", geometry)
+
+	case geom.Point:
+		return geom.Point{geo.X(), geo.Y()}, nil
+
+	case geom.MultiPoint:
+		pts := make(geom.MultiPoint, len(geo))
+		for i, pt := range geo {
+			pts[i] = pt
 		}
-		return G{pts}, nil
-	case tegola.LineString:
-		var line Line
-		for _, ptGeo := range geo.Subpoints() {
-			line = append(line, Point{ptGeo.X(), ptGeo.Y()})
+		return pts, nil
+
+	case geom.LineString:
+		line := make(geom.LineString, len(geo))
+		for i, pt := range geo {
+			line[i] = pt
 		}
-		return G{line}, nil
-	case tegola.MultiLine:
-		var line MultiLine
-		for i, lineGeo := range geo.Lines() {
-			geom, err := CloneGeometry(lineGeo)
+		return line, nil
+
+	case geom.MultiLineString:
+		lines := make(geom.MultiLineString, len(geo))
+		for i, line := range geo {
+			// getting a geometry interface back
+			linei, err := CloneGeometry(geom.LineString(line))
 			if err != nil {
-				return G{}, fmt.Errorf("Got error converting line(%v) of multiline: %v", i, err)
+				return nil, fmt.Errorf("got error converting line(%v) of multiline: %v", i, err)
 			}
-			line = append(line, geom.AsLine())
+
+			// get the value
+			linev, ok := linei.(geom.LineString)
+			if !ok {
+				panic("we did not get the conversion we were expecting")
+			}
+
+			lines[i] = linev
 		}
-		return G{line}, nil
-	case tegola.Polygon:
-		var poly Polygon
-		for i, line := range geo.Sublines() {
-			geom, err := CloneGeometry(line)
+		return lines, nil
+
+	case geom.Polygon:
+		// getting a geometry inteface back
+		poly := make(geom.Polygon, len(geo))
+		for i, line := range geo {
+			linei, err := CloneGeometry(geom.LineString(line))
 			if err != nil {
-				return G{}, fmt.Errorf("Got error converting line(%v) of polygon: %v", i, err)
+				return nil, fmt.Errorf("got error converting line(%v) of polygon: %v", i, err)
 			}
-			poly = append(poly, geom.AsLine())
+
+			// get the value
+			linev, ok := linei.(geom.LineString)
+			if !ok {
+				panic("we did not get the conversion we were expecting")
+			}
+
+			poly[i] = linev
 		}
-		return G{poly}, nil
-	case tegola.MultiPolygon:
-		var mpoly MultiPolygon
-		for i, poly := range geo.Polygons() {
-			geom, err := CloneGeometry(poly)
+		return poly, nil
+
+	case geom.MultiPolygon:
+		mpoly := make(geom.MultiPolygon, len(geo))
+		for i, poly := range geo {
+			// getting a geometry inteface back
+			polyi, err := CloneGeometry(geom.Polygon(poly))
 			if err != nil {
-				return G{}, fmt.Errorf("Got error converting poly(%v) of multipolygon: %v", i, err)
+				return nil, fmt.Errorf("got error converting polygon(%v) of multipolygon: %v", i, err)
 			}
-			mpoly = append(mpoly, geom.AsPolygon())
+
+			// get the value
+			polyv, ok := polyi.(geom.Polygon)
+			if !ok {
+				panic("we did not get the conversion we were expecting")
+			}
+
+			mpoly[i] = polyv
 		}
-		return G{mpoly}, nil
+		return mpoly, nil
 	}
 }
 
 // ToWebMercator takes a SRID and a geometry encode using that srid, and returns a geometry encoded as a WebMercator.
-func ToWebMercator(SRID uint64, geometry tegola.Geometry) (G, error) {
+func ToWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	switch SRID {
 	default:
-		return G{}, fmt.Errorf("Don't know how to convert from %v to %v.", tegola.WebMercator, SRID)
+		return nil, fmt.Errorf("don't know how to convert from %v to %v.", tegola.WebMercator, SRID)
 	case tegola.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
@@ -167,10 +218,10 @@ func ToWebMercator(SRID uint64, geometry tegola.Geometry) (G, error) {
 }
 
 // FromWebMercator takes a geometry encoded with WebMercator, and returns a Geometry encodes to the given srid.
-func FromWebMercator(SRID uint64, geometry tegola.Geometry) (G, error) {
+func FromWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	switch SRID {
 	default:
-		return G{}, fmt.Errorf("Don't know how to convert from %v to %v.", SRID, tegola.WebMercator)
+		return nil, fmt.Errorf("don't know how to convert from %v to %v.", SRID, tegola.WebMercator)
 	case tegola.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
