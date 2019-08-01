@@ -192,11 +192,11 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
 				tegolaTile := tegola.NewTile(tile.ZXY())
 
-				sg := geo
+				sg := tegolaGeo
 				// multiple ways to turn off simplification. check the atlas init() function
 				// for how the second two conditions are set
 				if !l.DontSimplify && simplifyGeometries && tile.Z < simplificationMaxZoom {
-					sg = simplify.SimplifyGeometry(geo, tegolaTile.ZEpislon())
+					sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
 				}
 
 				// check if we need to clip and if we do build the clip region (tile extent)
@@ -220,7 +220,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// make valid function will be operating on.
 				sg = mvt.ScaleGeo(sg, tegolaTile)
 
-				geo, err = validate.CleanGeometry(ctx, sg, clipRegion)
+				tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
 				if err != nil {
 					return fmt.Errorf("err making geometry valid: %v", err)
 				}
