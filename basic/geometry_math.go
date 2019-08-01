@@ -15,7 +15,7 @@ import (
 func ApplyToPoints(geometry geom.Geometry, f func(coords ...float64) ([]float64, error)) (geom.Geometry, error) {
 	switch geo := geometry.(type) {
 	default:
-		return nil, fmt.Errorf("Unknown Geometry: %+v", geometry)
+		return nil, fmt.Errorf("unknown Geometry: %T", geometry)
 
 	case geom.Point:
 		c, err := f(geo.X(), geo.Y())
@@ -60,7 +60,7 @@ func ApplyToPoints(geometry geom.Geometry, f func(coords ...float64) ([]float64,
 		lines := make(geom.MultiLineString, len(geo))
 
 		for i, line := range geo {
-			// getting a geometry inteface back
+			// getting a geometry interface back
 			linei, err := ApplyToPoints(geom.LineString(line), f)
 			if err != nil {
 				return nil, fmt.Errorf("got error converting line(%v) of multiline: %v", i, err)
@@ -122,7 +122,7 @@ func ApplyToPoints(geometry geom.Geometry, f func(coords ...float64) ([]float64,
 func CloneGeometry(geometry geom.Geometry) (geom.Geometry, error) {
 	switch geo := geometry.(type) {
 	default:
-		return nil, fmt.Errorf("Unknown Geometry: %+v", geometry)
+		return nil, fmt.Errorf("unknown Geometry: %T", geometry)
 
 	case geom.Point:
 		return geom.Point{geo.X(), geo.Y()}, nil
@@ -204,7 +204,7 @@ func CloneGeometry(geometry geom.Geometry) (geom.Geometry, error) {
 func ToWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	switch SRID {
 	default:
-		return G{}, fmt.Errorf("Don't know how to convert from %v to %v.", tegola.WebMercator, SRID)
+		return nil, fmt.Errorf("don't know how to convert from %v to %v.", tegola.WebMercator, SRID)
 	case tegola.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
@@ -221,7 +221,7 @@ func ToWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 func FromWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	switch SRID {
 	default:
-		return nil, fmt.Errorf("Don't know how to convert from %v to %v.", SRID, tegola.WebMercator)
+		return nil, fmt.Errorf("don't know how to convert from %v to %v.", SRID, tegola.WebMercator)
 	case tegola.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
