@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
@@ -103,17 +104,17 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 
 	// TODO: leverage helper functions for minx / miny to make this easier to follow
 	// TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
-	minGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent.MinX(), bufferedExtent.MinY()})
+	minGeo, err := basic.FromWebMercator(srid, geom.Point{bufferedExtent.MinX(), bufferedExtent.MinY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
-	maxGeo, err := basic.FromWebMercator(srid, basic.Point{bufferedExtent.MaxX(), bufferedExtent.MaxY()})
+	maxGeo, err := basic.FromWebMercator(srid, geom.Point{bufferedExtent.MaxX(), bufferedExtent.MaxY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
-	minPt, maxPt := minGeo.AsPoint(), maxGeo.AsPoint()
+	minPt, maxPt := minGeo.(geom.Point), maxGeo.(geom.Point)
 
 	bbox := fmt.Sprintf("ST_MakeEnvelope(%g,%g,%g,%g,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
