@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/internal/p"
 	"github.com/go-spatial/tegola/mvt"
 )
@@ -51,12 +51,12 @@ func TestLayerAddFeatures(t *testing.T) {
 			features: []mvt.Feature{
 				{
 					Tags:     map[string]interface{}{"btag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 				{
 					ID:       p.Uint64(1),
 					Tags:     map[string]interface{}{"atag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 			},
 		},
@@ -65,11 +65,11 @@ func TestLayerAddFeatures(t *testing.T) {
 				{
 					ID:       p.Uint64(1),
 					Tags:     map[string]interface{}{"atag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 				{
 					Tags:     map[string]interface{}{"btag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 			},
 		},
@@ -78,24 +78,24 @@ func TestLayerAddFeatures(t *testing.T) {
 				{
 					ID:       p.Uint64(1),
 					Tags:     map[string]interface{}{"atag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 				{
 					ID:       p.Uint64(1),
 					Tags:     map[string]interface{}{"atag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 			},
 			expected: []mvt.Feature{
 				{
 					ID:       p.Uint64(1),
 					Tags:     map[string]interface{}{"atag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 				{
 					ID:       p.Uint64(1),
 					Tags:     map[string]interface{}{"atag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 			},
 		},
@@ -104,12 +104,12 @@ func TestLayerAddFeatures(t *testing.T) {
 				{
 					ID:       p.Uint64(1),
 					Tags:     map[string]interface{}{"atag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 				{
 					ID:       p.Uint64(2),
 					Tags:     map[string]interface{}{"atag": "tag"},
-					Geometry: basic.Point{12.0, 15.0},
+					Geometry: geom.Point{12.0, 15.0},
 				},
 			},
 		},

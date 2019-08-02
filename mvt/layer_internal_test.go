@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/internal/p"
 	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 )
@@ -73,7 +73,7 @@ func TestLayer(t *testing.T) {
 				Name: "onefeature",
 				features: []Feature{
 					{
-						Geometry: basic.Point{1, 1},
+						Geometry: geom.Point{1, 1},
 						Tags: map[string]interface{}{
 							"tag1": "tag",
 							"tag2": "tag",
@@ -97,11 +97,11 @@ func TestLayer(t *testing.T) {
 				Name: "twofeatures",
 				features: []Feature{
 					{
-						Geometry: &basic.Polygon{
-							basic.Line{
-								basic.Point{3, 6},
-								basic.Point{8, 12},
-								basic.Point{20, 34},
+						Geometry: geom.Polygon{
+							geom.LineString{
+								geom.Point{3, 6},
+								geom.Point{8, 12},
+								geom.Point{20, 34},
 							},
 						},
 						Tags: map[string]interface{}{
@@ -110,7 +110,7 @@ func TestLayer(t *testing.T) {
 						},
 					},
 					{
-						Geometry: basic.Point{1, 1},
+						Geometry: geom.Point{1, 1},
 						Tags: map[string]interface{}{
 							"tag1": "tag",
 							"tag2": "tag",

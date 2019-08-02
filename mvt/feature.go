@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/internal/log"
 	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 )
@@ -28,16 +27,11 @@ var (
 type Feature struct {
 	ID       *uint64
 	Tags     map[string]interface{}
-	Geometry tegola.Geometry
+	Geometry geom.Geometry
 }
 
-func wktEncode(g tegola.Geometry) string {
-	gg, err := convert.ToGeom(g)
-	if err != nil {
-		return fmt.Sprintf("error converting tegola geom to geom geom, %v", err)
-	}
-
-	s, err := wkt.Encode(gg)
+func wktEncode(g geom.Geometry) string {
+	s, err := wkt.Encode(g)
 	if err != nil {
 		return fmt.Sprintf("encoding error for geom geom, %v", err)
 	}
@@ -56,12 +50,12 @@ func (f Feature) String() string {
 }
 
 // NewFeatures returns one or more features for the given Geometry
-func NewFeatures(geo tegola.Geometry, tags map[string]interface{}) (f []Feature) {
+func NewFeatures(geo geom.Geometry, tags map[string]interface{}) (f []Feature) {
 	if geo == nil {
 		return f // return empty feature set for a nil geometry
 	}
 
-	if g, ok := geo.(tegola.Collection); ok {
+	if g, ok := geo.(geom.Collection); ok {
 		geos := g.Geometries()
 		for i := range geos {
 			f = append(f, NewFeatures(geos[i], tags)...)
@@ -155,7 +149,7 @@ func NewCursor() *cursor {
 }
 
 // GetDeltaPointAndUpdate assumes the Point is in WebMercator.
-func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
+func (c *cursor) GetDeltaPointAndUpdate(p geom.Point) (dx, dy int64) {
 	var ix, iy int64
 	var tx, ty = p.X(), p.Y()
 
@@ -170,7 +164,7 @@ func (c *cursor) GetDeltaPointAndUpdate(p tegola.Point) (dx, dy int64) {
 	return dx, dy
 }
 
-func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
+func (c *cursor) encodeCmd(cmd uint32, points [][2]float64) []uint32 {
 	if len(points) == 0 {
 		return []uint32{}
 	}
@@ -181,7 +175,7 @@ func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
 
 	// range through our points
 	for _, p := range points {
-		dx, dy := c.GetDeltaPointAndUpdate(p)
+		dx, dy := c.GetDeltaPointAndUpdate(geom.Point(p))
 		// encode our delta point
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
 	}
@@ -189,11 +183,11 @@ func (c *cursor) encodeCmd(cmd uint32, points []tegola.Point) []uint32 {
 	return g
 }
 
-func (c *cursor) MoveTo(points ...tegola.Point) []uint32 {
+func (c *cursor) MoveTo(points ...[2]float64) []uint32 {
 	return c.encodeCmd(uint32(NewCommand(cmdMoveTo, len(points))), points)
 }
 
-func (c *cursor) LineTo(points ...tegola.Point) []uint32 {
+func (c *cursor) LineTo(points ...[2]float64) []uint32 {
 	return c.encodeCmd(uint32(NewCommand(cmdLineTo, len(points))), points)
 }
 
@@ -201,9 +195,9 @@ func (c *cursor) ClosePath() uint32 {
 	return uint32(NewCommand(cmdClosePath, 1))
 }
 
-// encodeGeometry will take a tegola.Geometry and encode it according to the
+// encodeGeometry will take a geom.Geometry and encode it according to the
 // mapbox vector_tile spec.
-func encodeGeometry(ctx context.Context, geometry tegola.Geometry) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
+func encodeGeometry(ctx context.Context, geometry geom.Geometry) (g []uint32, vtyp vectorTile.Tile_GeomType, err error) {
 	if geometry == nil {
 		return nil, vectorTile.Tile_UNKNOWN, ErrNilGeometryType
 	}
@@ -211,50 +205,46 @@ func encodeGeometry(ctx context.Context, geometry tegola.Geometry) (g []uint32, 
 	c := NewCursor()
 
 	switch t := geometry.(type) {
-	case tegola.Point:
+	case geom.Point:
 		g = append(g, c.MoveTo(t)...)
 		return g, vectorTile.Tile_POINT, nil
 
-	case tegola.Point3:
-		g = append(g, c.MoveTo(t)...)
-		return g, vectorTile.Tile_POINT, nil
-
-	case tegola.MultiPoint:
+	case geom.MultiPoint:
 		g = append(g, c.MoveTo(t.Points()...)...)
 		return g, vectorTile.Tile_POINT, nil
 
-	case tegola.LineString:
-		points := t.Subpoints()
+	case geom.LineString:
+		points := t.Verticies()
 		g = append(g, c.MoveTo(points[0])...)
 		g = append(g, c.LineTo(points[1:]...)...)
 		return g, vectorTile.Tile_LINESTRING, nil
 
-	case tegola.MultiLine:
-		lines := t.Lines()
+	case geom.MultiLineString:
+		lines := t.LineStrings()
 		for _, l := range lines {
-			points := l.Subpoints()
+			points := geom.LineString(l).Verticies()
 			g = append(g, c.MoveTo(points[0])...)
 			g = append(g, c.LineTo(points[1:]...)...)
 		}
 		return g, vectorTile.Tile_LINESTRING, nil
 
-	case tegola.Polygon:
+	case geom.Polygon:
 		// TODO: Right now c.ScaleGeo() never returns a Polygon, so this is dead code.
-		lines := t.Sublines()
+		lines := t.LinearRings()
 		for _, l := range lines {
-			points := l.Subpoints()
+			points := geom.LineString(l).Verticies()
 			g = append(g, c.MoveTo(points[0])...)
 			g = append(g, c.LineTo(points[1:]...)...)
 			g = append(g, c.ClosePath())
 		}
 		return g, vectorTile.Tile_POLYGON, nil
 
-	case tegola.MultiPolygon:
+	case geom.MultiPolygon:
 		polygons := t.Polygons()
 		for _, p := range polygons {
-			lines := p.Sublines()
+			lines := geom.Polygon(p).LinearRings()
 			for _, l := range lines {
-				points := l.Subpoints()
+				points := geom.LineString(l).Verticies()
 				g = append(g, c.MoveTo(points[0])...)
 				g = append(g, c.LineTo(points[1:]...)...)
 				g = append(g, c.ClosePath())
