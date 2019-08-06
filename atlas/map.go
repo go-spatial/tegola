@@ -176,7 +176,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					geo = g
 				}
 
-				// TODO: remove this geom conversion step once the mvt package has adopted the new geom package
+				// TODO: remove this geom conversion step once the simplify function uses geom types
 				tegolaGeo, err := convert.ToTegola(geo)
 				if err != nil {
 					return err
@@ -213,22 +213,39 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 				}
 
+				// TODO: remove this geom conversion step once the simplify function uses geom types
+				geo, err = convert.ToGeom(sg)
+				if err != nil {
+					return err
+				}
+
 				// TODO(arolek): currently the validate.CleanGeometry method does not operate
 				// well on geometries that are not scaled to tile coordinate space. this will change
 				// with the adoption of the new make valid routine. once implemented, the clipRegion
 				// calculation will need to be in the same coordinate space as the geometry the
 				// make valid function will be operating on.
-				sg = mvt.ScaleGeo(sg, tegolaTile)
+				geo = mvt.ScaleGeo(geo, tegolaTile)
+
+				// TODO: remove this geom conversion step once the validate function uses geom types
+				sg, err = convert.ToTegola(geo)
+				if err != nil {
+					return err
+				}
 
 				tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
 				if err != nil {
 					return fmt.Errorf("err making geometry valid: %v", err)
 				}
 
+				geo, err = convert.ToGeom(tegolaGeo)
+				if err != nil {
+					return nil
+				}
+
 				mvtLayer.AddFeatures(mvt.Feature{
 					ID:       &f.ID,
 					Tags:     f.Tags,
-					Geometry: tegolaGeo,
+					Geometry: geo,
 				})
 
 				return nil
