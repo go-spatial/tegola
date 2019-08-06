@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"log"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
 )
 
@@ -29,19 +29,19 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 
 	geo, err = basic.CloneGeometry(geo)
 	if err != nil {
-		log.Errorf("failed to clone geo for test case. %v", err)
+		log.Printf("failed to clone geo for test case. %v", err)
 		return
 	}
 
 	bgeo, err := convert.ToTegola(geo)
 	if err != nil {
-		log.Errorf("failed to convert geo for test case. %v", err)
+		log.Printf("failed to convert geo for test case. %v", err)
 		return
 	}
 
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Errorf("failed to create test file %v : %v.", filename, err)
+		log.Printf("failed to create test file %v : %v.", filename, err)
 		return
 	}
 	defer f.Close()
@@ -53,9 +53,9 @@ func createDebugFile(min, max maths.Pt, geo tegola.Geometry, err error) {
 	}
 
 	if err = json.NewEncoder(f).Encode(geodebug); err != nil {
-		log.Errorf("err encoding json: %v", err)
+		log.Printf("err encoding json: %v", err)
 		return
 	}
 
-	log.Infof("created file: %v", filename)
+	log.Printf("created file: %v", filename)
 }
