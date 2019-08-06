@@ -3,10 +3,10 @@ package mvt
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
-	"github.com/go-spatial/tegola/internal/log"
 	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 )
 
@@ -500,7 +500,7 @@ func keyvalTagsMap(keyMap []string, valueMap []interface{}, f *Feature) (tags []
 		}
 
 		if kidx == -1 {
-			log.Errorf("did not find key (%v) in keymap.", key)
+			log.Printf("did not find key (%v) in keymap.", key)
 			return tags, fmt.Errorf("did not find key (%v) in keymap.", key)
 		}
 

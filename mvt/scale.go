@@ -1,10 +1,11 @@
 package mvt
 
 import (
+	"log"
+
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/internal/log"
 )
 
 // ScaleGeo converts the geometry's coordinates to tile coordinates
@@ -120,7 +121,7 @@ func scalePolygon(g geom.Polygon, tile *tegola.Tile) (p geom.Polygon) {
 		if len(ln) < 2 {
 			if debug {
 				// skip lines that have been reduced to less then 2 points.
-				log.Debug("skipping line 2", line, len(ln))
+				log.Println("skipping line 2", line, len(ln))
 			}
 			continue
 		}
