@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
-	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
+	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
 )
 
 var (
@@ -30,17 +30,12 @@ type Feature struct {
 	Geometry geom.Geometry
 }
 
-func wktEncode(g geom.Geometry) string {
-	s, err := wkt.Encode(g)
+func (f Feature) String() string {
+	g, err := wkt.Encode(f.Geometry)
 	if err != nil {
 		return fmt.Sprintf("encoding error for geom geom, %v", err)
 	}
 
-	return s
-}
-
-func (f Feature) String() string {
-	g := wktEncode(f.Geometry)
 
 	if f.ID != nil {
 		return fmt.Sprintf("{Feature: %v, GEO: %v, Tags: %+v}", *f.ID, g, f.Tags)
@@ -106,13 +101,17 @@ const (
 
 type Command uint32
 
+// NewCommand return a new command encoder
 func NewCommand(cmd uint32, count int) Command {
 	return Command((cmd & 0x7) | (uint32(count) << 3))
 }
 
+//ID encodes the ID of the command
 func (c Command) ID() uint32 {
 	return uint32(c) & 0x7
 }
+
+//Count encode the count of elements in the command
 func (c Command) Count() int {
 	return int(uint32(c) >> 3)
 }
@@ -144,6 +143,7 @@ type cursor struct {
 	y int64
 }
 
+// NewCursor creates a new cursor for drawing and MVT tile
 func NewCursor() *cursor {
 	return &cursor{}
 }
@@ -183,14 +183,17 @@ func (c *cursor) encodeCmd(cmd uint32, points [][2]float64) []uint32 {
 	return g
 }
 
+// MoveTo encodes a move to command for the given points
 func (c *cursor) MoveTo(points ...[2]float64) []uint32 {
 	return c.encodeCmd(uint32(NewCommand(cmdMoveTo, len(points))), points)
 }
 
+// LineTo encodes a line to command for the given points
 func (c *cursor) LineTo(points ...[2]float64) []uint32 {
 	return c.encodeCmd(uint32(NewCommand(cmdLineTo, len(points))), points)
 }
 
+// ClosePath encodes a close path command
 func (c *cursor) ClosePath() uint32 {
 	return uint32(NewCommand(cmdClosePath, 1))
 }

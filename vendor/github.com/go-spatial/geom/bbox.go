@@ -196,6 +196,35 @@ func NewExtent(points ...[2]float64) *Extent {
 	return &extent
 }
 
+// NewExtentFromPoints returns an Extent for the provided points; in following format [4]float64{ MinX, MinY, MaxX, MaxY }
+func NewExtentFromPoints(points ...Point) *Extent {
+	if len(points) == 0 {
+		return nil
+	}
+
+	extent := Extent{points[0][0], points[0][1], points[0][0], points[0][1]}
+	if len(points) == 1 {
+		return &extent
+	}
+	for _, pt := range points[1:] {
+		// Check the x coords
+		switch {
+		case pt[0] < extent[0]:
+			extent[0] = pt[0]
+		case pt[0] > extent[2]:
+			extent[2] = pt[0]
+		}
+		// Check the y coords
+		switch {
+		case pt[1] < extent[1]:
+			extent[1] = pt[1]
+		case pt[1] > extent[3]:
+			extent[3] = pt[1]
+		}
+	}
+	return &extent
+}
+
 // NewExtentFromGeometry tries to create an extent based on the geometry
 func NewExtentFromGeometry(g Geometry) (*Extent, error) {
 	var pts []Point

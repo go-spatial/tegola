@@ -10,6 +10,7 @@ import (
 	"github.com/akrylysov/algnhsa"
 	"github.com/dimfeld/httptreemux"
 
+	"github.com/go-spatial/geom/encoding/mvt"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"

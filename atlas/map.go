@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/encoding/mvt"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
@@ -19,7 +20,6 @@ import (
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/simplify"
 	"github.com/go-spatial/tegola/maths/validate"
-	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
@@ -224,7 +224,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// with the adoption of the new make valid routine. once implemented, the clipRegion
 				// calculation will need to be in the same coordinate space as the geometry the
 				// make valid function will be operating on.
-				geo = mvt.ScaleGeo(geo, tegolaTile)
+				geo = mvt.PrepareGeo(geo, clipRegion, float64(mvt.DefaultExtent))
 
 				// TODO: remove this geom conversion step once the validate function uses geom types
 				sg, err = convert.ToTegola(geo)
