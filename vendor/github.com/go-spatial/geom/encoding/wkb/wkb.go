@@ -8,6 +8,7 @@ package wkb
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -77,34 +78,6 @@ func Decode(r io.Reader) (geo geom.Geometry, err error) {
 	}
 }
 
-func _encode(en *encode.Encoder, g geom.Geometry) error {
-	switch geo := g.(type) {
-	case geom.Pointer:
-		en.Point(geo.XY())
-	case geom.MultiPointer:
-		en.MultiPoint(geo.Points())
-	case geom.LineStringer:
-		en.LineString(geo.Verticies())
-	case geom.MultiLineStringer:
-		en.MultiLineString(geo.LineStrings())
-	case geom.Polygoner:
-		en.Polygon(geo.LinearRings())
-	case geom.MultiPolygoner:
-		en.MultiPolygon(geo.Polygons())
-	case geom.Collectioner:
-		geoms := geo.Geometries()
-		en.BOM().Write(Collection, uint32(len(geoms)))
-		for _, gg := range geoms {
-			if err := _encode(en, gg); err != nil {
-				return err
-			}
-		}
-	default:
-		return geom.ErrUnknownGeometry{g}
-	}
-	return en.Err()
-}
-
 func EncodeBytes(g geom.Geometry) (bs []byte, err error) {
 	buff := new(bytes.Buffer)
 	if err = Encode(buff, g); err != nil {
@@ -114,6 +87,11 @@ func EncodeBytes(g geom.Geometry) (bs []byte, err error) {
 }
 
 func Encode(w io.Writer, g geom.Geometry) error {
-	en := encode.Encoder{W: w}
-	return _encode(&en, g)
+	return EncodeWithByteOrder(binary.LittleEndian, w, g)
+}
+
+func EncodeWithByteOrder(byteOrder binary.ByteOrder, w io.Writer, g geom.Geometry) error {
+	en := encode.Encoder{W: w, ByteOrder: byteOrder}
+	en.Geometry(g)
+	return en.Err()
 }

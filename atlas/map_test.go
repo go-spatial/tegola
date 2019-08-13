@@ -10,10 +10,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/p"
-	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
 	"github.com/go-spatial/tegola/provider/test"
 	"github.com/go-spatial/tegola/provider/test/emptycollection"
 )

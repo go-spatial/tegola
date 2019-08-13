@@ -8,10 +8,10 @@ import (
 	"path"
 	"strings"
 
+	"github.com/go-spatial/geom/encoding/mvt"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/mvt"
 )
 
 // TileCacheHandler implements a request cache for tiles on requests when the URLs

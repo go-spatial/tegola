@@ -8,11 +8,11 @@ import (
 	"os"
 
 	"github.com/arolek/algnhsa"
+	"github.com/go-spatial/geom/encoding/mvt"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/server"
 )
 

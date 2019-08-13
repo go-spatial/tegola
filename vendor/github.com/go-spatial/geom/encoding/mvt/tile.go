@@ -3,8 +3,9 @@ package mvt
 import (
 	"context"
 	"fmt"
+	"log"
 
-	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
+	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
 )
 
 // Tile describes a Mapbox Vector Tile
@@ -18,7 +19,9 @@ func (t *Tile) AddLayers(layers ...*Layer) error {
 	for i := range layers {
 		nl := layers[i]
 		if nl == nil {
-			// log.Printf("Got a nil layer for %v", i)
+			if debug {
+				log.Printf("Got a nil layer for %v", i)
+			}
 			continue
 		}
 		for i, l := range t.layers {
