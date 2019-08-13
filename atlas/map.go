@@ -262,13 +262,6 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 					return err
 				}
 
-				// TODO(arolek): currently the validate.CleanGeometry method does not operate
-				// well on geometries that are not scaled to tile coordinate space. this will change
-				// with the adoption of the new make valid routine. once implemented, the clipRegion
-				// calculation will need to be in the same coordinate space as the geometry the
-				// make valid function will be operating on.
-				geo = mvt.PrepareGeo(geo, tile.Extent3857(), float64(mvt.DefaultExtent))
-
 				// TODO: remove this geom conversion step once the validate function uses geom types
 				sg, err = convert.ToTegola(geo)
 				if err != nil {
@@ -282,6 +275,12 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 
 				geo, err = convert.ToGeom(tegolaGeo)
 				if err != nil {
+					return nil
+				}
+
+				// tranlate the geometry to tile coordinates
+				geo = mvt.PrepareGeo(geo, tile.Extent3857(), float64(m.TileExtent))
+				if geo == nil {
 					return nil
 				}
 
