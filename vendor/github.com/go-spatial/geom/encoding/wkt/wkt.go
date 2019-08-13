@@ -3,9 +3,11 @@ package wkt
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func isNil(a interface{}) bool {
@@ -98,6 +100,19 @@ func isCollectionerEmpty(col geom.Collectioner) bool {
 	return true
 }
 
+func formatFloat(f float64) string {
+	s := strconv.FormatFloat(f, 'f', 3, 64)
+	if s[len(s)-3:] == "000" {
+		// remove the .
+		return s[:len(s)-4]
+	}
+	return s
+}
+
+func formatPoint(pt [2]float64) string {
+	return formatFloat(pt[0]) + " " + formatFloat(pt[1])
+}
+
 /*
 This purpose of this file is to house the wkt functions. These functions are
 use to take a tagola.Geometry and convert it to a wkt string. It will, also,
@@ -109,8 +124,10 @@ func _encode(geo geom.Geometry) string {
 	switch g := geo.(type) {
 
 	case geom.Pointer:
-		xy := g.XY()
-		return fmt.Sprintf("%v %v", xy[0], xy[1])
+		return formatPoint(g.XY())
+
+	case [2]float64:
+		return formatPoint(g)
 
 	case geom.MultiPointer:
 		var points []string
@@ -142,6 +159,10 @@ func _encode(geo geom.Geometry) string {
 			if len(l) == 0 {
 				continue
 			}
+			if !cmp.PointEqual(l[0], l[len(l)-1]) {
+				// Dup the first point to close the polygon.
+				l = append(l, l[0])
+			}
 			rings = append(rings, _encode(geom.LineString(l)))
 		}
 		return "(" + strings.Join(rings, ",") + ")"
@@ -165,45 +186,58 @@ func _encode(geo geom.Geometry) string {
 func Encode(geo geom.Geometry) (string, error) {
 	switch g := geo.(type) {
 	default:
+
 		return "", geom.ErrUnknownGeometry{geo}
+
 	case geom.Pointer:
+
 		// POINT( 10 10)
 		if isNil(g) {
 			return "POINT EMPTY", nil
 		}
 		return "POINT (" + _encode(geo) + ")", nil
 
+	case [2]float64:
+
+		return "POINT (" + _encode(geo) + ")", nil
+
 	case geom.MultiPointer:
+
 		if isNil(g) || len(g.Points()) == 0 {
 			return "MULTIPOINT EMPTY", nil
 		}
 		return "MULTIPOINT " + _encode(geo), nil
 
 	case geom.LineStringer:
+
 		if isNil(g) || len(g.Verticies()) == 0 {
 			return "LINESTRING EMPTY", nil
 		}
 		return "LINESTRING " + _encode(geo), nil
 
 	case geom.MultiLineStringer:
+
 		if isMultiLineStringerEmpty(g) {
 			return "MULTILINESTRING EMPTY", nil
 		}
 		return "MULTILINESTRING " + _encode(geo), nil
 
 	case geom.Polygoner:
+
 		if isPolygonerEmpty(g) {
 			return "POLYGON EMPTY", nil
 		}
 		return "POLYGON " + _encode(geo), nil
 
 	case geom.MultiPolygoner:
+
 		if isMultiPolygonerEmpty(g) {
 			return "MULTIPOLYGON EMPTY", nil
 		}
 		return "MULTIPOLYGON " + _encode(geo), nil
 
 	case geom.Collectioner:
+
 		if isCollectionerEmpty(g) {
 			return "GEOMETRYCOLLECTION EMPTY", nil
 		}
@@ -216,7 +250,61 @@ func Encode(geo geom.Geometry) (string, error) {
 			geometries = append(geometries, s)
 		}
 		return "GEOMETRYCOLLECTION (" + strings.Join(geometries, ",") + ")", nil
+
+	case geom.Line:
+
+		return Encode(geom.LineString(g[:]))
+
+	case [2][2]float64:
+
+		return Encode(geom.LineString(g[:]))
+
+	case [][2]float64:
+
+		return Encode(geom.LineString(g))
+
+	case []geom.Line:
+
+		ml := make(geom.MultiLineString, len(g))
+		for i := range g {
+			ml[i] = g[i][:]
+		}
+		return Encode(ml)
+
+	case []geom.Point:
+		mp := make(geom.MultiPoint, len(g))
+		for i := range g {
+			mp[i] = [2]float64(g[i])
+		}
+		return Encode(mp)
+
+	case geom.Triangle:
+		// treat a triangle as polygon
+		return Encode(geom.Polygon{g[:]})
+
+	case []geom.Triangle:
+		mp := make(geom.MultiPolygon, len(g))
+		for i := range g {
+			mp[i] = geom.Polygon{g[i][:]}
+		}
+		return Encode(mp)
+	case geom.Extent:
+		// treat an extent as a ploygon
+		return Encode(g.AsPolygon())
+	case *geom.Extent:
+		// treat an extent as a ploygon
+		if g != nil {
+			return Encode(g.AsPolygon())
+		}
+		return Encode(geom.Polygon{})
 	}
+}
+func MustEncode(geo geom.Geometry) (str string) {
+	var err error
+	if str, err = Encode(geo); err != nil {
+		panic(fmt.Sprintf("unable to encode %T as wkt", geo))
+	}
+	return str
 }
 
 func Decode(text string) (geo geom.Geometry, err error) {

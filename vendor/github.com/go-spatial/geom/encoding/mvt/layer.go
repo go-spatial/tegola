@@ -7,7 +7,7 @@ import (
 
 	"context"
 
-	vectorTile "github.com/go-spatial/tegola/mvt/vector_tile"
+	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
 )
 
 // Layer describes a layer within a tile.
@@ -75,12 +75,12 @@ func (l *Layer) VTileLayer(ctx context.Context) (*vectorTile.Tile_Layer, error) 
 }
 
 // Version is the version of tile spec this layer is from.
-func (*Layer) Version() int { return 2 }
+func (*Layer) Version() int { return int(Version) }
 
 // Extent defaults to 4096
 func (l *Layer) Extent() int {
 	if l == nil || l.extent == nil {
-		return 4096
+		return int(DefaultExtent)
 	}
 	return *(l.extent)
 }
@@ -88,7 +88,7 @@ func (l *Layer) Extent() int {
 // SetExtent sets the extent value
 func (l *Layer) SetExtent(e int) {
 	if l == nil {
-		l = new(Layer)
+		return
 	}
 	l.extent = &e
 }

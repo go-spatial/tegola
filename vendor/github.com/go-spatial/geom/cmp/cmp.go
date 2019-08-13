@@ -85,7 +85,14 @@ func PointLess(p1, p2 [2]float64) bool {
 }
 
 // PointEqual returns weather both points have the same value for x,y.
-func PointEqual(p1, p2 [2]float64) bool { return Float(p1[0], p2[0]) && Float(p1[1], p2[1]) }
+func PointEqual(p1, p2 [2]float64) bool {
+	return Float(p1[0], p2[0]) && Float(p1[1], p2[1])
+}
+
+// GeomPointEqual returns weather both points have the same value for x,y.
+func GeomPointEqual(p1, p2 geom.Point) bool {
+	return Float(p1[0], p2[0]) && Float(p1[1], p2[1])
+}
 
 // MultiPointEqual will check to see see if the given slices are the same.
 func MultiPointEqual(p1, p2 [][2]float64) bool {

@@ -1,6 +1,8 @@
 // Package geom describes geometry interfaces.
 package geom
 
+const TOLERANCE = 0.000001
+
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
 type Geometry interface{}
@@ -259,14 +261,52 @@ func extractLines(g Geometry, lines *[]Line) error {
 	}
 }
 
-/*
-ExtractLines extracts all linear components from a geometry (line segements).
-If the geometry contains no line segements (e.g. empty geometry or
-point), then an empty array will be returned.
-
-Duplicate lines will not be removed.
-*/
+// ExtractLines extracts all linear components from a geometry (line segements).
+// If the geometry contains no line segements (e.g. empty geometry or
+// point), then an empty array will be returned.
+//
+// Duplicate lines will not be removed.
 func ExtractLines(g Geometry) (lines []Line, err error) {
 	err = extractLines(g, &lines)
 	return lines, err
+}
+
+// IsEmpty returns if the geometry represents an empty geometry
+func IsEmpty(geo Geometry) bool {
+	if geo == nil {
+		return true
+	}
+	switch g := geo.(type) {
+	case Point:
+		return g[0] == nan && g[1] == nan
+	case Pointer:
+		xy := g.XY()
+		return xy[0] == nan && xy[1] == nan
+	case LineString:
+		return len(g) == 0
+	case LineStringer:
+		return len(g.Verticies()) == 0
+	case Polygon:
+		return len(g) == 0
+	case Polygoner:
+		return len(g.LinearRings()) == 0
+	case MultiPoint:
+		return len(g) == 0
+	case MultiPointer:
+		return len(g.Points()) == 0
+	case MultiLineString:
+		return len(g) == 0
+	case MultiLineStringer:
+		return len(g.LineStrings()) == 0
+	case MultiPolygon:
+		return len(g) == 0
+	case MultiPolygoner:
+		return len(g.Polygons()) == 0
+	case Collection:
+		return len(g) == 0
+	case Collectioner:
+		return len(g.Geometries()) == 0
+	default:
+		return true
+	}
 }

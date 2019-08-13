@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb/internal/consts"
 )
 
@@ -59,8 +60,7 @@ func (en *Encoder) Point(pt [2]float64) {
 	en.BOM().Write(consts.Point, pt[0], pt[1])
 }
 func (en *Encoder) MultiPoint(pts [][2]float64) {
-	en.BOM()
-	en.Write(consts.MultiPoint, uint32(len(pts)))
+	en.BOM().Write(consts.MultiPoint, uint32(len(pts)))
 
 	for _, p := range pts {
 		en.Point(p)
@@ -108,5 +108,42 @@ func (en *Encoder) MultiPolygon(mply [][][][2]float64) {
 	en.BOM().Write(consts.MultiPolygon, uint32(len(mply)))
 	for _, p := range mply {
 		en.Polygon(p)
+	}
+}
+
+func (en *Encoder) Collection(geoms []geom.Geometry) {
+	if !en.conti() {
+		return
+	}
+	en.BOM().Write(consts.Collection, uint32(len(geoms)))
+	for _, gg := range geoms {
+		en.Geometry(gg)
+		if !en.conti() {
+			return
+		}
+	}
+}
+
+func (en *Encoder) Geometry(g geom.Geometry) {
+	if !en.conti() {
+		return
+	}
+	switch geo := g.(type) {
+	case geom.Pointer:
+		en.Point(geo.XY())
+	case geom.MultiPointer:
+		en.MultiPoint(geo.Points())
+	case geom.LineStringer:
+		en.LineString(geo.Verticies())
+	case geom.MultiLineStringer:
+		en.MultiLineString(geo.LineStrings())
+	case geom.Polygoner:
+		en.Polygon(geo.LinearRings())
+	case geom.MultiPolygoner:
+		en.MultiPolygon(geo.Polygons())
+	case geom.Collectioner:
+		en.Collection(geo.Geometries())
+	default:
+		en.err = geom.ErrUnknownGeometry{Geom: g}
 	}
 }

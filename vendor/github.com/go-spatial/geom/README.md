@@ -7,7 +7,11 @@ Geometry interfaces to help drive interoperability within the Go geospatial comm
 
 We should only vendor things needed for the CI system. As a library, we will not vendor our dependencies, but rather list them below:
 
-* none.
+*  [go-sqlite3](https://godoc.org/github.com/mattn/go-sqlite3)
+*  [uuid](https://godoc.org/github.com/pborman/uuid)
+*  [errors](https://godoc.org/github.com/gdey/errors)
+*  [proto](https://godoc.org/github.com/golang/protobuf/proto)
+*  [p](https://godoc.org/github.com/arolek/p)
 
 The following code has been Vendored into the source tree:
 

@@ -5,6 +5,10 @@ import (
 	"math"
 )
 
+func round(x, unit float64) float64 {
+	return math.Round(x/unit) * unit
+}
+
 // ErrPointsAreCoLinear is thrown when points are colinear but that is unexpected
 var ErrPointsAreCoLinear = errors.New("given points are colinear")
 
@@ -14,7 +18,13 @@ type Circle struct {
 	Radius float64
 }
 
-// CircleFromPoint returns the circle from by the given points, or an error if the points are colinear.
+// IsColinear returns weather the a,b,c are colinear to each other
+func IsColinear(a, b, c [2]float64) bool {
+	xA, yA, xB, yB, xC, yC := a[0], a[1], b[0], b[1], c[0], c[1]
+	return ((yB - yA) * (xC - xB)) == ((yC - yB) * (xB - xA))
+}
+
+// CircleFromPoints returns the circle from by the given points, or an error if the points are colinear.
 // REF:  Formula used gotten from http://mathforum.org/library/drmath/view/55233.html
 func CircleFromPoints(a, b, c [2]float64) (Circle, error) {
 	xA, yA, xB, yB, xC, yC := a[0], a[1], b[0], b[1], c[0], c[1]
@@ -81,7 +91,7 @@ func CircleFromPoints(a, b, c [2]float64) (Circle, error) {
 	r := math.Sqrt((vA * vA) + (vB * vB))
 	return Circle{
 		Center: [2]float64{x, y},
-		Radius: r,
+		Radius: round(r, 0.0001),
 	}, nil
 }
 
@@ -92,4 +102,43 @@ func (c Circle) ContainsPoint(pt [2]float64) bool {
 	v1, v2 := c.Center[0]-pt[0], c.Center[1]-pt[1]
 	d := math.Sqrt((v1 * v1) + (v2 * v2))
 	return c.Radius >= d
+}
+
+func (c Circle) AsPoints(k uint) []Point {
+	if k < 3 {
+		k = 30
+	}
+
+	pts := make([]Point, int(k))
+	for i := 0; i < int(k); i++ {
+		t := (2 * math.Pi) * (float64(i) / float64(k))
+		x, y := c.Center[0]+c.Radius*math.Cos(t), c.Center[1]+c.Radius*math.Sin(t)
+		pts[i][0], pts[i][1] = float64(x), float64(y)
+	}
+	return pts
+}
+
+func (c Circle) AsLineString(k uint) LineString {
+	pts := c.AsPoints(k)
+	lns := make(LineString, len(pts))
+	for i := range pts {
+		lns[i] = [2]float64(pts[i])
+	}
+	return lns
+}
+
+// AsSegments takes the number of segments that should be returned to describe the circle.
+// a value  less then 3 will use the default value of 30.
+func (c Circle) AsSegments(k uint) []Line {
+	pts := c.AsPoints(k)
+	lines := make([]Line, len(pts))
+	for i := range pts {
+		j := i - 1
+		if j < 0 {
+			j = int(k) - 1
+		}
+		lines[i][0] = pts[j]
+		lines[i][1] = pts[i]
+	}
+	return lines
 }
