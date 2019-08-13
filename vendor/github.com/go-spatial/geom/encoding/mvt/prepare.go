@@ -6,14 +6,11 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-// PrepareGeo converts the geometry's coordinates to tile pixel coordinates. tile should be the
+// PrepareGeo converts the geometry's coordinates to tile coordinates. tile should be the
 // extent of the tile, in the same projection as geo. pixelExtent is the dimension of the
 // (square) tile in pixels usually 4096, see DefaultExtent.
-// This function treats the tile extent elements as left, top, right, bottom. This is fine
-// when working with a north-positive projection such as lat/long (epsg:4326)
-// and web mercator (epsg:3857), but a south-positive projection (ie. epsg:2054) or west-postive
-// projection would then flip the geomtery. To properly render these coordinate systems, simply
-// swap the X's or Y's in the tile extent.
+// The geometry must not go outside the tile extent. If this is unknown,
+// use the clip package before encoding.
 func PrepareGeo(geo geom.Geometry, tile *geom.Extent, pixelExtent float64) geom.Geometry {
 	switch g := geo.(type) {
 	case geom.Point:
@@ -63,10 +60,10 @@ func PrepareGeo(geo geom.Geometry, tile *geom.Extent, pixelExtent float64) geom.
 }
 
 func preparept(g geom.Point, tile *geom.Extent, pixelExtent float64) geom.Point {
-	px := int64((g.X() - tile.MinX()) / tile.XSpan() * pixelExtent)
-	py := int64((tile.MaxY() - g.Y()) / tile.YSpan() * pixelExtent)
+	px := (g.X() - tile.MinX()) / tile.XSpan() * pixelExtent
+	py := (g.Y() - tile.MinY()) / tile.YSpan() * pixelExtent
 
-	return geom.Point{float64(px), float64(py)}
+	return geom.Point{px, py}
 }
 
 func preparelinestr(g geom.LineString, tile *geom.Extent, pixelExtent float64) (ls geom.LineString) {
