@@ -79,26 +79,28 @@ func (t Triangle) Area() float64 {
 func NewTriangleContaining(pts ...Point) Triangle {
 	const buff = 10
 	ext := NewExtentFromPoints(pts...)
-	xlen := ext[2] - ext[0]
-	ylen := ext[3] - ext[1]
-	x2len := xlen / 2
-
-	nx := ext[0] - (x2len * buff)
-	cx := ext[0] + x2len
-	xx := ext[2] + (x2len * buff)
-
-	ny := ext[1] - (ylen * buff)
-	xy := ext[3] + (2 * ylen * buff)
-	return Triangle{
-		{nx, ny},
-		{cx, xy},
-		{xx, ny},
+	tri, err := NewTriangleForExtent(ext, buff)
+	if err != nil {
+		panic(err)
 	}
+	return tri
 }
 
 func NewTriangleContainingPoints(pts ...[2]float64) Triangle {
 	const buff = 10
 	ext := NewExtent(pts...)
+	tri, err := NewTriangleForExtent(ext, buff)
+	if err != nil {
+		panic(err)
+	}
+	return tri
+}
+
+func NewTriangleForExtent(ext *Extent, buff float64) (Triangle, error) {
+	if ext == nil {
+		return Triangle{EmptyPoint, EmptyPoint, EmptyPoint},
+			fmt.Errorf("extent is nil")
+	}
 
 	xlen := ext[2] - ext[0]
 	ylen := ext[3] - ext[1]
@@ -114,5 +116,6 @@ func NewTriangleContainingPoints(pts ...[2]float64) Triangle {
 		{nx, ny},
 		{cx, xy},
 		{xx, ny},
-	}
+	}, nil
+
 }
