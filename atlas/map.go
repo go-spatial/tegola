@@ -13,13 +13,14 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/mvt"
+	"github.com/go-spatial/geom/planar/makevalid"
+	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/simplify"
-	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
@@ -226,20 +227,21 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// make valid function will be operating on.
 				geo = mvt.PrepareGeo(geo, clipRegion, float64(mvt.DefaultExtent))
 
-				// TODO: remove this geom conversion step once the validate function uses geom types
-				sg, err = convert.ToTegola(geo)
+				// create a hitmap for the makevalid function
+				hm, err := hitmap.New(clipRegion, geo)
 				if err != nil {
 					return err
 				}
 
-				tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
-				if err != nil {
-					return fmt.Errorf("err making geometry valid: %v", err)
+				// instantiate a new makevalid struct holding the hitmap
+				mv := makevalid.Makevalid{
+					Hitmap: hm,
 				}
 
-				geo, err = convert.ToGeom(tegolaGeo)
+				// apply make valid routine
+				geo, _, err = mv.Makevalid(ctx, geo, clipRegion)
 				if err != nil {
-					return nil
+					return err
 				}
 
 				mvtLayer.AddFeatures(mvt.Feature{
