@@ -72,6 +72,20 @@ func newTestMapWithLayers(layers ...atlas.Layer) *atlas.Atlas {
 	return a
 }
 
+func newTestMapWithBounds(minx, miny, maxx, maxy float64) *atlas.Atlas {
+
+	testMap := atlas.NewWebMercatorMap(testMapName)
+	testMap.Attribution = testMapAttribution
+	testMap.Center = testMapCenter
+	testMap.Layers = append(testMap.Layers, testLayer1)
+	testMap.Bounds = &geom.Extent{minx, miny, maxx, maxy}
+
+	a := &atlas.Atlas{}
+	a.AddMap(testMap)
+
+	return a
+}
+
 func doRequest(a *atlas.Atlas, method string, uri string, body io.Reader) (w *httptest.ResponseRecorder, router *httptreemux.TreeMux, err error) {
 
 	router = server.NewRouter(a)

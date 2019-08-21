@@ -118,6 +118,24 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 			expectedBody: "invalid Y value (4)",
 		},
+		"out boundary tile": {
+			uri:          "/maps/test-map/test-layer/4/0/0.pbf",
+			atlas:        newTestMapWithBounds(0, 0, 10, 10),
+			expectedCode: http.StatusNotFound,
+			expectedBody: "",
+		},
+		"on boundary tile": {
+			uri:          "/maps/test-map/test-layer/4/8/7.pbf",
+			atlas:        newTestMapWithBounds(0, 0, 10, 10),
+			expectedCode: http.StatusOK,
+			expectedLayers: []string{"test-layer"},
+		},
+		"in boundary tile": {
+			uri:          "/maps/test-map/test-layer/4/7/7.pbf",
+			atlas:        newTestMapWithBounds(-180, -90, 180, 90),
+			expectedCode: http.StatusOK,
+			expectedLayers: []string{"test-layer"},
+		},
 		"options": {
 			//  With empty hostname and no port specified in config, urls should have host:port matching request uri.
 			uri:          "/maps/test-map/test-layer/4/2/3.pbf",
