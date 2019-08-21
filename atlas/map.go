@@ -199,18 +199,19 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
 				}
 
+				tileExt := tile.Extent3857()
+
 				// check if we need to clip and if we do build the clip region (tile extent)
 				var clipRegion *geom.Extent
 				if !l.DontClip {
 					// CleanGeometry is expcting to operate in pixel coordinates so the clipRegion
 					// will need to be in this same coordinate system. this will change when the new
-					// make valid routing is implemented
-					pbb, err := tegolaTile.PixelBufferedBounds()
-					if err != nil {
-						return fmt.Errorf("err calculating tile pixel buffer bounds: %v", err)
-					}
-
-					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+					// make valid routine is implemented
+					pbb := tileExt.ExpandBy(slippy.Pixels2Webs(uint(m.TileBuffer), tile.Z))
+					clipRegion = geom.NewExtent(
+						[2]float64{0, 0},
+						[2]float64{pbb.XSpan(), pbb.YSpan()},
+					)
 				}
 
 				// TODO: remove this geom conversion step once the simplify function uses geom types
@@ -224,7 +225,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// with the adoption of the new make valid routine. once implemented, the clipRegion
 				// calculation will need to be in the same coordinate space as the geometry the
 				// make valid function will be operating on.
-				geo = mvt.PrepareGeo(geo, clipRegion, float64(mvt.DefaultExtent))
+				geo = mvt.PrepareGeo(geo, tileExt, float64(mvt.DefaultExtent))
 
 				// TODO: remove this geom conversion step once the validate function uses geom types
 				sg, err = convert.ToTegola(geo)
