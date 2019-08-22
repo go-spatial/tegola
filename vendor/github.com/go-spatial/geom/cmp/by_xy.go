@@ -1,10 +1,20 @@
 package cmp
 
+import "github.com/go-spatial/geom"
+
 type ByXY [][2]float64
 
 func (xy ByXY) Less(i, j int) bool { return XYLessPoint(xy[i], xy[j]) }
 func (xy ByXY) Swap(i, j int)      { xy[i], xy[j] = xy[j], xy[i] }
 func (xy ByXY) Len() int           { return len(xy) }
+
+type PointByXY []geom.Point
+
+func (xy PointByXY) Less(i, j int) bool {
+	return XYLessPoint([2]float64(xy[i]), [2]float64(xy[j]))
+}
+func (xy PointByXY) Swap(i, j int) { xy[i], xy[j] = xy[j], xy[i] }
+func (xy PointByXY) Len() int      { return len(xy) }
 
 // bySizeXY is for sorting polygons. There are a few things we need to take
 // in to consideration when sorting polygons.

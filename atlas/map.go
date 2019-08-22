@@ -224,7 +224,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// with the adoption of the new make valid routine. once implemented, the clipRegion
 				// calculation will need to be in the same coordinate space as the geometry the
 				// make valid function will be operating on.
-				geo = mvt.PrepareGeo(geo, clipRegion, float64(mvt.DefaultExtent))
+				geo = mvt.PrepareGeo(geo, tile.Extent3857(), float64(mvt.DefaultExtent))
 
 				// TODO: remove this geom conversion step once the validate function uses geom types
 				sg, err = convert.ToTegola(geo)
