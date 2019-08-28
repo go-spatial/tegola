@@ -1,9 +1,12 @@
 package server_test
 
 import (
+	"crypto/tls"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"testing"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom"
@@ -15,7 +18,7 @@ import (
 // test server config
 const (
 	httpPort       = ":8080"
-	serverVersion  = "0.4.0"
+	serverVersion  = "0.10.0"
 	serverHostName = "tegola.io"
 )
 
@@ -106,4 +109,43 @@ func init() {
 
 	// register a map with atlas
 	atlas.AddMap(testMap)
+}
+
+func TestURLRoot(t *testing.T) {
+	type tcase struct {
+		request  http.Request
+		hostName string
+		expected string
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+
+			server.HostName = tc.hostName
+
+			output := server.URLRoot(&tc.request).String()
+			if output != tc.expected {
+				t.Errorf("expected (%v) got (%v)", tc.expected, output)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"http": {
+			request:  http.Request{},
+			hostName: serverHostName,
+			expected: fmt.Sprintf("http://%v", serverHostName),
+		},
+		"https": {
+			request: http.Request{
+				TLS: &tls.ConnectionState{},
+			},
+			hostName: serverHostName,
+			expected: fmt.Sprintf("https://%v", serverHostName),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
 }

@@ -1,6 +1,4 @@
-/*
-	config loads and understands the tegola config format.
-*/
+// Package config loads and understands the tegola config format.
 package config
 
 import (
@@ -35,9 +33,10 @@ type Config struct {
 }
 
 type Webserver struct {
-	HostName env.String `toml:"hostname"`
-	Port     env.String `toml:"port"`
-	Headers  env.Dict   `toml:"headers"`
+	HostName  env.String `toml:"hostname"`
+	Port      env.String `toml:"port"`
+	URIPrefix env.String `toml:"uri_prefix"`
+	Headers   env.Dict   `toml:"headers"`
 }
 
 // A Map represents a map in the Tegola Config file.
@@ -137,6 +136,15 @@ func (c *Config) Validate() error {
 			if v == strings.ToLower(k) {
 				return ErrInvalidHeader{Header: k}
 			}
+		}
+	}
+
+	// check if webserver.uri_prefix is set and if so
+	// confirm it starts with a forward slash "/"
+	if string(c.Webserver.URIPrefix) != "" {
+		uriPrefix := string(c.Webserver.URIPrefix)
+		if string(uriPrefix[0]) != "/" {
+			return ErrInvalidURIPrefix(uriPrefix)
 		}
 	}
 
