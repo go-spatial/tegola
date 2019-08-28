@@ -50,6 +50,10 @@ var serverCmd = &cobra.Command{
 			server.Headers[name] = val
 		}
 
+		if conf.Webserver.URIPrefix != "" {
+			server.URIPrefix = string(conf.Webserver.URIPrefix)
+		}
+
 		// start our webserver
 		srv := server.Start(nil, serverPort)
 		shutdown(srv)

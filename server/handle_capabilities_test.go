@@ -259,15 +259,15 @@ func TestHandleCapabilities(t *testing.T) {
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
 						Bounds:       tegola.WGS84Bounds,
-						Capabilities: "http://cdn.tegola.io:8080/capabilities/test-map.json?debug=true",
+						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
 						Tiles: []string{
-							"http://cdn.tegola.io:8080/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
+							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
 								Name: testLayer1.MVTName(),
 								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io:8080/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
+									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 								},
 								MinZoom: testLayer1.MinZoom,
 								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
@@ -275,7 +275,7 @@ func TestHandleCapabilities(t *testing.T) {
 							{
 								Name: "test-layer-2-name",
 								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io:8080/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
+									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
@@ -283,7 +283,7 @@ func TestHandleCapabilities(t *testing.T) {
 							{
 								Name: "debug-tile-outline",
 								Tiles: []string{
-									"http://cdn.tegola.io:8080/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
 								},
 								MinZoom: 0,
 								MaxZoom: atlas.MaxZoom,
@@ -291,7 +291,7 @@ func TestHandleCapabilities(t *testing.T) {
 							{
 								Name: "debug-tile-center",
 								Tiles: []string{
-									"http://cdn.tegola.io:8080/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
 								},
 								MinZoom: 0,
 								MaxZoom: atlas.MaxZoom,

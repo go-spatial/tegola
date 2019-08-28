@@ -93,6 +93,10 @@ func main() {
 		server.Headers[name] = val
 	}
 
+	if conf.Webserver.URIPrefix != "" {
+		server.URIPrefix = string(conf.Webserver.URIPrefix)
+	}
+
 	// http route setup
 	mux := server.NewRouter(nil)
 
@@ -105,7 +109,7 @@ func main() {
 
 // URLRoot overrides the default server.URLRoot function in order to include the "stage" part of the root
 // that is part of lambda's URL scheme
-func URLRoot(r *http.Request) string {
+func URLRoot(r *http.Request) *url.URL {
 	u := url.URL{
 		Scheme: scheme(r),
 		Host:   r.Header.Get("Host"),
@@ -116,7 +120,7 @@ func URLRoot(r *http.Request) string {
 		u.Path = ctx.RequestContext.Stage
 	}
 
-	return u.String()
+	return &u
 }
 
 // various checks to determine if the request is http or https. the scheme is needed for the TileJSON URLs

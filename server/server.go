@@ -4,7 +4,8 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"strings"
+	"net/url"
+	"path"
 
 	"github.com/dimfeld/httptreemux"
 
@@ -35,6 +36,10 @@ var (
 	// configurable via the tegola config.toml file (set in main.go)
 	Headers = map[string]string{}
 
+	// URIPrefix sets a prefix on all server endpoints. This is often used
+	// when the server sits behind a reverse proxy with a prefix (i.e. /tegola)
+	URIPrefix = "/"
+
 	// DefaultCORSHeaders define the default CORS response headers added to all requests
 	DefaultCORSHeaders = map[string]string{
 		"Access-Control-Allow-Origin":  "*",
@@ -45,7 +50,7 @@ var (
 // NewRouter set's up the our routes.
 func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r := httptreemux.New()
-	group := r.NewGroup("/")
+	group := r.NewGroup(URIPrefix)
 
 	// one handler to respond to all OPTIONS requests for registered routes with our CORS headers
 	r.OptionsHandler = corsHandler
@@ -94,38 +99,15 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 	return srv
 }
 
-// hostName determines the hostname:port to return based on the following hierarchy
-// - HostName / Port values as configured via the config file
-// - The request host / port if config HostName or Port is missing
+// hostName determines weather to use an user defined HostName
+// or the host from the incoming request
 func hostName(r *http.Request) string {
-	var requestHostname string
-	var requestPort string
-
-	substrs := strings.Split(r.Host, ":")
-
-	switch len(substrs) {
-	case 1:
-		requestHostname = substrs[0]
-	case 2:
-		requestHostname = substrs[0]
-		requestPort = substrs[1]
-	default:
-		log.Warnf("multiple colons (':') in host string: %v", r.Host)
+	// if the HostName has been configured, don't mutate it
+	if HostName != "" {
+		return HostName
 	}
 
-	retHost := HostName
-	if HostName == "" {
-		retHost = requestHostname
-	}
-
-	if Port != "" && Port != "none" {
-		return retHost + Port
-	}
-	if requestPort != "" && Port != "none" {
-		return retHost + ":" + requestPort
-	}
-
-	return retHost
+	return r.Host
 }
 
 // various checks to determin if the request is http or https. the scheme is needed for the TileURLs
@@ -142,8 +124,32 @@ func scheme(r *http.Request) string {
 
 // URLRoot builds a string containing the scheme, host and port based on a combination of user defined values,
 // headers and request parameters. The function is public so it can be overridden for other implementations.
-var URLRoot = func(r *http.Request) string {
-	return fmt.Sprintf("%v://%v", scheme(r), hostName(r))
+var URLRoot = func(r *http.Request) *url.URL {
+	root := url.URL{
+		Scheme: scheme(r),
+		Host:   hostName(r),
+	}
+
+	return &root
+}
+
+// buildCapabilitiesURL is responsible for building the various URLs which are returned by
+// the capabilities endpoints using the request, uri parts, and query params the function
+// will determine the protocol host:port and URI prefix that need to be included based on
+// user defined configurations and request context
+func buildCapabilitiesURL(r *http.Request, uriParts []string, query url.Values) string {
+	uri := path.Join(uriParts...)
+	q := query.Encode()
+	if q != "" {
+		// prepend our query identifier
+		q = "?" + q
+	}
+
+	// usually the url.URL package would be used for building the URL, but the
+	// uri template for the tiles contains characters that the package does not like:
+	// {z}/{x}/{y}. These values are escaped during the String() call which does not
+	// work for the capabilities URLs.
+	return fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, uri), q)
 }
 
 // corsHanlder is used to respond to all OPTIONS requests for registered routes

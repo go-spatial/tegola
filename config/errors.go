@@ -60,3 +60,9 @@ type ErrInvalidHeader struct {
 func (e ErrInvalidHeader) Error() string {
 	return fmt.Sprintf("config: header (%v) blacklisted", e.Header)
 }
+
+type ErrInvalidURIPrefix string
+
+func (e ErrInvalidURIPrefix) Error() string {
+	return fmt.Sprintf("config: invalid uri_prefix (%v). uri_prefix must start with a forward slash '/' ", string(e))
+}
