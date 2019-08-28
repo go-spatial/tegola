@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
@@ -125,7 +126,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			MinZoom: m.Layers[i].MinZoom,
 			MaxZoom: m.Layers[i].MaxZoom,
 			Tiles: []string{
-				fmt.Sprintf("%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", URLRoot(r), req.mapName, m.Layers[i].MVTName(), debugQuery),
+				fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, "maps", req.mapName, m.Layers[i].MVTName(), "{z}/{x}/{y}.pbf"), debugQuery),
 			},
 		}
 
@@ -145,7 +146,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 	}
 
-	tileURL := fmt.Sprintf("%v/maps/%v/{z}/{x}/{y}.pbf%v", URLRoot(r), req.mapName, debugQuery)
+	tileURL := fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, "maps", req.mapName, "{z}/{x}/{y}.pbf"), debugQuery)
 
 	// build our URL scheme for the tile grid
 	tileJSON.Tiles = append(tileJSON.Tiles, tileURL)

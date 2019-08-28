@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
@@ -61,9 +62,9 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			Bounds:      m.Bounds,
 			Center:      m.Center,
 			Tiles: []string{
-				fmt.Sprintf("%v/maps/%v/{z}/{x}/{y}.pbf%v", URLRoot(r), m.Name, debugQuery),
+				fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, "maps", m.Name, "{z}/{x}/{y}.pbf"), debugQuery),
 			},
-			Capabilities: fmt.Sprintf("%v/capabilities/%v.json%v", URLRoot(r), m.Name, debugQuery),
+			Capabilities: fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, "capabilities", m.Name+".json"), debugQuery),
 		}
 
 		for i := range m.Layers {
@@ -94,7 +95,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			cLayer := CapabilitiesLayer{
 				Name: m.Layers[i].MVTName(),
 				Tiles: []string{
-					fmt.Sprintf("%v/maps/%v/%v/{z}/{x}/{y}.pbf%v", URLRoot(r), m.Name, m.Layers[i].MVTName(), debugQuery),
+					fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, "maps", m.Name, m.Layers[i].MVTName(), "{z}/{x}/{y}.pbf"), debugQuery),
 				},
 				MinZoom: m.Layers[i].MinZoom,
 				MaxZoom: m.Layers[i].MaxZoom,

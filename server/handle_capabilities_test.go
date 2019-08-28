@@ -246,61 +246,6 @@ func TestHandleCapabilities(t *testing.T) {
 				},
 			},
 		},
-		"config set hostname unset port": {
-			// With hostname set and port unset in config, urls should have host from config and
-			//  port from uri: "cdn.tegola.io:8080"
-			hostname: "cdn.tegola.io",
-			uri:      "http://localhost:8080/capabilities?debug=true",
-			expected: server.Capabilities{
-				Version: serverVersion,
-				Maps: []server.CapabilitiesMap{
-					{
-						Name:         "test-map",
-						Attribution:  "test attribution",
-						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       tegola.WGS84Bounds,
-						Capabilities: "http://cdn.tegola.io:8080/capabilities/test-map.json?debug=true",
-						Tiles: []string{
-							"http://cdn.tegola.io:8080/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
-						},
-						Layers: []server.CapabilitiesLayer{
-							{
-								Name: testLayer1.MVTName(),
-								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io:8080/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
-								},
-								MinZoom: testLayer1.MinZoom,
-								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
-							},
-							{
-								Name: "test-layer-2-name",
-								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io:8080/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
-								},
-								MinZoom: testLayer2.MinZoom,
-								MaxZoom: testLayer2.MaxZoom,
-							},
-							{
-								Name: "debug-tile-outline",
-								Tiles: []string{
-									"http://cdn.tegola.io:8080/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: atlas.MaxZoom,
-							},
-							{
-								Name: "debug-tile-center",
-								Tiles: []string{
-									"http://cdn.tegola.io:8080/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
-								},
-								MinZoom: 0,
-								MaxZoom: atlas.MaxZoom,
-							},
-						},
-					},
-				},
-			},
-		},
 	}
 
 	for name, tc := range tests {

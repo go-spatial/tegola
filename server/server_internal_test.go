@@ -15,23 +15,26 @@ func TestHostName(t *testing.T) {
 		expected string
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		// set the package variable
-		HostName = tc.hostName
-		Port = tc.port
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			// set the package variable
+			HostName = tc.hostName
+			Port = tc.port
 
-		url, err := url.Parse(tc.url)
-		if err != nil {
-			t.Errorf("url(%v) parse error, expected nil got %v", tc.url, err)
-			return
-		}
+			url, err := url.Parse(tc.url)
+			if err != nil {
+				t.Errorf("url(%v) parse error, expected nil got %v", tc.url, err)
+				return
+			}
 
-		req := http.Request{URL: url, Host: url.Host}
+			req := http.Request{URL: url, Host: url.Host}
 
-		output := hostName(&req)
-		if output != tc.expected {
-			t.Errorf("hostname, expected %v got %v", tc.expected, output)
-			return
+			output := hostName(&req)
+			if output != tc.expected {
+				t.Errorf("hostname, expected %v got %v", tc.expected, output)
+				return
+			}
+
 		}
 	}
 
@@ -52,7 +55,7 @@ func TestHostName(t *testing.T) {
 			// Hostname set, no port in config, but port in url.  Expect <config_host>:<url_port>.
 			url:      "http://localhost:8080/capabilities",
 			hostName: "cdn.tegola.io",
-			expected: "cdn.tegola.io:8080",
+			expected: "cdn.tegola.io",
 		},
 		"hostname set no port in config or url": {
 			url:      "http://localhost/capabilities",
@@ -66,8 +69,7 @@ func TestHostName(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -77,10 +79,13 @@ func TestScheme(t *testing.T) {
 		expected string
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		output := scheme(&tc.request)
-		if output != tc.expected {
-			t.Errorf("scheme, expected (%v) got (%v)", tc.expected, output)
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+
+			output := scheme(&tc.request)
+			if output != tc.expected {
+				t.Errorf("scheme, expected (%v) got (%v)", tc.expected, output)
+			}
 		}
 	}
 
@@ -109,7 +114,6 @@ func TestScheme(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
