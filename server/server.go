@@ -2,8 +2,10 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 
 	"github.com/dimfeld/httptreemux"
 
@@ -129,6 +131,25 @@ var URLRoot = func(r *http.Request) *url.URL {
 	}
 
 	return &root
+}
+
+// buildCapabilitiesURL is responsible for building the various URLs which are returned by
+// the capabilities endpoints using the request, uri parts, and query params the function
+// will determine the protocol host:port and URI prefix that need to be included based on
+// user defined configurations and request context
+func buildCapabilitiesURL(r *http.Request, uriParts []string, query url.Values) string {
+	uri := path.Join(uriParts...)
+	q := query.Encode()
+	if q != "" {
+		// prepend our query identifier
+		q = "?" + q
+	}
+
+	// usually the url.URL package would be used for building the URL, but the
+	// uri template for the tiles contains characters that the package does not like:
+	// {z}/{x}/{y}. These values are escaped during the String() call which does not
+	// work for the capabilities URLs.
+	return fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, uri), q)
 }
 
 // corsHanlder is used to respond to all OPTIONS requests for registered routes

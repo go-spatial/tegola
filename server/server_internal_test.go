@@ -117,3 +117,69 @@ func TestScheme(t *testing.T) {
 		t.Run(name, fn(tc))
 	}
 }
+
+func TestBuildCapabilitiesURL(t *testing.T) {
+	type tcase struct {
+		request   http.Request
+		uriParts  []string
+		uriPrefix string
+		query     url.Values
+		expected  string
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+
+			if tc.uriPrefix != "" {
+				URIPrefix = tc.uriPrefix
+			} else {
+				URIPrefix = "/"
+			}
+
+			output := buildCapabilitiesURL(&tc.request, tc.uriParts, tc.query)
+			if output != tc.expected {
+				t.Errorf("expected (%v) got (%v)", tc.expected, output)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"no uri prefix no query": {
+			request: http.Request{
+				Host: "cdn.tegola.io",
+			},
+			uriParts: []string{"foo", "bar"},
+			query:    url.Values{},
+			expected: "http://cdn.tegola.io/foo/bar",
+		},
+		"uri prefix no query": {
+			request: http.Request{
+				Host: "cdn.tegola.io",
+			},
+			uriParts:  []string{"foo", "bar"},
+			uriPrefix: "/tegola",
+			query:     url.Values{},
+			expected:  "http://cdn.tegola.io/tegola/foo/bar",
+		},
+		"uri prefix and query": {
+			request: http.Request{
+				Host: "cdn.tegola.io",
+			},
+			uriParts:  []string{"foo", "bar"},
+			uriPrefix: "/tegola",
+			query: url.Values{
+				"debug": []string{"true"},
+			},
+			expected: "http://cdn.tegola.io/tegola/foo/bar?debug=true",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+
+	// reset the URIPrefix. Ideally this would not be necessary but the server package is
+	// designed as a singleton right now. Eventually this will change so the tests
+	// don't need to consider each other
+	URIPrefix = "/"
+}
