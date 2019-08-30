@@ -1,3 +1,19 @@
+## 0.10.0 (2019-08-30)
+**Features**
+* cache/redis: add configurable key expiration time. #600 (@tierpod)
+* server: configurable webserver URI Prefix #136 (@ARolek)
+
+**Bug Fixes**
+* server: Content-Length for non-gzipped responses (@thomersch)
+* cmd: tegola command fails when running version subcommand without a config. #626 (@ear7h)
+
+**Maintenance**
+* Upgraded internal viewer Mapbox GL JS to 1.0.0 (@ARolek)
+* Skip S3 tests on external pull requests (@gdey)
+
+**Breaking Changes**
+* If a `webserver.hostname` is set in the config the port is no longer added to the hostname. When setting the `hostname` it's now assumed the user wants full control of `hostname:port` combo.
+
 ## 0.9.0 (2019-04-09)
 **Features**
 * Add support for --no-cache command line flag override (#517 @tierpod)
