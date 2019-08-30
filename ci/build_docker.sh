@@ -35,7 +35,7 @@ docker build -f ${PROJECT_DIR}/docker/Dockerfile -t "${DOCKER_NAME}:${VERSION_TA
 # push to docker hub
 if [ "${PUSH_TO_DOCKER}" == "yes" ] ; then
    docker tag ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION_TAG} ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:latest
-   docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
+   echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
    docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION_TAG}
    docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:latest
 fi
