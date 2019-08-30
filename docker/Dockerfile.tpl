@@ -26,14 +26,14 @@
 
 
 # --- Build the binary
-FROM golang:1.11.0-alpine3.8 AS build
+FROM golang:1.12.9-alpine3.10 AS build
 
 # Only needed for CGO support at time of build, results in no noticable change in binary size
 # incurs approximately 1:30 extra build time (1:54 vs 0:27) to install packages.  Doesn't impact
 # development as these layers are drawn from cache after the first build.
 RUN apk update \ 
-	&& apk add musl-dev=1.1.19-r10 \
-	&& apk add gcc=6.4.0-r9
+	&& apk add musl-dev=1.1.22-r3 \
+	&& apk add gcc=8.3.0-r0
 
 # Set up source for compilation
 RUN mkdir -p /go/src/github.com/go-spatial/tegola
@@ -45,7 +45,7 @@ RUN cd /go/src/github.com/go-spatial/tegola/cmd/tegola \
 	&& chmod a+x /opt/tegola
 
 # --- Create minimal deployment image, just alpine & the binary
-FROM alpine:3.8
+FROM alpine:3.10
 
 RUN apk update \
 	&& apk add ca-certificates \
