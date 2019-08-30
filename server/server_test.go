@@ -93,6 +93,24 @@ func doRequest(a *atlas.Atlas, method string, uri string, body io.Reader) (w *ht
 	return w, router, nil
 }
 
+// pre test setup phase
+func init() {
+	server.Version = serverVersion
+	server.HostName = serverHostName
+
+	testMap := atlas.NewWebMercatorMap(testMapName)
+	testMap.Attribution = testMapAttribution
+	testMap.Center = testMapCenter
+	testMap.Layers = append(testMap.Layers,
+		testLayer1,
+		testLayer2,
+		testLayer3,
+	)
+
+	// register a map with atlas
+	atlas.AddMap(testMap)
+}
+
 func TestURLRoot(t *testing.T) {
 	type tcase struct {
 		request  http.Request
@@ -130,22 +148,4 @@ func TestURLRoot(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
 	}
-}
-
-// pre test setup phase
-func init() {
-	server.Version = serverVersion
-	server.HostName = serverHostName
-
-	testMap := atlas.NewWebMercatorMap(testMapName)
-	testMap.Attribution = testMapAttribution
-	testMap.Center = testMapCenter
-	testMap.Layers = append(testMap.Layers,
-		testLayer1,
-		testLayer2,
-		testLayer3,
-	)
-
-	// register a map with atlas
-	atlas.AddMap(testMap)
 }

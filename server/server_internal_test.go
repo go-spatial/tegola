@@ -51,8 +51,15 @@ func TestHostName(t *testing.T) {
 			port:     "none",
 			expected: "cdn.tegola.io",
 		},
+		"hostname set port set": {
+			// With hostname set and port set to "none" in config, expect "cdn.tegola.io"
+			url:      "http://localhost:8080/capabilities",
+			hostName: "cdn.tegola.io",
+			port:     ":9090",
+			expected: "cdn.tegola.io",
+		},
 		"hostname set port in request": {
-			// Hostname set, no port in config, but port in url.  Expect <config_host>:<url_port>.
+			// Hostname set, no port in config, but port in url.  Expect <config_host>
 			url:      "http://localhost:8080/capabilities",
 			hostName: "cdn.tegola.io",
 			expected: "cdn.tegola.io",
