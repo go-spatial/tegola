@@ -140,8 +140,10 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	{
 		// Check to see that the zxy is within the bounds of the map.
+		// TODO(@ear7h): use a more efficient version of Intersect that doesn't
+		// make a new extent
 		textent := tile.Extent4326()
-		if !m.Bounds.Contains(textent) {
+		if _, intersect := m.Bounds.Intersect(textent); !intersect {
 			logAndError(w, http.StatusNotFound, "map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
 			return
 		}
