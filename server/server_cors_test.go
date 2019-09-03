@@ -25,6 +25,7 @@ func CORSTest(t *testing.T, tc CORSTestCase) {
 
 	server.HostName = tc.hostname
 	server.Port = tc.port
+	server.URIPrefix = "/"
 
 	// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
 	router := server.NewRouter(nil)

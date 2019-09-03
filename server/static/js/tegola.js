@@ -14,7 +14,7 @@ var app = new Vue({
 		},
 		hideMapsList: false,
 		inspectorIsActive: false,
-		//	built out based on the /capabilities response and style.json response
+		//	built out based on the capabilities response and style.json response
 		maps:[
 		/*	data model 
 			{
@@ -34,7 +34,7 @@ var app = new Vue({
 	},
 	created: function(){
 		var me = this;
-		var url = "/capabilities";
+		var url = "capabilities";
 
 		var debug = this.getParameterByName('debug');
 		if (debug == 'true'){
@@ -112,7 +112,7 @@ var app = new Vue({
 			}
 			//	initial load
 			if (!me.map){
-				var url = '/maps/'+mapRec.name+'/style.json';
+				var url = 'maps/'+mapRec.name+'/style.json';
 				if (me.debug) {
 					url += '?debug=true';
 				}
@@ -123,7 +123,7 @@ var app = new Vue({
 				});
 				me.map.addControl(new mapboxgl.NavigationControl());
 			} else {
-				me.map.setStyle('/maps/'+mapRec.name+'/style.json');
+				me.map.setStyle('maps/'+mapRec.name+'/style.json');
 			}
 
 			me.map.on('styledata', me.setData);
