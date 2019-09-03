@@ -20,6 +20,10 @@ func TestMiddlewareGzipHandler(t *testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
 
+			// our tests don't use the URIPrefix but our server is a singleton
+			// so we set it to the default for this test
+			server.URIPrefix = "/"
+
 			var err error
 
 			// setup a new atlas

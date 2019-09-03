@@ -2,9 +2,9 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -54,14 +54,14 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var debugQuery string
+	// if we have a debug param add it to our URLs
+	debugQuery := url.Values{}
 	if r.URL.Query().Get("debug") == "true" {
-		debugQuery = "?debug=true"
+		debugQuery.Set("debug", "true")
 
+		// update our map to include the debug layers
 		m = m.AddDebugLayers()
 	}
-
-	sourceURL := fmt.Sprintf("%v/capabilities/%v.json%v", URLRoot(r), req.mapName, debugQuery)
 
 	mapboxStyle := style.Root{
 		Name:    m.Name,
@@ -71,7 +71,7 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Sources: map[string]style.Source{
 			req.mapName: {
 				Type: style.SourceTypeVector,
-				URL:  sourceURL,
+				URL:  buildCapabilitiesURL(r, []string{"capabilities", req.mapName + ".json"}, debugQuery),
 			},
 		},
 		Layers: []style.Layer{},

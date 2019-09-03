@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
+	"strings"
 
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
@@ -26,9 +28,8 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 			return
 		}
 
-		// parse our URI into a cache key structure (pop off the "maps/" prefix)
-		// 5 is the value of len("maps/")
-		key, err := cache.ParseKey(r.URL.Path[5:])
+		// parse our URI into a cache key structure (remove any configured URIPrefix + "maps/" )
+		key, err := cache.ParseKey(strings.TrimPrefix(r.URL.Path, path.Join(URIPrefix, "maps")))
 		if err != nil {
 			log.Errorf("cache middleware: ParseKey err: %v", err)
 			next.ServeHTTP(w, r)
