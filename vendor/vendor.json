@@ -27,34 +27,40 @@
 			"revisionTime": "2017-05-07T10:33:33Z"
 		},
 		{
-			"checksumSHA1": "stlCSj5YfHbH1fZvziEZtMTxa8I=",
-			"path": "github.com/arolek/algnhsa",
-			"revision": "c6c22c361ed25a5b441f4d741573385abc72ccd4",
-			"revisionTime": "2018-06-06T22:25:14Z"
+			"checksumSHA1": "3FU3mAcUW5yHJdz2tJsnGVoUrIo=",
+			"path": "github.com/akrylysov/algnhsa",
+			"revision": "e8503cf02d256e518f8f8ae2be071d50514aa7bc",
+			"revisionTime": "2019-09-26T22:36:48Z"
 		},
 		{
-			"checksumSHA1": "H+nuubKZtdEPryI/ZiaF3W+hnus=",
+			"checksumSHA1": "yxAQc0KCtItM8fobSv4XtAaBE/I=",
 			"path": "github.com/aws/aws-lambda-go/events",
-			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
-			"revisionTime": "2018-04-08T23:25:24Z"
+			"revision": "fe4f484f034626157ca7deb2ddb418ffac99a9a6",
+			"revisionTime": "2019-08-29T20:26:44Z"
 		},
 		{
-			"checksumSHA1": "Atnv24CtEnB8ZLGDqFevLMfzLtQ=",
+			"checksumSHA1": "WMRt5NGacaITs3JFQWJBIOLL1so=",
 			"path": "github.com/aws/aws-lambda-go/lambda",
-			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
-			"revisionTime": "2018-04-08T23:25:24Z"
+			"revision": "fe4f484f034626157ca7deb2ddb418ffac99a9a6",
+			"revisionTime": "2019-08-29T20:26:44Z"
+		},
+		{
+			"checksumSHA1": "R5cnUZPkb0MPZnK822yvu4qlTXQ=",
+			"path": "github.com/aws/aws-lambda-go/lambda/handlertrace",
+			"revision": "fe4f484f034626157ca7deb2ddb418ffac99a9a6",
+			"revisionTime": "2019-08-29T20:26:44Z"
 		},
 		{
 			"checksumSHA1": "d4ehJWLS4YsqFG825pgwdvKDB6A=",
 			"path": "github.com/aws/aws-lambda-go/lambda/messages",
-			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
-			"revisionTime": "2018-04-08T23:25:24Z"
+			"revision": "fe4f484f034626157ca7deb2ddb418ffac99a9a6",
+			"revisionTime": "2019-08-29T20:26:44Z"
 		},
 		{
 			"checksumSHA1": "f9MhOwQHveaPVWO6trwfqHa+W0M=",
 			"path": "github.com/aws/aws-lambda-go/lambdacontext",
-			"revision": "ea03c2814414b2223eff860ed2286a83ed8a195c",
-			"revisionTime": "2018-04-08T23:25:24Z"
+			"revision": "fe4f484f034626157ca7deb2ddb418ffac99a9a6",
+			"revisionTime": "2019-08-29T20:26:44Z"
 		},
 		{
 			"checksumSHA1": "nv58S9hV7km2wMcP28T3Fla/7wo=",
