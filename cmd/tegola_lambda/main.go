@@ -7,27 +7,40 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/arolek/algnhsa"
+	"github.com/akrylysov/algnhsa"
+	"github.com/dimfeld/httptreemux"
+
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/mvt"
 	"github.com/go-spatial/tegola/server"
 )
 
-// set at build time via the CI
-var Version = "version not set"
+var (
+	// Version set at build time via the CI
+	Version = "version not set"
+	// mux is a reference to the http muxer. it's stored as a package
+	// var so we can take advantage of Lambda's "Global State".
+	mux *httptreemux.TreeMux
+)
 
+const DefaultConfLocation = "config.toml"
+
+// instantiate the server during the init() function and then store
+// the muxer in a package variable. This allows us to take advantage
+// of "Global State" to avoid needing to re-parse the config, connect
+// to databases, tile caches, etc. on each function invocation.
+//
+// For more info, see Using Global State:
+// https://docs.aws.amazon.com/lambda/latest/dg/go-programming-model-handler-types.html
 func init() {
-	// override the URLRoot func with a lambda specific one
-	server.URLRoot = URLRoot
-}
-
-func main() {
 	var err error
 
-	confLocation := "config.toml"
+	// override the URLRoot func with a lambda specific one
+	server.URLRoot = URLRoot
+
+	confLocation := DefaultConfLocation
 
 	// check if the env TEGOLA_CONFIG is set
 	if os.Getenv("TEGOLA_CONFIG") != "" {
@@ -98,13 +111,18 @@ func main() {
 	}
 
 	// http route setup
-	mux := server.NewRouter(nil)
+	mux = server.NewRouter(nil)
+}
 
+func main() {
 	// the second argument here tells algnhasa to watch for the MVT MimeType Content-Type headers
 	// if it detects this in the response the payload will be base64 encoded. Lambda needs to be configured
 	// to handle binary responses so it can convert the base64 encoded payload back into binary prior
 	// to sending to the client
-	algnhsa.ListenAndServe(mux, []string{mvt.MimeType})
+	algnhsa.ListenAndServe(mux, &algnhsa.Options{
+		BinaryContentTypes: []string{"application/vnd.mapbox-vector-tile"},
+		UseProxyPath:       true,
+	})
 }
 
 // URLRoot overrides the default server.URLRoot function in order to include the "stage" part of the root

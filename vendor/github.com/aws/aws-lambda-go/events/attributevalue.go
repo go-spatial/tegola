@@ -18,6 +18,10 @@ type DynamoDBAttributeValue struct {
 	dataType DynamoDBDataType
 }
 
+// This struct represents DynamoDBAttributeValue which doesn't
+// implement fmt.Stringer interface and safely `fmt.Sprintf`able
+type dynamoDbAttributeValue DynamoDBAttributeValue
+
 // Binary provides access to an attribute of type Binary.
 // Method panics if the attribute is not of type Binary.
 func (av DynamoDBAttributeValue) Binary() []byte {
@@ -98,8 +102,13 @@ func (av DynamoDBAttributeValue) NumberSet() []string {
 // String provides access to an attribute of type String.
 // Method panics if the attribute is not of type String.
 func (av DynamoDBAttributeValue) String() string {
-	av.ensureType(DataTypeString)
-	return av.value.(string)
+	if av.dataType == DataTypeString {
+		return av.value.(string)
+	}
+	// If dataType is not DataTypeString during fmt.Sprintf("%#v", ...)
+	// compiler confuses with fmt.Stringer interface and panics
+	// instead of printing the struct.
+	return fmt.Sprintf("%v", dynamoDbAttributeValue(av))
 }
 
 // StringSet provides access to an attribute of type String Set.
@@ -119,11 +128,82 @@ func (av DynamoDBAttributeValue) DataType() DynamoDBDataType {
 	return av.dataType
 }
 
+// NewBinaryAttribute creates an DynamoDBAttributeValue containing a Binary
+func NewBinaryAttribute(value []byte) DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.value = value
+	av.dataType = DataTypeBinary
+	return av
+}
+
+// NewBooleanAttribute creates an DynamoDBAttributeValue containing a Boolean
+func NewBooleanAttribute(value bool) DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.value = value
+	av.dataType = DataTypeBoolean
+	return av
+}
+
+// NewBinarySetAttribute creates an DynamoDBAttributeValue containing a BinarySet
+func NewBinarySetAttribute(value [][]byte) DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.value = value
+	av.dataType = DataTypeBinarySet
+	return av
+}
+
+// NewListAttribute creates an DynamoDBAttributeValue containing a List
+func NewListAttribute(value []DynamoDBAttributeValue) DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.value = value
+	av.dataType = DataTypeList
+	return av
+}
+
+// NewMapAttribute creates an DynamoDBAttributeValue containing a Map
+func NewMapAttribute(value map[string]DynamoDBAttributeValue) DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.value = value
+	av.dataType = DataTypeMap
+	return av
+}
+
+// NewNumberAttribute creates an DynamoDBAttributeValue containing a Number
+func NewNumberAttribute(value string) DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.value = value
+	av.dataType = DataTypeNumber
+	return av
+}
+
+// NewNumberSetAttribute creates an DynamoDBAttributeValue containing a NumberSet
+func NewNumberSetAttribute(value []string) DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.value = value
+	av.dataType = DataTypeNumberSet
+	return av
+}
+
+// NewNullAttribute creates an DynamoDBAttributeValue containing a Null
+func NewNullAttribute() DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.dataType = DataTypeNull
+	return av
+}
+
 // NewStringAttribute creates an DynamoDBAttributeValue containing a String
 func NewStringAttribute(value string) DynamoDBAttributeValue {
 	var av DynamoDBAttributeValue
 	av.value = value
 	av.dataType = DataTypeString
+	return av
+}
+
+// NewStringSetAttribute creates an DynamoDBAttributeValue containing a StringSet
+func NewStringSetAttribute(value []string) DynamoDBAttributeValue {
+	var av DynamoDBAttributeValue
+	av.value = value
+	av.dataType = DataTypeStringSet
 	return av
 }
 
