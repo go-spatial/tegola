@@ -1,3 +1,13 @@
+## 0.10.2 (2019-08-30)
+**Features**
+* added tegola_lambda_cgo to the build pipeline. Geopackage can now be used with tegola_lambda (@ARolek)
+
+## 0.10.1 (2019-09-03)
+**Bug Fixes**
+* server: fixed cache middleware removing incorrect path prefix when a `uri_prefix` was set. (@ARolek)
+* server: fixed internal viewer URIs when a `uri_prefix` was set. (@ARolek)
+* server: fixed internal viewer file paths when a `uri_prefix` was set. (@ARolek #361)
+
 ## 0.10.0 (2019-08-30)
 **Features**
 * cache/redis: add configurable key expiration time. #600 (@tierpod)
