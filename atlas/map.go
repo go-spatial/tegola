@@ -231,6 +231,12 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					return err
 				}
 
+				// tranlate the geometry to tile coordinates
+				geo = mvt.PrepareGeo(geo, tile.Extent3857(), float64(m.TileExtent))
+				if geo == nil {
+					return nil
+				}
+
 				mvtLayer.AddFeatures(mvt.Feature{
 					ID:       &f.ID,
 					Tags:     f.Tags,
