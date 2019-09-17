@@ -203,7 +203,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// check if we need to clip and if we do build the clip region (tile extent)
 				var clipRegion *geom.Extent
 				if !l.DontClip {
-					// CleanGeometry is expcting to operate in pixel coordinates so the clipRegion
+					// CleanGeometry is expecting to operate in pixel coordinates so the clipRegion
 					// will need to be in this same coordinate system. this will change when the new
 					// make valid routing is implemented
 					pbb, err := tegolaTile.PixelBufferedBounds()
