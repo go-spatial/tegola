@@ -211,7 +211,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// check if we need to clip and if we do build the clip region (tile extent)
 				var clipRegion *geom.Extent
 				if !l.DontClip {
-					clipRegion = tile.Extent3857().ExpandBy(64.0)
+					clipRegion = tile.Extent3857().ExpandBy(m.TileBuffer)
 				}
 
 				// create a hitmap for the makevalid function
