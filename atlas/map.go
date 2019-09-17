@@ -169,18 +169,14 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 				// check if the feature SRID and map SRID are different. If they are then reporject
 				if f.SRID != m.SRID {
+
 					// TODO(arolek): support for additional projections
 					g, err := basic.ToWebMercator(f.SRID, geo)
 					if err != nil {
 						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %v", f.SRID, f.ID, err)
 					}
 					geo = g
-				}
 
-				// TODO: remove this geom conversion step once the simplify function uses geom types
-				tegolaGeo, err := convert.ToTegola(geo)
-				if err != nil {
-					return err
 				}
 
 				// add default tags, but don't overwrite a tag that already exists
@@ -190,42 +186,33 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					}
 				}
 
-				// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-				tegolaTile := tegola.NewTile(tile.ZXY())
-
-				sg := tegolaGeo
 				// multiple ways to turn off simplification. check the atlas init() function
 				// for how the second two conditions are set
 				if !l.DontSimplify && simplifyGeometries && tile.Z < simplificationMaxZoom {
-					sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+
+					// TODO: remove this geom conversion step once the simplify function uses geom types
+					tegolaGeo, err := convert.ToTegola(geo)
+					if err != nil {
+						return err
+					}
+
+					// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
+					tegolaTile := tegola.NewTile(tile.ZXY())
+
+					sg := simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+
+					// TODO: remove this geom conversion step once the simplify function uses geom types
+					geo, err = convert.ToGeom(sg)
+					if err != nil {
+						return err
+					}
 				}
 
 				// check if we need to clip and if we do build the clip region (tile extent)
 				var clipRegion *geom.Extent
 				if !l.DontClip {
-					// CleanGeometry is expcting to operate in pixel coordinates so the clipRegion
-					// will need to be in this same coordinate system. this will change when the new
-					// make valid routing is implemented
-					pbb, err := tegolaTile.PixelBufferedBounds()
-					if err != nil {
-						return fmt.Errorf("err calculating tile pixel buffer bounds: %v", err)
-					}
-
-					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+					clipRegion = tile.Extent3857().ExpandBy(64.0)
 				}
-
-				// TODO: remove this geom conversion step once the simplify function uses geom types
-				geo, err = convert.ToGeom(sg)
-				if err != nil {
-					return err
-				}
-
-				// TODO(arolek): currently the validate.CleanGeometry method does not operate
-				// well on geometries that are not scaled to tile coordinate space. this will change
-				// with the adoption of the new make valid routine. once implemented, the clipRegion
-				// calculation will need to be in the same coordinate space as the geometry the
-				// make valid function will be operating on.
-				geo = mvt.PrepareGeo(geo, clipRegion, float64(mvt.DefaultExtent))
 
 				// create a hitmap for the makevalid function
 				hm, err := hitmap.New(clipRegion, geo)
@@ -242,6 +229,11 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				geo, _, err = mv.Makevalid(ctx, geo, clipRegion)
 				if err != nil {
 					return err
+				}
+
+				geo = mvt.PrepareGeo(geo, tile.Extent3857(), float64(mvt.DefaultExtent))
+				if geo == nil {
+					return nil
 				}
 
 				mvtLayer.AddFeatures(mvt.Feature{
