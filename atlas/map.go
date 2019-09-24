@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/mvt"
+	"github.com/go-spatial/geom/planar/clip"
 	"github.com/go-spatial/geom/planar/makevalid"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 	"github.com/go-spatial/geom/slippy"
@@ -265,7 +266,8 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 
 				// instantiate a new makevalid struct holding the hitmap
 				mv := makevalid.Makevalid{
-					Hitmap: hm,
+					Hitmap:  hm,
+					Clipper: clip.Default,
 				}
 
 				// apply make valid routine
