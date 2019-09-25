@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/internal/log"
@@ -74,8 +73,8 @@ func seedWorker(overwrite bool) func(ctx context.Context, mt MapTile) error {
 			}
 		}
 
-		//	seed the tile
-		if err = atlas.SeedMapTile(ctx, m, z, x, y); err != nil {
+		// seed the tile
+		if err = atlas.SeedMapTile(ctx, m, mt.Tile); err != nil {
 			if err == context.Canceled {
 				return err
 			}
@@ -112,10 +111,8 @@ func purgeWorker(_ context.Context, mt MapTile) error {
 		}
 	}
 
-	//	purge the tile
-	ttile := tegola.NewTile(mt.Tile.ZXY())
-
-	if err = atlas.PurgeMapTile(m, ttile); err != nil {
+	// purge the tile
+	if err = atlas.PurgeMapTile(m, mt.Tile); err != nil {
 		return seedPurgeWorkerTileError{
 			Purge: true,
 			Tile:  *mt.Tile,

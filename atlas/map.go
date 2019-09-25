@@ -36,7 +36,7 @@ func NewWebMercatorMap(name string) Map {
 		Bounds:     tegola.WGS84Bounds,
 		Layers:     []Layer{},
 		SRID:       tegola.WebMercator,
-		TileExtent: 4096,
+		TileExtent: uint64(mvt.DefaultExtent),
 		TileBuffer: uint64(tegola.DefaultTileBuffer),
 	}
 }
@@ -240,10 +240,8 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 						return err
 					}
 
-					// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-					tegolaTile := tegola.NewTile(tile.ZXY())
-
-					sg := simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+					sg := simplify.SimplifyGeometry(tegolaGeo,
+						simplify.ZEpislon(tile.Z, float64(m.TileExtent)))
 
 					// TODO: remove this geom conversion step once the simplify function uses geom types
 					geo, err = convert.ToGeom(sg)
@@ -255,7 +253,8 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 				// check if we need to clip and if we do build the clip region (tile extent)
 				var clipRegion *geom.Extent
 				if !l.DontClip {
-					clipRegion = tile.Extent3857().ExpandBy(64.0)
+					webs := slippy.Pixels2Webs(tile.Z, uint(m.TileBuffer))
+					clipRegion = tile.Extent3857().ExpandBy(webs)
 				}
 
 				// create a hitmap for the makevalid function
