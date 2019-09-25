@@ -102,20 +102,18 @@ func (a *Atlas) AllMaps() []Map {
 
 // SeedMapTile will generate a tile and persist it to the
 // configured cache backend
-func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
+func (a *Atlas) SeedMapTile(ctx context.Context, m Map, tile *slippy.Tile) error {
 
 	if a == nil {
 		// Use the default Atlas if a, is nil. This way the empty value is
 		// still useful.
-		return defaultAtlas.SeedMapTile(ctx, m, z, x, y)
+		return defaultAtlas.SeedMapTile(ctx, m, tile)
 	}
 
 	// confirm we have a cache backend
 	if a.cacher == nil {
 		return ErrMissingCache
 	}
-
-	tile := slippy.NewTile(z, x, y)
 
 	// encode the tile
 	b, err := m.Encode(ctx, tile)
@@ -126,16 +124,16 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 	// cache key
 	key := cache.Key{
 		MapName: m.Name,
-		Z:       z,
-		X:       x,
-		Y:       y,
+		Z:       tile.Z,
+		X:       tile.X,
+		Y:       tile.Y,
 	}
 
 	return a.cacher.Set(&key, b)
 }
 
 // PurgeMapTile will purge a map tile from the configured cache backend
-func (a *Atlas) PurgeMapTile(m Map, tile *tegola.Tile) error {
+func (a *Atlas) PurgeMapTile(m Map, tile *slippy.Tile) error {
 	if a == nil {
 		// Use the default Atlas if a, is nil. This way the empty value is
 		// still useful.
@@ -249,12 +247,12 @@ func SetCache(c cache.Interface) {
 
 // SeedMapTile will generate a tile and persist it to the
 // configured cache backend for the defaultAtlas
-func SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
-	return defaultAtlas.SeedMapTile(ctx, m, z, x, y)
+func SeedMapTile(ctx context.Context, m Map, tile *slippy.Tile) error {
+	return defaultAtlas.SeedMapTile(ctx, m, tile)
 }
 
 // PurgeMapTile will purge a map tile from the configured cache backend
 // for the defaultAtlas
-func PurgeMapTile(m Map, tile *tegola.Tile) error {
+func PurgeMapTile(m Map, tile *slippy.Tile) error {
 	return defaultAtlas.PurgeMapTile(m, tile)
 }
