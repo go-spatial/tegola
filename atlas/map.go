@@ -34,14 +34,14 @@ func NewWebMercatorMap(name string) Map {
 		Bounds:     tegola.WGS84Bounds,
 		Layers:     []Layer{},
 		SRID:       tegola.WebMercator,
-		TileExtent: 4096,
+		TileExtent: uint64(mvt.DefaultExtent),
 		TileBuffer: uint64(tegola.DefaultTileBuffer),
 	}
 }
 
 type Map struct {
 	Name string
-	// Contains an attribution to be displayed when the map is shown to a user.
+	// Contains an attribution to be displayed when the map is shown to a user),
 	// 	This string is sanatized so it can't be abused as a vector for XSS or beacon tracking.
 	Attribution string
 	// The maximum extent of available map tiles in WGS:84
@@ -197,10 +197,8 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 						return err
 					}
 
-					// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-					tegolaTile := tegola.NewTile(tile.ZXY())
-
-					sg := simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+					sg := simplify.SimplifyGeometry(tegolaGeo,
+						simplify.ZEpislon(tile.Z, float64(m.TileExtent)))
 
 					// TODO: remove this geom conversion step once the simplify function uses geom types
 					geo, err = convert.ToGeom(sg)
@@ -212,7 +210,8 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// check if we need to clip and if we do build the clip region (tile extent)
 				var clipRegion *geom.Extent
 				if !l.DontClip {
-					clipRegion = tile.Extent3857().ExpandBy(float64(m.TileBuffer))
+					webs := slippy.Pixels2Webs(tile.Z, uint(m.TileBuffer))
+					clipRegion = tile.Extent3857().ExpandBy(webs)
 				}
 
 				// create a hitmap for the makevalid function
@@ -308,3 +307,4 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	// return encoded, gzipped tile
 	return gzipBuf.Bytes(), nil
 }
+
