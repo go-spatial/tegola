@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"sync"
 
@@ -13,15 +15,17 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/mvt"
+	"github.com/go-spatial/geom/encoding/wkb"
+	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/clip"
 	"github.com/go-spatial/geom/planar/makevalid"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
+	"github.com/go-spatial/geom/planar/simplify"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/maths/simplify"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
@@ -187,21 +191,40 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					}
 				}
 
+				defer func() {
+					if r := recover(); r != nil {
+						log.Println("geometry:")
+						fname := fmt.Sprintf("panic_geo_%s_%d_%d_%d", l.MVTName(), tile.Z, tile.X, tile.Y)
+						file, err := os.OpenFile(fname+".wkt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+						if err == nil {
+							err = wkt.Encode(file, geo)
+							if err != nil {
+								log.Println("ERROR WRITING panic_dump", err)
+							}
+							file.Close()
+						}
+
+						file, err = os.OpenFile(fname+".wkb", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+						if err == nil {
+							err = wkb.Encode(hex.NewEncoder(file), geo)
+							if err != nil {
+								log.Println("ERROR WRITING panic_dump", err)
+							}
+							file.Close()
+						}
+						// panic(r)
+					}
+				}()
+
 				// multiple ways to turn off simplification. check the atlas init() function
 				// for how the second two conditions are set
 				if !l.DontSimplify && simplifyGeometries && tile.Z < simplificationMaxZoom {
-
-					// TODO: remove this geom conversion step once the simplify function uses geom types
-					tegolaGeo, err := convert.ToTegola(geo)
-					if err != nil {
-						return err
+					simp := simplify.DouglasPeucker{
+						Tolerance: slippy.Pixels2Webs(tile.Z, tegola.DefaultEpsilon),
 					}
 
-					sg := simplify.SimplifyGeometry(tegolaGeo,
-						simplify.ZEpislon(tile.Z, float64(m.TileExtent)))
-
-					// TODO: remove this geom conversion step once the simplify function uses geom types
-					geo, err = convert.ToGeom(sg)
+					var err error
+					geo, err = planar.Simplify(ctx, simp, geo)
 					if err != nil {
 						return err
 					}
@@ -307,4 +330,3 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	// return encoded, gzipped tile
 	return gzipBuf.Bytes(), nil
 }
-
