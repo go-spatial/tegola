@@ -227,7 +227,14 @@ func TestEncode(t *testing.T) {
 					}
 
 					if !reflect.DeepEqual(tileLayerFeature.Geometry, expectedTileLayerFeature.Geometry) {
-						t.Errorf("expected %v got %v", expectedTileLayerFeature.Geometry, tileLayerFeature.Geometry)
+						/*
+						TODO(ear7h): us mvt decode for easier debugging
+						expect, _ := mvt.DecodeGeometry(*expectedTileLayerFeature.Type, expectedTileLayerFeature.Geometry)
+						got, _ := mvt.DecodeGeometry(*tileLayerFeature.Type, tileLayerFeature.Geometry)
+						*/
+						expect := expectedTileLayerFeature.Geometry
+						got := tileLayerFeature.Geometry
+						t.Errorf("expected %v got %v", expect, got)
 						return
 					}
 				}
@@ -314,7 +321,7 @@ func TestEncode(t *testing.T) {
 								Id:       p.Uint64(0),
 								Tags:     []uint32{0, 0, 1, 1},
 								Type:     &polygon,
-								Geometry: []uint32{9, 0, 0, 26, 8192, 0, 0, 8192, 8191, 0, 15},
+								Geometry: []uint32{9, 0, 8192, 26, 0, 8191, 8192, 0, 0, 8192, 15},
 							},
 						},
 						Keys: []string{"type", "foo"},
@@ -336,7 +343,7 @@ func TestEncode(t *testing.T) {
 								Id:       p.Uint64(0),
 								Tags:     []uint32{0, 0},
 								Type:     &polygon,
-								Geometry: []uint32{9, 0, 0, 26, 8192, 0, 0, 8192, 8191, 0, 15},
+								Geometry: []uint32{9, 0, 8192, 26, 0, 8191, 8192, 0, 0, 8192, 15},
 							},
 						},
 						Keys: []string{"type"},
@@ -382,7 +389,7 @@ func TestEncode(t *testing.T) {
 								Id:       p.Uint64(0),
 								Tags:     []uint32{0, 0, 1, 1},
 								Type:     &polygon,
-								Geometry: []uint32{9, 127, 127, 26, 8320, 0, 0, 8320, 8319, 0, 15},
+								Geometry: []uint32{9, 127, 8192, 26, 0, 8319, 8320, 0, 0, 8320, 15},
 							},
 						},
 						Extent: p.Uint32(vectorTile.Default_Tile_Layer_Extent),
@@ -422,48 +429,7 @@ func TestEncode(t *testing.T) {
 								Id:       p.Uint64(0),
 								Tags:     []uint32{0, 0, 1, 1},
 								Type:     &polygon,
-								Geometry: []uint32{9, 0, 0, 26, 8192, 0, 0, 8192, 8191, 0, 15},
-							},
-						},
-						Extent: p.Uint32(vectorTile.Default_Tile_Layer_Extent),
-					},
-				},
-			},
-		},
-		"don't clip": {
-			grid: atlas.Map{
-				Layers: []atlas.Layer{
-					{
-						Name:     "layer1",
-						MinZoom:  0,
-						MaxZoom:  2,
-						DontSimplify: true,
-						Provider: &test.TileProvider{
-							Features: []provider.Feature{
-								{
-									SRID: 3857,
-									Geometry: slippy.NewTile(0, 0, 0).Extent3857().AsPolygon(),
-								},
-							},
-						},
-						DontClip: true,
-					},
-				},
-				TileBuffer: uint64(tegola.DefaultTileBuffer),
-				TileExtent: uint64(mvt.DefaultExtent),
-			},
-			tile: slippy.NewTile(2, 3, 3),
-			expected: vectorTile.Tile{
-				Layers: []*vectorTile.Tile_Layer{
-					{
-						Version: p.Uint32(2),
-						Name:    p.String("layer1"),
-						Features: []*vectorTile.Tile_Feature{
-							{
-								Id:       p.Uint64(0),
-								Tags:     []uint32{0, 0, 1, 1},
-								Type:     &polygon,
-								Geometry: []uint32{9, 24573, 24573, 26, 32766, 0, 0, 32766, 32765, 0, 15},
+								Geometry: []uint32{9, 0, 8192, 26, 0, 8191, 8192, 0, 0, 8192, 15},
 							},
 						},
 						Extent: p.Uint32(vectorTile.Default_Tile_Layer_Extent),
