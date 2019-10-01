@@ -1,2 +1,0 @@
-# When there is a test failure, the svg's for the test are dumped in this directory.
-_test_failures

@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-spatial/geom/encoding/mvt"
 	"github.com/go-spatial/geom/encoding/wkb"
-	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -18,14 +17,7 @@ func TileExample() {
 	// We have our point in wkb format.
 	var point = []byte{0, 0, 0, 0, 1, 70, 129, 246, 35, 46, 74, 93, 192, 3, 70, 27, 60, 175, 91, 64, 64}
 	pointReader := bytes.NewReader(point)
-	ggeo, err := wkb.Decode(pointReader)
-	if err != nil {
-		panic(err)
-	}
-
-	// Need to convert to a tegola type for now. (This is teomporary till we convert over to
-	// geom types)
-	geo, err := convert.ToTegola(ggeo)
+	geo, err := wkb.Decode(pointReader)
 	if err != nil {
 		panic(err)
 	}
