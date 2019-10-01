@@ -191,28 +191,14 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					}
 				}
 
+				// geo-processing is hard and error prone and
+				// tracking the actual geometries that cause errors is imensely
+				// helpful, especially at this point in the pipeline
 				defer func() {
 					if r := recover(); r != nil {
-						log.Println("geometry:")
-						fname := fmt.Sprintf("panic_geo_%s_%d_%d_%d", l.MVTName(), tile.Z, tile.X, tile.Y)
-						file, err := os.OpenFile(fname+".wkt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-						if err == nil {
-							err = wkt.Encode(file, geo)
-							if err != nil {
-								log.Println("ERROR WRITING panic_dump", err)
-							}
-							file.Close()
-						}
-
-						file, err = os.OpenFile(fname+".wkb", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-						if err == nil {
-							err = wkb.Encode(hex.NewEncoder(file), geo)
-							if err != nil {
-								log.Println("ERROR WRITING panic_dump", err)
-							}
-							file.Close()
-						}
-						// panic(r)
+						// writePanicGeometry will write a wkb and wkt file a
+						// geometry that causes a panic
+						writePanicGeometry(geo, l.MVTName(), tile)
 					}
 				}()
 
@@ -329,4 +315,27 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 	// return encoded, gzipped tile
 	return gzipBuf.Bytes(), nil
+}
+
+func writePanicGeometry(geo geom.Geometry, layerName string, tile *slippy.Tile) {
+
+	fname := fmt.Sprintf("panic_geo_%s_%d_%d_%d", layerName, tile.Z, tile.X, tile.Y)
+
+	file, err := os.OpenFile(fname+".wkt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err == nil {
+		err = wkt.Encode(file, geo)
+		if err != nil {
+			log.Printf("error writing %v: %v", fname, err)
+		}
+		file.Close()
+	}
+
+	file, err = os.OpenFile(fname+".wkb", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err == nil {
+		err = wkb.Encode(hex.NewEncoder(file), geo)
+		if err != nil {
+			log.Printf("error writing %v: %v", fname, err)
+		}
+		file.Close()
+	}
 }
