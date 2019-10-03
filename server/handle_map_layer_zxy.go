@@ -56,6 +56,7 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	}
 	req.z = uint(placeholder)
 
+	//TODO (meilinger): need different clamps on X vs Y
 	maxXYatZ := maths.Exp2(placeholder) - 1
 
 	x := params["x"]
@@ -142,7 +143,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Check to see that the zxy is within the bounds of the map.
 		// TODO(@ear7h): use a more efficient version of Intersect that doesn't
 		// make a new extent
-		textent := tile.Extent4326()
+		textent := tile.Extent4326(uint(m.SRID))
 		if _, intersect := m.Bounds.Intersect(textent); !intersect {
 			logAndError(w, http.StatusNotFound, "map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
 			return

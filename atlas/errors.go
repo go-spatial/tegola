@@ -17,3 +17,11 @@ type ErrMapNotFound struct {
 func (e ErrMapNotFound) Error() string {
 	return fmt.Sprintf("atlas: map (%v) not found", e.Name)
 }
+
+type ErrUnsupportedTileProjection struct {
+	Code uint
+}
+
+func (e ErrUnsupportedTileProjection) Error() string {
+	return fmt.Sprintf("map: map has unsupported projection (%v)", e.Code)
+}

@@ -72,10 +72,13 @@ func ParseKey(str string) (*Key, error) {
 	}
 
 	key.Z = uint(placeholder)
-	maxXYatZ := maths.Exp2(placeholder) - 1
+	//TODO (meilinger): how to know the map srid to constrain correctly?
+	//m, _ := atlas.GetMap(key.MapName)
+	maxXatZ := maths.Exp2(placeholder)*2 - 1
+	maxYatZ := maths.Exp2(placeholder) - 1
 
 	placeholder, err = strconv.ParseUint(zxy[1], 10, 32)
-	if err != nil || placeholder > maxXYatZ {
+	if err != nil || placeholder > maxXatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "X",
@@ -91,7 +94,7 @@ func ParseKey(str string) (*Key, error) {
 	// trim the extension if it exists
 	yParts := strings.Split(zxy[2], ".")
 	placeholder, err = strconv.ParseUint(yParts[0], 10, 64)
-	if err != nil || placeholder > maxXYatZ {
+	if err != nil || placeholder > maxYatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "Y",

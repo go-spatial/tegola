@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/proj"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
@@ -185,12 +186,13 @@ func seedPurgeCommand(cmd *cobra.Command, args []string) (err error) {
 	}()
 
 	log.Info("zoom list: ", zooms)
-	tilechannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms)
+	//TODO (meilinger): need support for specifying SRID of tiles in tileset
+	tilechannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms, proj.WebMercator)
 
 	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 }
 
-func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint) *TileChannel {
+func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint, tileSRID uint) *TileChannel {
 
 	tce := &TileChannel{
 		channel: make(chan *slippy.Tile),
@@ -200,8 +202,8 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 		defer tce.Close()
 		for _, z := range zooms {
 			// get the tiles at the corners given the bounds and zoom
-			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0])
-			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2])
+			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0], tileSRID)
+			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2], tileSRID)
 
 			// x,y initials and finals
 			_, xi, yi := corner1.ZXY()

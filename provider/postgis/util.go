@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/proj"
+	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/proj"
+	"github.com/go-spatial/tegola/projection"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -90,6 +92,43 @@ const (
 	pixelHeightToken      = "!PIXEL_HEIGHT!"
 )
 
+func tileBBtoLayerBoundary(tileSRID uint64, layerSRID uint64, tileExtent *geom.Extent) (*geom.Extent, error) {
+	if tileSRID == layerSRID {
+		return tileExtent, nil
+	}
+
+	minp := geom.Point{tileExtent.MinX(), tileExtent.MinY()}
+	maxp := geom.Point{tileExtent.MaxX(), tileExtent.MaxY()}
+
+	// Project tile extent to 4326, then clip based on max WGS84 extents for source layer srid
+	// We need to ratchet down the layer boundary if our tile bounds are outside of the project-able region of the layer
+	min4326, _ := projection.ConvertGeom(4326, tileSRID, minp)
+	pmin4326 := min4326.(geom.Point)
+	max4326, _ := projection.ConvertGeom(4326, tileSRID, maxp)
+	pmax4326 := max4326.(geom.Point)
+
+	e4326 := geom.Extent{pmin4326.X(), pmin4326.Y(), pmax4326.X(), pmax4326.Y()}
+	clippedExtent, _ := e4326.Intersect(slippy.SupportedProjections[uint(layerSRID)].WGS84Extents)
+
+	minp = geom.Point{clippedExtent.MinX(), clippedExtent.MinY()}
+	maxp = geom.Point{clippedExtent.MaxX(), clippedExtent.MaxY()}
+
+	minGeo, err := projection.ConvertGeom(layerSRID, tileSRID, minp)
+	if err != nil {
+		return nil, fmt.Errorf("error trying to convert tile point: %v ", err)
+	}
+	maxGeo, err := projection.ConvertGeom(layerSRID, tileSRID, maxp)
+	if err != nil {
+		return nil, fmt.Errorf("error trying to convert tile point: %v ", err)
+	}
+
+	minPt, maxPt := minGeo.(geom.Point), maxGeo.(geom.Point)
+
+	ret := &geom.Extent{minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y()}
+
+	return ret, nil
+}
+
 // replaceTokens replaces tokens in the provided SQL string
 //
 // !BBOX! - the bounding box of the tile
@@ -99,23 +138,16 @@ const (
 // !PIXEL_HEIGHT! - the pixel height in meters, assuming 256x256 tiles
 func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) {
 
-	bufferedExtent, _ := tile.BufferedExtent()
+	bufferedExtent, tileSRID := tile.BufferedExtent()
 
 	// TODO: leverage helper functions for minx / miny to make this easier to follow
-	// TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
-	minGeo, err := proj.FromWebMercator(srid, geom.Point{bufferedExtent.MinX(), bufferedExtent.MinY()})
+	ext, err := tileBBtoLayerBoundary(tileSRID, srid, bufferedExtent)
 	if err != nil {
-		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
+		//TODO (meilinger)
+		fmt.Printf("Extent error: %v %v", bufferedExtent, err)
 	}
 
-	maxGeo, err := proj.FromWebMercator(srid, geom.Point{bufferedExtent.MaxX(), bufferedExtent.MaxY()})
-	if err != nil {
-		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
-	}
-
-	minPt, maxPt := minGeo.(geom.Point), maxGeo.(geom.Point)
-
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%g,%g,%g,%g,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
+	bbox := fmt.Sprintf("ST_MakeEnvelope(%g,%g,%g,%g,%d)", ext.MinX(), ext.MinY(), ext.MaxX(), ext.MaxY(), srid)
 
 	extent, _ := tile.Extent()
 	// TODO: Always convert to meter if we support different projections

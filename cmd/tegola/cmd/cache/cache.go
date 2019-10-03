@@ -110,8 +110,9 @@ func (tc *TileChannel) Close() {
 }
 
 type MapTile struct {
-	MapName string
-	Tile    *slippy.Tile
+	MapName  string
+	Tile     *slippy.Tile
+	TileSRID uint64
 }
 
 func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, concurrency int, worker func(context.Context, MapTile) error) (err error) {
@@ -180,8 +181,9 @@ TileChannelLoop:
 			}
 
 			mapTile := MapTile{
-				MapName: maps[m].Name,
-				Tile:    tile,
+				MapName:  maps[m].Name,
+				Tile:     tile,
+				TileSRID: maps[m].SRID,
 			}
 
 			select {

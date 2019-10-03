@@ -6,8 +6,8 @@ import (
 
 	"context"
 
+	"github.com/go-spatial/proj"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
 	"github.com/jackc/pgx"

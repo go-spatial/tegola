@@ -181,7 +181,7 @@ func TestParse(t *testing.T) {
 								MinZoom:       env.UintPtr(10),
 								MaxZoom:       env.UintPtr(20),
 								DontSimplify:  true,
-								DontClip:  true,
+								DontClip:      true,
 							},
 						},
 					},
@@ -319,6 +319,106 @@ func TestParse(t *testing.T) {
 								ProviderLayer: "provider1.water_6_10",
 								MinZoom:       env.UintPtr(6),
 								MaxZoom:       env.UintPtr(10),
+							},
+						},
+					},
+				},
+			},
+		},
+		"4326 map": {
+			config: `
+				tile_buffer = 12
+
+				[webserver]
+				hostname = "cdn.tegola.io"
+				port = ":8080"
+				cors_allowed_origin = "tegola.io"
+
+					[webserver.headers]
+					Access-Control-Allow-Origin = "*"
+					Access-Control-Allow-Methods = "GET, OPTIONS"
+
+				[cache]
+				type = "file"
+				basepath = "/tmp/tegola-cache"
+
+				[[providers]]
+				name = "provider1"
+				type = "postgis"
+				host = "localhost"
+				port = 5432
+				database = "osm_water" 
+				user = "admin"
+				password = ""
+
+					[[providers.layers]]
+					name = "water"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+				[[maps]]
+				name = "osm"
+				srid = 4326
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = [-76.275329586789, 39.153492567373, 8.0]
+
+					[[maps.layers]]
+					provider_layer = "provider1.water"
+					min_zoom = 10
+					max_zoom = 20
+					dont_simplify = true
+					dont_clip = true`,
+			expected: config.Config{
+				TileBuffer:   env.IntPtr(env.Int(12)),
+				LocationName: "",
+				Webserver: config.Webserver{
+					HostName: "cdn.tegola.io",
+					Port:     ":8080",
+					Headers: env.Dict{
+						"Access-Control-Allow-Origin":  "*",
+						"Access-Control-Allow-Methods": "GET, OPTIONS",
+					},
+				},
+				Cache: env.Dict{
+					"type":     "file",
+					"basepath": "/tmp/tegola-cache",
+				},
+				Providers: []env.Dict{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						TileBuffer:  env.IntPtr(env.Int(12)),
+						SRID:        env.UintPtr(env.Uint(4326)),
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water",
+								MinZoom:       env.UintPtr(10),
+								MaxZoom:       env.UintPtr(20),
+								DontSimplify:  true,
+								DontClip:      true,
 							},
 						},
 					},

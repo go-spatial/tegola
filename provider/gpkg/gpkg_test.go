@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/proj"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/gpkg"
 )
@@ -171,6 +171,9 @@ func TestAutoConfig(t *testing.T) {
 		t.Run(tname, fn(tc))
 	}
 }
+
+var minpt = [2]float64{-20037508.34, -20037471.20}
+var maxpt = [2]float64{20037508.34, 20037471.20}
 
 func TestNewTileProvider(t *testing.T) {
 	type tcase struct {

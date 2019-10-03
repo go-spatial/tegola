@@ -18,26 +18,25 @@ import (
 	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar"
-	"github.com/go-spatial/geom/planar/clip"
-	"github.com/go-spatial/geom/planar/makevalid"
-	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 	"github.com/go-spatial/geom/planar/simplify"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/proj"
+	"github.com/go-spatial/tegola/projection"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
 
 // NewMap creates a new map with the necessary default values
-func NewWebMercatorMap(name string) Map {
+func NewMap(name string, srid uint) Map {
+	bounds := slippy.SupportedProjections[srid].WGS84Extents
+
 	return Map{
 		Name: name,
 		// default bounds
-		Bounds:     proj.WGS84Bounds,
+		Bounds:     bounds,
 		Layers:     []Layer{},
-		SRID:       proj.WebMercator,
+		SRID:       uint64(srid),
 		TileExtent: uint64(mvt.DefaultExtent),
 		TileBuffer: uint64(tegola.DefaultTileBuffer),
 	}
@@ -172,16 +171,11 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 				geo := f.Geometry
 
-				// check if the feature SRID and map SRID are different. If they are then reporject
-				if f.SRID != m.SRID {
+				// check if the feature SRID and map SRID are different. If they are then reproject
+				geo, convErr := projection.ConvertGeom(m.SRID, f.SRID, geo)
 
-					// TODO(arolek): support for additional projections
-					g, err := proj.ToWebMercator(f.SRID, geo)
-					if err != nil {
-						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %v", f.SRID, f.ID, err)
-					}
-					geo = g
-
+				if convErr != nil {
+					return fmt.Errorf("unable to transform geometry to %v from SRID (%v) for feature %v due to error: %v", m.SRID, f.SRID, f.ID, convErr)
 				}
 
 				// add default tags, but don't overwrite a tag that already exists
@@ -206,7 +200,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				// for how the second two conditions are set
 				if !l.DontSimplify && simplifyGeometries && tile.Z < simplificationMaxZoom {
 					simp := simplify.DouglasPeucker{
-						Tolerance: slippy.Pixels2Webs(tile.Z, tegola.DefaultEpsilon),
+						Tolerance: slippy.PixelsToProjectedUnits(tile.Z, tegola.DefaultEpsilon, uint(m.SRID)),
 					}
 
 					var err error
@@ -216,33 +210,34 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					}
 				}
 
-				// check if we need to clip and if we do build the clip region (tile extent)
-				var clipRegion *geom.Extent
-				if !l.DontClip {
-					webs := slippy.Pixels2Webs(tile.Z, uint(m.TileBuffer))
-					clipRegion = tile.Extent3857().ExpandBy(webs)
-				}
+				// // check if we need to clip and if we do build the clip region (tile extent)
+				// var clipRegion *geom.Extent
+				// if !l.DontClip {
+				// 	// TODO(meilinger)
+				// 	webs := slippy.PixelsToProjectedUnits(tile.Z, uint(m.TileBuffer), uint(m.SRID))
+				// 	clipRegion = tile.NativeExtent(uint(m.SRID)).ExpandBy(webs)
+				// }
 
-				// create a hitmap for the makevalid function
-				hm, err := hitmap.New(clipRegion, geo)
-				if err != nil {
-					return err
-				}
+				// // create a hitmap for the makevalid function
+				// hm, err := hitmap.New(clipRegion, geo)
+				// if err != nil {
+				// 	return err
+				// }
 
-				// instantiate a new makevalid struct holding the hitmap
-				mv := makevalid.Makevalid{
-					Hitmap:  hm,
-					Clipper: clip.Default,
-				}
+				// // instantiate a new makevalid struct holding the hitmap
+				// mv := makevalid.Makevalid{
+				// 	Hitmap:  hm,
+				// 	Clipper: clip.Default,
+				// }
 
-				// apply make valid routine
-				geo, _, err = mv.Makevalid(ctx, geo, clipRegion)
-				if err != nil {
-					return err
-				}
+				// // apply make valid routine
+				// geo, _, err = mv.Makevalid(ctx, geo, clipRegion)
+				// if err != nil {
+				// 	return err
+				// }
 
-				// tranlate the geometry to tile coordinates
-				geo = mvt.PrepareGeo(geo, tile.Extent3857(), float64(m.TileExtent))
+				// translate the geometry to tile coordinates
+				geo = mvt.PrepareGeo(geo, tile.NativeExtent(uint(m.SRID)), float64(m.TileExtent))
 				if geo == nil {
 					return nil
 				}

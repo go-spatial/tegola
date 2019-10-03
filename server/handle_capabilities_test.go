@@ -8,8 +8,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-spatial/geom/slippy"
+
 	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/server"
 )
 
@@ -71,7 +72,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       proj.WGS84Bounds,
+						Bounds:       slippy.SupportedProjections[3857].WGS84Extents,
 						Capabilities: "http://localhost:8080/capabilities/test-map.json",
 						Tiles: []string{
 							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -111,7 +112,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       proj.WGS84Bounds,
+						Bounds:       slippy.SupportedProjections[3857].WGS84Extents,
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
@@ -163,7 +164,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       proj.WGS84Bounds,
+						Bounds:       slippy.SupportedProjections[3857].WGS84Extents,
 						Capabilities: "http://localhost:8080/capabilities/test-map.json",
 						Tiles: []string{
 							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
@@ -203,7 +204,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       proj.WGS84Bounds,
+						Bounds:       slippy.SupportedProjections[3857].WGS84Extents,
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
@@ -258,7 +259,7 @@ func TestHandleCapabilities(t *testing.T) {
 						Name:         "test-map",
 						Attribution:  "test attribution",
 						Center:       [3]float64{1.0, 2.0, 3.0},
-						Bounds:       proj.WGS84Bounds,
+						Bounds:       slippy.SupportedProjections[3857].WGS84Extents,
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",

@@ -7,6 +7,7 @@ import (
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/env"
 )
 
 func TestMaps(t *testing.T) {
@@ -15,7 +16,11 @@ func TestMaps(t *testing.T) {
 		maps        []config.Map
 		providers   []dict.Dict
 		expectedErr error
+		expectedRes func(*[]config.Map, *testing.T)
 	}
+
+	EPSG4326 := env.Uint(4326)
+	UNSUPPORTED := env.Uint(1234)
 
 	fn := func(t *testing.T, tc tcase) {
 		var err error
@@ -38,6 +43,9 @@ func TestMaps(t *testing.T) {
 				t.Errorf("invalid error. expected: %v, got: %v", tc.expectedErr, err.Error())
 			}
 			return
+		}
+		if tc.expectedRes != nil {
+			tc.expectedRes(&tc.maps, t)
 		}
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
@@ -135,6 +143,32 @@ func TestMaps(t *testing.T) {
 					"name": "test",
 					"type": "debug",
 				},
+			},
+		},
+		"success with alternate srid": {
+			maps: []config.Map{
+				{
+					Name: "foo",
+					SRID: &EPSG4326,
+				},
+			},
+			expectedRes: func(m *[]config.Map, t *testing.T) {
+				firstMap := (*m)[0]
+
+				if *firstMap.SRID != 4326 {
+					t.Error("Map SRID expected to be 4326")
+				}
+			},
+		},
+		"unsupported projection": {
+			maps: []config.Map{
+				{
+					Name: "foo",
+					SRID: &UNSUPPORTED,
+				},
+			},
+			expectedErr: atlas.ErrUnsupportedTileProjection{
+				Code: uint(UNSUPPORTED),
 			},
 		},
 	}

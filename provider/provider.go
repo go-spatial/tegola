@@ -11,7 +11,6 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 )
 
-
 // TODO(@ear7h) remove this atrocity from the code base
 // tile_t is an implementation of the Tile interface, it is
 // named as such as to not confuse from the 4 other possible meanings
@@ -21,25 +20,27 @@ import (
 type tile_t struct {
 	slippy.Tile
 	buffer uint
+	srid   uint
 }
 
 func NewTile(z, x, y, buf, srid uint) Tile {
-	return &tile_t {
+	return &tile_t{
 		Tile: slippy.Tile{
-			Z:z,
-			X:x,
-			Y:y,
+			Z: z,
+			X: x,
+			Y: y,
 		},
 		buffer: buf,
+		srid:   srid,
 	}
 }
 
 func (tile *tile_t) Extent() (ext *geom.Extent, srid uint64) {
-	return tile.Extent3857(), 3857
+	return tile.NativeExtent(tile.srid), uint64(tile.srid)
 }
 
 func (tile *tile_t) BufferedExtent() (ext *geom.Extent, srid uint64) {
-	return tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, tile.buffer)), 3857
+	return tile.NativeExtent(tile.srid).ExpandBy(slippy.PixelsToProjectedUnits(tile.Z, tile.buffer, tile.srid)), uint64(tile.srid)
 }
 
 // Tile is an interface used by Tiler, it is an unecessary abstraction and is
@@ -52,7 +53,6 @@ type Tile interface {
 	// BufferedExtent returns the extent of the tile including any buffer
 	BufferedExtent() (extent *geom.Extent, srid uint64)
 }
-
 
 type Tiler interface {
 	// TileFeature will stream decoded features to the callback function fn

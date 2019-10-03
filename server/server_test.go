@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-spatial/proj"
+
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
@@ -68,7 +70,7 @@ var testLayer3 = atlas.Layer{
 
 func newTestMapWithLayers(layers ...atlas.Layer) *atlas.Atlas {
 
-	testMap := atlas.NewWebMercatorMap(testMapName)
+	testMap := atlas.NewMap(testMapName, proj.WebMercator)
 	testMap.Attribution = testMapAttribution
 	testMap.Center = testMapCenter
 	testMap.Layers = append(testMap.Layers, layers...)
@@ -81,7 +83,7 @@ func newTestMapWithLayers(layers ...atlas.Layer) *atlas.Atlas {
 
 func newTestMapWithBounds(minx, miny, maxx, maxy float64) *atlas.Atlas {
 
-	testMap := atlas.NewWebMercatorMap(testMapName)
+	testMap := atlas.NewMap(testMapName, proj.WebMercator)
 	testMap.Attribution = testMapAttribution
 	testMap.Center = testMapCenter
 	testMap.Layers = append(testMap.Layers, testLayer1)
@@ -116,7 +118,7 @@ func init() {
 	server.Version = serverVersion
 	server.HostName = serverHostName
 
-	testMap := atlas.NewWebMercatorMap(testMapName)
+	testMap := atlas.NewMap(testMapName, proj.WebMercator)
 	testMap.Attribution = testMapAttribution
 	testMap.Center = testMapCenter
 	testMap.Layers = append(testMap.Layers,

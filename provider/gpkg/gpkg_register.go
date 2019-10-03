@@ -12,12 +12,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-spatial/geom/slippy"
+
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -358,7 +359,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			// Set bounds & zoom params to include all layers
 			// Bounds checks need params: maxx, minx, maxy, miny
 			// TODO(arolek): this assumes WGS84. should be more flexible
-			customSQL = replaceTokens(customSQL, 0, proj.WGS84Bounds)
+			customSQL = replaceTokens(customSQL, 0, slippy.SupportedProjections[4326].WGS84Extents)
 
 			// Get geometry type & srid from geometry of first row.
 			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)

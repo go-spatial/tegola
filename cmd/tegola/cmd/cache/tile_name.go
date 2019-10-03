@@ -98,7 +98,7 @@ func generateTilesForTileName(ctx context.Context, tile *slippy.Tile, explicit b
 		}
 		for _, zoom := range zooms {
 			// range will include the original tile.
-			err := tile.RangeFamilyAt(zoom, func(tile *slippy.Tile) error {
+			err := tile.RangeFamilyAt(zoom, 3857, func(tile *slippy.Tile, srid uint) error {
 				select {
 				case tce.channel <- tile:
 				case <-ctx.Done():

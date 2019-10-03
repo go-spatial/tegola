@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/proj"
 )
 
 type sTiles []*slippy.Tile
@@ -78,17 +79,18 @@ func TestGenerateTilesForBounds(t *testing.T) {
 	worldBounds := [4]float64{-180.0, -85.0511, 180, 85.0511}
 
 	type tcase struct {
-		zooms  []uint
-		bounds [4]float64
-		tiles  sTiles
-		err    error
+		zooms    []uint
+		bounds   [4]float64
+		tiles    sTiles
+		err      error
+		tileSRID uint
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 
 			// Setup up the generator.
-			tilechannel := generateTilesForBounds(context.Background(), tc.bounds, tc.zooms)
+			tilechannel := generateTilesForBounds(context.Background(), tc.bounds, tc.zooms, tc.tileSRID)
 			tiles := make(sTiles, 0, len(tc.tiles))
 			for tile := range tilechannel.Channel() {
 				tiles = append(tiles, tile)
@@ -116,9 +118,10 @@ func TestGenerateTilesForBounds(t *testing.T) {
 
 	tests := map[string]tcase{
 		"max_zoom=0": {
-			zooms:  []uint{0},
-			bounds: worldBounds,
-			tiles:  sTiles{slippy.NewTile(0, 0, 0)},
+			zooms:    []uint{0},
+			bounds:   worldBounds,
+			tiles:    sTiles{slippy.NewTile(0, 0, 0)},
+			tileSRID: proj.WebMercator,
 		},
 		"min_zoom=1 max_zoom=1": {
 			zooms:  []uint{1},
@@ -129,6 +132,7 @@ func TestGenerateTilesForBounds(t *testing.T) {
 				slippy.NewTile(1, 1, 0),
 				slippy.NewTile(1, 1, 1),
 			},
+			tileSRID: proj.WebMercator,
 		},
 		"min_zoom=1 max_zoom=1 bounds=180,90,0,0": {
 			zooms:  []uint{1},
@@ -141,6 +145,7 @@ func TestGenerateTilesForBounds(t *testing.T) {
 				 */
 				slippy.NewTile(1, 1, 1),
 			},
+			tileSRID: proj.WebMercator,
 		},
 	}
 

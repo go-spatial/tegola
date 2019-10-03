@@ -10,8 +10,9 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
+	"github.com/go-spatial/proj"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/proj"
+	"github.com/go-spatial/tegola/projection"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -85,12 +86,15 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	// TODO(arolek): reimplement once the geom package has reprojection
 	// check if the SRID of the layer differs from that of the tile. tileSRID is assumed to always be WebMercator
 	if pLayer.srid != tileSRID {
-		minGeo, err := proj.FromWebMercator(pLayer.srid, geom.Point{tileBBox.MinX(), tileBBox.MinY()})
+
+		minGeo, err := projection.ConvertGeom(pLayer.srid, tileSRID, geom.Point{tileBBox.MinX(), tileBBox.MinY()})
+
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}
 
-		maxGeo, err := proj.FromWebMercator(pLayer.srid, geom.Point{tileBBox.MaxX(), tileBBox.MaxY()})
+		maxGeo, err := projection.ConvertGeom(pLayer.srid, tileSRID, geom.Point{tileBBox.MaxX(), tileBBox.MaxY()})
+
 		if err != nil {
 			return fmt.Errorf("error converting point: %v ", err)
 		}

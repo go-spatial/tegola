@@ -99,7 +99,7 @@ push_to_coveralls() {
 go_install golang.org/x/tools/cmd/cover
 
 # install the geom package
-go get -u github.com/go-spatial/geom/...
+#go get -u github.com/go-spatial/geom/...
 
 # generate coverage data, but skip the vendor directory.
 # skipping the vendor directory is necessary for go versions less than Go 1.9.x
