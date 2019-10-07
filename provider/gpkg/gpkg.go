@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/proj"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/projection"
@@ -75,6 +76,49 @@ func (p *Provider) Layers() ([]provider.LayerInfo, error) {
 	return ls, nil
 }
 
+func clampTileBBToNativeExtent(tileSRID uint64, layerSRID uint64, tileExtent *geom.Extent) (*geom.Extent, error) {
+	if tileSRID == layerSRID {
+		return tileExtent, nil
+	}
+
+	minp := geom.Point{tileExtent.MinX(), tileExtent.MinY()}
+	maxp := geom.Point{tileExtent.MaxX(), tileExtent.MaxY()}
+
+	// Project tile extent to 4326, then clip based on max WGS84 extents for source layer srid
+	// We need to ratchet down the layer boundary if our tile bounds are outside of the project-able region of the layer
+	min4326, _ := projection.ConvertGeom(4326, tileSRID, minp)
+	pmin4326 := min4326.(geom.Point)
+	max4326, _ := projection.ConvertGeom(4326, tileSRID, maxp)
+	pmax4326 := max4326.(geom.Point)
+
+	e4326 := geom.Extent{pmin4326.X(), pmin4326.Y(), pmax4326.X(), pmax4326.Y()}
+	clippedExtent, _ := e4326.Intersect(slippy.SupportedProjections[uint(layerSRID)].WGS84Extents)
+
+	minp = geom.Point{clippedExtent.MinX(), clippedExtent.MinY()}
+	maxp = geom.Point{clippedExtent.MaxX(), clippedExtent.MaxY()}
+
+	var minPt, maxPt geom.Point
+
+	if layerSRID != 4326 {
+		minGeo, err := projection.ConvertGeom(layerSRID, tileSRID, minp)
+		if err != nil {
+			return nil, fmt.Errorf("error trying to convert tile point: %v ", err)
+		}
+		maxGeo, err := projection.ConvertGeom(layerSRID, tileSRID, maxp)
+		if err != nil {
+			return nil, fmt.Errorf("error trying to convert tile point: %v ", err)
+		}
+
+		minPt, maxPt = minGeo.(geom.Point), maxGeo.(geom.Point)
+	} else {
+		minPt, maxPt = minp, maxp
+	}
+
+	ret := &geom.Extent{minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y()}
+
+	return ret, nil
+}
+
 func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
 	log.Debugf("fetching layer %v", layer)
 
@@ -83,23 +127,10 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 	// read the tile extent
 	tileBBox, tileSRID := tile.BufferedExtent()
 
-	// TODO(arolek): reimplement once the geom package has reprojection
-	// check if the SRID of the layer differs from that of the tile. tileSRID is assumed to always be WebMercator
-	if pLayer.srid != tileSRID {
-
-		minGeo, err := projection.ConvertGeom(pLayer.srid, tileSRID, geom.Point{tileBBox.MinX(), tileBBox.MinY()})
-
-		if err != nil {
-			return fmt.Errorf("error converting point: %v ", err)
-		}
-
-		maxGeo, err := projection.ConvertGeom(pLayer.srid, tileSRID, geom.Point{tileBBox.MaxX(), tileBBox.MaxY()})
-
-		if err != nil {
-			return fmt.Errorf("error converting point: %v ", err)
-		}
-
-		tileBBox = geom.NewExtent(minGeo.(geom.Point), maxGeo.(geom.Point))
+	bbox, err := clampTileBBToNativeExtent(tileSRID, pLayer.SRID(), tileBBox)
+	if err != nil {
+		//TODO (meilinger)
+		fmt.Printf("Extent error: %v %v", tileBBox, err)
 	}
 
 	var qtext string
@@ -118,11 +149,11 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		qtext = fmt.Sprintf("%v FROM `%v` l JOIN `%v` si ON l.`%v` = si.id WHERE l.`%v` IS NOT NULL AND !BBOX! ORDER BY l.`%v`", selectClause, pLayer.tablename, rtreeTablename, pLayer.idFieldname, pLayer.geomFieldname, pLayer.idFieldname)
 
 		z, _, _ := tile.ZXY()
-		qtext = replaceTokens(qtext, z, tileBBox)
+		qtext = replaceTokens(qtext, z, bbox)
 	} else {
 		// If layer was specified via "sql" in config, collect it
 		z, _, _ := tile.ZXY()
-		qtext = replaceTokens(pLayer.sql, z, tileBBox)
+		qtext = replaceTokens(pLayer.sql, z, bbox)
 	}
 
 	log.Debugf("qtext: %v", qtext)

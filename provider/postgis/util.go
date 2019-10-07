@@ -92,7 +92,7 @@ const (
 	pixelHeightToken      = "!PIXEL_HEIGHT!"
 )
 
-func tileBBtoLayerBoundary(tileSRID uint64, layerSRID uint64, tileExtent *geom.Extent) (*geom.Extent, error) {
+func clampTileBBToNativeExtent(tileSRID uint64, layerSRID uint64, tileExtent *geom.Extent) (*geom.Extent, error) {
 	if tileSRID == layerSRID {
 		return tileExtent, nil
 	}
@@ -113,16 +113,24 @@ func tileBBtoLayerBoundary(tileSRID uint64, layerSRID uint64, tileExtent *geom.E
 	minp = geom.Point{clippedExtent.MinX(), clippedExtent.MinY()}
 	maxp = geom.Point{clippedExtent.MaxX(), clippedExtent.MaxY()}
 
-	minGeo, err := projection.ConvertGeom(layerSRID, tileSRID, minp)
-	if err != nil {
-		return nil, fmt.Errorf("error trying to convert tile point: %v ", err)
-	}
-	maxGeo, err := projection.ConvertGeom(layerSRID, tileSRID, maxp)
-	if err != nil {
-		return nil, fmt.Errorf("error trying to convert tile point: %v ", err)
-	}
+	var minPt, maxPt geom.Point
 
-	minPt, maxPt := minGeo.(geom.Point), maxGeo.(geom.Point)
+	if layerSRID != 4326 {
+		// project extents to native querying srid
+		minGeo, err := projection.ConvertGeom(layerSRID, tileSRID, minp)
+		if err != nil {
+			return nil, fmt.Errorf("error trying to convert tile point: %v ", err)
+		}
+		maxGeo, err := projection.ConvertGeom(layerSRID, tileSRID, maxp)
+		if err != nil {
+			return nil, fmt.Errorf("error trying to convert tile point: %v ", err)
+		}
+
+		minPt, maxPt = minGeo.(geom.Point), maxGeo.(geom.Point)
+	} else {
+		// extents already in 4326
+		minPt, maxPt = minp, maxp
+	}
 
 	ret := &geom.Extent{minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y()}
 
@@ -141,7 +149,7 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 	bufferedExtent, tileSRID := tile.BufferedExtent()
 
 	// TODO: leverage helper functions for minx / miny to make this easier to follow
-	ext, err := tileBBtoLayerBoundary(tileSRID, srid, bufferedExtent)
+	ext, err := clampTileBBToNativeExtent(tileSRID, srid, bufferedExtent)
 	if err != nil {
 		//TODO (meilinger)
 		fmt.Printf("Extent error: %v %v", bufferedExtent, err)

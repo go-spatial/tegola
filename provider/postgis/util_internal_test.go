@@ -42,6 +42,24 @@ func TestReplaceTokens(t *testing.T) {
 			tile:     provider.NewTile(2, 1, 1, 64, proj.WebMercator),
 			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.0175297205300871e+07,-156543.03390625,156543.03390625,1.0175297205300868e+07,3857)",
 		},
+		"replace BBOX query 3857 w/ 4326 tile": {
+			sql:      "SELECT * FROM foo WHERE geom && !BBOX!",
+			srid:     3857,
+			tile:     provider.NewTile(2, 1, 1, 64, 4326),
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-1.5106402774055952e+07,-78273.48162973639,-9.940482654430602e+06,5.7329017585954005e+06,3857)",
+		},
+		"replace BBOX query 4326 w/ 4326 tile": {
+			sql:      "SELECT * FROM foo WHERE geom && !BBOX!",
+			srid:     4326,
+			tile:     provider.NewTile(2, 1, 1, 64, 4326),
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-135.703125,-0.703125,-89.296875,45.703125,4326)",
+		},
+		"replace BBOX query 4326 w/ 3857 tile": {
+			sql:      "SELECT * FROM foo WHERE geom && !BBOX!",
+			srid:     4326,
+			tile:     provider.NewTile(2, 1, 1, 64, proj.WebMercator),
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-91.40624998727614,-1.4061088352394662,1.4062499998042484,67.06743334612516,4326)",
+		},
 		"replace BBOX with != in query": {
 			sql:      "SELECT * FROM foo WHERE geom && !BBOX! AND bar != 42",
 			srid:     proj.WebMercator,
