@@ -6,12 +6,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/go-spatial/proj"
+
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/proj"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/provider"
 
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
@@ -204,12 +204,13 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 			// get the tiles at the corners given the bounds and zoom
 			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0], tileSRID)
 			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2], tileSRID)
+			grid := slippy.GetGrid(tileSRID)
 
 			// x,y initials and finals
 			_, xi, yi := corner1.ZXY()
 			_, xf, yf := corner2.ZXY()
 
-			maxXYatZ := uint(maths.Exp2(uint64(z))) - 1
+			maxXatZ, maxYatZ := grid.MaxXY(z)
 
 			// ensure the initials are smaller than finals
 			// this breaks at the anti meridian: https://github.com/go-spatial/tegola/issues/500
@@ -221,8 +222,8 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 			}
 
 			// prevent seeding out of bounds
-			xf = min(xf, maxXYatZ)
-			yf = min(yf, maxXYatZ)
+			xf = min(xf, maxXatZ)
+			yf = min(yf, maxYatZ)
 
 		MainLoop:
 			for x := xi; x <= xf; x++ {

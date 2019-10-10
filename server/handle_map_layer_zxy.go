@@ -13,7 +13,6 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/maths"
 )
 
 type HandleMapLayerZXY struct {
@@ -56,12 +55,15 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	}
 	req.z = uint(placeholder)
 
-	//TODO (meilinger): need different clamps on X vs Y
-	maxXYatZ := maths.Exp2(placeholder) - 1
+	mp, _ := req.Atlas.Map(req.mapName)
+	msrid := mp.SRID
+
+	grid := slippy.GetGrid(uint(msrid))
+	maxXatZ, maxYatZ := grid.MaxXY(req.z)
 
 	x := params["x"]
 	placeholder, err = strconv.ParseUint(x, 10, 32)
-	if err != nil || placeholder > maxXYatZ {
+	if err != nil || placeholder > uint64(maxXatZ) {
 		log.Warnf("invalid X value (%v)", x)
 		return fmt.Errorf("invalid X value (%v)", x)
 	}
@@ -71,7 +73,7 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	y := params["y"]
 	yParts := strings.Split(y, ".")
 	placeholder, err = strconv.ParseUint(yParts[0], 10, 32)
-	if err != nil || placeholder > maxXYatZ {
+	if err != nil || placeholder > uint64(maxYatZ) {
 		log.Warnf("invalid Y value (%v)", yParts[0])
 		return fmt.Errorf("invalid Y value (%v)", yParts[0])
 	}

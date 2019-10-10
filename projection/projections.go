@@ -4,22 +4,14 @@ import (
 	"fmt"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/proj"
 	"github.com/go-spatial/proj/core"
 	"github.com/go-spatial/proj/support"
 )
 
-const (
-	WebMercator     = 3857
-	WGS84           = 4326
-	Equirectangular = 4087
-)
-
-// WGS84Bounds
-var WGS84Bounds = slippy.SupportedProjections[proj.EPSG3857].WGS84Extents
 var p4326InvOp3857 = get4326InvOp("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0")
 
+//TODO (meilinger): Can remove this and use the proj.Inverse when PR (https://github.com/go-spatial/proj/pull/32) is approved
 func get4326InvOp(str string) func(...float64) ([]float64, error) {
 	ps, err := support.NewProjString(str)
 	if err != nil {
