@@ -155,7 +155,9 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 
 			layer, err := atlasLayerFromConfigLayer(&l, string(m.Name), layerer)
 			if err != nil {
-				return err
+				return ErrFetchingLayerInfo{
+					Provider: providerName,
+				}
 			}
 			newMap.Layers = append(newMap.Layers, layer)
 		}

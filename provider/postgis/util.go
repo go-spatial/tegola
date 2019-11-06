@@ -10,8 +10,6 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"

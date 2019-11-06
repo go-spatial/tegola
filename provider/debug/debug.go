@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -86,12 +86,12 @@ func (p *Provider) Layers() ([]provider.LayerInfo, error) {
 		{
 			name:     "debug-tile-outline",
 			geomType: geom.Line{},
-			srid:     tegola.WebMercator,
+			srid:     proj.WebMercator,
 		},
 		{
 			name:     "debug-tile-center",
 			geomType: geom.Point{},
-			srid:     tegola.WebMercator,
+			srid:     proj.WebMercator,
 		},
 	}
 

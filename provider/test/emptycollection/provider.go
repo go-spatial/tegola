@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 
 	"github.com/go-spatial/tegola/dict"
@@ -34,7 +34,7 @@ func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 		layer{
 			name:     "empty_geom_collection",
 			geomType: geom.Collection{},
-			srid:     tegola.WebMercator,
+			srid:     proj.WebMercator,
 		},
 	}, nil
 }

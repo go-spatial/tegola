@@ -219,8 +219,8 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 			}
 
 			// prevent seeding out of bounds
-			xf = maths.Min(xf, maxXYatZ)
-			yf = maths.Min(yf, maxXYatZ)
+			xf = min(xf, maxXYatZ)
+			yf = min(yf, maxXYatZ)
 
 		MainLoop:
 			for x := xi; x <= xf; x++ {
@@ -238,4 +238,11 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 		tce.Close()
 	}()
 	return tce
+}
+
+func min(x, y uint) uint {
+	if x < y {
+		return x
+	}
+	return y
 }

@@ -25,9 +25,9 @@ import (
 	"github.com/go-spatial/geom/planar/simplify"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/mvtprovider"
+	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
@@ -37,9 +37,9 @@ func NewWebMercatorMap(name string) Map {
 	return Map{
 		Name: name,
 		// default bounds
-		Bounds:     tegola.WGS84Bounds,
+		Bounds:     proj.WGS84Bounds,
 		Layers:     []Layer{},
-		SRID:       tegola.WebMercator,
+		SRID:       proj.WebMercator,
 		TileExtent: uint64(mvt.DefaultExtent),
 		TileBuffer: uint64(tegola.DefaultTileBuffer),
 	}
@@ -219,7 +219,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 				if f.SRID != m.SRID {
 
 					// TODO(arolek): support for additional projections
-					g, err := basic.ToWebMercator(f.SRID, geo)
+					g, err := proj.ToWebMercator(f.SRID, geo)
 					if err != nil {
 						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %w", f.SRID, f.ID, err)
 					}

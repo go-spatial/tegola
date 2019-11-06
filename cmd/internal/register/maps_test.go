@@ -19,39 +19,41 @@ func TestMaps(t *testing.T) {
 		expectedErr  error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		var err error
-
-		// convert []dict.Dict -> []dict.Dicter
-		provArr := make([]dict.Dicter, len(tc.providers))
-		for i := range provArr {
-			provArr[i] = tc.providers[i]
+	fn := func(tc tcase) func(*testing.T) {
+		// atlas contains a lock; we get a vet error if we are
+		// just using the value version of it. So, make it a
+		// pointer and init it if it is nil before the test.
+		if tc.atlas == nil {
+			tc.atlas = new(atlas.Atlas)
 		}
+		return func(t *testing.T) {
+			var err error
 
-		providers, err := register.Providers(provArr)
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
+			// convert []dict.Dict -> []dict.Dicter
+			provArr := make([]dict.Dicter, len(tc.providers))
+			for i := range provArr {
+				provArr[i] = tc.providers[i]
+			}
+
+			// init out mvt providers
+			// but first convert []env.Map -> []dict.Dicter
+			mvtProvArr := make([]dict.Dicter, len(tc.mvtproviders))
+			for i := range tc.mvtproviders {
+				mvtProvArr[i] = tc.mvtproviders[i]
+			}
+
+			mvtProviders, err := register.MVTProviders(mvtProvArr)
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
+				return
+			}
+
+			err = register.Maps(&tc.atlas, tc.maps, providers, mvtProviders)
+			if !errors.Is(err, tc.expectedErr) {
+				t.Errorf("invalid error, expected %v got %v", tc.expectedErr, err)
+			}
 			return
 		}
-
-		// init out mvt providers
-		// but first convert []env.Map -> []dict.Dicter
-		mvtProvArr := make([]dict.Dicter, len(tc.mvtproviders))
-		for i := range tc.mvtproviders {
-			mvtProvArr[i] = tc.mvtproviders[i]
-		}
-
-		mvtProviders, err := register.MVTProviders(mvtProvArr)
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
-			return
-		}
-
-		err = register.Maps(&tc.atlas, tc.maps, providers, mvtProviders)
-		if !errors.Is(err, tc.expectedErr) {
-			t.Errorf("invalid error, expected %v got %v", tc.expectedErr, err)
-		}
-		return
 	}
 
 	tests := map[string]tcase{
@@ -149,7 +151,6 @@ func TestMaps(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
