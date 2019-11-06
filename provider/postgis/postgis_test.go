@@ -6,8 +6,8 @@ import (
 
 	"context"
 
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
 	"github.com/jackc/pgx"
@@ -289,7 +289,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 4032,
 			expectedTags:         []string{"scalerank", "featurecla"},
 		},
@@ -299,7 +299,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
 				postgis.ConfigKeyFields:    []string{"scalerank"},
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 4032,
 			expectedTags:         []string{"scalerank"},
 		},
@@ -308,7 +308,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -319,7 +319,7 @@ func TestTileFeatures(t *testing.T) {
 					SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100
 				) AS sub`,
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -329,7 +329,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 				postgis.ConfigKeyTablename: "not_good_name",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -338,7 +338,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "(  SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -347,7 +347,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "   (SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"featurecla"},
 		},
@@ -356,7 +356,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       " -- this is a comment\n-- accross multiple lines\n (SELECT gid, geom, scalerank FROM ne_10m_land_scale_rank LIMIT 100) AS sub -- another comment at the end",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"scalerank"},
 		},
@@ -365,7 +365,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "(SELECT * FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"scalerank", "featurecla"},
 		},
@@ -375,7 +375,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeySQL:       "(SELECT * FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 				postgis.ConfigKeyFields:    []string{"scalerank"},
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 100,
 			expectedTags:         []string{"scalerank"},
 		},
@@ -384,7 +384,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) AS geom FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 98,
 		},
 		"SQL sub-query with token in SELECT": {
@@ -393,7 +393,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyGeomType:  "polygon", // required to disable SQL inspection
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, !ZOOM! * 2 AS doublezoom FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 98,
 			expectedTags:         []string{"doublezoom"},
 		},
@@ -403,7 +403,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeySQL:       "(SELECT gid, geom, 1 AS a, '2' AS b, 3 AS c FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",
 				postgis.ConfigKeyFields:    []string{"gid", "a", "b"},
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 98,
 			expectedTags:         []string{"a", "b"},
 			// expectedTags:         []string{"gid", "a", "b"}, TODO #383
@@ -413,7 +413,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyLayerName: "land",
 				postgis.ConfigKeySQL:       " -- this is a comment\n -- accross multiple lines \n \tSELECT gid, -- gid \nST_AsBinary(geom) AS geom -- geom \n FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX! -- comment at the end",
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
 			expectedFeatureCount: 98,
 		},
 		"decode numeric(x,x) types": {
@@ -423,7 +423,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyGeomField:   "geometry",
 				postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geometry) AS geometry, osm_id, name, nullif(as_numeric(height),-1) AS height, type FROM osm_buildings_test WHERE geometry && !BBOX!",
 			},
-			tile:                 provider.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(16, 11241, 26168, 64, proj.WebMercator),
 			expectedFeatureCount: 101,
 			expectedTags:         []string{"name", "type"}, // height can be null and therefore missing from the tags
 		},
@@ -434,7 +434,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyGeomField:   "geom",
 				postgis.ConfigKeySQL:         "SELECT ST_AsBinary(geom) AS geom, id FROM three_d_test WHERE geom && !BBOX!",
 			},
-			tile:                 provider.NewTile(0, 0, 0, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(0, 0, 0, 64, proj.WebMercator),
 			expectedFeatureCount: 0,
 		},
 		"gracefully handle null geometry": {
@@ -445,7 +445,7 @@ func TestTileFeatures(t *testing.T) {
 				// this SQL is a workaround the normal !BBOX! WHERE clause. we're simulating a null geometry lookup in the table and don't want to filter by bounding box
 				postgis.ConfigKeySQL: "SELECT id, ST_AsBinary(geometry) AS geometry, !BBOX! AS bbox FROM null_geom_test",
 			},
-			tile:                 provider.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(16, 11241, 26168, 64, proj.WebMercator),
 			expectedFeatureCount: 1,
 			expectedTags:         []string{"bbox"},
 		},
@@ -455,7 +455,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyGeomField: "geom",
 				postgis.ConfigKeySQL:       "SELECT ST_AsBinary(geom) FROM three_d_test WHERE geom && !BBOX!",
 			},
-			tile: provider.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			tile: provider.NewTile(16, 11241, 26168, 64, proj.WebMercator),
 			expectedErr: postgis.ErrGeomFieldNotFound{
 				GeomFieldName: "geom",
 				LayerName:     "missing_geom_field_name",
@@ -468,7 +468,7 @@ func TestTileFeatures(t *testing.T) {
 				postgis.ConfigKeyGeomType:  "polygon", // bypass the geometry type sniff on init
 				postgis.ConfigKeySQL:       "SELECT ST_AsBinary(ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')) AS geom, !BBOX! AS bbox",
 			},
-			tile:                 provider.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
+			tile:                 provider.NewTile(16, 11241, 26168, 64, proj.WebMercator),
 			expectedFeatureCount: 1,
 			expectedTags:         []string{},
 		},

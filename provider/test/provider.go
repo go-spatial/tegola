@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 
 	"github.com/go-spatial/tegola/dict"
@@ -31,7 +31,7 @@ func Cleanup() { Count = 0 }
 // TileProvider is the concrete type that satisfies the provider.Provider
 // interface. The Features field can, optionally, be populated to be used
 // in the TileFeatures call.
-type TileProvider struct{
+type TileProvider struct {
 	Features []provider.Feature
 }
 
@@ -40,7 +40,7 @@ func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 		layer{
 			name:     "test-layer",
 			geomType: geom.Polygon{},
-			srid:     tegola.WebMercator,
+			srid:     proj.WebMercator,
 		},
 	}, nil
 }

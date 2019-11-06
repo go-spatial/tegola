@@ -15,9 +15,9 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/proj"
+	"github.com/go-spatial/tegola/provider"
 )
 
 const Name = "postgis"
@@ -42,7 +42,7 @@ const (
 
 const (
 	DefaultPort    = 5432
-	DefaultSRID    = tegola.WebMercator
+	DefaultSRID    = proj.WebMercator
 	DefaultMaxConn = 100
 	DefaultSSLMode = "disable"
 	DefaultSSLKey  = ""
@@ -432,7 +432,7 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 	sql = strings.Replace(sql, "!ZOOM!", "ANY('{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}')", 1)
 
 	// we need a tile to run our sql through the replacer
-	tile := provider.NewTile(0, 0, 0, 64, tegola.WebMercator)
+	tile := provider.NewTile(0, 0, 0, 64, proj.WebMercator)
 
 	// normal replacer
 	sql, err = replaceTokens(sql, l.srid, tile)

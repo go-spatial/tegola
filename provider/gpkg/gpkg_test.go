@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/gpkg"
 )
@@ -296,7 +296,7 @@ func TestTileFeatures(t *testing.T) {
 			},
 			layerName: "rd_lines",
 			tile: MockTile{
-				srid: tegola.WGS84,
+				srid: proj.WGS84,
 				bufferedExtent: geom.NewExtent(
 					[2]float64{20.0, 37.85},
 					[2]float64{23.6, 37.9431},
@@ -314,7 +314,7 @@ func TestTileFeatures(t *testing.T) {
 			},
 			layerName: "rl_lines",
 			tile: MockTile{
-				srid: tegola.WGS84,
+				srid: proj.WGS84,
 				bufferedExtent: geom.NewExtent(
 					[2]float64{23.6, 37.8},
 					[2]float64{23.8, 38.0},
@@ -341,7 +341,7 @@ func TestTileFeatures(t *testing.T) {
 			layerName: "land1",
 			tile: MockTile{
 				Z:    1,
-				srid: tegola.WebMercator,
+				srid: proj.WebMercator,
 				bufferedExtent: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
@@ -368,7 +368,7 @@ func TestTileFeatures(t *testing.T) {
 			layerName: "land2",
 			tile: MockTile{
 				Z:    0,
-				srid: tegola.WebMercator,
+				srid: proj.WebMercator,
 				bufferedExtent: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
@@ -385,7 +385,7 @@ func TestTileFeatures(t *testing.T) {
 			},
 			layerName: "boundary",
 			tile: MockTile{
-				srid: tegola.WGS84,
+				srid: proj.WGS84,
 				bufferedExtent: geom.NewExtent(
 					[2]float64{20.0, 37.85},
 					[2]float64{23.6, 37.9431},
@@ -461,7 +461,7 @@ func TestConfigs(t *testing.T) {
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
-				srid: tegola.WebMercator,
+				srid: proj.WebMercator,
 			},
 			layerName: "a_points",
 			expectedTags: map[uint64]map[string]interface{}{
@@ -493,7 +493,7 @@ func TestConfigs(t *testing.T) {
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
-				srid: tegola.WebMercator,
+				srid: proj.WebMercator,
 			},
 			layerName: "rd_lines",
 			expectedTags: map[uint64]map[string]interface{}{
@@ -515,7 +515,7 @@ func TestConfigs(t *testing.T) {
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
-				srid: tegola.WebMercator,
+				srid: proj.WebMercator,
 			},
 			layerName: "a_points",
 			expectedTags: map[uint64]map[string]interface{}{
@@ -560,7 +560,7 @@ func TestConfigs(t *testing.T) {
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
-				srid: tegola.WebMercator,
+				srid: proj.WebMercator,
 			},
 			layerName: "a_p_points",
 			expectedTags: map[uint64]map[string]interface{}{
