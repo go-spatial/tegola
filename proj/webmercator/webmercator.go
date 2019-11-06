@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+
+	"github.com/go-spatial/geom"
 )
 
 const (
@@ -29,7 +31,7 @@ const (
 	MaxYExtent  = 20048966.10
 )
 
-var Extent = [4]float64{MinXExtent, MinYExtent, MaxXExtent, MaxYExtent}
+var Extent = geom.Extent{MinXExtent, MinYExtent, MaxXExtent, MaxYExtent}
 
 var ErrCoordsRequire2Values = errors.New("Coords should have at least 2 coords")
 
@@ -54,7 +56,7 @@ func con(phi float64) float64 {
 	return math.Pow(((1.0 - v) / (1.0 + v)), Com)
 }
 
-//LonToX converts from a Longitude to a X coordinate in WebMercator.
+// LonToX converts from a Longitude to a X coordinate in WebMercator.
 func LonToX(lon float64) float64 {
 	return RMajor * DegToRad(lon)
 }

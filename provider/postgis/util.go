@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/proj"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -26,7 +25,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql st
 		//	if a subquery is set in the 'sql' config the subquery is set to the layer's
 		//	'tablename' param. because of this case normal SQL token replacement needs to be
 		//	applied to tablename SQL generation
-		tile := provider.NewTile(0, 0, 0, 64, tegola.WebMercator)
+		tile := provider.NewTile(0, 0, 0, 64, proj.WebMercator)
 		sql, err = replaceTokens(sql, 3857, tile)
 		if err != nil {
 			return "", err
@@ -104,12 +103,12 @@ func replaceTokens(sql string, srid uint64, tile provider.Tile) (string, error) 
 
 	// TODO: leverage helper functions for minx / miny to make this easier to follow
 	// TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
-	minGeo, err := basic.FromWebMercator(srid, geom.Point{bufferedExtent.MinX(), bufferedExtent.MinY()})
+	minGeo, err := proj.FromWebMercator(srid, geom.Point{bufferedExtent.MinX(), bufferedExtent.MinY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}
 
-	maxGeo, err := basic.FromWebMercator(srid, geom.Point{bufferedExtent.MaxX(), bufferedExtent.MaxY()})
+	maxGeo, err := proj.FromWebMercator(srid, geom.Point{bufferedExtent.MaxX(), bufferedExtent.MaxY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
 	}

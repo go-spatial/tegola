@@ -113,7 +113,7 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 
 			// confirm our providerLayer name is registered
 			var found bool
-			var layerGeomType tegola.Geometry
+			var layerGeomType geom.Geometry
 			for i := range layerInfos {
 				if layerInfos[i].Name() == providerLayer[1] {
 					found = true
@@ -162,7 +162,7 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 				DefaultTags:       defaultTags,
 				GeomType:          layerGeomType,
 				DontSimplify:      bool(l.DontSimplify),
-				DontClip:      	   bool(l.DontClip),
+				DontClip:          bool(l.DontClip),
 			})
 		}
 
