@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/maths"
 )
 
 type Format struct {
@@ -66,7 +65,7 @@ func (f Format) String() string {
 	return fmt.Sprintf("%[2]s%[1]s%[3]s%[1]s%[4]s", f.Sep, v[0], v[1], v[2])
 }
 
-func (f Format) Parse(val string) (z, x, y uint, err error) {
+func (f Format) Parse(val string, srid uint) (z, x, y uint, err error) {
 	parts := strings.Split(val, f.Sep)
 	if len(parts) != 3 {
 		return 0, 0, 0, fmt.Errorf("invalid zxy value (%v). expecting the formatStr %v", val, f)
@@ -77,23 +76,24 @@ func (f Format) Parse(val string) (z, x, y uint, err error) {
 		return 0, 0, 0, fmt.Errorf("invalid Z value (%v)", parts[f.Z])
 	}
 
-	maxXYatZ := maths.Exp2(zi) - 1
+	grid := slippy.GetGrid(srid)
+	xsize, ysize := grid.GridSize(uint(zi))
 
 	xi, err := strconv.ParseUint(parts[f.X], 10, 64)
-	if err != nil || xi > maxXYatZ {
+	if err != nil || uint(xi) >= xsize {
 		return 0, 0, 0, fmt.Errorf("invalid X value (%v)", parts[f.X])
 	}
 
 	yi, err := strconv.ParseUint(parts[f.Y], 10, 64)
-	if err != nil || yi > maxXYatZ {
+	if err != nil || uint(yi) >= ysize {
 		return 0, 0, 0, fmt.Errorf("invalid Y value (%v)", parts[f.Y])
 	}
 
 	return uint(zi), uint(xi), uint(yi), nil
 }
 
-func (f Format) ParseTile(val string) (tile *slippy.Tile, err error) {
-	z, x, y, err := format.Parse(val)
+func (f Format) ParseTile(val string, srid uint) (tile *slippy.Tile, err error) {
+	z, x, y, err := format.Parse(val, srid)
 	if err != nil {
 		return nil, err
 	}

@@ -18,9 +18,6 @@ import (
 	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar"
-	"github.com/go-spatial/geom/planar/clip"
-	"github.com/go-spatial/geom/planar/makevalid"
-	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 	"github.com/go-spatial/geom/planar/simplify"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
@@ -213,31 +210,31 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					}
 				}
 
-				//TODO: makevalid issues for 4326
+				//TODO: makevalid issues -- disabled clip and makevalid
 				// check if we need to clip and if we do build the clip region (tile extent)
-				var clipRegion *geom.Extent
-				if !l.DontClip {
-					webs := slippy.PixelsToProjectedUnits(tile.Z, uint(m.TileBuffer), uint(m.SRID))
-					clipRegion = tile.NativeExtent(uint(m.SRID)).ExpandBy(webs)
-				}
+				// var clipRegion *geom.Extent
+				// if !l.DontClip {
+				// 	webs := slippy.PixelsToProjectedUnits(tile.Z, uint(m.TileBuffer), uint(m.SRID))
+				// 	clipRegion = tile.NativeExtent(uint(m.SRID)).ExpandBy(webs)
+				// }
 
-				// create a hitmap for the makevalid function
-				hm, err := hitmap.New(clipRegion, geo)
-				if err != nil {
-					return err
-				}
+				// // create a hitmap for the makevalid function
+				// hm, err := hitmap.New(clipRegion, geo)
+				// if err != nil {
+				// 	return err
+				// }
 
-				// instantiate a new makevalid struct holding the hitmap
-				mv := makevalid.Makevalid{
-					Hitmap:  hm,
-					Clipper: clip.Default,
-				}
+				// // instantiate a new makevalid struct holding the hitmap
+				// mv := makevalid.Makevalid{
+				// 	Hitmap:  hm,
+				// 	Clipper: clip.Default,
+				// }
 
-				// apply make valid routine
-				geo, _, err = mv.Makevalid(ctx, geo, clipRegion)
-				if err != nil {
-					return err
-				}
+				// // apply make valid routine
+				// geo, _, err = mv.Makevalid(ctx, geo, clipRegion)
+				// if err != nil {
+				// 	return err
+				// }
 
 				// translate the geometry to tile coordinates
 				geo = mvt.PrepareGeo(geo, tile.NativeExtent(uint(m.SRID)), float64(m.TileExtent))

@@ -10,7 +10,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-spatial/proj"
+
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola/atlas"
 )
 
 func TestGenerateTilesForTileList(t *testing.T) {
@@ -25,6 +28,7 @@ func TestGenerateTilesForTileList(t *testing.T) {
 		explicit     bool
 		tiles        sTiles
 		err          error
+		maps         []atlas.Map
 	}
 
 	fn := func(tc tcase) (string, func(t *testing.T)) {
@@ -48,8 +52,13 @@ func TestGenerateTilesForTileList(t *testing.T) {
 				in = strings.NewReader(tc.tileList)
 			}
 
-			tilechannel := generateTilesForTileList(context.Background(), in, tc.explicit, tc.zooms, tc.format)
-			tiles := make(sTiles, 0, len(tc.tiles))
+			tilechannel, err := generateTilesForTileList(context.Background(), in, tc.explicit, tc.zooms, tc.format, tc.maps)
+			if err != nil {
+				t.Errorf("%v %v", t.Name(), err)
+				return
+			}
+
+			tiles := make([]*MapTile, 0, len(tc.tiles))
 			for tile := range tilechannel.Channel() {
 				tiles = append(tiles, tile)
 			}
@@ -68,15 +77,20 @@ func TestGenerateTilesForTileList(t *testing.T) {
 				return
 			}
 
-			sort.Sort(tiles)
-			if !tc.tiles.IsEqual(tiles) {
-				t.Errorf("unexpected tile list generated, expected %v got %v", tc.tiles, tiles)
+			stiles := make(sTiles, 0, len(tc.tiles))
+			for _, t := range tiles {
+				stiles = append(stiles, t.Tile)
+			}
+
+			sort.Sort(stiles)
+			if !tc.tiles.IsEqual(stiles) {
+				t.Errorf("unexpected tile list generated, expected %v got %v", tc.tiles, stiles)
 			}
 		}
 	}
 
-	tests := [...]tcase{
-		{
+	tests := map[string]tcase{
+		"test_3857_13/14/15 zooms": {
 			tileFilename: "testdata/list.tiles",
 			format:       defaultTileNameFormat,
 			zooms:        []uint{13, 14, 15},
@@ -88,14 +102,30 @@ func TestGenerateTilesForTileList(t *testing.T) {
 				slippy.NewTile(15, 601, 1562),
 				slippy.NewTile(15, 601, 1563),
 			},
+			maps: []atlas.Map{atlas.NewMap("test", proj.WebMercator)},
 		},
-		{
+		"test_explicit_3857": {
 			tileFilename: "testdata/list.tiles",
 			format:       defaultTileNameFormat,
 			explicit:     true,
 			tiles: sTiles{
 				slippy.NewTile(14, 300, 781),
 			},
+			maps: []atlas.Map{atlas.NewMap("test", proj.WebMercator)},
+		},
+		"test_4326_7/8/9 zooms": {
+			tileFilename: "testdata/4326.tiles",
+			format:       defaultTileNameFormat,
+			zooms:        []uint{7, 8, 9},
+			tiles: sTiles{
+				slippy.NewTile(7, 250, 125),
+				slippy.NewTile(8, 500, 250),
+				slippy.NewTile(9, 1000, 500),
+				slippy.NewTile(9, 1000, 501),
+				slippy.NewTile(9, 1001, 500),
+				slippy.NewTile(9, 1001, 501),
+			},
+			maps: []atlas.Map{atlas.NewMap("test", proj.EPSG4326)},
 		},
 	}
 	for _, tc := range tests {

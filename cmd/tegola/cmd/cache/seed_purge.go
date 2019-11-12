@@ -6,8 +6,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/go-spatial/proj"
-
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
@@ -186,61 +184,69 @@ func seedPurgeCommand(cmd *cobra.Command, args []string) (err error) {
 	}()
 
 	log.Info("zoom list: ", zooms)
-	//TODO (meilinger): need support for specifying SRID of tiles in tileset
-	tilechannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms, proj.WebMercator)
+	tilechannel, err := generateTilesForBounds(ctx, seedPurgeBounds, zooms, seedPurgeMaps)
+	if err != nil {
+		return err
+	}
 
-	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
+	return doWork(ctx, tilechannel, cacheConcurrency, seedPurgeWorker)
 }
 
-func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint, tileSRID uint) *TileChannel {
+func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint, maps []atlas.Map) (channel *TileChannel, err error) {
+	if len(maps) == 0 {
+		return nil, fmt.Errorf("no maps defined")
+	}
 
 	tce := &TileChannel{
-		channel: make(chan *slippy.Tile),
+		channel: make(chan *MapTile),
 	}
 
 	go func() {
 		defer tce.Close()
-		for _, z := range zooms {
-			// get the tiles at the corners given the bounds and zoom
-			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0], tileSRID)
-			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2], tileSRID)
-			grid := slippy.GetGrid(tileSRID)
+		for _, m := range maps {
+			for _, z := range zooms {
+				// get the tiles at the corners given the bounds and zoom
+				srid := uint(m.SRID)
+				grid := slippy.GetGrid(srid)
+				corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0], srid)
+				corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2], srid)
 
-			// x,y initials and finals
-			_, xi, yi := corner1.ZXY()
-			_, xf, yf := corner2.ZXY()
+				// x,y initials and finals
+				_, xi, yi := corner1.ZXY()
+				_, xf, yf := corner2.ZXY()
 
-			maxXatZ, maxYatZ := grid.MaxXY(z)
+				// ensure the initials are smaller than finals
+				// this breaks at the anti meridian: https://github.com/go-spatial/tegola/issues/500
+				if xi > xf {
+					xi, xf = xf, xi
+				}
+				if yi > yf {
+					yi, yf = yf, yi
+				}
 
-			// ensure the initials are smaller than finals
-			// this breaks at the anti meridian: https://github.com/go-spatial/tegola/issues/500
-			if xi > xf {
-				xi, xf = xf, xi
-			}
-			if yi > yf {
-				yi, yf = yf, yi
-			}
+				maxXatZ, maxYatZ := grid.MaxXY(z)
 
-			// prevent seeding out of bounds
-			xf = min(xf, maxXatZ)
-			yf = min(yf, maxYatZ)
+				// prevent seeding out of bounds
+				xf = min(xf, maxXatZ)
+				yf = min(yf, maxYatZ)
 
-		MainLoop:
-			for x := xi; x <= xf; x++ {
-				// loop columns
-				for y := yi; y <= yf; y++ {
-					select {
-					case tce.channel <- slippy.NewTile(z, x, y):
-					case <-ctx.Done():
-						// we have been cancelled
-						break MainLoop
+			MainLoop:
+				for x := xi; x <= xf; x++ {
+					// loop columns
+					for y := yi; y <= yf; y++ {
+						select {
+						case tce.channel <- &MapTile{MapName: m.Name, Tile: slippy.NewTile(z, x, y)}:
+						case <-ctx.Done():
+							// we have been cancelled
+							break MainLoop
+						}
 					}
 				}
 			}
 		}
 		tce.Close()
 	}()
-	return tce
+	return tce, nil
 }
 
 func min(x, y uint) uint {

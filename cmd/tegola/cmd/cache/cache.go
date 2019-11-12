@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-spatial/cobra" // The config from the main app
 	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/log"
 )
@@ -61,14 +60,14 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 }
 
 type TileChannel struct {
-	channel  chan *slippy.Tile
+	channel  chan *MapTile
 	cl       sync.RWMutex
 	isClosed bool
 	l        sync.RWMutex
 	err      error
 }
 
-func (tc *TileChannel) Channel() <-chan *slippy.Tile {
+func (tc *TileChannel) Channel() <-chan *MapTile {
 	if tc == nil {
 		return nil
 	}
@@ -110,22 +109,17 @@ func (tc *TileChannel) Close() {
 }
 
 type MapTile struct {
-	MapName  string
-	Tile     *slippy.Tile
-	TileSRID uint64
+	MapName string
+	Tile    *slippy.Tile
 }
 
-func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, concurrency int, worker func(context.Context, MapTile) error) (err error) {
+func doWork(ctx context.Context, tileChannel *TileChannel, concurrency int, worker func(context.Context, MapTile) error) (err error) {
 	var wg sync.WaitGroup
 	// new channel for the workers
 	tiler := make(chan MapTile)
 	var cleanup bool
 	var errLock sync.RWMutex
 	var mapTileErr error
-
-	if len(maps) == 0 {
-		return fmt.Errorf("no maps defined")
-	}
 
 	// set up the workers
 	wg.Add(concurrency)
@@ -163,35 +157,33 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 	// run through the incoming tiles, and generate the mapTiles as needed.
 TileChannelLoop:
 	for tile := range tileChannel.Channel() {
-		for m := range maps {
+		if ctx.Err() != nil {
+			cleanup = true
+			break
+		}
 
-			if ctx.Err() != nil {
+		{ // worker error occured.
+			errLock.RLock()
+			e := mapTileErr
+			errLock.RUnlock()
+			if e != nil {
 				cleanup = true
 				break
 			}
+		}
 
-			{ // worker error occured.
-				errLock.RLock()
-				e := mapTileErr
-				errLock.RUnlock()
-				if e != nil {
-					cleanup = true
-					break
-				}
-			}
+		mapTile := MapTile{
+			MapName: tile.MapName,
+			Tile:    tile.Tile,
+		}
 
-			mapTile := MapTile{
-				MapName:  maps[m].Name,
-				Tile:     tile,
-				TileSRID: maps[m].SRID,
-			}
+		log.Debugf("seeding: %v", mapTile)
 
-			select {
-			case tiler <- mapTile:
-			case <-ctx.Done():
-				cleanup = true
-				break TileChannelLoop
-			}
+		select {
+		case tiler <- mapTile:
+		case <-ctx.Done():
+			cleanup = true
+			break TileChannelLoop
 		}
 	}
 

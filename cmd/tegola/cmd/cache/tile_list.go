@@ -8,8 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola/atlas"
+
+	"github.com/go-spatial/cobra"
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
@@ -90,17 +92,24 @@ func tileListCommand(cmd *cobra.Command, args []string) (err error) {
 
 	log.Info("zoom list: ", zooms)
 
-	tilechannel := generateTilesForTileList(ctx, in, explicit, zooms, format)
+	tilechannel, err := generateTilesForTileList(ctx, in, explicit, zooms, format, seedPurgeMaps)
+	if err != nil {
+		return err
+	}
 
 	// start up workers here
-	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
+	return doWork(ctx, tilechannel, cacheConcurrency, seedPurgeWorker)
 }
 
 // generateTilesForTileList will return a channel where all the tiles in the list will be published
 // if explicit is false and zooms is not empty, it will include the tiles above and below with in the provided zooms
-func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit bool, zooms []uint, format Format) *TileChannel {
+func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit bool, zooms []uint, format Format, maps []atlas.Map) (*TileChannel, error) {
+	if len(maps) == 0 {
+		return nil, fmt.Errorf("no maps defined")
+	}
+
 	tce := &TileChannel{
-		channel: make(chan *slippy.Tile),
+		channel: make(chan *MapTile),
 	}
 	go func() {
 		defer tce.Close()
@@ -108,47 +117,50 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 		var (
 			err        error
 			lineNumber int
-			tile       *slippy.Tile
+			stile      *slippy.Tile
 		)
 
 		scanner := bufio.NewScanner(tilelist)
 
-		for scanner.Scan() {
-			lineNumber++
-			txt := scanner.Text()
-			tile, err = format.ParseTile(txt)
-			if err != nil {
-				tce.setError(fmt.Errorf("failed to parse line [%v]: %v", lineNumber, err))
-				return
-			}
-
-			if explicit || len(zooms) == 0 {
-				select {
-				case tce.channel <- tile:
-				case <-ctx.Done():
-					// we have been cancelled
+		for _, m := range maps {
+			srid := uint(m.SRID)
+			for scanner.Scan() {
+				lineNumber++
+				txt := scanner.Text()
+				stile, err = format.ParseTile(txt, uint(m.SRID))
+				if err != nil {
+					tce.setError(fmt.Errorf("failed to parse line [%v]: %v", lineNumber, err))
 					return
 				}
-				continue
-			}
 
-			for _, zoom := range zooms {
-				// range will include the original tile.
-				err = tile.RangeFamilyAt(zoom, 3857, func(tile *slippy.Tile, srid uint) error {
+				if explicit || len(zooms) == 0 {
 					select {
-					case tce.channel <- tile:
+					case tce.channel <- &MapTile{Tile: stile, MapName: m.Name}:
 					case <-ctx.Done():
 						// we have been cancelled
-						return context.Canceled
+						return
 					}
-					return nil
-				})
-				// gracefully stop if cancelled
-				if err != nil {
-					return
+					continue
+				}
+
+				for _, zoom := range zooms {
+					// range will include the original tile.
+					err = stile.RangeFamilyAt(zoom, srid, func(tile *slippy.Tile, srid uint) error {
+						select {
+						case tce.channel <- &MapTile{Tile: tile, MapName: m.Name}:
+						case <-ctx.Done():
+							// we have been cancelled
+							return context.Canceled
+						}
+						return nil
+					})
+					// gracefully stop if cancelled
+					if err != nil {
+						return
+					}
 				}
 			}
 		}
 	}()
-	return tce
+	return tce, nil
 }

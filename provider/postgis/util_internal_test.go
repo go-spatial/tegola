@@ -58,7 +58,7 @@ func TestReplaceTokens(t *testing.T) {
 			sql:      "SELECT * FROM foo WHERE geom && !BBOX!",
 			srid:     4326,
 			tile:     provider.NewTile(2, 1, 1, 64, proj.WebMercator),
-			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-91.40624998727614,-1.4061088352394662,1.4062499998042484,67.06743334612516,4326)",
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-91.40624999980423,-1.4061088352394662,1.4062499998042484,67.06743335100668,4326)",
 		},
 		"replace BBOX with != in query": {
 			sql:      "SELECT * FROM foo WHERE geom && !BBOX! AND bar != 42",

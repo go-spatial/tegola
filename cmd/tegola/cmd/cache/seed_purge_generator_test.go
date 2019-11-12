@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/proj"
+	"github.com/go-spatial/tegola/atlas"
 )
 
 type sTiles []*slippy.Tile
@@ -84,14 +85,20 @@ func TestGenerateTilesForBounds(t *testing.T) {
 		tiles    sTiles
 		err      error
 		tileSRID uint
+		maps     []atlas.Map
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 
 			// Setup up the generator.
-			tilechannel := generateTilesForBounds(context.Background(), tc.bounds, tc.zooms, tc.tileSRID)
-			tiles := make(sTiles, 0, len(tc.tiles))
+			tilechannel, err := generateTilesForBounds(context.Background(), tc.bounds, tc.zooms, tc.maps)
+			if err != nil {
+				t.Errorf("%v %v", t.Name(), err)
+				return
+			}
+
+			tiles := make([]*MapTile, 0, len(tc.tiles))
 			for tile := range tilechannel.Channel() {
 				tiles = append(tiles, tile)
 			}
@@ -109,21 +116,26 @@ func TestGenerateTilesForBounds(t *testing.T) {
 				return
 			}
 
-			sort.Sort(tiles)
-			if !tc.tiles.IsEqual(tiles) {
-				t.Errorf("unexpected tile list generated, expected %v got %v", tc.tiles, tiles)
+			stiles := make(sTiles, 0, len(tc.tiles))
+			for _, t := range tiles {
+				stiles = append(stiles, t.Tile)
+			}
+
+			sort.Sort(stiles)
+			if !tc.tiles.IsEqual(stiles) {
+				t.Errorf("unexpected tile list generated, expected %v got %v", tc.tiles, stiles)
 			}
 		}
 	}
 
 	tests := map[string]tcase{
-		"max_zoom=0": {
-			zooms:    []uint{0},
-			bounds:   worldBounds,
-			tiles:    sTiles{slippy.NewTile(0, 0, 0)},
-			tileSRID: proj.WebMercator,
+		"3857: max_zoom=0": {
+			zooms:  []uint{0},
+			bounds: worldBounds,
+			tiles:  sTiles{slippy.NewTile(0, 0, 0)},
+			maps:   []atlas.Map{atlas.NewMap("test", proj.WebMercator)},
 		},
-		"min_zoom=1 max_zoom=1": {
+		"3857: min_zoom=1 max_zoom=1": {
 			zooms:  []uint{1},
 			bounds: worldBounds,
 			tiles: sTiles{
@@ -132,9 +144,9 @@ func TestGenerateTilesForBounds(t *testing.T) {
 				slippy.NewTile(1, 1, 0),
 				slippy.NewTile(1, 1, 1),
 			},
-			tileSRID: proj.WebMercator,
+			maps: []atlas.Map{atlas.NewMap("test", proj.WebMercator)},
 		},
-		"min_zoom=1 max_zoom=1 bounds=180,90,0,0": {
+		"3857: min_zoom=1 max_zoom=1 bounds=180,90,0,0": {
 			zooms:  []uint{1},
 			bounds: [4]float64{180.0, 90.0, 0.0, 0.0},
 			tiles: sTiles{
@@ -145,7 +157,22 @@ func TestGenerateTilesForBounds(t *testing.T) {
 				 */
 				slippy.NewTile(1, 1, 1),
 			},
-			tileSRID: proj.WebMercator,
+			maps: []atlas.Map{atlas.NewMap("test", proj.WebMercator)},
+		},
+		"4326: min_zoom=1 max_zoom=1 bounds=-180,-90,180,90": {
+			zooms:  []uint{1},
+			bounds: [4]float64{-180.0, -90, 180.0, 90.0},
+			tiles: sTiles{
+				slippy.NewTile(1, 0, 0),
+				slippy.NewTile(1, 0, 1),
+				slippy.NewTile(1, 1, 0),
+				slippy.NewTile(1, 1, 1),
+				slippy.NewTile(1, 2, 0),
+				slippy.NewTile(1, 2, 1),
+				slippy.NewTile(1, 3, 0),
+				slippy.NewTile(1, 3, 1),
+			},
+			maps: []atlas.Map{atlas.NewMap("test", 4326)},
 		},
 	}
 
