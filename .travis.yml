@@ -37,15 +37,15 @@ env:
 
 matrix:
   include:
+    - go: "1.13.x"
+      env: CGO_ENABLED=0
     - go: "1.12.x"
       env: CGO_ENABLED=0
     - go: "1.11.x"
       env: CGO_ENABLED=0
-    - go: "1.10.x"
-      env: CGO_ENABLED=0
+    - go: "1.13.x"
     - go: "1.12.x"
     - go: "1.11.x"
-    - go: "1.10.x"
 
 services:
   - docker
