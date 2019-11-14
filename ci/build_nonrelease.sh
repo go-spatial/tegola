@@ -1,11 +1,7 @@
 set -x
 
-# cd to geom package location
-# gopath or vendor
-GEOM_PACKAGE_NAME=`go list -f "$(printf '{{ range .Imports }}{{ . }}\n{{ end }}\n')" ./.. | grep geom`
-cd `go list -f '{{.Dir}}' $GEOM_PACKAGE_NAME`
-GEOM_HASH=`git rev-parse --short HEAD`
-cd -
+# read the hash of the geom repo
+GEOM_HASH=`git -C $GOPATH/src/github.com/go-spatial/geom rev-parse --short HEAD`
 
 TEGOLA_HASH=`git rev-parse --short HEAD`
 
