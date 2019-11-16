@@ -1,5 +1,4 @@
 // +build !noMBTilesCache
-// +build cgo
 
 package atlas
 
