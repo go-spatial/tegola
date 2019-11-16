@@ -1,6 +1,6 @@
 // +build cgo
 
-package file
+package mbtiles
 
 import (
 	_ "github.com/mattn/go-sqlite3"

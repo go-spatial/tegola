@@ -1,4 +1,4 @@
-package file
+package mbtiles
 
 import (
 	"database/sql"

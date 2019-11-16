@@ -1,6 +1,6 @@
 // +build !cgo
 
-package file
+package mbtiles
 
 import (
 	"github.com/go-spatial/tegola/cache"
