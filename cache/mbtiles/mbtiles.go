@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/cache"
 )
 
@@ -28,6 +30,10 @@ const (
 	ConfigKeyBounds   = "bounds"
 )
 
+var (
+	EarthBounds Bounds = [4]float64{-180, -85.0511, 180, 85.0511}
+)
+
 func init() {
 	cache.Register(CacheType, New)
 }
@@ -35,7 +41,7 @@ func init() {
 //Cache hold the cache configuration
 type Cache struct {
 	Basepath string
-	Bounds   [4]float64
+	Bounds   Bounds
 	// MinZoom determines the min zoom the cache to persist. Before this
 	// zoom, cache Set() calls will be ignored.
 	MinZoom uint
@@ -47,9 +53,17 @@ type Cache struct {
 	DBList map[string]*sql.DB
 }
 
-//BoundsStr return a string representation of cache bounds
-func (fc *Cache) BoundsStr() string {
-	return fmt.Sprintf("%f,%f,%f,%f", fc.Bounds[0], fc.Bounds[1], fc.Bounds[2], fc.Bounds[3])
+//Bounds alias of [4]float64
+type Bounds [4]float64
+
+//String return a string representation of cache bounds
+func (b Bounds) String() string {
+	return fmt.Sprintf("%f,%f,%f,%f", b[0], b[1], b[2], b[3])
+}
+
+//IsEarth return true if bound to full earth
+func (b Bounds) IsEarth() bool {
+	return EarthBounds[0] == b[0] && EarthBounds[1] == b[1] && EarthBounds[2] == b[2] && EarthBounds[3] == b[3]
 }
 
 //Get reads a z,x,y entry from the cache and returns the contents
@@ -77,6 +91,14 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 	// check for maxzoom and minzoom
 	if key.Z > fc.MaxZoom || key.Z < fc.MinZoom {
 		return nil
+	}
+	if !fc.Bounds.IsEarth() {
+		//Check if match bounds
+		t := slippy.NewTile(key.Z, key.X, key.Y)
+		b := geom.Extent(fc.Bounds)
+		if _, doesIntersect := t.Extent3857().Intersect(&b); !doesIntersect {
+			return nil
+		}
 	}
 
 	db, err := fc.openOrCreateDB(key.MapName, key.LayerName)
@@ -142,7 +164,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 		for metaName, metaValue := range map[string]string{
 			"name":    "Tegola Cache Tiles",
 			"format":  "pbf",
-			"bounds":  fc.BoundsStr(),
+			"bounds":  fc.Bounds.String(),
 			"minzoom": fmt.Sprintf("%d", fc.MinZoom),
 			"maxzoom": fmt.Sprintf("%d", fc.MaxZoom),
 			"json":    json,

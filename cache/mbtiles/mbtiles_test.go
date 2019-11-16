@@ -41,8 +41,8 @@ func TestNew(t *testing.T) {
 			return
 		}
 
-		if tc.expectedBoundsStr != output.(*mbtiles.Cache).BoundsStr() {
-			t.Errorf("expected %+v got %+v", tc.expectedBoundsStr, output.(*mbtiles.Cache).BoundsStr())
+		if tc.expectedBoundsStr != output.(*mbtiles.Cache).Bounds.String() {
+			t.Errorf("expected %+v got %+v", tc.expectedBoundsStr, output.(*mbtiles.Cache).Bounds.String())
 			return
 		}
 	}

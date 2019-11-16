@@ -41,7 +41,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, err
 	}
 
-	defaultBounds := "-180,-85.0511,180,85.0511"
+	defaultBounds := EarthBounds.String()
 	cfgBounds, err := config.String(ConfigKeyBounds, &defaultBounds)
 	if err != nil {
 		return nil, err
