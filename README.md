@@ -261,6 +261,7 @@ The following build flags can be used to turn off certain features of tegola:
 - `noAzblobCache` - turn off the Azure Blob cache back end.
 - `noS3Cache` - turn off the AWS S3 cache back end.
 - `noRedisCache` - turn off the Redis cache back end.
+- `noMBTilesCache` - turn off the MBTiles cache back end. Note, MBTilesCache uses CGO and will be turned off if the environment variable `CGO_ENABLED=0` is set prior to building.
 - `noPostgisProvider` - turn off the PostGIS data provider.
 - `noGpkgProvider` - turn off the GeoPackage data provider. Note, GeoPackage uses CGO and will be turned off if the environment variable `CGO_ENABLED=0` is set prior to building.
 - `noViewer` - turn off the built in viewer.
