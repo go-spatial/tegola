@@ -3,12 +3,15 @@ package file
 import (
 	"database/sql"
 	"errors"
+	"os"
+	"path/filepath"
 
 	"github.com/go-spatial/tegola/cache"
 )
 
 var (
-	ErrMissingBasepath = errors.New("mbtilescache: missing required param 'basepath'")
+	ErrMissingBasepath        = errors.New("mbtilescache: missing required param 'basepath'")
+	ErrLayerCacheNotSupported = errors.New("mbtilescache: cache by layer is not supported")
 )
 
 //TODO attribution form maps definition (if possible)
@@ -42,25 +45,98 @@ type Cache struct {
 	dbList map[string]*sql.DB
 }
 
-//TODO Ignore from cache layer name (not suported by mbtiles)
-//TODO Create one file for each map name (use `default` is .MapName is not set)
-
 //Get reads a z,x,y entry from the cache and returns the contents
 // if there is a hit. the second argument denotes a hit or miss
 // so the consumer does not need to sniff errors for cache read misses
 func (fc *Cache) Get(key *cache.Key) ([]byte, bool, error) {
-	//TODO
-	return nil, false, nil
+	if key.LayerName != "" {
+		return nil, false, ErrLayerCacheNotSupported
+	}
+	db, err := fc.openOrCreateDB(key.MapName)
+	if err != nil {
+		return nil, false, err
+	}
+	yCorr := (1 << key.Z) - 1 - key.Y
+	var data []byte
+	err = db.QueryRow("SELECT tile_data FROM tiles WHERE zoom_level = ? AND tile_column = ? AND tile_row = ?", key.Z, key.X, yCorr).Scan(&data)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	return data, true, nil
 }
 
 //Set save a z,x,y entry in the cache
 func (fc *Cache) Set(key *cache.Key, val []byte) error {
-	//TODO
-	return nil
+	if key.LayerName != "" {
+		return ErrLayerCacheNotSupported
+	}
+	db, err := fc.openOrCreateDB(key.MapName)
+	if err != nil {
+		return err
+	}
+	yCorr := (1 << key.Z) - 1 - key.Y
+	_, err = db.Exec("INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES (?, ?, ?, ?)", key.Z, key.X, yCorr, val)
+	return err
 }
 
 //Purge clear a z,x,y entry from the cache
 func (fc *Cache) Purge(key *cache.Key) error {
-	//TODO
-	return nil
+	if key.LayerName != "" {
+		return ErrLayerCacheNotSupported
+	}
+	db, err := fc.openOrCreateDB(key.MapName)
+	if err != nil {
+		return err
+	}
+	yCorr := (1 << key.Z) - 1 - key.Y
+	_, err = db.Exec("DELETE FROM tiles WHERE zoom_level = ? AND tile_column = ? AND tile_row = ?", key.Z, key.X, yCorr)
+	return err
+}
+
+func (fc *Cache) openOrCreateDB(mapName string) (*sql.DB, error) {
+	if mapName == "" {
+		mapName = "default"
+	}
+	//Look for open connection in dbList
+	db, ok := fc.dbList[mapName]
+	if ok {
+		return db, nil
+	}
+
+	//Connection is not already opend we need one
+	file := filepath.Join(fc.Basepath, mapName+".mbtiles")
+
+	//Check if file exist prior to init
+	_, err := os.Stat(file)
+	dbNeedInit := os.IsNotExist(err)
+
+	db, err = sql.Open("sqlite3", file)
+	if err != nil {
+		return nil, err
+	}
+	if dbNeedInit {
+		for _, initSt := range []string{
+			"CREATE TABLE metadata (name text, value text)",
+			"CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob)",
+			"CREATE UNIQUE INDEX tile_index on tiles (zoom_level, tile_column, tile_row)",
+			//"CREATE TABLE grids (zoom_level integer, tile_column integer, tile_row integer, grid blob)",
+			//"CREATE TABLE grid_data (zoom_level integer, tile_column integer, tile_row integer, key_name text, key_json text)",
+		} {
+			_, err := db.Exec(initSt)
+			if err != nil {
+				return nil, err
+			}
+		}
+		//TODO generate json vector defs
+
+		//TODO find better storage in sqlite + use views
+	}
+	//TODO find if needed to update an already set mbtiles but with others metadata
+
+	//Store connection
+	fc.dbList[mapName] = db
+	return db, err
 }

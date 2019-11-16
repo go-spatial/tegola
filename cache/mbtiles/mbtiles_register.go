@@ -3,6 +3,8 @@
 package file
 
 import (
+	_ "github.com/mattn/go-sqlite3"
+
 	"database/sql"
 	"os"
 
