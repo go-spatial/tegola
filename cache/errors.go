@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrUnsupported = errors.New("provider: unsupported")
+	ErrUnsupported = errors.New("cache: unsupported")
 )
 
 type ErrInvalidFileKeyParts struct {
