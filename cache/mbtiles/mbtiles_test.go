@@ -4,12 +4,14 @@ package mbtiles_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/mbtiles"
 	"github.com/go-spatial/tegola/dict"
 )
@@ -105,6 +107,82 @@ func TestNew(t *testing.T) {
 			},
 			expected: nil,
 			err:      fmt.Errorf(`config: value mapped to "max_zoom" is string not uint`),
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
+	}
+}
+
+func TestSetGetPurge(t *testing.T) {
+	type tcase struct {
+		config   dict.Dict
+		key      cache.Key
+		expected []byte
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+
+		fc, err := mbtiles.New(tc.config)
+		if err != nil {
+			t.Errorf("%v", err)
+			return
+		}
+
+		// test write
+		if err = fc.Set(&tc.key, tc.expected); err != nil {
+			t.Errorf("write failed. err: %v", err)
+			return
+		}
+
+		output, hit, err := fc.Get(&tc.key)
+		if err != nil {
+			t.Errorf("read failed. err: %v", err)
+			return
+		}
+		if !hit {
+			t.Errorf("read failed. should have been a hit but cache reported a miss")
+			return
+		}
+
+		if !reflect.DeepEqual(output, tc.expected) {
+			t.Errorf("expected %v got %v", tc.expected, output)
+			return
+		}
+
+		// test purge
+		if err = fc.Purge(&tc.key); err != nil {
+			t.Errorf("purge failed. err: %v", err)
+			return
+		}
+
+		output, hit, err = fc.Get(&tc.key)
+		if err != nil {
+			t.Errorf("read failed. err: %v", err)
+			return
+		}
+		if hit {
+			t.Errorf("purge failed. should have been a miss but cache reported a hit")
+			return
+		}
+	}
+
+	tests := map[string]tcase{
+		"get set purge": {
+			config: map[string]interface{}{
+				"basepath": "testfiles/tegola-cache",
+			},
+			key: cache.Key{
+				Z: 0,
+				X: 1,
+				Y: 2,
+			},
+			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
 		},
 	}
 
