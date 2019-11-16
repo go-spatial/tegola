@@ -8,5 +8,5 @@ import (
 )
 
 func New(config dict.Dicter) (cache.Interface, error) {
-	return nil, provider.ErrUnsupported
+	return nil, cache.ErrUnsupported
 }
