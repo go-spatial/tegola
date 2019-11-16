@@ -6,3 +6,4 @@ documents
 .cover
 *.env
 tmp
+*.mbtiles

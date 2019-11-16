@@ -43,6 +43,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	if err != nil {
 		return nil, err
 	}
+	//TODO clean and format bounds
 
 	fc.Basepath, err = config.String(ConfigKeyBasepath, nil)
 	if err != nil {

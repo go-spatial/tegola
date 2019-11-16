@@ -3,6 +3,7 @@ package mbtiles
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -137,6 +138,27 @@ func (fc *Cache) openOrCreateDB(mapName string) (*sql.DB, error) {
 				return nil, err
 			}
 		}
+		for metaName, metaValue := range map[string]string{
+			"name":    "Tegola Cache Tiles",
+			"format":  "pbf",
+			"bounds":  fc.Bounds,
+			"minzoom": fmt.Sprintf("%d", fc.MinZoom),
+			"maxzoom": fmt.Sprintf("%d", fc.MaxZoom),
+			//TODO "json": "{}"
+			//Not mandatory but could be implemented
+			//center
+			//attribution
+			//description
+			//type
+			//version
+		} {
+
+			_, err = db.Exec("INSERT INTO metadata (name, value) VALUES (?, ?)", metaName, metaValue)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		//TODO generate metadata
 		//TODO generate json vector defs
 
