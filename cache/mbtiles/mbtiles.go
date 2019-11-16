@@ -10,10 +10,6 @@ var (
 	ErrMissingBasepath = errors.New("mbtilescache: missing required param 'basepath'")
 )
 
-func init() {
-	cache.Register(CacheType, New)
-}
-
 //TODO attribution form maps definition (if possible)
 //TODO set generic description
 
