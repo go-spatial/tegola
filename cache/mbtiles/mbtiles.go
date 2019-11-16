@@ -16,6 +16,7 @@ var (
 
 //TODO attribution form maps definition (if possible)
 //TODO set generic description
+//TODO filter Set by bounds
 
 const CacheType = "mbtiles"
 
@@ -73,6 +74,12 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 	if key.LayerName != "" {
 		return ErrLayerCacheNotSupported
 	}
+
+	// check for maxzoom and minzoom
+	if key.Z > fc.MaxZoom || key.Z < fc.MinZoom {
+		return nil
+	}
+
 	db, err := fc.openOrCreateDB(key.MapName)
 	if err != nil {
 		return err
@@ -130,6 +137,7 @@ func (fc *Cache) openOrCreateDB(mapName string) (*sql.DB, error) {
 				return nil, err
 			}
 		}
+		//TODO generate metadata
 		//TODO generate json vector defs
 
 		//TODO find better storage in sqlite + use views
