@@ -85,7 +85,7 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 		return err
 	}
 	yCorr := (1 << key.Z) - 1 - key.Y
-	_, err = db.Exec("INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES (?, ?, ?, ?)", key.Z, key.X, yCorr, val)
+	_, err = db.Exec("INSERT OR REPLACE INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES (?, ?, ?, ?)", key.Z, key.X, yCorr, val)
 	return err
 }
 
