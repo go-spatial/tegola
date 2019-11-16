@@ -3,12 +3,10 @@
 package mbtiles_test
 
 import (
+	"database/sql"
 	"fmt"
 	"reflect"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
@@ -37,7 +35,7 @@ func TestNew(t *testing.T) {
 			return
 		}
 
-		if !cmp.Equal(tc.expected, output, cmpopts.IgnoreUnexported(mbtiles.Cache{})) { //Reflect compare un-exported field like dbList
+		if !reflect.DeepEqual(tc.expected, output) {
 			t.Errorf("expected %+v got %+v", tc.expected, output)
 			return
 		}
@@ -53,6 +51,7 @@ func TestNew(t *testing.T) {
 				Bounds:   "-180.0,-85,180,85",
 				MinZoom:  0,
 				MaxZoom:  tegola.MaxZ,
+				DBList:   make(map[string]*sql.DB),
 			},
 			err: nil,
 		},
@@ -66,6 +65,7 @@ func TestNew(t *testing.T) {
 				Bounds:   "-180.0,-85,180,85",
 				MinZoom:  0,
 				MaxZoom:  9,
+				DBList:   make(map[string]*sql.DB),
 			},
 			err: nil,
 		},
@@ -79,6 +79,7 @@ func TestNew(t *testing.T) {
 				Bounds:   "-180.0,-85,180,85",
 				MinZoom:  0,
 				MaxZoom:  2,
+				DBList:   make(map[string]*sql.DB),
 			},
 			err: nil,
 		},
@@ -92,6 +93,7 @@ func TestNew(t *testing.T) {
 				Bounds:   "-180.0, -85.0511, 180.0, 85.0511", //TODO should be cleaned
 				MinZoom:  0,
 				MaxZoom:  tegola.MaxZ,
+				DBList:   make(map[string]*sql.DB),
 			},
 			err: nil,
 		},

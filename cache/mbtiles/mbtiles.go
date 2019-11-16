@@ -44,7 +44,7 @@ type Cache struct {
 	// should not be leveraged for higher zooms when data changes often.
 	MaxZoom uint
 	// reference to the database connections
-	dbList map[string]*sql.DB
+	DBList map[string]*sql.DB
 }
 
 //Get reads a z,x,y entry from the cache and returns the contents
@@ -108,8 +108,8 @@ func (fc *Cache) openOrCreateDB(mapName string) (*sql.DB, error) {
 	if mapName == "" {
 		mapName = "default"
 	}
-	//Look for open connection in dbList
-	db, ok := fc.dbList[mapName]
+	//Look for open connection in DBList
+	db, ok := fc.DBList[mapName]
 	if ok {
 		return db, nil
 	}
@@ -167,6 +167,6 @@ func (fc *Cache) openOrCreateDB(mapName string) (*sql.DB, error) {
 	//TODO find if needed to update an already set mbtiles but with others metadata
 
 	//Store connection
-	fc.dbList[mapName] = db
+	fc.DBList[mapName] = db
 	return db, err
 }

@@ -59,7 +59,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, err
 	}
 
-	fc.dbList = make(map[string]*sql.DB)
+	fc.DBList = make(map[string]*sql.DB)
 
 	return &fc, nil
 }
