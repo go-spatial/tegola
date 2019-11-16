@@ -132,13 +132,15 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 				return nil, err
 			}
 		}
+
+		json := `{"vector_layers":[]}` //TODO populate layers
 		for metaName, metaValue := range map[string]string{
 			"name":    "Tegola Cache Tiles",
 			"format":  "pbf",
 			"bounds":  fc.Bounds,
 			"minzoom": fmt.Sprintf("%d", fc.MinZoom),
 			"maxzoom": fmt.Sprintf("%d", fc.MaxZoom),
-			//TODO "json": "{}"
+			"json":    json,
 			//Not mandatory but could be implemented
 			//center
 			//attribution
