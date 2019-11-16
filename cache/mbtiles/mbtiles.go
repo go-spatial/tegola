@@ -3,7 +3,6 @@ package file
 import (
 	"errors"
 	"os"
-	"path/filepath"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
@@ -11,7 +10,7 @@ import (
 )
 
 var (
-	ErrMissingFilepath = errors.New("mbtilescache: missing required param 'filepath'")
+	ErrMissingBasepath = errors.New("mbtilescache: missing required param 'basepath'")
 )
 
 //TODO attribution form maps definition (if possible)
@@ -20,7 +19,7 @@ var (
 const CacheType = "mbtiles"
 
 const (
-	ConfigKeyFilepath = "filepath"
+	ConfigKeyBasepath = "basepath"
 	ConfigKeyMaxZoom  = "max_zoom"
 	ConfigKeyMinZoom  = "min_zoom"
 	ConfigKeyBounds   = "bounds"
@@ -59,17 +58,17 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, err
 	}
 
-	fc.Filepath, err = config.String(ConfigKeyFilepath, nil)
+	fc.Basepath, err = config.String(ConfigKeyBasepath, nil)
 	if err != nil {
-		return nil, ErrMissingFilepath
+		return nil, ErrMissingBasepath
 	}
 
-	if fc.Filepath == "" {
-		return nil, ErrMissingFilepath
+	if fc.Basepath == "" {
+		return nil, ErrMissingBasepath
 	}
 
-	// make our basepath of filepath if it does not exist
-	if err = os.MkdirAll(filepath.Dir(fc.Filepath), os.ModePerm); err != nil {
+	// make our basepath if it does not exist
+	if err = os.MkdirAll(fc.Basepath, os.ModePerm); err != nil {
 		return nil, err
 	}
 
@@ -78,7 +77,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 
 //Cache hold the cache configuration
 type Cache struct {
-	Filepath string
+	Basepath string
 	Bounds   string
 	// MinZoom determines the min zoom the cache to persist. Before this
 	// zoom, cache Set() calls will be ignored.
@@ -88,6 +87,9 @@ type Cache struct {
 	// should not be leveraged for higher zooms when data changes often.
 	MaxZoom uint
 }
+
+//TODO Ignore from cache layer name (not suported by mbtiles)
+//TODO Create one file for each map name (use `default` is .MapName is not set)
 
 //Get reads a z,x,y entry from the cache and returns the contents
 // if there is a hit. the second argument denotes a hit or miss
