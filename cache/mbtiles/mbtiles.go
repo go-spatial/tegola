@@ -35,7 +35,7 @@ func init() {
 //Cache hold the cache configuration
 type Cache struct {
 	Basepath string
-	Bounds   string
+	Bounds   [4]float64
 	// MinZoom determines the min zoom the cache to persist. Before this
 	// zoom, cache Set() calls will be ignored.
 	MinZoom uint
@@ -45,6 +45,11 @@ type Cache struct {
 	MaxZoom uint
 	// reference to the database connections
 	DBList map[string]*sql.DB
+}
+
+//BoundsStr return a string representation of cache bounds
+func (fc *Cache) BoundsStr() string {
+	return fmt.Sprintf("%f,%f,%f,%f", fc.Bounds[0], fc.Bounds[1], fc.Bounds[2], fc.Bounds[3])
 }
 
 //Get reads a z,x,y entry from the cache and returns the contents
@@ -137,7 +142,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 		for metaName, metaValue := range map[string]string{
 			"name":    "Tegola Cache Tiles",
 			"format":  "pbf",
-			"bounds":  fc.Bounds,
+			"bounds":  fc.BoundsStr(),
 			"minzoom": fmt.Sprintf("%d", fc.MinZoom),
 			"maxzoom": fmt.Sprintf("%d", fc.MaxZoom),
 			"json":    json,

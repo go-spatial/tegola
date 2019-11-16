@@ -3,14 +3,17 @@
 package mbtiles
 
 import (
-	_ "github.com/mattn/go-sqlite3"
-
 	"database/sql"
+	"fmt"
 	"os"
+	"strings"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/cmd"
 )
 
 // New instantiates a Cache. The config expects the following params:
@@ -38,12 +41,32 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, err
 	}
 
-	defaultBounds := "-180.0,-85,180,85"
-	fc.Bounds, err = config.String(ConfigKeyBounds, &defaultBounds)
+	defaultBounds := "-180,-85.0511,180,85.0511"
+	cfgBounds, err := config.String(ConfigKeyBounds, &defaultBounds)
 	if err != nil {
 		return nil, err
 	}
-	//TODO clean and format bounds
+
+	// validate and set bounds flag
+	boundsParts := strings.Split(strings.TrimSpace(cfgBounds), ",")
+	if len(boundsParts) != 4 {
+		return nil, fmt.Errorf("mbtilescache: invalid value for bounds (%v). expecting minx, miny, maxx, maxy", cfgBounds)
+	}
+
+	var ok bool
+
+	if fc.Bounds[0], ok = cmd.IsValidLngString(boundsParts[0]); !ok {
+		return nil, fmt.Errorf("mbtilescache: invalid lng value(%v) for bounds (%v)", boundsParts[0], cfgBounds)
+	}
+	if fc.Bounds[1], ok = cmd.IsValidLatString(boundsParts[1]); !ok {
+		return nil, fmt.Errorf("mbtilescache: invalid lat value(%v) for bounds (%v)", boundsParts[1], cfgBounds)
+	}
+	if fc.Bounds[2], ok = cmd.IsValidLngString(boundsParts[2]); !ok {
+		return nil, fmt.Errorf("mbtilescache: invalid lng value(%v) for bounds (%v)", boundsParts[2], cfgBounds)
+	}
+	if fc.Bounds[3], ok = cmd.IsValidLatString(boundsParts[3]); !ok {
+		return nil, fmt.Errorf("mbtilescache: invalid lat value(%v) for bounds (%v)", boundsParts[3], cfgBounds)
+	}
 
 	fc.Basepath, err = config.String(ConfigKeyBasepath, nil)
 	if err != nil {
