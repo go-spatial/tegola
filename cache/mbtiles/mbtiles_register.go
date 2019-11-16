@@ -3,6 +3,7 @@
 package file
 
 import (
+	"database/sql"
 	"os"
 
 	"github.com/go-spatial/tegola"
@@ -54,6 +55,8 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	if err = os.MkdirAll(fc.Basepath, os.ModePerm); err != nil {
 		return nil, err
 	}
+
+	fc.dbList = make(map[string]*sql.DB)
 
 	return &fc, nil
 }

@@ -1,6 +1,7 @@
 package file
 
 import (
+	"database/sql"
 	"errors"
 
 	"github.com/go-spatial/tegola/cache"
@@ -37,6 +38,8 @@ type Cache struct {
 	// zoom, cache Set() calls will be ignored. This is useful if the cache
 	// should not be leveraged for higher zooms when data changes often.
 	MaxZoom uint
+	// reference to the database connections
+	dbList map[string]*sql.DB
 }
 
 //TODO Ignore from cache layer name (not suported by mbtiles)
