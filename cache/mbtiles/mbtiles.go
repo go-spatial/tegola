@@ -51,10 +51,7 @@ type Cache struct {
 // if there is a hit. the second argument denotes a hit or miss
 // so the consumer does not need to sniff errors for cache read misses
 func (fc *Cache) Get(key *cache.Key) ([]byte, bool, error) {
-	if key.LayerName != "" {
-		return nil, false, ErrLayerCacheNotSupported
-	}
-	db, err := fc.openOrCreateDB(key.MapName)
+	db, err := fc.openOrCreateDB(key.MapName, key.LayerName)
 	if err != nil {
 		return nil, false, err
 	}
@@ -72,16 +69,12 @@ func (fc *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 
 //Set save a z,x,y entry in the cache
 func (fc *Cache) Set(key *cache.Key, val []byte) error {
-	if key.LayerName != "" {
-		return ErrLayerCacheNotSupported
-	}
-
 	// check for maxzoom and minzoom
 	if key.Z > fc.MaxZoom || key.Z < fc.MinZoom {
 		return nil
 	}
 
-	db, err := fc.openOrCreateDB(key.MapName)
+	db, err := fc.openOrCreateDB(key.MapName, key.LayerName)
 	if err != nil {
 		return err
 	}
@@ -92,10 +85,7 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 
 //Purge clear a z,x,y entry from the cache
 func (fc *Cache) Purge(key *cache.Key) error {
-	if key.LayerName != "" {
-		return ErrLayerCacheNotSupported
-	}
-	db, err := fc.openOrCreateDB(key.MapName)
+	db, err := fc.openOrCreateDB(key.MapName, key.LayerName)
 	if err != nil {
 		return err
 	}
@@ -104,18 +94,22 @@ func (fc *Cache) Purge(key *cache.Key) error {
 	return err
 }
 
-func (fc *Cache) openOrCreateDB(mapName string) (*sql.DB, error) {
+func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 	if mapName == "" {
 		mapName = "default"
 	}
+	fileName := mapName
+	if layerName != "" {
+		fileName += "-" + layerName
+	}
 	//Look for open connection in DBList
-	db, ok := fc.DBList[mapName]
+	db, ok := fc.DBList[fileName]
 	if ok {
 		return db, nil
 	}
 
 	//Connection is not already opend we need one
-	file := filepath.Join(fc.Basepath, mapName+".mbtiles")
+	file := filepath.Join(fc.Basepath, fileName+".mbtiles")
 
 	//Check if file exist prior to init
 	_, err := os.Stat(file)
@@ -167,6 +161,6 @@ func (fc *Cache) openOrCreateDB(mapName string) (*sql.DB, error) {
 	//TODO find if needed to update an already set mbtiles but with others metadata
 
 	//Store connection
-	fc.DBList[mapName] = db
+	fc.DBList[fileName] = db
 	return db, err
 }
