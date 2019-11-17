@@ -60,11 +60,6 @@ func (b Bounds) String() string {
 	return fmt.Sprintf("%f,%f,%f,%f", b[0], b[1], b[2], b[3])
 }
 
-//IsEarth return true if bound to full earth
-func (b Bounds) IsEarth() bool {
-	return EarthBounds[0] == b[0] && EarthBounds[1] == b[1] && EarthBounds[2] == b[2] && EarthBounds[3] == b[3]
-}
-
 //Center return the center of the bound
 func (b Bounds) Center() [2]float64 {
 	return [2]float64{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}

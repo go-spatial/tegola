@@ -18,7 +18,6 @@ import (
 // 	basepath (string): a path to where the cache will be written
 // 	max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
 // 	min_zoom (int): min zoom to use the cache. before this zoom cache Set() calls will be ignored
-// 	bounds (string): bounds to use the cache. outside this bounds cache Set() calls will be ignored
 //
 func New(config dict.Dicter) (cache.Interface, error) {
 	var err error
