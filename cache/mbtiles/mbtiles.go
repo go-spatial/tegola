@@ -24,7 +24,6 @@ const (
 	ConfigKeyBasepath = "basepath"
 	ConfigKeyMaxZoom  = "max_zoom"
 	ConfigKeyMinZoom  = "min_zoom"
-	ConfigKeyBounds   = "bounds"
 )
 
 var (
