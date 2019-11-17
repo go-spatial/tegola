@@ -13,7 +13,7 @@ package main
 //   % go tool pprof -alloc_space -web http://localhost:6060/debug/pprof/heap
 
 // The profiler is disabled by default during build. To enable it, use the builg tag 'pprof'.
-// For example, from the cmd/tegola direcotry:
+// For example, from the cmd/tegola directory:
 //
 // go build -tags 'pprof'
 
