@@ -140,7 +140,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 		return db, nil
 	}
 
-	//Connection is not already opend we need one
+	//Connection is not ready we need one
 	file := filepath.Join(fc.Basepath, fileName+".mbtiles")
 
 	//Check if file exist prior to init
@@ -154,6 +154,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 	if dbNeedInit {
 		for _, initSt := range []string{
 			"CREATE TABLE metadata (name text, value text)",
+			"CREATE UNIQUE INDEX metadata_name on metadata (name)",
 			"CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob)",
 			"CREATE UNIQUE INDEX tile_index on tiles (zoom_level, tile_column, tile_row)",
 			//"CREATE TABLE grids (zoom_level integer, tile_column integer, tile_row integer, grid blob)",
@@ -164,54 +165,49 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 				return nil, err
 			}
 		}
+		//TODO find better storage in sqlite + use views
+	}
 
-		var a *atlas.Atlas
-		m, err := a.Map(mapName)
+	var a *atlas.Atlas
+	m, err := a.Map(mapName)
+	if err != nil {
+		return nil, err
+	}
+	layersJSON := make([]string, len(m.Layers))
+	for i, ml := range m.Layers {
+		pLayers, err := ml.Provider.Layers()
 		if err != nil {
 			return nil, err
 		}
-		layersJSON := make([]string, len(m.Layers))
-		for i, ml := range m.Layers {
-			pLayers, err := ml.Provider.Layers()
-			if err != nil {
-				return nil, err
-			}
-			fieldsJSON := make([]string, len(pLayers))
-			for i2, pl := range pLayers {
-				fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())
-			}
-			layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, fields: {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
+		fieldsJSON := make([]string, len(pLayers))
+		for i2, pl := range pLayers {
+			fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())
 		}
-		json := fmt.Sprintf(`{"vector_layers": [%s]}`, strings.Join(layersJSON, ", ")) //TODO populate layers with json encoder
-
-		center := fc.Bounds.Center()
-		for metaName, metaValue := range map[string]string{
-			"name":        mapName,
-			"description": "Tegola Cache Tiles",
-			"format":      "pbf",
-			"bounds":      fc.Bounds.String(),
-			"center":      fmt.Sprintf("%f,%f,4", center[0], center[1]),
-			"minzoom":     fmt.Sprintf("%d", fc.MinZoom),
-			"maxzoom":     fmt.Sprintf("%d", fc.MaxZoom),
-			"json":        json,
-			"version":     "1.0.0",
-			//Not mandatory but could be implemented
-			//attribution
-			//type
-		} {
-
-			_, err = db.Exec("INSERT INTO metadata (name, value) VALUES (?, ?)", metaName, metaValue)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		//TODO generate metadata
-		//TODO generate json vector defs
-
-		//TODO find better storage in sqlite + use views
+		layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, fields: {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
 	}
-	//TODO find if needed to update an already set mbtiles but with others metadata
+	json := fmt.Sprintf(`{"vector_layers": [%s]}`, strings.Join(layersJSON, ", ")) //TODO populate layers with json encoder
+
+	center := fc.Bounds.Center()
+	for metaName, metaValue := range map[string]string{
+		"name":        mapName,
+		"description": "Tegola Cache Tiles",
+		"format":      "pbf",
+		"bounds":      fc.Bounds.String(),
+		"center":      fmt.Sprintf("%f,%f,4", center[0], center[1]),
+		"minzoom":     fmt.Sprintf("%d", fc.MinZoom),
+		"maxzoom":     fmt.Sprintf("%d", fc.MaxZoom),
+		"json":        json,
+		"version":     "1.0.0",
+		//Not mandatory but could be implemented
+		//attribution
+		//type
+	} {
+
+		_, err = db.Exec("INSERT OR REPLACE INTO metadata (name, value) VALUES (?, ?)", metaName, metaValue)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	//Store connection
 	fc.DBList[fileName] = db
