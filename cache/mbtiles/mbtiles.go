@@ -18,8 +18,6 @@ var (
 )
 
 //TODO attribution form maps definition (if possible)
-//TODO set generic description
-//TODO filter Set by bounds
 
 const CacheType = "mbtiles"
 
@@ -64,6 +62,11 @@ func (b Bounds) String() string {
 //IsEarth return true if bound to full earth
 func (b Bounds) IsEarth() bool {
 	return EarthBounds[0] == b[0] && EarthBounds[1] == b[1] && EarthBounds[2] == b[2] && EarthBounds[3] == b[3]
+}
+
+//Center return the center of the bound
+func (b Bounds) Center() [2]float64 {
+	return [2]float64{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}
 }
 
 //Get reads a z,x,y entry from the cache and returns the contents
@@ -161,17 +164,18 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 		}
 
 		json := `{"vector_layers":[]}` //TODO populate layers
+		center := fc.Bounds.Center()
 		for metaName, metaValue := range map[string]string{
-			"name":    "Tegola Cache Tiles",
-			"format":  "pbf",
-			"bounds":  fc.Bounds.String(),
-			"minzoom": fmt.Sprintf("%d", fc.MinZoom),
-			"maxzoom": fmt.Sprintf("%d", fc.MaxZoom),
-			"json":    json,
+			"name":        mapName,
+			"description": "Tegola Cache Tiles",
+			"format":      "pbf",
+			"bounds":      fc.Bounds.String(),
+			"center":      fmt.Sprintf("%f,%f", center[0], center[1]),
+			"minzoom":     fmt.Sprintf("%d", fc.MinZoom),
+			"maxzoom":     fmt.Sprintf("%d", fc.MaxZoom),
+			"json":        json,
 			//Not mandatory but could be implemented
-			//center
 			//attribution
-			//description
 			//type
 			//version
 		} {
