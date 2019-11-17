@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
@@ -47,6 +48,8 @@ type Cache struct {
 	MaxZoom uint
 	// reference to the database connections
 	DBList map[string]*sql.DB
+	// for managing current access to the DBList
+	sync.RWMutex
 }
 
 //Bounds alias of [4]float64
@@ -122,6 +125,9 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 	if layerName != "" {
 		fileName += "-" + layerName
 	}
+
+	fc.Lock()
+	defer fc.Unlock()
 	//Look for open connection in DBList
 	db, ok := fc.DBList[fileName]
 	if ok {
