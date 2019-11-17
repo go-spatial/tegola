@@ -1,4 +1,4 @@
-package atlas
+package server
 
 // The point of this file is to load and register the default cache backends
 import (

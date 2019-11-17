@@ -1,6 +1,6 @@
 // +build !noMBTilesCache
 
-package atlas
+package server
 
 // The point of this file is to load and register the mbtiles cache backend.
 // the mbtiles cache can be excluded during the build with the `noMBTilesCache` build flag

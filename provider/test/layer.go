@@ -6,6 +6,7 @@ type layer struct {
 	name     string
 	geomType geom.Geometry
 	srid     uint64
+	idField  string
 }
 
 func (l layer) Name() string {
@@ -18,4 +19,8 @@ func (l layer) GeomType() geom.Geometry {
 
 func (l layer) SRID() uint64 {
 	return l.srid
+}
+
+func (l layer) IDFieldName() string {
+	return l.idField
 }

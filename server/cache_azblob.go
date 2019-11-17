@@ -1,6 +1,6 @@
 // +build !noAzblobCache
 
-package atlas
+package server
 
 // The point of this file is to load and register the azblob cache backend.
 // the azblob cache can be excluded during the build with the `noAzblobCache` build flag

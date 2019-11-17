@@ -172,8 +172,12 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 		}
 		layersJSON := make([]string, len(m.Layers))
 		for i, ml := range m.Layers {
-			fieldsJSON := make([]string, len(ml.Provider.Layers))
-			for i2, pl := range ml.Provider.Layers {
+			pLayers, err := ml.Provider.Layers()
+			if err != nil {
+				return nil, err
+			}
+			fieldsJSON := make([]string, len(pLayers))
+			for i2, pl := range pLayers {
 				fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())
 			}
 			layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, fields: {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
