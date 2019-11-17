@@ -1,6 +1,13 @@
 package cache
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var (
+	ErrUnsupported = errors.New("cache: unsupported")
+)
 
 type ErrInvalidFileKeyParts struct {
 	path          string
