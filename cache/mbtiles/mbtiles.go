@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -158,20 +159,26 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 
 	var a *atlas.Atlas
 	m, err := a.Map(mapName)
+	layersJSON := make([]string, 0)
 	if err != nil {
-		return nil, err
-	}
-	layersJSON := make([]string, len(m.Layers))
-	for i, ml := range m.Layers {
-		pLayers, err := ml.Provider.Layers()
-		if err != nil {
-			return nil, err
+		//return nil, err
+		log.Printf("mbtilescache: fail to retrieve map details: %s", mapName)
+	} else {
+		layersJSON = make([]string, len(m.Layers))
+		for i, ml := range m.Layers {
+			fieldsJSON := make([]string, 0)
+			pLayers, err := ml.Provider.Layers()
+			if err != nil {
+				//return nil, err
+				log.Printf("mbtilescache: fail to retrieve map layers details: %s", ml.Name)
+			} else {
+				fieldsJSON = make([]string, len(pLayers))
+				for i2, pl := range pLayers {
+					fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())
+				}
+			}
+			layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, fields: {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
 		}
-		fieldsJSON := make([]string, len(pLayers))
-		for i2, pl := range pLayers {
-			fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())
-		}
-		layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, fields: {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
 	}
 	json := fmt.Sprintf(`{"vector_layers": [%s]}`, strings.Join(layersJSON, ", ")) //TODO populate layers with json encoder
 
