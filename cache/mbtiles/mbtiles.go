@@ -172,11 +172,15 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 				log.Printf("mbtilescache: fail to retrieve map layers details: %s", ml.Name)
 			} else {
 				fieldsJSON = make([]string, len(pLayers))
-				for i2, pl := range pLayers {
-					fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())
+				i2 := 0
+				for _, pl := range pLayers {
+					if strings.HasSuffix(ml.ProviderLayerName, "."+pl.Name()) {
+						fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName()) ///TODO de-duplicate
+						i2++
+					}
 				}
 			}
-			layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, fields: {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
+			layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, "fields": {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
 		}
 	}
 	json := fmt.Sprintf(`{"vector_layers": [%s]}`, strings.Join(layersJSON, ", ")) //TODO populate layers with json encoder
