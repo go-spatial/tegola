@@ -14,4 +14,3 @@ The MBTilesCache config supports the following properties:
 - `basepath` (string): [Required] a folder to write the cached tiles to {mapname}.mbtiles files.
 - `max_zoom` (int): [Optional] the max zoom the cache should cache to. After this zoom, Set() calls will return before doing work. This set the metadata maxzoom
 - `min_zoom` (int): [Optional] the min zoom the cache should cache to. Before this zoom, Set() calls will return before doing work. This set the metadata minzoom
-- `bounds` (int): [Optional] the bounds to register in the cache. This set the metadata bounds. Default to earth bounds: -180.0,-85,180,85.

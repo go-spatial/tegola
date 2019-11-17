@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 )
@@ -18,8 +16,6 @@ var (
 	ErrMissingBasepath        = errors.New("mbtilescache: missing required param 'basepath'")
 	ErrLayerCacheNotSupported = errors.New("mbtilescache: cache by layer is not supported")
 )
-
-//TODO attribution form maps definition (if possible)
 
 const CacheType = "mbtiles"
 
@@ -96,14 +92,6 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 	// check for maxzoom and minzoom
 	if key.Z > fc.MaxZoom || key.Z < fc.MinZoom {
 		return nil
-	}
-	if !fc.Bounds.IsEarth() {
-		//Check if match bounds
-		t := slippy.NewTile(key.Z, key.X, key.Y)
-		b := geom.Extent(fc.Bounds)
-		if _, doesIntersect := t.Extent3857().Intersect(&b); !doesIntersect {
-			return nil
-		}
 	}
 
 	db, err := fc.openOrCreateDB(key.MapName, key.LayerName)
@@ -199,7 +187,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 		"json":        json,
 		"version":     "1.0.0",
 		//Not mandatory but could be implemented
-		//attribution
+		//attribution from maps definition (if possible) or cache option
 		//type
 	} {
 

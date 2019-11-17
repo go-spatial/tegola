@@ -92,29 +92,6 @@ func TestNew(t *testing.T) {
 			expectedBoundsStr: "-180.000000,-85.051100,180.000000,85.051100",
 			err:               nil,
 		},
-		"valid basepath and bounds": {
-			config: map[string]interface{}{
-				"basepath": "testfiles/tegola-cache",
-				"bounds":   "-180.0, -85.0511, 180.0, 85.0511",
-			},
-			expected: &mbtiles.Cache{
-				Basepath: "testfiles/tegola-cache",
-				Bounds:   [4]float64{-180.0, -85.0511, 180, 85.0511},
-				MinZoom:  0,
-				MaxZoom:  tegola.MaxZ,
-				DBList:   make(map[string]*sql.DB),
-			},
-			expectedBoundsStr: "-180.000000,-85.051100,180.000000,85.051100",
-			err:               nil,
-		},
-		"invalid bounds": {
-			config: map[string]interface{}{
-				"basepath": "testfiles/tegola-cache",
-				"bounds":   "-280.0, -85.0511, 180.0, 85.0511",
-			},
-			expected: nil,
-			err:      fmt.Errorf("mbtilescache: invalid lng value(%v) for bounds (%v)", "-280.0", "-280.0, -85.0511, 180.0, 85.0511"),
-		},
 		"missing basepath": {
 			config:   map[string]interface{}{},
 			expected: nil,
