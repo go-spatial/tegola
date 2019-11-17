@@ -147,16 +147,16 @@ func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
 
 	var ok bool
 
-	if seedPurgeBounds[0], ok = gdcmd.IsValidLngString(boundsParts[0]); !ok {
+	if seedPurgeBounds[0], ok = IsValidLngString(boundsParts[0]); !ok {
 		return fmt.Errorf("invalid lng value(%v) for bounds (%v)", boundsParts[0], cacheBounds)
 	}
-	if seedPurgeBounds[1], ok = gdcmd.IsValidLatString(boundsParts[1]); !ok {
+	if seedPurgeBounds[1], ok = IsValidLatString(boundsParts[1]); !ok {
 		return fmt.Errorf("invalid lat value(%v) for bounds (%v)", boundsParts[1], cacheBounds)
 	}
-	if seedPurgeBounds[2], ok = gdcmd.IsValidLngString(boundsParts[2]); !ok {
+	if seedPurgeBounds[2], ok = IsValidLngString(boundsParts[2]); !ok {
 		return fmt.Errorf("invalid lng value(%v) for bounds (%v)", boundsParts[2], cacheBounds)
 	}
-	if seedPurgeBounds[3], ok = gdcmd.IsValidLatString(boundsParts[3]); !ok {
+	if seedPurgeBounds[3], ok = IsValidLatString(boundsParts[3]); !ok {
 		return fmt.Errorf("invalid lat value(%v) for bounds (%v)", boundsParts[3], cacheBounds)
 	}
 
