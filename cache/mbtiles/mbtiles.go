@@ -177,12 +177,9 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 				//return nil, err
 				log.Printf("mbtilescache: fail to retrieve map layers details: %s", ml.Name)
 			} else {
-				fieldsJSON = make([]string, len(pLayers))
-				i2 := 0
 				for _, pl := range pLayers {
-					if strings.HasSuffix(ml.ProviderLayerName, "."+pl.Name()) {
-						fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName()) ///TODO de-duplicate
-						i2++
+					if ml.ProviderLayerName == pl.Name() {
+						fieldsJSON = append(fieldsJSON, fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())) ///TODO de-duplicate
 					}
 				}
 			}
