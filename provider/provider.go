@@ -11,7 +11,6 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 )
 
-
 // TODO(@ear7h) remove this atrocity from the code base
 // tile_t is an implementation of the Tile interface, it is
 // named as such as to not confuse from the 4 other possible meanings
@@ -24,11 +23,11 @@ type tile_t struct {
 }
 
 func NewTile(z, x, y, buf, srid uint) Tile {
-	return &tile_t {
+	return &tile_t{
 		Tile: slippy.Tile{
-			Z:z,
-			X:x,
-			Y:y,
+			Z: z,
+			X: x,
+			Y: y,
 		},
 		buffer: buf,
 	}
@@ -53,7 +52,6 @@ type Tile interface {
 	BufferedExtent() (extent *geom.Extent, srid uint64)
 }
 
-
 type Tiler interface {
 	// TileFeature will stream decoded features to the callback function fn
 	// if fn returns ErrCanceled, the TileFeatures method should stop processing
@@ -66,6 +64,7 @@ type LayerInfo interface {
 	Name() string
 	GeomType() geom.Geometry
 	SRID() uint64
+	IDFieldName() string
 }
 
 // InitFunc initilize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.

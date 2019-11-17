@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
 )
 
@@ -163,21 +165,35 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 			}
 		}
 
-		json := `{"vector_layers":[]}` //TODO populate layers
+		var a *atlas.Atlas
+		m, err := a.Map(mapName)
+		if err != nil {
+			return nil, err
+		}
+		layersJSON := make([]string, len(m.Layers))
+		for i, ml := range m.Layers {
+			fieldsJSON := make([]string, len(ml.Provider.Layers))
+			for i2, pl := range ml.Provider.Layers {
+				fieldsJSON[i2] = fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())
+			}
+			layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, fields: {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
+		}
+		json := fmt.Sprintf(`{"vector_layers": [%s]}`, strings.Join(layersJSON, ", ")) //TODO populate layers with json encoder
+
 		center := fc.Bounds.Center()
 		for metaName, metaValue := range map[string]string{
 			"name":        mapName,
 			"description": "Tegola Cache Tiles",
 			"format":      "pbf",
 			"bounds":      fc.Bounds.String(),
-			"center":      fmt.Sprintf("%f,%f", center[0], center[1]),
+			"center":      fmt.Sprintf("%f,%f,4", center[0], center[1]),
 			"minzoom":     fmt.Sprintf("%d", fc.MinZoom),
 			"maxzoom":     fmt.Sprintf("%d", fc.MaxZoom),
 			"json":        json,
+			"version":     "1.0.0",
 			//Not mandatory but could be implemented
 			//attribution
 			//type
-			//version
 		} {
 
 			_, err = db.Exec("INSERT INTO metadata (name, value) VALUES (?, ?)", metaName, metaValue)
