@@ -14,6 +14,8 @@ env:
     - secure: "IlT9p8OUxTgvdVW5teBLiINrqcjqxTeTvaNOz7fZ24Sv5sqkOldzCa24/FQH/LinOXQFHl1jq7C+Tqu0OQhw/L6T28oDrzGSJf+PmdqmnrgqndTthDMRfh3Vw1KqgMAFJSma+G39XNo6T15clKIU7iMMR4gWa7zFx/BjclT9kk0dGP/RIR3HDG9Svqo6q9rsRMIsuTSmiN73QL8pqcbPAjYuXfQ5COffCObipLORbinacmf6tiiVDG+ZtH9FtXkJf0reb/jZZWCvk12IENtSK5R2r/UOZ5nZ6QwMNE0WnxqeZB5qJfnT2kHz/fRU02hypJllMAiB3agr3/yCy3ut8aVwI2QAK1FkOWCGUa0C4vWKZZ+aDM+BKnsADTRuxdY+HUDVlgQv0IXSxiYPbFxABdw7Y/G9p8KDiDH16yp4QLsKRo15QWOJk2Fa4MD20t7dFqiYJl47V8LSrwmov9hg5mxn2REpzRxoQ7Smyrl6gPXKjyp7VBFUNCmAGZFuSwDKktS8iwyM2rlJLiJCouSJGG8mnyFK4GoUuuYTU7hcV11oQiUJ51bk+0iSJsjjoWvjRDy+HY7CnBbEvxEmt8kmbNrbPyyFvq6FDOQauJr9rnx3U4vB26jwnH0MBIWOVyd1LL/lmQHIsFnmgSuOflDrDnULU6azXqUkl22rs9uPB6c="
     # secure DOCKER_PASSWORD
     - secure: "bQvCZLmlErLeXo5fULlmSJ+3XCc6pdGZ1QP9EX0naGPfsvSyTVZed9aFsHJDUtg3XpbxJ7aB4M/L30UbZJFcnai/rcjzirqDioOjC1pFVCwgpBGVetsUdVt7KYHM2sCN0+Wj8h0H026XWVVR+2rjq3V63GxB4s9nN1RYWO1kDmxy3/BSAaPFt9eNdGq0NwJ9CjA1hS928jn/FR72ZLZ17Iav+8zay27kc8IJYjze4iQ+ji4Rs0+vA5cgXdS7iKelbSwTggMsikUOQRZ8sptP2qfqaADF2P5gZlS1aOb3El9wXEZjESqIjzycNvLlPbAijdgiFsh45deBzgKay3/Dapw7ttsR3exd4dcvnU34eP45ms4Tm6o+QifP2wyzwiHi+Aa2ELfiC//nFUAiKdX4urqsH7wv/HCJtgXOaK6bHlEK6YSqQafY5QmDOPoWnFCv1M+1JcK1HVpAS3Vny1Fui/yasFZcg8OhZHxHkkBadgVQEJAB61Z86LfFyKFAbqQ2xcw6rYVdgKj/j85cntNmk3d/skCZYkKOwYPEDWSLoF+HwYHln2jQfyVB3qj4FBpjTBsFjz5E5y9/Efv3sRXlIkhhOJhMiOSje8AjXnAKkPS5PbgNmx5N2i2E0aN7/KZpAFrGaenSn8D6Bh6+xaX8sZEl+5OCBJyL0p/Ji1Lr1+o="
+    # tell go mod to use the vendor directory
+    - GOFLAGS="-mod=vendor"
     - RUN_POSTGIS_TESTS=yes
     - PGHOST="localhost"
     - PGPORT=5432
@@ -39,13 +41,9 @@ matrix:
   include:
     - go: "1.13.x"
       env: CGO_ENABLED=0
-    - go: "1.12.x"
-      env: CGO_ENABLED=0
-    - go: "1.11.x"
-      env: CGO_ENABLED=0
+      env: GO111MODULE=on
     - go: "1.13.x"
-    - go: "1.12.x"
-    - go: "1.11.x"
+      env: GO111MODULE=on
 
 services:
   - docker

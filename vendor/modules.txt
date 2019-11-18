@@ -1,0 +1,120 @@
+# github.com/Azure/azure-pipeline-go v0.0.0-20180607212504-7571e8eb0876
+github.com/Azure/azure-pipeline-go/pipeline
+# github.com/Azure/azure-storage-blob-go v0.0.0-20180706173141-f0a732ea9441
+github.com/Azure/azure-storage-blob-go/2017-07-29/azblob
+# github.com/BurntSushi/toml v0.3.1
+github.com/BurntSushi/toml
+# github.com/akrylysov/algnhsa v0.12.1
+github.com/akrylysov/algnhsa
+# github.com/aws/aws-lambda-go v1.13.1
+github.com/aws/aws-lambda-go/events
+github.com/aws/aws-lambda-go/lambda
+github.com/aws/aws-lambda-go/lambda/handlertrace
+github.com/aws/aws-lambda-go/lambda/messages
+github.com/aws/aws-lambda-go/lambdacontext
+# github.com/aws/aws-sdk-go v1.12.44-0.20171207221737-00379a7e831f
+github.com/aws/aws-sdk-go/aws
+github.com/aws/aws-sdk-go/aws/awserr
+github.com/aws/aws-sdk-go/aws/awsutil
+github.com/aws/aws-sdk-go/aws/client
+github.com/aws/aws-sdk-go/aws/client/metadata
+github.com/aws/aws-sdk-go/aws/corehandlers
+github.com/aws/aws-sdk-go/aws/credentials
+github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds
+github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
+github.com/aws/aws-sdk-go/aws/credentials/stscreds
+github.com/aws/aws-sdk-go/aws/defaults
+github.com/aws/aws-sdk-go/aws/ec2metadata
+github.com/aws/aws-sdk-go/aws/endpoints
+github.com/aws/aws-sdk-go/aws/request
+github.com/aws/aws-sdk-go/aws/session
+github.com/aws/aws-sdk-go/aws/signer/v4
+github.com/aws/aws-sdk-go/internal/shareddefaults
+github.com/aws/aws-sdk-go/private/protocol
+github.com/aws/aws-sdk-go/private/protocol/query
+github.com/aws/aws-sdk-go/private/protocol/query/queryutil
+github.com/aws/aws-sdk-go/private/protocol/rest
+github.com/aws/aws-sdk-go/private/protocol/restxml
+github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
+github.com/aws/aws-sdk-go/service/s3
+github.com/aws/aws-sdk-go/service/sts
+# github.com/dimfeld/httptreemux v5.0.1+incompatible
+github.com/dimfeld/httptreemux
+# github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb
+github.com/gdey/errors
+# github.com/go-ini/ini v1.28.3-0.20170813052230-c787282c39ac
+github.com/go-ini/ini
+# github.com/go-redis/redis v6.9.0+incompatible
+github.com/go-redis/redis
+github.com/go-redis/redis/internal
+github.com/go-redis/redis/internal/consistenthash
+github.com/go-redis/redis/internal/hashtag
+github.com/go-redis/redis/internal/pool
+github.com/go-redis/redis/internal/proto
+github.com/go-redis/redis/internal/singleflight
+# github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
+github.com/go-spatial/cobra
+# github.com/go-spatial/geom v0.0.0-20191115190231-0905ac843a79
+github.com/go-spatial/geom
+github.com/go-spatial/geom/cmp
+github.com/go-spatial/geom/encoding/gpkg
+github.com/go-spatial/geom/encoding/mvt
+github.com/go-spatial/geom/encoding/mvt/vector_tile
+github.com/go-spatial/geom/encoding/wkb
+github.com/go-spatial/geom/encoding/wkb/internal/consts
+github.com/go-spatial/geom/encoding/wkb/internal/decode
+github.com/go-spatial/geom/encoding/wkb/internal/encode
+github.com/go-spatial/geom/encoding/wkt
+github.com/go-spatial/geom/internal/debugger
+github.com/go-spatial/geom/internal/debugger/recorder
+github.com/go-spatial/geom/internal/debugger/recorder/gpkg
+github.com/go-spatial/geom/internal/rtreego
+github.com/go-spatial/geom/planar
+github.com/go-spatial/geom/planar/clip
+github.com/go-spatial/geom/planar/intersect
+github.com/go-spatial/geom/planar/makevalid
+github.com/go-spatial/geom/planar/makevalid/hitmap
+github.com/go-spatial/geom/planar/makevalid/walker
+github.com/go-spatial/geom/planar/simplify
+github.com/go-spatial/geom/planar/triangulate/delaunay
+github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge
+github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision
+github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision/pseudopolygon
+github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision/testingtables
+github.com/go-spatial/geom/slippy
+github.com/go-spatial/geom/winding
+# github.com/golang/protobuf v1.2.0
+github.com/golang/protobuf/proto
+# github.com/inconshreveable/mousetrap v1.0.0
+github.com/inconshreveable/mousetrap
+# github.com/jackc/pgx v3.2.0+incompatible
+github.com/jackc/pgx
+github.com/jackc/pgx/chunkreader
+github.com/jackc/pgx/internal/sanitize
+github.com/jackc/pgx/pgio
+github.com/jackc/pgx/pgproto3
+github.com/jackc/pgx/pgtype
+# github.com/jmespath/go-jmespath v0.0.0-20160803190731-bd40a432e4c7
+github.com/jmespath/go-jmespath
+# github.com/jteeuwen/go-bindata v3.0.7+incompatible
+github.com/jteeuwen/go-bindata
+github.com/jteeuwen/go-bindata/go-bindata
+# github.com/karalabe/xgo v0.0.0-20191115072854-c5ccff8648a7
+github.com/karalabe/xgo
+# github.com/mattn/go-sqlite3 v1.12.0
+github.com/mattn/go-sqlite3
+# github.com/mattn/goveralls v0.0.4
+github.com/mattn/goveralls
+# github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c
+github.com/pborman/uuid
+# github.com/pkg/errors v0.8.1-0.20180311214515-816c9085562c
+github.com/pkg/errors
+# github.com/spf13/pflag v1.0.1-0.20180410213010-329ebf1e0480
+github.com/spf13/pflag
+# github.com/theckman/goconstraint v1.10.1-0.20180216224824-e867bde6e4e1
+github.com/theckman/goconstraint/go1.8/gte
+# golang.org/x/tools v0.0.0-20190328211700-ab21143f2384
+golang.org/x/tools/cmd/cover
+golang.org/x/tools/cover
+# gopkg.in/go-playground/colors.v1 v1.0.2-0.20150924111726-b53ecfb39623
+gopkg.in/go-playground/colors.v1
