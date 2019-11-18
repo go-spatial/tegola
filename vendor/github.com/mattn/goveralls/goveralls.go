@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	_ "crypto/sha512"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -20,6 +21,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -50,10 +52,13 @@ var (
 	coverprof  = flag.String("coverprofile", "", "If supplied, use a go cover profile (comma separated)")
 	covermode  = flag.String("covermode", "count", "sent as covermode argument to go test")
 	repotoken  = flag.String("repotoken", os.Getenv("COVERALLS_TOKEN"), "Repository Token on coveralls")
+	parallel   = flag.Bool("parallel", os.Getenv("COVERALLS_PARALLEL") != "", "Submit as parallel")
 	endpoint   = flag.String("endpoint", "https://coveralls.io", "Hostname to submit Coveralls data to")
-	service    = flag.String("service", "travis-ci", "The CI service or other environment in which the test suite was run. ")
+	service    = flag.String("service", "", "The CI service or other environment in which the test suite was run. ")
 	shallow    = flag.Bool("shallow", false, "Shallow coveralls internal server errors")
 	ignore     = flag.String("ignore", "", "Comma separated files to ignore")
+	insecure   = flag.Bool("insecure", false, "Set insecure to skip verification of certificates")
+	show       = flag.Bool("show", false, "Show which package is being tested")
 )
 
 // usage supplants package flag's Usage variable
@@ -80,6 +85,7 @@ type Job struct {
 	ServicePullRequest string        `json:"service_pull_request,omitempty"`
 	ServiceName        string        `json:"service_name"`
 	SourceFiles        []*SourceFile `json:"source_files"`
+	Parallel           *bool         `json:"parallel,omitempty"`
 	Git                *Git          `json:"git,omitempty"`
 	RunAt              time.Time     `json:"run_at"`
 }
@@ -104,9 +110,14 @@ func getPkgs(pkg string) ([]string, error) {
 	allPkgs := strings.Split(strings.Trim(string(out), "\n"), "\n")
 	pkgs := make([]string, 0, len(allPkgs))
 	for _, p := range allPkgs {
-		if !strings.Contains(p, "/vendor/") {
-			pkgs = append(pkgs, p)
+		if strings.Contains(p, "/vendor/") {
+			continue
 		}
+		// go modules output
+		if strings.Contains(p, "go: ") {
+			continue
+		}
+		pkgs = append(pkgs, p)
 	}
 	return pkgs, nil
 }
@@ -149,6 +160,9 @@ func getCoverage() ([]*SourceFile, error) {
 		args = append(args, line)
 		cmd.Args = args
 
+		if *show {
+			fmt.Println("goveralls:", line)
+		}
 		err = cmd.Run()
 		if err != nil {
 			return nil, fmt.Errorf("%v: %v", err, outBuf.String())
@@ -225,6 +239,13 @@ func process() error {
 	os.Setenv("PATH", strings.Join(paths, string(filepath.ListSeparator)))
 
 	//
+	// Handle certificate verification configuration
+	//
+	if *insecure {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	//
 	// Initialize Job
 	//
 	var jobId string
@@ -234,6 +255,21 @@ func process() error {
 		jobId = circleCiJobId
 	} else if appveyorJobId := os.Getenv("APPVEYOR_JOB_ID"); appveyorJobId != "" {
 		jobId = appveyorJobId
+	} else if semaphoreJobId := os.Getenv("SEMAPHORE_BUILD_NUMBER"); semaphoreJobId != "" {
+		jobId = semaphoreJobId
+	} else if jenkinsJobId := os.Getenv("BUILD_NUMBER"); jenkinsJobId != "" {
+		jobId = jenkinsJobId
+	} else if droneBuildNumber := os.Getenv("DRONE_BUILD_NUMBER"); droneBuildNumber != "" {
+		jobId = droneBuildNumber
+	} else if buildkiteBuildNumber := os.Getenv("BUILDKITE_BUILD_NUMBER"); buildkiteBuildNumber != "" {
+		jobId = buildkiteBuildNumber
+	} else if githubSha := os.Getenv("GITHUB_SHA"); githubSha != "" {
+		if os.Getenv("GITHUB_EVENT_NAME") == "pull_request" {
+			number, _ := getGithubEvent()["number"].(float64)
+			jobId = fmt.Sprintf(`%s-PR-%d`, githubSha, int(number))
+		} else {
+			jobId = githubSha
+		}
 	}
 
 	if *repotoken == "" {
@@ -250,6 +286,19 @@ func process() error {
 		pullRequest = regexp.MustCompile(`[0-9]+$`).FindString(prURL)
 	} else if prNumber := os.Getenv("APPVEYOR_PULL_REQUEST_NUMBER"); prNumber != "" {
 		pullRequest = prNumber
+	} else if prNumber := os.Getenv("PULL_REQUEST_NUMBER"); prNumber != "" {
+		pullRequest = prNumber
+	} else if prNumber := os.Getenv("DRONE_PULL_REQUEST"); prNumber != "" {
+		pullRequest = prNumber
+	} else if prNumber := os.Getenv("BUILDKITE_PULL_REQUEST"); prNumber != "" {
+		pullRequest = prNumber
+	} else if os.Getenv("GITHUB_EVENT_NAME") == "pull_request" {
+		number, _ := getGithubEvent()["number"].(float64)
+		pullRequest = strconv.Itoa(int(number))
+	}
+
+	if *service == "" && os.Getenv("TRAVIS_JOB_ID") != "" {
+		*service = "travis-ci"
 	}
 
 	sourceFiles, err := getCoverage()
@@ -257,19 +306,27 @@ func process() error {
 		return err
 	}
 
+	commitRef := "HEAD"
+	if os.Getenv("GITHUB_EVENT_NAME") == "pull_request" {
+		ghPR, _ := getGithubEvent()["pull_request"].(map[string]interface{})
+		ghHead, _ := ghPR["head"].(map[string]interface{})
+		commitRef, _ = ghHead["sha"].(string)
+	}
+
 	j := Job{
 		RunAt:              time.Now(),
 		RepoToken:          repotoken,
 		ServicePullRequest: pullRequest,
-		Git:                collectGitInfo(),
+		Parallel:           parallel,
+		Git:                collectGitInfo(commitRef),
 		SourceFiles:        sourceFiles,
+		ServiceName:        *service,
 	}
 
 	// Only include a job ID if it's known, otherwise, Coveralls looks
 	// for the job and can't find it.
 	if jobId != "" {
 		j.ServiceJobId = jobId
-		j.ServiceName = *service
 	}
 
 	// Ignore files
@@ -339,6 +396,30 @@ func process() error {
 	fmt.Println(response.Message)
 	fmt.Println(response.URL)
 	return nil
+}
+
+func getGithubEvent() map[string]interface{} {
+	jsonFilePath := os.Getenv("GITHUB_EVENT_PATH")
+	if jsonFilePath == "" {
+		return nil
+	}
+
+	jsonFile, err := os.Open(jsonFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer jsonFile.Close()
+
+	jsonByte, _ := ioutil.ReadAll(jsonFile)
+
+	// unmarshal the json into a release event
+	var event map[string]interface{}
+	err = json.Unmarshal(jsonByte, &event)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return event
 }
 
 func main() {
