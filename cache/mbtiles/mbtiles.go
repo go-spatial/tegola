@@ -168,7 +168,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 			"description": "Tegola Cache Tiles",
 			"format":      tileJSON.Format,
 			"bounds":      BoundsToString(m.Bounds.Extent()),
-			"center":      fmt.Sprintf("%f,%f,%f", m.Center),
+			"center":      fmt.Sprintf("%f,%f,%f", m.Center[0], m.Center[1], m.Center[2]),
 			"minzoom":     fmt.Sprintf("%d", Max(fc.MinZoom, tileJSON.MinZoom)),
 			"maxzoom":     fmt.Sprintf("%d", Min(fc.MaxZoom, tileJSON.MaxZoom)),
 			"json":        string(bJSON), //TODO only output selected layer if layerName is set
