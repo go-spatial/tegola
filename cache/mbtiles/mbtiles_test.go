@@ -16,10 +16,9 @@ import (
 
 func TestNew(t *testing.T) {
 	type tcase struct {
-		config            dict.Dict
-		expected          *mbtiles.Cache
-		expectedBoundsStr string
-		err               error
+		config   dict.Dict
+		expected *mbtiles.Cache
+		err      error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -41,10 +40,6 @@ func TestNew(t *testing.T) {
 			return
 		}
 
-		if tc.expectedBoundsStr != output.(*mbtiles.Cache).Bounds.String() {
-			t.Errorf("expected %+v got %+v", tc.expectedBoundsStr, output.(*mbtiles.Cache).Bounds.String())
-			return
-		}
 	}
 
 	tests := map[string]tcase{
@@ -54,13 +49,11 @@ func TestNew(t *testing.T) {
 			},
 			expected: &mbtiles.Cache{
 				Basepath: "testfiles/tegola-cache",
-				Bounds:   [4]float64{-180.0, -85.0511, 180, 85.0511},
 				MinZoom:  0,
 				MaxZoom:  tegola.MaxZ,
 				DBList:   make(map[string]*sql.DB),
 			},
-			expectedBoundsStr: "-180.000000,-85.051100,180.000000,85.051100",
-			err:               nil,
+			err: nil,
 		},
 		"valid basepath and max zoom": {
 			config: map[string]interface{}{
@@ -69,13 +62,11 @@ func TestNew(t *testing.T) {
 			},
 			expected: &mbtiles.Cache{
 				Basepath: "testfiles/tegola-cache",
-				Bounds:   [4]float64{-180.0, -85.0511, 180, 85.0511},
 				MinZoom:  0,
 				MaxZoom:  9,
 				DBList:   make(map[string]*sql.DB),
 			},
-			expectedBoundsStr: "-180.000000,-85.051100,180.000000,85.051100",
-			err:               nil,
+			err: nil,
 		},
 		"valid basepath and min zoom": {
 			config: map[string]interface{}{
@@ -84,13 +75,11 @@ func TestNew(t *testing.T) {
 			},
 			expected: &mbtiles.Cache{
 				Basepath: "testfiles/tegola-cache",
-				Bounds:   [4]float64{-180.0, -85.0511, 180, 85.0511},
 				MinZoom:  0,
 				MaxZoom:  2,
 				DBList:   make(map[string]*sql.DB),
 			},
-			expectedBoundsStr: "-180.000000,-85.051100,180.000000,85.051100",
-			err:               nil,
+			err: nil,
 		},
 		"missing basepath": {
 			config:   map[string]interface{}{},
