@@ -16,8 +16,7 @@ import (
 )
 
 var (
-	ErrMissingBasepath        = errors.New("mbtilescache: missing required param 'basepath'")
-	ErrLayerCacheNotSupported = errors.New("mbtilescache: cache by layer is not supported")
+	ErrMissingBasepath = errors.New("mbtilescache: missing required param 'basepath'")
 )
 
 const CacheType = "mbtiles"
@@ -172,7 +171,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 			"center":      fmt.Sprintf("%f,%f,%f", m.Center),
 			"minzoom":     fmt.Sprintf("%d", Max(fc.MinZoom, tileJSON.MinZoom)),
 			"maxzoom":     fmt.Sprintf("%d", Min(fc.MaxZoom, tileJSON.MaxZoom)),
-			"json":        string(bJSON),
+			"json":        string(bJSON), //TODO only output selected layer if layerName is set
 			"version":     tileJSON.Version,
 			"attribution": m.Attribution,
 			"type":        "overlay",
