@@ -2,16 +2,17 @@ package mbtiles
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/mapbox/tilejson"
 )
 
 var (
@@ -26,10 +27,6 @@ const (
 	ConfigKeyMinZoom  = "min_zoom"
 )
 
-var (
-	EarthBounds Bounds = [4]float64{-180, -85.0511, 180, 85.0511}
-)
-
 func init() {
 	cache.Register(CacheType, New)
 }
@@ -37,7 +34,6 @@ func init() {
 //Cache hold the cache configuration
 type Cache struct {
 	Basepath string
-	Bounds   Bounds
 	// MinZoom determines the min zoom the cache to persist. Before this
 	// zoom, cache Set() calls will be ignored.
 	MinZoom uint
@@ -49,19 +45,6 @@ type Cache struct {
 	DBList map[string]*sql.DB
 	// for managing current access to the DBList
 	sync.RWMutex
-}
-
-//Bounds alias of [4]float64
-type Bounds [4]float64
-
-//String return a string representation of cache bounds
-func (b Bounds) String() string {
-	return fmt.Sprintf("%f,%f,%f,%f", b[0], b[1], b[2], b[3])
-}
-
-//Center return the center of the bound
-func (b Bounds) Center() [2]float64 {
-	return [2]float64{(b[0] + b[2]) / 2, (b[1] + b[3]) / 2}
 }
 
 //Get reads a z,x,y entry from the cache and returns the contents
@@ -156,55 +139,73 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 		//TODO find better storage in sqlite + use views
 	}
 
-	var a *atlas.Atlas
-	m, err := a.Map(mapName)
-	layersJSON := make([]string, 0)
+	// lookup our Map
+	m, err := atlas.GetMap(mapName)
 	if err != nil {
-		//return nil, err
 		log.Printf("mbtilescache: fail to retrieve map details: %s", mapName)
 	} else {
-		layersJSON = make([]string, len(m.Layers))
-		for i, ml := range m.Layers {
-			fieldsJSON := make([]string, 0)
-			pLayers, err := ml.Provider.Layers()
-			if err != nil {
-				//return nil, err
-				log.Printf("mbtilescache: fail to retrieve map layers details: %s", ml.Name)
-			} else {
-				for _, pl := range pLayers {
-					if ml.ProviderLayerName == pl.Name() {
-						fieldsJSON = append(fieldsJSON, fmt.Sprintf(`"%s": "String"`, pl.IDFieldName())) ///TODO de-duplicate
-					}
-				}
-			}
-			layersJSON[i] = fmt.Sprintf(`{"id":"%s", "description": "%s", "minzoom": %d, "maxzoom": %d, "fields": {%s}}`, ml.ProviderLayerName, ml.Name, ml.MinZoom, ml.MaxZoom, strings.Join(fieldsJSON, ", "))
+		tileJSON := tilejson.TileJSON{
+			Attribution: &m.Attribution,
+			Bounds:      m.Bounds.Extent(),
+			Center:      m.Center,
+			Format:      "pbf",
+			Name:        &m.Name,
+			Scheme:      tilejson.SchemeXYZ,
+			TileJSON:    tilejson.Version,
+			Version:     "1.0.0",
+			Grids:       make([]string, 0),
+			Data:        make([]string, 0),
 		}
-	}
-	json := fmt.Sprintf(`{"vector_layers": [%s]}`, strings.Join(layersJSON, ", ")) //TODO populate layers with json encoder
+		tileJSON.SetVectorLayers(m.Layers)
 
-	center := fc.Bounds.Center()
-	for metaName, metaValue := range map[string]string{
-		"name":        mapName,
-		"description": "Tegola Cache Tiles",
-		"format":      "pbf",
-		"bounds":      fc.Bounds.String(),
-		"center":      fmt.Sprintf("%f,%f,4", center[0], center[1]),
-		"minzoom":     fmt.Sprintf("%d", fc.MinZoom),
-		"maxzoom":     fmt.Sprintf("%d", fc.MaxZoom),
-		"json":        json,
-		"version":     "1.0.0",
-		//Not mandatory but could be implemented
-		//attribution from maps definition (if possible) or cache option
-		//type
-	} {
-
-		_, err = db.Exec("INSERT OR REPLACE INTO metadata (name, value) VALUES (?, ?)", metaName, metaValue)
+		bJSON, err := json.Marshal(tileJSON)
 		if err != nil {
-			return nil, err
+			log.Printf("mbtilescache: fail to encode vector layers: %s", err)
+		}
+
+		for metaName, metaValue := range map[string]string{
+			"name":        m.Name,
+			"description": "Tegola Cache Tiles",
+			"format":      tileJSON.Format,
+			"bounds":      BoundsToString(m.Bounds.Extent()),
+			"center":      fmt.Sprintf("%f,%f,%f", m.Center),
+			"minzoom":     fmt.Sprintf("%d", Max(fc.MinZoom, tileJSON.MinZoom)),
+			"maxzoom":     fmt.Sprintf("%d", Min(fc.MaxZoom, tileJSON.MaxZoom)),
+			"json":        string(bJSON), //TODO only output selected layer if layerName is set
+			"version":     tileJSON.Version,
+			"attribution": m.Attribution,
+			"type":        "overlay",
+		} {
+
+			_, err = db.Exec("INSERT OR REPLACE INTO metadata (name, value) VALUES (?, ?)", metaName, metaValue)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	//Store connection
 	fc.DBList[fileName] = db
 	return db, err
+}
+
+//BoundsToString return a string representation of cache bounds
+func BoundsToString(b [4]float64) string {
+	return fmt.Sprintf("%f,%f,%f,%f", b[0], b[1], b[2], b[3])
+}
+
+// Max returns the larger of x or y.
+func Max(x, y uint) uint {
+	if x < y {
+		return y
+	}
+	return x
+}
+
+// Min returns the smaller of x or y.
+func Min(x, y uint) uint {
+	if x > y {
+		return y
+	}
+	return x
 }
