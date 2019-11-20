@@ -15,8 +15,7 @@ import (
 )
 
 var (
-	ErrMissingBasepath        = errors.New("mbtilescache: missing required param 'basepath'")
-	ErrLayerCacheNotSupported = errors.New("mbtilescache: cache by layer is not supported")
+	ErrMissingBasepath = errors.New("mbtilescache: missing required param 'basepath'")
 )
 
 const CacheType = "mbtiles"
