@@ -115,6 +115,7 @@ type TileJSON struct {
 // vector layers are not officially part of the tileJSON spec.
 // the following was proposed on the TileJSON spec repo at
 // https://github.com/mapbox/tilejson-spec/issues/14
+// and should implement https://github.com/mapbox/mbtiles-spec/blob/master/1.3/spec.md#vector-tileset-metadata
 type VectorLayer struct {
 	// REQUIRED. The MVT encoding version.
 	Version int `json:"version"`
@@ -140,6 +141,11 @@ type VectorLayer struct {
 	MaxZoom uint `json:"maxzoom"`
 	// Tegola supports individual layer tiles.
 	Tiles []string `json:"tiles"`
+	// OPTIONAL. The description of the layer
+	Description string `json:"description"`
+	// REQUIRED. Default: []
+	// possible values include: "Number", "Boolean", "String"
+	Fields map[string]string `json:"fields"`
 }
 
 //SetVectorLayers fill VectorLayers from map layers
@@ -187,13 +193,15 @@ func (tileJSON *TileJSON) SetVectorLayers(layers []atlas.Layer) {
 
 		//	build our vector layer details
 		layer := VectorLayer{
-			Version: 2,
-			Extent:  4096,
-			ID:      layers[i].MVTName(),
-			Name:    layers[i].MVTName(),
-			MinZoom: layers[i].MinZoom,
-			MaxZoom: layers[i].MaxZoom,
-			Tiles:   []string{},
+			Version:     2,
+			Extent:      4096,
+			ID:          layers[i].MVTName(),
+			Name:        layers[i].MVTName(),
+			Description: layers[i].MVTName(),
+			MinZoom:     layers[i].MinZoom,
+			MaxZoom:     layers[i].MaxZoom,
+			Tiles:       []string{},
+			Fields:      map[string]string{},
 		}
 
 		switch layers[i].GeomType.(type) {
@@ -206,6 +214,14 @@ func (tileJSON *TileJSON) SetVectorLayers(layers []atlas.Layer) {
 		default:
 			layer.GeometryType = GeomTypeUnknown
 			// TODO: debug log
+		}
+		pLayers, err := layers[i].Provider.Layers()
+		if err == nil {
+			for _, pl := range pLayers {
+				if layers[i].ProviderLayerName == pl.Name() {
+					layer.Fields[pl.IDFieldName()] = "String"
+				}
+			}
 		}
 
 		// add our layer to our tile layer response
