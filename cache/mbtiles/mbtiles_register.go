@@ -37,8 +37,6 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, err
 	}
 
-	fc.Bounds = EarthBounds
-
 	fc.Basepath, err = config.String(ConfigKeyBasepath, nil)
 	if err != nil {
 		return nil, ErrMissingBasepath

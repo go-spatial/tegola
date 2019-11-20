@@ -9,7 +9,6 @@ import (
 
 	"github.com/dimfeld/httptreemux"
 
-	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/mapbox/tilejson"
 )
@@ -75,74 +74,12 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		m = m.AddDebugLayers()
 	}
 
-	for i := range m.Layers {
-		// check if the layer already exists in our slice. this can happen if the config
-		// is using the "name" param for a layer to override the providerLayerName
-		var skip bool
-		for j := range tileJSON.VectorLayers {
-			if tileJSON.VectorLayers[j].ID == m.Layers[i].MVTName() {
-				// we need to use the min and max of all layers with this name
-				if tileJSON.VectorLayers[j].MinZoom > m.Layers[i].MinZoom {
-					tileJSON.VectorLayers[j].MinZoom = m.Layers[i].MinZoom
-				}
-
-				if tileJSON.VectorLayers[j].MaxZoom < m.Layers[i].MaxZoom {
-					tileJSON.VectorLayers[j].MaxZoom = m.Layers[i].MaxZoom
-				}
-
-				skip = true
-				break
-			}
+	tileJSON.SetVectorLayers(m.Layers)
+	//Build tiles urls
+	for i, layer := range tileJSON.VectorLayers {
+		tileJSON.VectorLayers[i].Tiles = []string{
+			buildCapabilitiesURL(r, []string{"maps", req.mapName, layer.ID, "{z}/{x}/{y}.pbf"}, debugQuery),
 		}
-
-		// the first layer sets the initial min / max otherwise they default to 0/0
-		if len(tileJSON.VectorLayers) == 0 {
-			tileJSON.MinZoom = m.Layers[i].MinZoom
-			tileJSON.MaxZoom = m.Layers[i].MaxZoom
-		}
-
-		// check if we have a min zoom lower then our current min
-		if tileJSON.MinZoom > m.Layers[i].MinZoom {
-			tileJSON.MinZoom = m.Layers[i].MinZoom
-		}
-
-		// check if we have a max zoom higher then our current max
-		if tileJSON.MaxZoom < m.Layers[i].MaxZoom {
-			tileJSON.MaxZoom = m.Layers[i].MaxZoom
-		}
-
-		//	entry for layer already exists. move on
-		if skip {
-			continue
-		}
-
-		//	build our vector layer details
-		layer := tilejson.VectorLayer{
-			Version: 2,
-			Extent:  4096,
-			ID:      m.Layers[i].MVTName(),
-			Name:    m.Layers[i].MVTName(),
-			MinZoom: m.Layers[i].MinZoom,
-			MaxZoom: m.Layers[i].MaxZoom,
-			Tiles: []string{
-				buildCapabilitiesURL(r, []string{"maps", req.mapName, m.Layers[i].MVTName(), "{z}/{x}/{y}.pbf"}, debugQuery),
-			},
-		}
-
-		switch m.Layers[i].GeomType.(type) {
-		case geom.Point, geom.MultiPoint:
-			layer.GeometryType = tilejson.GeomTypePoint
-		case geom.Line, geom.LineString, geom.MultiLineString:
-			layer.GeometryType = tilejson.GeomTypeLine
-		case geom.Polygon, geom.MultiPolygon:
-			layer.GeometryType = tilejson.GeomTypePolygon
-		default:
-			layer.GeometryType = tilejson.GeomTypeUnknown
-			// TODO: debug log
-		}
-
-		// add our layer to our tile layer response
-		tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 	}
 
 	tileURL := buildCapabilitiesURL(r, []string{"maps", req.mapName, "{z}/{x}/{y}.pbf"}, debugQuery)
