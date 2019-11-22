@@ -34,7 +34,7 @@ func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 		layer{
 			name:     "empty_geom_collection",
 			geomType: geom.Collection{},
-			srid:     proj.WebMercator,
+			srid:     proj.WebMercatorSRID,
 		},
 	}, nil
 }

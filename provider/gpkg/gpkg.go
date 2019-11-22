@@ -17,7 +17,7 @@ import (
 
 const (
 	Name                 = "gpkg"
-	DefaultSRID          = proj.WebMercator
+	DefaultSRID          = proj.WebMercatorSRID
 	DefaultIDFieldName   = "fid"
 	DefaultGeomFieldName = "geom"
 )

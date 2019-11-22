@@ -31,6 +31,8 @@ github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6 h1:JZlproLIh4Xx
 github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6/go.mod h1:f1ZQ97aEXWRWGYAZPB9oKTvG/PejtuPD3W/TUXkMlc8=
 github.com/go-spatial/geom v0.0.0-20191115190231-0905ac843a79 h1:owrbvJQWiEWMZTNbdbVouhHygl777uhRJMljKOexBKc=
 github.com/go-spatial/geom v0.0.0-20191115190231-0905ac843a79/go.mod h1:ysDXHAm45k1iWrWWOFdbjksiQFWmWLeFgbeuv6n7XiY=
+github.com/go-spatial/proj v0.2.0 h1:sii5Now3GFEyR9hV2SBJFWFz95s4xSaZmP0aYDk1K6c=
+github.com/go-spatial/proj v0.2.0/go.mod h1:ePHHp7ITVc4eIVW5sgG/0Eu9RMAGOQUgM/D1ZkccY+0=
 github.com/golang/protobuf v1.2.0 h1:P3YflyNX/ehuJFLhxviNdFxQPkGK5cDcApsge1SqnvM=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 h1:EGx4pi6eqNxGaHF6qqu48+N2wcFQ5qg5FXgOdqsJ5d8=
