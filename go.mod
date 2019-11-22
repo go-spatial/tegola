@@ -17,6 +17,7 @@ require (
 	github.com/go-redis/redis v6.9.0+incompatible
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 	github.com/go-spatial/geom v0.0.0-20191115190231-0905ac843a79
+	github.com/go-spatial/proj v0.2.0
 	github.com/golang/protobuf v1.2.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect

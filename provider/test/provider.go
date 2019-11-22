@@ -40,7 +40,7 @@ func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 		layer{
 			name:     "test-layer",
 			geomType: geom.Polygon{},
-			srid:     proj.WebMercator,
+			srid:     proj.WebMercatorSRID,
 		},
 	}, nil
 }
