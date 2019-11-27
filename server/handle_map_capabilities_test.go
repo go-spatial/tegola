@@ -61,6 +61,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Tiles: []string{
 							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
 						},
+						Fields: map[string]string{},
 					},
 					{
 						Version:      2,
@@ -74,6 +75,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Tiles: []string{
 							fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer2.MVTName()),
 						},
+						Fields: map[string]string{},
 					},
 				},
 			},
@@ -116,6 +118,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Tiles: []string{
 							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
 						},
+						Fields: map[string]string{},
 					},
 					{
 						Version:      2,
@@ -129,6 +132,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Tiles: []string{
 							fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
 						},
+						Fields: map[string]string{},
 					},
 					{
 						Version:      2,
@@ -142,6 +146,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
 						},
+						Fields: map[string]string{},
 					},
 					{
 						Version:      2,
@@ -155,6 +160,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 						Tiles: []string{
 							"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
 						},
+						Fields: map[string]string{},
 					},
 				},
 			},
@@ -194,16 +200,6 @@ func TestHandleMapCapabilities(t *testing.T) {
 		// read the response body
 		if err := json.Unmarshal(bytes, &tileJSON); err != nil {
 			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
-			continue
-		}
-
-		if !reflect.DeepEqual(testMapName, *tileJSON.Name) {
-			t.Errorf("[%v] response map name and expected do not match \n%+v\n%+v", i, testMapName, *tileJSON.Name)
-			continue
-		}
-
-		if !reflect.DeepEqual(testMapAttribution, *tileJSON.Attribution) {
-			t.Errorf("[%v] response map attribution and expected do not match \n%+v\n%+v", i, testMapAttribution, *tileJSON.Attribution)
 			continue
 		}
 
