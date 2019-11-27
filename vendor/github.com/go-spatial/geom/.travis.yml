@@ -1,0 +1,27 @@
+language: go
+# Does nothing when building on go-spatial/geom, but makes builds work cleanly on forks.
+go_import_path: github.com/go-spatial/geom
+
+git:
+  depth: 1
+
+matrix:
+  include:
+    - go: "1.13.x"
+      env: CGO_ENABLED=0
+    - go: "1.12.x"
+      env: CGO_ENABLED=0
+    - go: "1.11.x"
+      env: CGO_ENABLED=0
+    - go: "1.13.x"
+    - go: "1.12.x"
+    - go: "1.11.x"
+
+script:
+  - bash ci/go_test_multi_package_coverprofile.sh --coveralls
+
+notifications:
+  email:
+    on_success: never
+  slack:
+    secure: TzRnZdJ1dhQJg9nby2oJ6qFj9Bl20VJ2aJXmXwADsj2ck/UGsFWpYNnqZVWvZomCZEJinFpA/h2TG1odEzg1BpCT0+rLIGQDAhIMVuici+nIs+DyPQmL2owG1LZ6/hzX09Y1mIZci0nmnI1wousfM8WDPRq5NSOsBeAMlixGR4g4lF8cp/R0B6CtcewtQx4RicdPJtopHDwXm5KI1/7euFcJwu15FWwWoUp6mOw+r44T1Md+qbqDKBbLSy+YvMkPcxI7HeECa7OP9OjkeUfU0BoMP6qqo9QTVX5v6lOHxA+FhueyyPrSTtNV377tilDy88kytqu6w8gcrxZOddj7nFbv6ErjfVaMfeepzk/HH2bzlLevvL+ukeJKrBNdmPuDRU3BqG5ygrdGAQUNpM7VSXLDcGrM2+ocVn/HO1NyXWwpejq7Gq0HWhNkYPHG5c7+khkQkRGJtg0wp9R3qXDAcRHLR+CHh89g5Blz4Wo6R/Q48MLJycbH/W56zsoe0xQ5Ww2eti16uSFE4kkiPt99uewWkPSfEZn4pyk+xCwDxgNDNu/BaV+Mjm4JTL1GjWalto+NLK7NsEg+6sEYok0CHkUb8MQV++r1KVfIaxC3zVuojIiOSB9/+JPtPd9w2iuVOlz0rrbXfKkkSf5wcmOguqk3aAfAgmcjAV9p1kI9pSc=

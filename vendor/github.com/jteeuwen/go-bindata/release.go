@@ -34,24 +34,19 @@ func writeRelease(w io.Writer, c *Config, toc []Asset) error {
 // writeReleaseHeader writes output file headers.
 // This targets release builds.
 func writeReleaseHeader(w io.Writer, c *Config) error {
-	var err error
 	if c.NoCompress {
 		if c.NoMemCopy {
-			err = header_uncompressed_nomemcopy(w)
+			return header_uncompressed_nomemcopy(w)
 		} else {
-			err = header_uncompressed_memcopy(w)
+			return header_uncompressed_memcopy(w)
 		}
 	} else {
 		if c.NoMemCopy {
-			err = header_compressed_nomemcopy(w)
+			return header_compressed_nomemcopy(w)
 		} else {
-			err = header_compressed_memcopy(w)
+			return header_compressed_memcopy(w)
 		}
 	}
-	if err != nil {
-		return err
-	}
-	return header_release_common(w)
 }
 
 // writeReleaseAsset write a release entry for the given asset.
@@ -67,21 +62,17 @@ func writeReleaseAsset(w io.Writer, c *Config, asset *Asset) error {
 
 	if c.NoCompress {
 		if c.NoMemCopy {
-			err = uncompressed_nomemcopy(w, asset, fd)
+			return uncompressed_nomemcopy(w, asset, fd)
 		} else {
-			err = uncompressed_memcopy(w, asset, fd)
+			return uncompressed_memcopy(w, asset, fd)
 		}
 	} else {
 		if c.NoMemCopy {
-			err = compressed_nomemcopy(w, asset, fd)
+			return compressed_nomemcopy(w, asset, fd)
 		} else {
-			err = compressed_memcopy(w, asset, fd)
+			return compressed_memcopy(w, asset, fd)
 		}
 	}
-	if err != nil {
-		return err
-	}
-	return asset_release_common(w, c, asset)
 }
 
 // sanitize prepares a valid UTF-8 string as a raw string constant.
@@ -103,28 +94,31 @@ func header_compressed_nomemcopy(w io.Writer) error {
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"reflect"
 	"strings"
-	"time"
+	"unsafe"
 )
 
-func bindataRead(data, name string) ([]byte, error) {
-	gz, err := gzip.NewReader(strings.NewReader(data))
+func bindata_read(data, name string) ([]byte, error) {
+	var empty [0]byte
+	sx := (*reflect.StringHeader)(unsafe.Pointer(&data))
+	b := empty[:]
+	bx := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	bx.Data = sx.Data
+	bx.Len = len(data)
+	bx.Cap = bx.Len
+
+	gz, err := gzip.NewReader(bytes.NewBuffer(b))
 	if err != nil {
 		return nil, fmt.Errorf("Read %%q: %%v", name, err)
 	}
 
 	var buf bytes.Buffer
 	_, err = io.Copy(&buf, gz)
-	clErr := gz.Close()
+	gz.Close()
 
 	if err != nil {
 		return nil, fmt.Errorf("Read %%q: %%v", name, err)
-	}
-	if clErr != nil {
-		return nil, err
 	}
 
 	return buf.Bytes(), nil
@@ -140,14 +134,10 @@ func header_compressed_memcopy(w io.Writer) error {
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
-	"time"
 )
 
-func bindataRead(data []byte, name string) ([]byte, error) {
+func bindata_read(data []byte, name string) ([]byte, error) {
 	gz, err := gzip.NewReader(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, fmt.Errorf("Read %%q: %%v", name, err)
@@ -155,13 +145,10 @@ func bindataRead(data []byte, name string) ([]byte, error) {
 
 	var buf bytes.Buffer
 	_, err = io.Copy(&buf, gz)
-	clErr := gz.Close()
+	gz.Close()
 
 	if err != nil {
 		return nil, fmt.Errorf("Read %%q: %%v", name, err)
-	}
-	if clErr != nil {
-		return nil, err
 	}
 
 	return buf.Bytes(), nil
@@ -174,16 +161,12 @@ func bindataRead(data []byte, name string) ([]byte, error) {
 func header_uncompressed_nomemcopy(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
-	"time"
 	"unsafe"
 )
 
-func bindataRead(data, name string) ([]byte, error) {
+func bindata_read(data, name string) ([]byte, error) {
 	var empty [0]byte
 	sx := (*reflect.StringHeader)(unsafe.Pointer(&data))
 	b := empty[:]
@@ -201,48 +184,8 @@ func bindataRead(data, name string) ([]byte, error) {
 func header_uncompressed_memcopy(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
-	"time"
 )
-`)
-	return err
-}
-
-func header_release_common(w io.Writer) error {
-	_, err := fmt.Fprintf(w, `type asset struct {
-	bytes []byte
-	info  os.FileInfo
-}
-
-type bindataFileInfo struct {
-	name    string
-	size    int64
-	mode    os.FileMode
-	modTime time.Time
-}
-
-func (fi bindataFileInfo) Name() string {
-	return fi.name
-}
-func (fi bindataFileInfo) Size() int64 {
-	return fi.size
-}
-func (fi bindataFileInfo) Mode() os.FileMode {
-	return fi.mode
-}
-func (fi bindataFileInfo) ModTime() time.Time {
-	return fi.modTime
-}
-func (fi bindataFileInfo) IsDir() bool {
-	return false
-}
-func (fi bindataFileInfo) Sys() interface{} {
-	return nil
-}
-
 `)
 	return err
 }
@@ -263,8 +206,8 @@ func compressed_nomemcopy(w io.Writer, asset *Asset, r io.Reader) error {
 
 	_, err = fmt.Fprintf(w, `"
 
-func %sBytes() ([]byte, error) {
-	return bindataRead(
+func %s() ([]byte, error) {
+	return bindata_read(
 		_%s,
 		%q,
 	)
@@ -290,8 +233,8 @@ func compressed_memcopy(w io.Writer, asset *Asset, r io.Reader) error {
 
 	_, err = fmt.Fprintf(w, `")
 
-func %sBytes() ([]byte, error) {
-	return bindataRead(
+func %s() ([]byte, error) {
+	return bindata_read(
 		_%s,
 		%q,
 	)
@@ -314,8 +257,8 @@ func uncompressed_nomemcopy(w io.Writer, asset *Asset, r io.Reader) error {
 
 	_, err = fmt.Fprintf(w, `"
 
-func %sBytes() ([]byte, error) {
-	return bindataRead(
+func %s() ([]byte, error) {
+	return bindata_read(
 		_%s,
 		%q,
 	)
@@ -335,53 +278,18 @@ func uncompressed_memcopy(w io.Writer, asset *Asset, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if utf8.Valid(b) && !bytes.Contains(b, []byte{0}) {
+	if utf8.Valid(b) {
 		fmt.Fprintf(w, "`%s`", sanitize(b))
 	} else {
-		fmt.Fprintf(w, "%+q", b)
+		fmt.Fprintf(w, "%q", b)
 	}
 
 	_, err = fmt.Fprintf(w, `)
 
-func %sBytes() ([]byte, error) {
+func %s() ([]byte, error) {
 	return _%s, nil
 }
 
 `, asset.Func, asset.Func)
-	return err
-}
-
-func asset_release_common(w io.Writer, c *Config, asset *Asset) error {
-	fi, err := os.Stat(asset.Path)
-	if err != nil {
-		return err
-	}
-
-	mode := uint(fi.Mode())
-	modTime := fi.ModTime().Unix()
-	size := fi.Size()
-	if c.NoMetadata {
-		mode = 0
-		modTime = 0
-		size = 0
-	}
-	if c.Mode > 0 {
-		mode = uint(os.ModePerm) & c.Mode
-	}
-	if c.ModTime > 0 {
-		modTime = c.ModTime
-	}
-	_, err = fmt.Fprintf(w, `func %s() (*asset, error) {
-	bytes, err := %sBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: %q, size: %d, mode: os.FileMode(%d), modTime: time.Unix(%d, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-`, asset.Func, asset.Func, asset.Name, size, mode, modTime)
 	return err
 }
