@@ -218,7 +218,7 @@ func (tileJSON *TileJSON) SetVectorLayers(layers []atlas.Layer) {
 		pLayers, err := layers[i].Provider.Layers()
 		if err == nil {
 			for _, pl := range pLayers {
-				if layers[i].ProviderLayerName == pl.Name() {
+				if layers[i].ProviderLayerName == pl.Name() && pl.IDFieldName() != "" {
 					layer.Fields[pl.IDFieldName()] = "String"
 				}
 			}
