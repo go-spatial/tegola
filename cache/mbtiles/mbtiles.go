@@ -142,7 +142,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 	// lookup our Map
 	m, err := atlas.GetMap(mapName)
 	if err != nil {
-		log.Printf("mbtilescache: fail to retrieve map details: %s", mapName)
+		log.Printf("mbtilescache: fail to retrieve map '%s' details: %v", mapName, err)
 	} else {
 		tileJSON := tilejson.TileJSON{
 			Attribution: &m.Attribution,
@@ -161,32 +161,32 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 		bJSON, err := json.Marshal(tileJSON)
 		if err != nil {
 			log.Printf("mbtilescache: fail to encode vector layers: %s", err)
-		}
+		} else {
+			for metaName, metaValue := range map[string]string{
+				"name":        m.Name,
+				"description": "Tegola Cache Tiles",
+				"format":      tileJSON.Format,
+				"bounds":      BoundsToString(m.Bounds.Extent()),
+				"center":      fmt.Sprintf("%f,%f,%f", m.Center[0], m.Center[1], m.Center[2]),
+				"minzoom":     fmt.Sprintf("%d", Max(fc.MinZoom, tileJSON.MinZoom)),
+				"maxzoom":     fmt.Sprintf("%d", Min(fc.MaxZoom, tileJSON.MaxZoom)),
+				"json":        string(bJSON), //TODO only output selected layer if layerName is set
+				"version":     tileJSON.Version,
+				"attribution": m.Attribution,
+				"type":        "overlay",
+			} {
 
-		for metaName, metaValue := range map[string]string{
-			"name":        m.Name,
-			"description": "Tegola Cache Tiles",
-			"format":      tileJSON.Format,
-			"bounds":      BoundsToString(m.Bounds.Extent()),
-			"center":      fmt.Sprintf("%f,%f,%f", m.Center[0], m.Center[1], m.Center[2]),
-			"minzoom":     fmt.Sprintf("%d", Max(fc.MinZoom, tileJSON.MinZoom)),
-			"maxzoom":     fmt.Sprintf("%d", Min(fc.MaxZoom, tileJSON.MaxZoom)),
-			"json":        string(bJSON), //TODO only output selected layer if layerName is set
-			"version":     tileJSON.Version,
-			"attribution": m.Attribution,
-			"type":        "overlay",
-		} {
-
-			_, err = db.Exec("INSERT OR REPLACE INTO metadata (name, value) VALUES (?, ?)", metaName, metaValue)
-			if err != nil {
-				return nil, err
+				_, err = db.Exec("INSERT OR REPLACE INTO metadata (name, value) VALUES (?, ?)", metaName, metaValue)
+				if err != nil {
+					log.Printf("mbtilescache: fail to write metadata: %s", err)
+				}
 			}
 		}
 	}
 
 	//Store connection
 	fc.DBList[fileName] = db
-	return db, err
+	return db, nil
 }
 
 //BoundsToString return a string representation of cache bounds
