@@ -197,6 +197,16 @@ func TestHandleMapCapabilities(t *testing.T) {
 			continue
 		}
 
+		if !reflect.DeepEqual(testMapName, *tileJSON.Name) {
+			t.Errorf("[%v] response map name and expected do not match \n%+v\n%+v", i, testMapName, *tileJSON.Name)
+			continue
+		}
+
+		if !reflect.DeepEqual(testMapAttribution, *tileJSON.Attribution) {
+			t.Errorf("[%v] response map attribution and expected do not match \n%+v\n%+v", i, testMapAttribution, *tileJSON.Attribution)
+			continue
+		}
+
 		if !reflect.DeepEqual(test.expected, tileJSON) {
 			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
 			continue
