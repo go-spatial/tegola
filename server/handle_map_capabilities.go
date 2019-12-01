@@ -10,7 +10,6 @@ import (
 	"github.com/dimfeld/httptreemux"
 
 	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/mapbox/tilejson"
 )
 
 type HandleMapCapabilities struct {
@@ -49,19 +48,6 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	tileJSON := tilejson.TileJSON{
-		Attribution: &m.Attribution,
-		Bounds:      m.Bounds.Extent(),
-		Center:      m.Center,
-		Format:      "pbf",
-		Name:        &m.Name,
-		Scheme:      tilejson.SchemeXYZ,
-		TileJSON:    tilejson.Version,
-		Version:     "1.0.0",
-		Grids:       make([]string, 0),
-		Data:        make([]string, 0),
-	}
-
 	// parse our query string
 	var query = r.URL.Query()
 
@@ -74,7 +60,8 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		m = m.AddDebugLayers()
 	}
 
-	tileJSON.SetVectorLayers(m.Layers)
+	tileJSON := m.GetBaseTileJSON()
+
 	//Build tiles urls
 	for i, layer := range tileJSON.VectorLayers {
 		tileJSON.VectorLayers[i].Tiles = []string{

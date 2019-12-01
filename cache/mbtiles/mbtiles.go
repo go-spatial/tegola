@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/mapbox/tilejson"
 )
 
 var (
@@ -144,19 +143,7 @@ func (fc *Cache) openOrCreateDB(mapName, layerName string) (*sql.DB, error) {
 	if err != nil {
 		log.Printf("mbtilescache: fail to retrieve map '%s' details: %v", mapName, err)
 	} else {
-		tileJSON := tilejson.TileJSON{
-			Attribution: &m.Attribution,
-			Bounds:      m.Bounds.Extent(),
-			Center:      m.Center,
-			Format:      "pbf",
-			Name:        &m.Name,
-			Scheme:      tilejson.SchemeXYZ,
-			TileJSON:    tilejson.Version,
-			Version:     "1.0.0",
-			Grids:       make([]string, 0),
-			Data:        make([]string, 0),
-		}
-		tileJSON.SetVectorLayers(m.Layers)
+		tileJSON := m.GetBaseTileJSON()
 
 		bJSON, err := json.Marshal(tileJSON)
 		if err != nil {
