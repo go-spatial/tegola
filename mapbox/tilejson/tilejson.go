@@ -2,11 +2,6 @@
 // https://github.com/mapbox/tilejson-spec
 package tilejson
 
-import (
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/atlas"
-)
-
 const Version = "2.1.0"
 
 type GeomType string
@@ -140,75 +135,4 @@ type VectorLayer struct {
 	MaxZoom uint `json:"maxzoom"`
 	// Tegola supports individual layer tiles.
 	Tiles []string `json:"tiles"`
-}
-
-//SetVectorLayers fill VectorLayers from map layers
-func (tileJSON *TileJSON) SetVectorLayers(layers []atlas.Layer) {
-	for i := range layers {
-		// check if the layer already exists in our slice. this can happen if the config
-		// is using the "name" param for a layer to override the providerLayerName
-		var skip bool
-		for j := range tileJSON.VectorLayers {
-			if tileJSON.VectorLayers[j].ID == layers[i].MVTName() {
-				// we need to use the min and max of all layers with this name
-				if tileJSON.VectorLayers[j].MinZoom > layers[i].MinZoom {
-					tileJSON.VectorLayers[j].MinZoom = layers[i].MinZoom
-				}
-
-				if tileJSON.VectorLayers[j].MaxZoom < layers[i].MaxZoom {
-					tileJSON.VectorLayers[j].MaxZoom = layers[i].MaxZoom
-				}
-
-				skip = true
-				break
-			}
-		}
-
-		// the first layer sets the initial min / max otherwise they default to 0/0
-		if len(tileJSON.VectorLayers) == 0 {
-			tileJSON.MinZoom = layers[i].MinZoom
-			tileJSON.MaxZoom = layers[i].MaxZoom
-		}
-
-		// check if we have a min zoom lower then our current min
-		if tileJSON.MinZoom > layers[i].MinZoom {
-			tileJSON.MinZoom = layers[i].MinZoom
-		}
-
-		// check if we have a max zoom higher then our current max
-		if tileJSON.MaxZoom < layers[i].MaxZoom {
-			tileJSON.MaxZoom = layers[i].MaxZoom
-		}
-
-		//	entry for layer already exists. move on
-		if skip {
-			continue
-		}
-
-		//	build our vector layer details
-		layer := VectorLayer{
-			Version: 2,
-			Extent:  4096,
-			ID:      layers[i].MVTName(),
-			Name:    layers[i].MVTName(),
-			MinZoom: layers[i].MinZoom,
-			MaxZoom: layers[i].MaxZoom,
-			Tiles:   []string{},
-		}
-
-		switch layers[i].GeomType.(type) {
-		case geom.Point, geom.MultiPoint:
-			layer.GeometryType = GeomTypePoint
-		case geom.Line, geom.LineString, geom.MultiLineString:
-			layer.GeometryType = GeomTypeLine
-		case geom.Polygon, geom.MultiPolygon:
-			layer.GeometryType = GeomTypePolygon
-		default:
-			layer.GeometryType = GeomTypeUnknown
-			// TODO: debug log
-		}
-
-		// add our layer to our tile layer response
-		tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
-	}
 }
