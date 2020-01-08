@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
@@ -40,7 +39,7 @@ func (tile *tile_t) BufferedExtent() (ext *geom.Extent, srid uint64) {
 	return tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, tile.buffer)), 3857
 }
 
-// Tile is an interface used by Tiler, it is an unecessary abstraction and is
+// Tile is an interface used by Tiler, it is an unnecessary abstraction and is
 // due to be removed. The tiler interface will, instead take a, *geom.Extent.
 type Tile interface {
 	// ZXY returns the z, x and y values of the tile
@@ -70,7 +69,7 @@ type LayerInfo interface {
 	SRID() uint64
 }
 
-// InitFunc initilize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
+// InitFunc initialize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
 type InitFunc func(dicter dict.Dicter) (Tiler, error)
 
 // CleanupFunc is called to when the system is shuting down, this allows the provider to cleanup.
@@ -91,7 +90,7 @@ func Register(name string, init InitFunc, cleanup CleanupFunc) error {
 	}
 
 	if _, ok := providers[name]; ok {
-		return fmt.Errorf("provider %v already exists", name)
+		return ErrProviderAlreadyExists{Name: name}
 	}
 
 	providers[name] = pfns{
@@ -113,6 +112,15 @@ func Drivers() (l []string) {
 	}
 
 	return l
+}
+
+// Exists returns if the provider has been registered already
+func Exists(name string) bool {
+	if providers == nil {
+		return false
+	}
+	_, ok := providers[name]
+	return ok
 }
 
 // For function returns a configured provider of the given type, provided the correct config map.

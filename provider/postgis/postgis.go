@@ -517,7 +517,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	}
 
 	if debugExecuteSQL {
-		log.Printf("TEGOLA_SQL_DEBUG:EXECUTE_SQL for layer (%v): %v", layer, sql)
+		log.Printf("%s:%s for layer (%v): %v", EnvSQLDebugName, EnvSQLDebugExecute, layer, sql)
 	}
 
 	// context check
