@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,6 +16,22 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 )
+
+const (
+	EnvSQLDebugName    = "TEGOLA_SQL_DEBUG"
+	EnvSQLDebugLayer   = "LAYER_SQL"
+	EnvSQLDebugExecute = "EXECUTE_SQL"
+)
+
+var (
+	debugLayerSQL   bool
+	debugExecuteSQL bool
+)
+
+func init() {
+	debugLayerSQL = strings.Contains(os.Getenv(EnvSQLDebugName), EnvSQLDebugLayer)
+	debugExecuteSQL = strings.Contains(os.Getenv(EnvSQLDebugName), EnvSQLDebugExecute)
+}
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
 func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string) (sql string, err error) {

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 
@@ -304,7 +303,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			}
 		}
 
-		if strings.Contains(os.Getenv("TEGOLA_SQL_DEBUG"), "LAYER_SQL") {
+		if debugLayerSQL {
 			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.sql)
 		}
 
@@ -519,8 +518,8 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		return fmt.Errorf("error replacing layer tokens for layer (%v) SQL (%v): %v", layer, sql, err)
 	}
 
-	if strings.Contains(os.Getenv("TEGOLA_SQL_DEBUG"), "EXECUTE_SQL") {
-		log.Printf("TEGOLA_SQL_DEBUG:EXECUTE_SQL for layer (%v): %v", layer, sql)
+	if debugExecuteSQL {
+		log.Printf("%s:%s for layer (%v): %v", EnvSQLDebugName, EnvSQLDebugExecute, layer, sql)
 	}
 
 	// context check

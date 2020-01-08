@@ -28,8 +28,8 @@ type Config struct {
 	Webserver    Webserver `toml:"webserver"`
 	Cache        env.Dict  `toml:"cache"`
 	// Map of providers.
-	Providers []env.Dict
-	Maps      []Map
+	Providers []env.Dict `toml:"providers"`
+	Maps      []Map      `toml:"maps"`
 }
 
 type Webserver struct {
@@ -37,8 +37,8 @@ type Webserver struct {
 	Port      env.String `toml:"port"`
 	URIPrefix env.String `toml:"uri_prefix"`
 	Headers   env.Dict   `toml:"headers"`
-	SSLCert env.String `toml:"ssl_cert"`
-	SSLKey env.String `toml:"ssl_key"`
+	SSLCert   env.String `toml:"ssl_cert"`
+	SSLKey    env.String `toml:"ssl_key"`
 }
 
 // A Map represents a map in the Tegola Config file.
@@ -67,18 +67,25 @@ type MapLayer struct {
 	DontClip env.Bool `toml:"dont_clip"`
 }
 
-// GetName helper to get the name we care about.
+// ProviderLayerName returns the provider and layer names
+func (ml MapLayer) ProviderLayerName() (string, string, error) {
+	// split the provider layer (syntax is provider.layer)
+	plParts := strings.Split(string(ml.ProviderLayer), ".")
+	if len(plParts) != 2 {
+		return "", "", ErrInvalidProviderLayerName{ProviderLayerName: string(ml.ProviderLayer)}
+	}
+
+	return plParts[0], plParts[1], nil
+}
+
+// GetName will return the user-defined Layer name from the config,
+// or if not defined will return the name of the layer associated with the provider
 func (ml MapLayer) GetName() (string, error) {
 	if ml.Name != "" {
 		return string(ml.Name), nil
 	}
-	// split the provider layer (syntax is provider.layer)
-	plParts := strings.Split(string(ml.ProviderLayer), ".")
-	if len(plParts) != 2 {
-		return "", ErrInvalidProviderLayerName{ProviderLayerName: string(ml.ProviderLayer)}
-	}
-
-	return plParts[1], nil
+	_, name, err := ml.ProviderLayerName()
+	return name, err
 }
 
 // checks the config for issues
