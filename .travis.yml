@@ -14,63 +14,15 @@ env:
     - secure: "IlT9p8OUxTgvdVW5teBLiINrqcjqxTeTvaNOz7fZ24Sv5sqkOldzCa24/FQH/LinOXQFHl1jq7C+Tqu0OQhw/L6T28oDrzGSJf+PmdqmnrgqndTthDMRfh3Vw1KqgMAFJSma+G39XNo6T15clKIU7iMMR4gWa7zFx/BjclT9kk0dGP/RIR3HDG9Svqo6q9rsRMIsuTSmiN73QL8pqcbPAjYuXfQ5COffCObipLORbinacmf6tiiVDG+ZtH9FtXkJf0reb/jZZWCvk12IENtSK5R2r/UOZ5nZ6QwMNE0WnxqeZB5qJfnT2kHz/fRU02hypJllMAiB3agr3/yCy3ut8aVwI2QAK1FkOWCGUa0C4vWKZZ+aDM+BKnsADTRuxdY+HUDVlgQv0IXSxiYPbFxABdw7Y/G9p8KDiDH16yp4QLsKRo15QWOJk2Fa4MD20t7dFqiYJl47V8LSrwmov9hg5mxn2REpzRxoQ7Smyrl6gPXKjyp7VBFUNCmAGZFuSwDKktS8iwyM2rlJLiJCouSJGG8mnyFK4GoUuuYTU7hcV11oQiUJ51bk+0iSJsjjoWvjRDy+HY7CnBbEvxEmt8kmbNrbPyyFvq6FDOQauJr9rnx3U4vB26jwnH0MBIWOVyd1LL/lmQHIsFnmgSuOflDrDnULU6azXqUkl22rs9uPB6c="
     # secure DOCKER_PASSWORD
     - secure: "bQvCZLmlErLeXo5fULlmSJ+3XCc6pdGZ1QP9EX0naGPfsvSyTVZed9aFsHJDUtg3XpbxJ7aB4M/L30UbZJFcnai/rcjzirqDioOjC1pFVCwgpBGVetsUdVt7KYHM2sCN0+Wj8h0H026XWVVR+2rjq3V63GxB4s9nN1RYWO1kDmxy3/BSAaPFt9eNdGq0NwJ9CjA1hS928jn/FR72ZLZ17Iav+8zay27kc8IJYjze4iQ+ji4Rs0+vA5cgXdS7iKelbSwTggMsikUOQRZ8sptP2qfqaADF2P5gZlS1aOb3El9wXEZjESqIjzycNvLlPbAijdgiFsh45deBzgKay3/Dapw7ttsR3exd4dcvnU34eP45ms4Tm6o+QifP2wyzwiHi+Aa2ELfiC//nFUAiKdX4urqsH7wv/HCJtgXOaK6bHlEK6YSqQafY5QmDOPoWnFCv1M+1JcK1HVpAS3Vny1Fui/yasFZcg8OhZHxHkkBadgVQEJAB61Z86LfFyKFAbqQ2xcw6rYVdgKj/j85cntNmk3d/skCZYkKOwYPEDWSLoF+HwYHln2jQfyVB3qj4FBpjTBsFjz5E5y9/Efv3sRXlIkhhOJhMiOSje8AjXnAKkPS5PbgNmx5N2i2E0aN7/KZpAFrGaenSn8D6Bh6+xaX8sZEl+5OCBJyL0p/Ji1Lr1+o="
-    - RUN_POSTGIS_TESTS=yes
-    - PGHOST="localhost"
-    - PGPORT=5432
-    - PGDATABASE="tegola"
-    - PGUSER="postgres"
-    - PGUSER_NO_ACCESS="tegola_no_access"
-    - PGSSLMODE="disable"
-    - PGSSLKEY=""
-    - PGSSLCERT=""
-    - PGSSLROOTCERT=""
     - DOCKERHUB_ORG="gospatial"
     - DOCKERHUB_REPO="tegola"
-    - RUN_REDIS_TESTS=yes
-    # "COVERALLS_TOKEN" nvp encrypted using travis CLI - contains api key used to post test coverage results to coveralls.io account repo associated w/ github repo
-    - secure: iXQ7Bpf/190qUhs3SqM1vpQrEA5HRoMvDmydaPsbLG9qfdIYC7qzPClEzfG+XJ6WWmHjBUMAh8WOOa8qdVvCnNdUZ9PRSmJZqLG0cKBTOt+PiQ3QkxBEcIBYKnzN3arAYDMXfmip8g3NvCwtjEj+LQDvriq9C3JIOUO72IDYBe3kvCcrPvdvC3kddDkeT9HpxL8316LIKFsNGtvcF+24KgZOrWqdwIP5PxCsTd4iE7N5UrfH0HYY9zhXW9GLHo1kzdYmGtKbeHfhOdrYH5bUwnneLwRqPDP3A45KnXAyioIHnmEUvWC7UMEhoUpURg+XGQbYQmYpnfgMC5DqKNHnLnJ/exrHii0SbvXBCoDwW+BRql3LZAQrUPLoOsjJbcewDqdAzDa0LhxknQ9F5OLzlkkOA3wskKtfkQ9sYG9rCYpG7JwCjAJxKRr342+mu5Lj5O5iraWpi5ZwmVrk00UDEfGhF2KlUi4Dd+TqcdLDIyibftkX/XHaubUxh9Jwh7dLMM1r6c42VN6tpBFj7/bRL49rBDh3tlX8/cZVJsllHCPWFEE67G3lmzDeTFcgCjY25YD4g1/OsQAY/tMMJrfaaFKskrJQFbXQ+TXJ/CUuayQEUZFkiAz8MEkgcMPcxpzg54wg+nnuaa4XsvkykXh/0wLWa/zvU4mPnm49fQsAlTk=
-    # S3 tests
-    - RUN_S3_TESTS=yes
-    - AWS_TEST_BUCKET=tegola-ci
-    - AWS_REGION=us-east-2
-    - secure: OSNdVkn7SsaaPQe94x+uAOGNGfuGxbE9SlxGSDBucDi1lUcpS6QRWUNh6IoDMAoVfzJcCUoxacZl5Vajlh6yWfo6JwKZEWaL3xWwCHoX06DEZAEhU7uSdn783y6TTehVOEyIL36Vcs3lDX5rL7tFy1PTjATgiG0FodeIs6f7THMp1g5cIurBlwBhwwNuQuZPdizKa6MAdAAm9xPlcITbMKQQy4hZXb51yQeR47gAQsllDMOt34wvQtdwYBP/vcBza8k9RKYQxdqCte4gRBpBJTaMd2cE1R4igBo5RlIf2d8y05u94Hj8iSQd5EZGAbNolQRpOaZWMZIF3i1TiE3zpwMn/oYuAZSGBeP3MYiMXo9smIaoYlkHhQ2bKP4DtoRPcpsf0BIz3knVItnU9WAqRWBb1/g4WDj/wgb4mDVN1+kxPQejQaXa737zQ+thxupdXGISnyrcZi3DKs9+Yzp+5GbZ+jNmq1s1ErUJJyF+qAntwc4RiPA35lns0aRAWY6h5P/zxTaXQNf/b8OJDISKLAuvmj3oe0Wwv8kVeWDtS05MVuIh576AeTdpTH7aFmUnNjpVGK20JGd4jHDSAAp90wZlfSI6EJSEv46wzEWACd9IDKmW8ro9Jg2LYio4YivW9poS0F3pqb3fbzpcmq3+9vlWSh2B0aJZCApkF/67b4Q=
-
-matrix:
-  include:
-    - go: "1.12.x"
-      env: CGO_ENABLED=0
-    - go: "1.11.x"
-      env: CGO_ENABLED=0
-    - go: "1.10.x"
-      env: CGO_ENABLED=0
-    - go: "1.12.x"
-    - go: "1.11.x"
-    - go: "1.10.x"
 
 services:
   - docker
-  - postgresql
-  - redis-server
-
-addons:
-  postgresql: "9.6"
-  apt:
-    packages:
-    - postgresql-9.6-postgis-2.4
 
 install:
   - echo $TRAVIS_GO_VERSION
   - bash ci/build_bindata.sh
-  - bash ci/config_postgis.sh
-
-# "script" phase occurs after "install" and before "deploy" phases (and sub-phases) - see https://docs.travis-ci.com/user/customizing-the-build/#The-Build-Lifecycle
-#   by default, in absence of "script" phase, travis go build executes "go test -v ./..." - see https://docs.travis-ci.com/user/languages/go/#Default-Build-Script
-#   which we replace below since we want to execute "go test" against multiple packages while generating a cover profile for each - "go test" does not currently
-#   support this, so we use custom script go_test_multi_package_coverprofile.sh to do so... this script also aggregates generated cover profiles into a single
-#   coverage profile and then finally posts the results to the coveralls.io acccount/repo associated with the encrypted API key/token above - see "COVERALLS_TOKEN"
-#   in env|global section, above
-script:
-  - bash ci/go_test_multi_package_coverprofile.sh --coveralls
 
 before_deploy:
   - bash -x ci/build_binary.sh

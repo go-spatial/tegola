@@ -1,0 +1,120 @@
+name: On push
+on: [push, pull_request]
+jobs:
+
+  test:
+    name: Test on Ubuntu
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: 
+        go: ['1.12', '1.13', '1.14']
+
+    services:
+      # label used to access the service container
+      postgis:
+        # docker hub image
+        image: postgis/postgis:9.6-2.5
+        env:
+          # set the master password for the instance
+          POSTGRES_PASSWORD: postgres
+        ports:
+        - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis
+        ports:
+        - 6379:6379
+        options: --entrypoint redis-server
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        # necessary until Go modules have been adopted in this repo
+        path: go/src/github.com/go-spatial/tegola
+
+    - name: Set up Go ${{ matrix.go }}
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go }}
+      id: go
+
+    - name: Go Debug
+      run: |
+        go env
+        pwd
+        echo ${HOME}
+        echo ${GITHUB_WORKSPACE}
+        echo ${GOPATH}
+        echo ${GOROOT}
+      env:
+        GOPATH: /home/runner/work/tegola/go
+
+    - name: Load Postgres test data
+      env:
+        TEST_DATA_URL: https://raw.githubusercontent.com/go-spatial/tegola-testdata/master/tegola.backup
+        TEST_DATA: tegola.backup
+        PGUSER: postgres
+        PGHOST: localhost
+        PGDATABASE: postgres
+        PGPASSWORD: postgres
+      run: |
+        curl ${TEST_DATA_URL} > ${TEST_DATA}
+        pg_restore -d postgres -C ${TEST_DATA}
+        psql -c "CREATE ROLE tegola_no_access LOGIN PASSWORD 'postgres'"
+        rm ${TEST_DATA}
+
+    - name: Postgres Debug
+      env:
+        PGUSER: postgres
+        PGHOST: localhost
+        PGDATABASE: postgres
+        PGPASSWORD: postgres
+      run: |
+        psql -c "\l"
+
+    - name: Run tests
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: /home/runner/work/tegola/tegola/go
+
+        # redis tests
+        RUN_REDIS_TESTS: yes
+
+        # AWS S3 tests
+        RUN_S3_TESTS: yes
+        AWS_TEST_BUCKET: tegola-ci
+        AWS_REGION: us-east-2
+
+        # PostGIS tests
+        RUN_POSTGIS_TESTS: yes
+        PGHOST: localhost
+        PGPORT: 5432
+        PGDATABASE: tegola
+        PGUSER: postgres
+        PGPASSWORD: postgres
+        PGUSER_NO_ACCESS: tegola_no_access
+        PGSSLMODE: disable
+        PGSSLKEY: ""
+        PGSSLCERT: ""
+        PGSSLROOTCERT: ""
+      run: |
+        cd ${GOPATH}/src/github.com/go-spatial/tegola
+        go test -covermode atomic -coverprofile=profile.cov ./...
+
+    - name: Send coverage report to Coveralls
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: /home/runner/work/tegola/tegola/go
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        GO111MODULE=off go get github.com/mattn/goveralls
+        cd ${GOPATH}/src/github.com/go-spatial/tegola
+        $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
+
