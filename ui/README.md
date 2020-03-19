@@ -31,11 +31,6 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 In order to compile the UI for inclusion in tegola, run the following commands from the `ui` folder:
 
 ```console
-$ npm run build
-$ rm -rf ../server/static/
-$ mkdir ../server/static && cp -r dist/* ../server/static
-$ cd ../server
-$ go-bindata -pkg=bindata -o=bindata/bindata.go -ignore=.DS_Store static/...
+$ go run build.go
 ```
 
-TODO: include these steps as part of the CI/CD pipeline.

@@ -1,3 +1,3 @@
-//go:generate go-bindata -pkg=bindata -o=bindata/bindata.go -ignore=.DS_Store static/...
+//go:generate go run ../ui/build.go
 
 package server
