@@ -3,8 +3,8 @@ documents
 .cover
 tmp
 .DS_Store
-node_modules
-/dist
+ui/node_modules
+ui/dist
 
 # local env files
 .env.local
