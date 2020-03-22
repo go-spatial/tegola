@@ -118,3 +118,24 @@ jobs:
         cd ${GOPATH}/src/github.com/go-spatial/tegola
         $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
 
+    # necessary for go-bindata
+    - name: Add Go bin system path # used for building the internal viewer
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: ${{ github.workspace }}/go
+      run: |
+        mkdir -p ${GOPATH}/bin
+        echo "::add-path::${GOPATH}/bin"
+
+    # converts viewer code (HTML, CSS, JS) into Go binary data
+    # this is run to make sure the client side code builds but the bindata
+    # is not used for compiling at this point
+    - name: Generate bindata 
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: ${{ github.workspace }}/go
+      run: |
+        cd ${GOPATH}/src/github.com/go-spatial/tegola/vendor/github.com/jteeuwen/go-bindata/go-bindata
+        go install
+        cd ${GOPATH}/src/github.com/go-spatial/tegola/server
+        go generate ./...
