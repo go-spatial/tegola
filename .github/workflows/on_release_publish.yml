@@ -1,0 +1,232 @@
+name: On release publish
+on: 
+  push:
+  release:
+    types: [published]
+
+jobs:
+
+  gen_version:
+    name: Generate software version
+    runs-on: ubuntu-latest
+
+    steps:
+    # on release we want to use release.tag_name for the version
+    - name: Set tegola version (use release.tag_name)
+      if: github.event_name == 'release'
+      run: echo ${{ github.event.release.tag_name }} > ${{ github.workspace }}/version.txt
+
+    # when it's not a release build use the commit hash for the version tag
+    - name: Set tegola version (use commit hash)
+      if: github.event_name == 'push'
+      run: echo ${{ github.sha }} | cut -c1-7 > ${{ github.workspace }}/version.txt
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: version
+        path: ${{ github.workspace }}/version.txt
+
+  build_nix:
+    name: Build for Linux, MacOS and AWS Lambda
+    needs: gen_version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: 
+        goos: ['darwin', 'linux']
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        # necessary until Go modules have been adopted in this repo
+        path: go/src/github.com/go-spatial/tegola
+
+    - name: Download version artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: version
+
+    - name: Set tegola version
+      run: echo "::set-env name=VERSION::$(cat version/version.txt)"
+
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+
+    - name: Build for ${{ matrix.goos }}
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: ${{ github.workspace }}/go
+        # build architecture
+        GOOS: ${{ matrix.goos }}
+      run: |
+          cd ${GOPATH}/src/github.com/go-spatial/tegola/cmd/tegola
+          go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}"
+
+    # workaround for archives losing permissions 
+    # https://github.com/actions/upload-artifact/issues/38
+    - name: Zip archive permissions workaround
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: ${{ github.workspace }}/go
+      run: |
+        cd ${GOPATH}/src/github.com/go-spatial/tegola/cmd/tegola
+        zip -9 -D tegola.zip tegola
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: tegola_${{ matrix.goos }}_amd64
+        path: ${{ github.workspace }}/go/src/github.com/go-spatial/tegola/cmd/tegola/tegola.zip
+
+    - name: Upload release asset
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ github.workspace }}/go/src/github.com/go-spatial/tegola/cmd/tegola/tegola.zip
+        asset_name: tegola_${{ matrix.goos }}_amd64.zip
+        asset_content_type: application/zip
+
+    - name: Build tegola_lambda
+      # only run the lambda build once during the build matrix
+      if: matrix.goos == 'linux'
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: ${{ github.workspace }}/go
+        # build architecture
+        GOOS: linux
+      run: |
+          cd ${GOPATH}/src/github.com/go-spatial/tegola/cmd/tegola_lambda
+          go build -ldflags "-w -X main.Version=${VERSION}"
+
+    # workaround for archives losing permissions 
+    # https://github.com/actions/upload-artifact/issues/38
+    - name: Zip archive permissions workaround
+      # only run the lambda build once during the build matrix
+      if: matrix.goos == 'linux'
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: ${{ github.workspace }}/go
+      run: |
+        cd ${GOPATH}/src/github.com/go-spatial/tegola/cmd/tegola_lambda
+        zip -9 -D tegola.zip tegola_lambda
+
+    - name: Upload build artifacts
+      # only run the lambda build once during the build matrix
+      if: matrix.goos == 'linux'
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: tegola_lambda
+        path: ${{ github.workspace }}/go/src/github.com/go-spatial/tegola/cmd/tegola_lambda/tegola.zip
+
+    - name: Upload release asset
+      if: matrix.goos == 'linux' && github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ github.workspace }}/go/src/github.com/go-spatial/tegola/cmd/tegola_lambda/tegola.zip
+        asset_name: tegola_lambda.zip
+        asset_content_type: application/zip
+
+  build_docker:
+    name: Build Docker image and publish to Docker Hub
+    needs: gen_version
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_ORG: gospatial
+      DOCKERHUB_REPO: tegola
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Download version artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: version
+
+    - name: Set tegola version
+      run: echo "::set-env name=VERSION::$(cat version/version.txt)"
+
+    - name: Build and tag Docker container
+      run: |
+        docker build -t tegola --build-arg VERSION=${VERSION} .
+        docker tag tegola:latest ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION}
+        docker tag tegola:latest ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:latest
+
+    - name: Publish Docker container
+      if: github.event_name == 'release'
+      env:
+          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+      run: |
+        echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USER} --password-stdin
+        docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION}
+        docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:latest
+
+  build_windows:
+    name: Build for Windows
+    needs: gen_version
+    runs-on: windows-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        # necessary until Go modules have been adopted in this repo
+        path: go\src\github.com\go-spatial\tegola
+
+    - name: Download version artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: version
+
+    - name: Set tegola version
+      run: echo "::set-env name=VERSION::$(cat version/version.txt)"
+
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+
+    - name: Build for Windows
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: ${{ github.workspace }}\go
+      run: |
+          cd $Env:GOPATH\src\github.com\go-spatial\tegola\cmd\tegola
+          go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=$Env:VERSION"
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: tegola_windows_amd64
+        path: ${{ github.workspace }}\go\src\github.com\go-spatial\tegola\cmd\tegola\tegola.exe
+
+    - name: Compress release asset
+      if: github.event_name == 'release'
+      env:
+        # necessary until Go modules have been adopted in this repo
+        GOPATH: ${{ github.workspace }}\go
+      run: |
+          cd $Env:GOPATH\src\github.com\go-spatial\tegola\cmd\tegola
+          7z a tegola.zip tegola.exe
+
+    - name: Upload release asset
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ github.workspace }}\go\src\github.com\go-spatial\tegola\cmd\tegola\tegola.zip
+        asset_name: tegola_windows_amd64.zip
+        asset_content_type: application/zip
+
