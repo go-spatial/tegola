@@ -305,12 +305,12 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"tablename query with fields and id as field": {
 			layerConfig: map[string]interface{}{
-				postgis.ConfigKeyLayerName: "land",
-				postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
+				postgis.ConfigKeyLayerName:   "land",
+				postgis.ConfigKeyTablename:   "ne_10m_land_scale_rank",
 				postgis.ConfigKeyGeomIDField: "gid",
-				postgis.ConfigKeyFields:    []string{"gid", "scalerank"},
+				postgis.ConfigKeyFields:      []string{"gid", "scalerank"},
 			},
-			tile:                 provider.NewTile(1, 1, 1, 64, proj.WebMercator),
+			tile:                 provider.NewTile(1, 1, 1, 64, tegola.WebMercator),
 			expectedFeatureCount: 4032,
 			expectedTags:         []string{"gid", "scalerank"},
 		},
