@@ -38,9 +38,6 @@ jobs:
     steps:
     - name: Check out code
       uses: actions/checkout@v2
-      with:
-        # necessary until Go modules have been adopted in this repo
-        path: go/src/github.com/go-spatial/tegola
 
     - name: Download version artifact
       uses: actions/download-artifact@v1
@@ -57,29 +54,24 @@ jobs:
 
     - name: Build for ${{ matrix.goos }}
       env:
-        # necessary until Go modules have been adopted in this repo
-        GOPATH: ${{ github.workspace }}/go
         # build architecture
         GOOS: ${{ matrix.goos }}
       run: |
-          cd ${GOPATH}/src/github.com/go-spatial/tegola/cmd/tegola
-          go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}"
+          cd cmd/tegola
+          go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}"
 
     # workaround for archives losing permissions 
     # https://github.com/actions/upload-artifact/issues/38
     - name: Zip archive permissions workaround
-      env:
-        # necessary until Go modules have been adopted in this repo
-        GOPATH: ${{ github.workspace }}/go
       run: |
-        cd ${GOPATH}/src/github.com/go-spatial/tegola/cmd/tegola
+        cd cmd/tegola
         zip -9 -D tegola.zip tegola
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v2-preview
       with:
         name: tegola_${{ matrix.goos }}_amd64
-        path: ${{ github.workspace }}/go/src/github.com/go-spatial/tegola/cmd/tegola/tegola.zip
+        path: cmd/tegola/tegola.zip
 
     - name: Upload release asset
       if: github.event_name == 'release'
@@ -88,7 +80,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ${{ github.workspace }}/go/src/github.com/go-spatial/tegola/cmd/tegola/tegola.zip
+        asset_path: cmd/tegola/tegola.zip
         asset_name: tegola_${{ matrix.goos }}_amd64.zip
         asset_content_type: application/zip
 
@@ -96,24 +88,19 @@ jobs:
       # only run the lambda build once during the build matrix
       if: matrix.goos == 'linux'
       env:
-        # necessary until Go modules have been adopted in this repo
-        GOPATH: ${{ github.workspace }}/go
         # build architecture
         GOOS: linux
       run: |
-          cd ${GOPATH}/src/github.com/go-spatial/tegola/cmd/tegola_lambda
-          go build -ldflags "-w -X main.Version=${VERSION}"
+          cd cmd/tegola_lambda
+          go build -mod vendor -ldflags "-w -X main.Version=${VERSION}"
 
     # workaround for archives losing permissions 
     # https://github.com/actions/upload-artifact/issues/38
     - name: Zip archive permissions workaround
       # only run the lambda build once during the build matrix
       if: matrix.goos == 'linux'
-      env:
-        # necessary until Go modules have been adopted in this repo
-        GOPATH: ${{ github.workspace }}/go
       run: |
-        cd ${GOPATH}/src/github.com/go-spatial/tegola/cmd/tegola_lambda
+        cd cmd/tegola_lambda
         zip -9 -D tegola.zip tegola_lambda
 
     - name: Upload build artifacts
@@ -122,7 +109,7 @@ jobs:
       uses: actions/upload-artifact@v2-preview
       with:
         name: tegola_lambda
-        path: ${{ github.workspace }}/go/src/github.com/go-spatial/tegola/cmd/tegola_lambda/tegola.zip
+        path: cmd/tegola_lambda/tegola.zip
 
     - name: Upload release asset
       if: matrix.goos == 'linux' && github.event_name == 'release'
@@ -131,7 +118,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ${{ github.workspace }}/go/src/github.com/go-spatial/tegola/cmd/tegola_lambda/tegola.zip
+        asset_path: cmd/tegola_lambda/tegola.zip
         asset_name: tegola_lambda.zip
         asset_content_type: application/zip
 
@@ -179,9 +166,9 @@ jobs:
     steps:
     - name: Check out code
       uses: actions/checkout@v2
-      with:
+#      with:
         # necessary until Go modules have been adopted in this repo
-        path: go\src\github.com\go-spatial\tegola
+ #       path: go\src\github.com\go-spatial\tegola
 
     - name: Download version artifact
       uses: actions/download-artifact@v1
@@ -197,26 +184,26 @@ jobs:
         go-version: 1.14
 
     - name: Build for Windows
-      env:
+#      env:
         # necessary until Go modules have been adopted in this repo
-        GOPATH: ${{ github.workspace }}\go
+#        GOPATH: ${{ github.workspace }}\go
       run: |
-          cd $Env:GOPATH\src\github.com\go-spatial\tegola\cmd\tegola
+          cd cmd\tegola
           go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=$Env:VERSION"
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v1
       with:
         name: tegola_windows_amd64
-        path: ${{ github.workspace }}\go\src\github.com\go-spatial\tegola\cmd\tegola\tegola.exe
+        path: cmd\tegola\tegola.exe
 
     - name: Compress release asset
       if: github.event_name == 'release'
-      env:
+      #env:
         # necessary until Go modules have been adopted in this repo
-        GOPATH: ${{ github.workspace }}\go
+        #GOPATH: ${{ github.workspace }}\go
       run: |
-          cd $Env:GOPATH\src\github.com\go-spatial\tegola\cmd\tegola
+          cd cmd\tegola
           7z a tegola.zip tegola.exe
 
     - name: Upload release asset
@@ -226,7 +213,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ${{ github.workspace }}\go\src\github.com\go-spatial\tegola\cmd\tegola\tegola.zip
+        asset_path: cmd\tegola\tegola.zip
         asset_name: tegola_windows_amd64.zip
         asset_content_type: application/zip
 
