@@ -35,26 +35,18 @@ jobs:
     steps:
     - name: Check out code
       uses: actions/checkout@v2
-      with:
-        # necessary until Go modules have been adopted in this repo
-        path: go/src/github.com/go-spatial/tegola
 
     - name: Set up Go ${{ matrix.go }}
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go }}
-      id: go
 
-    - name: Go Debug
+    - name: Env Debug
       run: |
         go env
         pwd
         echo ${HOME}
         echo ${GITHUB_WORKSPACE}
-        echo ${GOPATH}
-        echo ${GOROOT}
-      env:
-        GOPATH: /home/runner/work/tegola/go
 
     - name: Load Postgres test data
       env:
@@ -81,9 +73,6 @@ jobs:
 
     - name: Run tests
       env:
-        # necessary until Go modules have been adopted in this repo
-        GOPATH: /home/runner/work/tegola/tegola/go
-
         # redis tests
         RUN_REDIS_TESTS: yes
 
@@ -105,37 +94,21 @@ jobs:
         PGSSLCERT: ""
         PGSSLROOTCERT: ""
       run: |
-        cd ${GOPATH}/src/github.com/go-spatial/tegola
-        go test -covermode atomic -coverprofile=profile.cov ./...
+        go test -mod vendor -covermode atomic -coverprofile=profile.cov ./...
 
     - name: Send coverage report to Coveralls
       env:
-        # necessary until Go modules have been adopted in this repo
-        GOPATH: /home/runner/work/tegola/tegola/go
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        GO111MODULE=off go get github.com/mattn/goveralls
-        cd ${GOPATH}/src/github.com/go-spatial/tegola
+        go get github.com/mattn/goveralls
         $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
-
-    # necessary for go-bindata
-    - name: Add Go bin system path # used for building the internal viewer
-      env:
-        # necessary until Go modules have been adopted in this repo
-        GOPATH: ${{ github.workspace }}/go
-      run: |
-        mkdir -p ${GOPATH}/bin
-        echo "::add-path::${GOPATH}/bin"
 
     # converts viewer code (HTML, CSS, JS) into Go binary data
     # this is run to make sure the client side code builds but the bindata
     # is not used for compiling at this point
     - name: Generate bindata 
-      env:
-        # necessary until Go modules have been adopted in this repo
-        GOPATH: ${{ github.workspace }}/go
       run: |
-        cd ${GOPATH}/src/github.com/go-spatial/tegola/vendor/github.com/jteeuwen/go-bindata/go-bindata
+        cd ${GITHUB_WORKSPACE}/vendor/github.com/jteeuwen/go-bindata/go-bindata
         go install
-        cd ${GOPATH}/src/github.com/go-spatial/tegola/server
+        cd ${GITHUB_WORKSPACE}/server
         go generate ./...
