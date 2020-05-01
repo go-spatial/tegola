@@ -6,6 +6,7 @@ require (
 	github.com/Azure/azure-pipeline-go v0.0.0-20180607212504-7571e8eb0876 // indirect
 	github.com/Azure/azure-storage-blob-go v0.0.0-20180706173141-f0a732ea9441
 	github.com/BurntSushi/toml v0.3.1
+	github.com/ajstarks/svgo v0.0.0-20200320125537-f189e35d30ca
 	github.com/akrylysov/algnhsa v0.12.1
 	github.com/arolek/p v0.0.0-20191103215535-df3c295ed582 // indirect
 	github.com/aws/aws-lambda-go v1.13.1 // indirect
@@ -13,6 +14,7 @@ require (
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/dimfeld/httptreemux v5.0.1+incompatible
 	github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb // indirect
+	github.com/gdey/tbltest v0.0.0-20180914212833-1865222d591f
 	github.com/go-ini/ini v1.28.3-0.20170813052230-c787282c39ac // indirect
 	github.com/go-redis/redis v6.9.0+incompatible
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6

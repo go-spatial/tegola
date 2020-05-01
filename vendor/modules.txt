@@ -4,6 +4,8 @@ github.com/Azure/azure-pipeline-go/pipeline
 github.com/Azure/azure-storage-blob-go/2017-07-29/azblob
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
+# github.com/ajstarks/svgo v0.0.0-20200320125537-f189e35d30ca
+github.com/ajstarks/svgo
 # github.com/akrylysov/algnhsa v0.12.1
 github.com/akrylysov/algnhsa
 # github.com/aws/aws-lambda-go v1.13.1
@@ -42,6 +44,8 @@ github.com/aws/aws-sdk-go/service/sts
 github.com/dimfeld/httptreemux
 # github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb
 github.com/gdey/errors
+# github.com/gdey/tbltest v0.0.0-20180914212833-1865222d591f
+github.com/gdey/tbltest
 # github.com/go-ini/ini v1.28.3-0.20170813052230-c787282c39ac
 github.com/go-ini/ini
 # github.com/go-redis/redis v6.9.0+incompatible

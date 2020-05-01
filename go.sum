@@ -4,6 +4,8 @@ github.com/Azure/azure-storage-blob-go v0.0.0-20180706173141-f0a732ea9441 h1:+Wy
 github.com/Azure/azure-storage-blob-go v0.0.0-20180706173141-f0a732ea9441/go.mod h1:x2mtS6O3mnMEZOJp7d7oldh8IvatBrMfReiyQ+cKgKY=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/ajstarks/svgo v0.0.0-20200320125537-f189e35d30ca h1:kWzLcty5V2rzOqJM7Tp/MfSX0RMSI1x4IOLApEefYxA=
+github.com/ajstarks/svgo v0.0.0-20200320125537-f189e35d30ca/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
 github.com/akrylysov/algnhsa v0.12.1 h1:A9Ojt4hZrL77mhBc3qGO3Sn9reyf+tvM3DmR0SfXguc=
 github.com/akrylysov/algnhsa v0.12.1/go.mod h1:xAcJ/X8DV+81e+dUjIoB/r5CbISrSXV9//leoMDHcdk=
 github.com/arolek/p v0.0.0-20191103215535-df3c295ed582 h1:DugKk4B3PpqfZ1QunDSPqNZDAErQmdCgwurloi1Axaw=
@@ -23,6 +25,8 @@ github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb h1:FYO+lZtAUnakgSW9xYs7QvgawjCDM5wgHaXoDhYHNH4=
 github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb/go.mod h1:PFaV7MgSRe92Wo9O2H2i1CIm7urUk10AgdSHKyBfjmQ=
+github.com/gdey/tbltest v0.0.0-20180914212833-1865222d591f h1:eqGnktl65l0bBrqFWtWVdwrV1B8vRKpucSarJBRWEEs=
+github.com/gdey/tbltest v0.0.0-20180914212833-1865222d591f/go.mod h1:O0rUOxGq87ndwSAK+YVv/8g40Wbre/OSPCU8GlgUyPk=
 github.com/go-ini/ini v1.28.3-0.20170813052230-c787282c39ac h1:Ds6vWsRL/ivkqGuoh6BV5SElghKtwljj+FEEQ0kSwHE=
 github.com/go-ini/ini v1.28.3-0.20170813052230-c787282c39ac/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
 github.com/go-redis/redis v6.9.0+incompatible h1:TYmqCy++WwnKkrf+NJA2QuKdgkpeIr3IlPU3xnvqK/g=
