@@ -121,7 +121,7 @@ func main() {
 	// to handle binary responses so it can convert the base64 encoded payload back into binary prior
 	// to sending to the client
 	algnhsa.ListenAndServe(mux, &algnhsa.Options{
-		BinaryContentTypes: []string{"application/vnd.mapbox-vector-tile"},
+		BinaryContentTypes: []string{mvt.MimeType},
 		UseProxyPath:       true,
 	})
 }
