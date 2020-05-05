@@ -1,3 +1,16 @@
+## 0.11.0 (2020-05-04)
+**Features**
+* Added SSL Support (#82 @ear7h)
+* lambda: global state for database connection caching (#609 @ARolek) 
+
+**Bug Fixes**
+* server: return tiles that lie on a Map's boundary (#633 @ear7h)
+* postgis: use `id` table field as a tile tag (#383 @ear7h)
+
+**Maintenance**
+* atlas: remove usage of tegola.Tile (#636 @ear7h)
+* atlas: use geom package simplify function (@ear7h)
+
 ## 0.10.2 (2019-08-30)
 **Features**
 * added tegola_lambda_cgo to the build pipeline. Geopackage can now be used with tegola_lambda (@ARolek)
