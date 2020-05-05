@@ -2,7 +2,8 @@ name: On release publish
 on: 
   push:
   release:
-    types: [published]
+    types: 
+      - published
 
 jobs:
 
