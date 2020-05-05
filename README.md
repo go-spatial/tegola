@@ -1,6 +1,6 @@
 # Tegola
 
-[![Build Status](https://travis-ci.org/go-spatial/tegola.svg?branch=master)](https://travis-ci.org/go-spatial/tegola)
+![On push](https://github.com/go-spatial/tegola/workflows/On%20push/badge.svg)
 [![Report Card](https://goreportcard.com/badge/github.com/go-spatial/tegola)](https://goreportcard.com/badge/github.com/go-spatial/tegola)
 [![Coverage Status](https://coveralls.io/repos/github/go-spatial/tegola/badge.svg?branch=master)](https://coveralls.io/github/go-spatial/tegola?branch=master)
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/go-spatial/tegola)
@@ -18,11 +18,12 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 - Parallelized tile serving and geometry processing.
 - Support for Web Mercator (3857) and WGS84 (4326) projections.
 - Support for [AWS Lambda](cmd/tegola_lambda).
+- Support for serving HTTPS.
 
 ## Usage
 ```
 tegola is a vector tile server
-Version: v0.10.2
+Version: v0.11.0
 
 Usage:
   tegola [command]
@@ -272,14 +273,8 @@ Example of using the build flags to turn of the Redis cache back end, the GeoPac
 go build -tags 'noRedisCache noGpkgProvider noViewer'
 ```
 
-
-**Turning off CGO**
-Tegola uses CGO for certain functionality (i.e. GeoPackge support). To build tegola without CGO use the following command:
-
-```bash
-CGO_ENABLED=0 go build
-```
-
-
 ## License
 See [license](LICENSE.md) file in repo.
+
+## Looking for a vector tile style editor?
+Once you have tegola running you're likely going to want to work on your map's cartography. Give [fresco](https://github.com/go-spatial/fresco) a try!
