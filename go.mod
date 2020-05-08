@@ -18,7 +18,7 @@ require (
 	github.com/go-redis/redis v6.9.0+incompatible
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 	github.com/go-spatial/geom v0.0.0-20191115190231-0905ac843a79
-	github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
+	github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a // indirect
 	github.com/golang/protobuf v1.0.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jackc/pgx v3.2.0+incompatible
@@ -27,7 +27,7 @@ require (
 	github.com/karalabe/xgo v0.0.0-20180416083054-f99c776585a0 // indirect
 	github.com/mattn/go-sqlite3 v1.10.1-0.20190315083729-31f5bb843b78
 	github.com/mattn/goveralls v0.0.5
-	github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c
+	github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c // indirect
 	github.com/pkg/errors v0.8.1-0.20180311214515-816c9085562c // indirect
 	github.com/spf13/pflag v1.0.1-0.20180410213010-329ebf1e0480 // indirect
 	github.com/theckman/goconstraint v1.10.1-0.20180216224824-e867bde6e4e1

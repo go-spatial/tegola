@@ -90,10 +90,12 @@ github.com/go-spatial/geom/internal/debugger/recorder
 github.com/go-spatial/geom/internal/debugger/recorder/gpkg
 github.com/go-spatial/geom/internal/rtreego
 github.com/go-spatial/geom/planar
+github.com/go-spatial/geom/planar/clip
 github.com/go-spatial/geom/planar/intersect
 github.com/go-spatial/geom/planar/makevalid
 github.com/go-spatial/geom/planar/makevalid/hitmap
 github.com/go-spatial/geom/planar/makevalid/walker
+github.com/go-spatial/geom/planar/simplify
 github.com/go-spatial/geom/planar/triangulate/delaunay
 github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge
 github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision
@@ -103,7 +105,6 @@ github.com/go-spatial/geom/slippy
 github.com/go-spatial/geom/winding
 # github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
 ## explicit
-github.com/go-test/deep
 # github.com/golang/protobuf v1.0.0
 ## explicit
 github.com/golang/protobuf/proto
