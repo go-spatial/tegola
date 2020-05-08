@@ -1,0 +1,11 @@
+language: go
+
+go:
+   - 1.6.x
+   - 1.7.x
+   - 1.8.x
+   - master
+   
+addons:
+    code_climate:
+        repo_token: 56eb32bec422207f6005dc6a389bd17fc5f89e283c70764afcc2d61d4e596e30

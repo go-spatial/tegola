@@ -1,0 +1,132 @@
+# github.com/Azure/azure-pipeline-go v0.0.0-20180607212504-7571e8eb0876
+## explicit
+github.com/Azure/azure-pipeline-go/pipeline
+# github.com/Azure/azure-storage-blob-go v0.0.0-20180706173141-f0a732ea9441
+## explicit
+github.com/Azure/azure-storage-blob-go/2017-07-29/azblob
+# github.com/BurntSushi/toml v0.3.1
+## explicit
+github.com/BurntSushi/toml
+# github.com/ajstarks/svgo v0.0.0-20170507103333-2489f1e6d405
+## explicit
+github.com/ajstarks/svgo
+# github.com/akrylysov/algnhsa v0.12.1
+## explicit
+github.com/akrylysov/algnhsa
+# github.com/aws/aws-lambda-go v1.13.1
+## explicit
+github.com/aws/aws-lambda-go/events
+github.com/aws/aws-lambda-go/lambda
+github.com/aws/aws-lambda-go/lambda/handlertrace
+github.com/aws/aws-lambda-go/lambda/messages
+github.com/aws/aws-lambda-go/lambdacontext
+# github.com/aws/aws-sdk-go v1.12.44-0.20171207221737-00379a7e831f
+## explicit
+github.com/aws/aws-sdk-go/aws
+github.com/aws/aws-sdk-go/aws/awserr
+github.com/aws/aws-sdk-go/aws/awsutil
+github.com/aws/aws-sdk-go/aws/client
+github.com/aws/aws-sdk-go/aws/client/metadata
+github.com/aws/aws-sdk-go/aws/corehandlers
+github.com/aws/aws-sdk-go/aws/credentials
+github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds
+github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
+github.com/aws/aws-sdk-go/aws/credentials/stscreds
+github.com/aws/aws-sdk-go/aws/defaults
+github.com/aws/aws-sdk-go/aws/ec2metadata
+github.com/aws/aws-sdk-go/aws/endpoints
+github.com/aws/aws-sdk-go/aws/request
+github.com/aws/aws-sdk-go/aws/session
+github.com/aws/aws-sdk-go/aws/signer/v4
+github.com/aws/aws-sdk-go/internal/shareddefaults
+github.com/aws/aws-sdk-go/private/protocol
+github.com/aws/aws-sdk-go/private/protocol/query
+github.com/aws/aws-sdk-go/private/protocol/query/queryutil
+github.com/aws/aws-sdk-go/private/protocol/rest
+github.com/aws/aws-sdk-go/private/protocol/restxml
+github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
+github.com/aws/aws-sdk-go/service/s3
+github.com/aws/aws-sdk-go/service/sts
+# github.com/dimfeld/httptreemux v5.0.1+incompatible
+## explicit
+github.com/dimfeld/httptreemux
+# github.com/gdey/bastet v0.0.0-20180226195348-314ac74cee07
+## explicit
+# github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb
+## explicit
+# github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
+## explicit
+github.com/gdey/tbltest
+# github.com/go-ini/ini v1.28.3-0.20170813052230-c787282c39ac
+## explicit
+github.com/go-ini/ini
+# github.com/go-redis/redis v6.9.0+incompatible
+## explicit
+github.com/go-redis/redis
+github.com/go-redis/redis/internal
+github.com/go-redis/redis/internal/consistenthash
+github.com/go-redis/redis/internal/hashtag
+github.com/go-redis/redis/internal/pool
+github.com/go-redis/redis/internal/proto
+github.com/go-redis/redis/internal/singleflight
+# github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
+## explicit
+github.com/go-spatial/cobra
+# github.com/go-spatial/geom v0.0.0-20190821234737-802ab2533ab4
+## explicit
+github.com/go-spatial/geom
+github.com/go-spatial/geom/cmp
+github.com/go-spatial/geom/encoding/mvt
+github.com/go-spatial/geom/encoding/mvt/vector_tile
+github.com/go-spatial/geom/encoding/wkb
+github.com/go-spatial/geom/encoding/wkb/internal/consts
+github.com/go-spatial/geom/encoding/wkb/internal/decode
+github.com/go-spatial/geom/encoding/wkb/internal/encode
+github.com/go-spatial/geom/encoding/wkt
+github.com/go-spatial/geom/slippy
+# github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
+## explicit
+github.com/go-test/deep
+# github.com/golang/protobuf v1.0.0
+## explicit
+github.com/golang/protobuf/proto
+# github.com/inconshreveable/mousetrap v1.0.0
+## explicit
+github.com/inconshreveable/mousetrap
+# github.com/jackc/pgx v3.2.0+incompatible
+## explicit
+github.com/jackc/pgx
+github.com/jackc/pgx/chunkreader
+github.com/jackc/pgx/internal/sanitize
+github.com/jackc/pgx/pgio
+github.com/jackc/pgx/pgproto3
+github.com/jackc/pgx/pgtype
+# github.com/jmespath/go-jmespath v0.0.0-20160803190731-bd40a432e4c7
+## explicit
+github.com/jmespath/go-jmespath
+# github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
+## explicit
+# github.com/karalabe/xgo v0.0.0-20180416083054-f99c776585a0
+## explicit
+# github.com/mattn/go-sqlite3 v1.10.1-0.20190315083729-31f5bb843b78
+## explicit
+github.com/mattn/go-sqlite3
+# github.com/mattn/goveralls v0.0.2
+## explicit
+# github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c
+## explicit
+github.com/pborman/uuid
+# github.com/pkg/errors v0.8.1-0.20180311214515-816c9085562c
+## explicit
+github.com/pkg/errors
+# github.com/spf13/pflag v1.0.1-0.20180410213010-329ebf1e0480
+## explicit
+github.com/spf13/pflag
+# github.com/theckman/goconstraint v1.10.1-0.20180216224824-e867bde6e4e1
+## explicit
+github.com/theckman/goconstraint/go1.8/gte
+# golang.org/x/tools v0.0.0-20180125025630-25101aadb97a
+## explicit
+# gopkg.in/go-playground/colors.v1 v1.0.2-0.20150924111726-b53ecfb39623
+## explicit
+gopkg.in/go-playground/colors.v1
