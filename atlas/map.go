@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -171,7 +172,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					// TODO(arolek): support for additional projections
 					g, err := basic.ToWebMercator(f.SRID, geo)
 					if err != nil {
-						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %v", f.SRID, f.ID, err)
+						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %w", f.SRID, f.ID, err)
 					}
 					geo = g
 				}
@@ -207,7 +208,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 					// make valid routing is implemented
 					pbb, err := tegolaTile.PixelBufferedBounds()
 					if err != nil {
-						return fmt.Errorf("err calculating tile pixel buffer bounds: %v", err)
+						return fmt.Errorf("err calculating tile pixel buffer bounds: %w", err)
 					}
 
 					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
@@ -234,7 +235,7 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 
 				tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
 				if err != nil {
-					return fmt.Errorf("err making geometry valid: %v", err)
+					return fmt.Errorf("err making geometry valid: %w", err)
 				}
 
 				geo, err = convert.ToGeom(tegolaGeo)
@@ -251,14 +252,15 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 				return nil
 			})
 			if err != nil {
-				switch err {
-				case context.Canceled:
-					// TODO (arolek): add debug logs
+				switch {
+				case errors.Is(err, context.Canceled):
+					// Do nothing if we were cancelled.
+
 				default:
 					z, x, y := tile.ZXY()
 					// TODO (arolek): should we return an error to the response or just log the error?
 					// we can't just write to the response as the waitgroup is going to write to the response as well
-					log.Printf("err fetching tile (z: %v, x: %v, y: %v) features: %v", z, x, y, err)
+					log.Printf("err fetching tile (z: %v, x: %v, y: %v) features: %#V", z, x, y, err)
 				}
 				return
 			}
