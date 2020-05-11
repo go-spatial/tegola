@@ -9,7 +9,6 @@ github.com/Azure/azure-storage-blob-go/2017-07-29/azblob
 github.com/BurntSushi/toml
 # github.com/ajstarks/svgo v0.0.0-20170507103333-2489f1e6d405
 ## explicit
-github.com/ajstarks/svgo
 # github.com/akrylysov/algnhsa v0.12.1
 ## explicit
 github.com/akrylysov/algnhsa
@@ -57,7 +56,6 @@ github.com/dimfeld/httptreemux
 github.com/gdey/errors
 # github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
 ## explicit
-github.com/gdey/tbltest
 # github.com/go-ini/ini v1.28.3-0.20170813052230-c787282c39ac
 ## explicit
 github.com/go-ini/ini
@@ -103,9 +101,15 @@ github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision/pseudopolygon
 github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision/testingtables
 github.com/go-spatial/geom/slippy
 github.com/go-spatial/geom/winding
-# github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
+# github.com/go-spatial/proj v0.2.0
 ## explicit
-# github.com/golang/protobuf v1.0.0
+github.com/go-spatial/proj
+github.com/go-spatial/proj/core
+github.com/go-spatial/proj/merror
+github.com/go-spatial/proj/mlog
+github.com/go-spatial/proj/operations
+github.com/go-spatial/proj/support
+# github.com/golang/protobuf v1.2.0
 ## explicit
 github.com/golang/protobuf/proto
 # github.com/inconshreveable/mousetrap v1.0.0
