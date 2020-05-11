@@ -39,7 +39,7 @@ func NewWebMercatorMap(name string) Map {
 		// default bounds
 		Bounds:     proj.WGS84Bounds,
 		Layers:     []Layer{},
-		SRID:       proj.WebMercator,
+		SRID:       proj.WebMercatorSRID,
 		TileExtent: uint64(mvt.DefaultExtent),
 		TileBuffer: uint64(tegola.DefaultTileBuffer),
 	}

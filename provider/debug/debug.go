@@ -86,12 +86,12 @@ func (p *Provider) Layers() ([]provider.LayerInfo, error) {
 		{
 			name:     "debug-tile-outline",
 			geomType: geom.Line{},
-			srid:     proj.WebMercator,
+			srid:     proj.WebMercatorSRID,
 		},
 		{
 			name:     "debug-tile-center",
 			geomType: geom.Point{},
-			srid:     proj.WebMercator,
+			srid:     proj.WebMercatorSRID,
 		},
 	}
 

@@ -2,25 +2,26 @@ package proj
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/proj/webmercator"
+	"github.com/go-spatial/proj"
 )
 
-var (
-	WebMercatorBounds = &webmercator.Extent
-	WGS84Bounds       = &geom.Extent{-180.0, -85.0511, 180.0, 85.0511}
-)
+var WGS84Bounds = SupportedProjections[proj.EPSG3857].WGS84Extents
 
-const (
-	WebMercator = webmercator.SRID
-	WGS84       = 4326
-	Deg2Rad     = math.Pi / 180
-	Rad2Deg     = 180 / math.Pi
-	PiDiv2      = math.Pi / 2.0
-	PiDiv4      = math.Pi / 4.0
-)
+const WGS84SRID = proj.WGS84
+const WebMercatorSRID = proj.WebMercator
+
+type extents struct {
+	NativeExtents *geom.Extent
+	WGS84Extents  *geom.Extent
+}
+
+// SupportedProjections contains supported projection native and lat/long extents as well as tile layout ratio
+var SupportedProjections = map[uint]extents{
+	3857: extents{NativeExtents: &geom.Extent{-20026376.39, -20048966.10, 20026376.39, 20048966.10}, WGS84Extents: &geom.Extent{-180.0, -85.0511, 180.0, 85.0511}},
+	4326: extents{NativeExtents: &geom.Extent{-180.0, -90.0, 180.0, 90.0}, WGS84Extents: &geom.Extent{-180.0, -90.0, 180.0, 90.0}},
+}
 
 // ApplyToPoints applys the given function to each point in the geometry and any sub geometries, return a new transformed geometry.
 func ApplyToPoints(geometry geom.Geometry, f func(coords ...float64) ([]float64, error)) (geom.Geometry, error) {
@@ -215,16 +216,16 @@ func CloneGeometry(geometry geom.Geometry) (geom.Geometry, error) {
 func ToWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	switch SRID {
 	default:
-		return nil, fmt.Errorf("don't know how to convert from %v to %v.", WebMercator, SRID)
-	case WebMercator:
+		return nil, fmt.Errorf("don't know how to convert from %v to %v.", proj.WebMercator, SRID)
+	case proj.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
 		// in the same SRID.
 
 		return CloneGeometry(geometry)
-	case WGS84:
+	case proj.WGS84:
 
-		return ApplyToPoints(geometry, webmercator.PToXY)
+		return ApplyToPoints(geometry, convertWrapper(SRID))
 	}
 }
 
@@ -232,13 +233,25 @@ func ToWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 func FromWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	switch SRID {
 	default:
-		return nil, fmt.Errorf("don't know how to convert from %v to %v.", SRID, WebMercator)
-	case WebMercator:
+		return nil, fmt.Errorf("don't know how to convert from %v to %v.", SRID, proj.WebMercator)
+	case proj.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
 		// in the same SRID.
 		return CloneGeometry(geometry)
-	case WGS84:
-		return ApplyToPoints(geometry, webmercator.PToLonLat)
+	case proj.WGS84:
+		return ApplyToPoints(geometry, inverseWrapper(proj.WebMercator))
+	}
+}
+
+func convertWrapper(destSRID uint64) func(...float64) ([]float64, error) {
+	return func(c ...float64) ([]float64, error) {
+		return proj.Convert(proj.EPSGCode(destSRID), []float64{c[0], c[1]})
+	}
+}
+
+func inverseWrapper(sourceSRID uint64) func(...float64) ([]float64, error) {
+	return func(c ...float64) ([]float64, error) {
+		return proj.Inverse(proj.EPSGCode(sourceSRID), []float64{c[0], c[1]})
 	}
 }

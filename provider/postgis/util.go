@@ -41,7 +41,7 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string, buffer 
 		//	if a subquery is set in the 'sql' config the subquery is set to the layer's
 		//	'tablename' param. because of this case normal SQL token replacement needs to be
 		//	applied to tablename SQL generation
-		tile := provider.NewTile(0, 0, 0, 64, tegola.WebMercator)
+		tile := provider.NewTile(0, 0, 0, 64, proj.WebMercator)
 		sql, err = replaceTokens(sql, l, tile, buffer)
 		if err != nil {
 			return "", err
