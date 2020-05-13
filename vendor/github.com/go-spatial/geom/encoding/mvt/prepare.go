@@ -3,6 +3,10 @@ package mvt
 import (
 	"log"
 
+	"github.com/go-spatial/geom/cmp"
+
+	"github.com/go-spatial/geom/winding"
+
 	"github.com/go-spatial/geom"
 )
 
@@ -57,14 +61,27 @@ func PrepareGeo(geo geom.Geometry, tile *geom.Extent, pixelExtent float64) geom.
 			}
 		}
 		return mp
+	case *geom.MultiPolygon:
+		if g == nil {
+			return nil
+		}
+		var mp geom.MultiPolygon
+		for _, p := range g.Polygons() {
+			np := preparePolygon(p, tile, pixelExtent)
+			if len(np) > 0 {
+				mp = append(mp, np)
+			}
+		}
+		return &mp
 	}
 
 	return nil
 }
 
 func preparept(g geom.Point, tile *geom.Extent, pixelExtent float64) geom.Point {
-	px := int64((g.X() - tile.MinX()) / tile.XSpan() * pixelExtent)
-	py := int64((tile.MaxY() - g.Y()) / tile.YSpan() * pixelExtent)
+
+	px := (g.X() - tile.MinX()) / tile.XSpan() * pixelExtent
+	py := (tile.MaxY() - g.Y()) / tile.YSpan() * pixelExtent
 
 	return geom.Point{float64(px), float64(py)}
 }
@@ -73,13 +90,22 @@ func preparelinestr(g geom.LineString, tile *geom.Extent, pixelExtent float64) (
 	pts := g
 	// If the linestring
 	if len(pts) < 2 {
-		// Not enought points to make a line.
+		// Not enough points to make a line.
 		return nil
 	}
 
-	ls = make(geom.LineString, len(pts))
+	ls = make(geom.LineString, 0, len(pts))
 	for i := 0; i < len(pts); i++ {
-		ls[i] = preparept(pts[i], tile, pixelExtent)
+		npt := preparept(pts[i], tile, pixelExtent)
+
+		if i != 0 && cmp.HiCMP.GeomPointEqual(ls[len(ls)-1], npt) {
+			// skip points that are equivalent due to precision truncation
+			continue
+		}
+		ls = append(ls, preparept(pts[i], tile, pixelExtent))
+	}
+	if len(ls) < 2 {
+		return nil
 	}
 
 	return ls
@@ -94,17 +120,31 @@ func preparePolygon(g geom.Polygon, tile *geom.Extent, pixelExtent float64) (p g
 	}
 
 	for _, line := range lines.LineStrings() {
+
+		if len(line) < 2 {
+			if debug {
+				// skip lines that have been reduced to less than 2 points.
+				log.Println("skipping line 2", line, len(line))
+			}
+			continue
+		}
 		ln := preparelinestr(line, tile, pixelExtent)
+		if cmp.HiCMP.GeomPointEqual(ln[0], ln[len(ln)-1]) {
+			// first and last is the same, need to remove the last point.
+			ln = ln[:len(ln)-1]
+		}
 		if len(ln) < 2 {
 			if debug {
-				// skip lines that have been reduced to less then 2 points.
+				// skip lines that have been reduced to less than 2 points.
 				log.Println("skipping line 2", line, len(ln))
 			}
 			continue
 		}
-		// TODO: check the last and first point to make sure
-		// they are not the same, per the mvt spec
 		p = append(p, ln)
 	}
-	return p
+
+	order := winding.Order{
+		YPositiveDown: false,
+	}
+	return geom.Polygon(order.RectifyPolygon([][][2]float64(p)))
 }

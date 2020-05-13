@@ -106,12 +106,12 @@ func NewTriangleForExtent(ext *Extent, buff float64) (Triangle, error) {
 	ylen := ext[3] - ext[1]
 	x2len := xlen / 2
 
-	nx := ext[0] - (x2len * buff)
+	nx := ext[0] - (x2len * buff) - buff
 	cx := ext[0] + x2len
-	xx := ext[2] + (x2len * buff)
+	xx := ext[2] + (x2len * buff) + buff
 
-	ny := ext[1] - (ylen * buff)
-	xy := ext[3] + (2 * ylen * buff)
+	ny := ext[1] - (ylen * buff) - buff
+	xy := ext[3] + (2 * ylen * buff) + buff
 	return Triangle{
 		{nx, ny},
 		{cx, xy},

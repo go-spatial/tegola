@@ -54,6 +54,7 @@ github.com/dimfeld/httptreemux
 ## explicit
 # github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb
 ## explicit
+github.com/gdey/errors
 # github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
 ## explicit
 github.com/gdey/tbltest
@@ -72,10 +73,11 @@ github.com/go-redis/redis/internal/singleflight
 # github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 ## explicit
 github.com/go-spatial/cobra
-# github.com/go-spatial/geom v0.0.0-20190821234737-802ab2533ab4
+# github.com/go-spatial/geom v0.0.0-20191115190231-0905ac843a79
 ## explicit
 github.com/go-spatial/geom
 github.com/go-spatial/geom/cmp
+github.com/go-spatial/geom/encoding/gpkg
 github.com/go-spatial/geom/encoding/mvt
 github.com/go-spatial/geom/encoding/mvt/vector_tile
 github.com/go-spatial/geom/encoding/wkb
@@ -83,7 +85,22 @@ github.com/go-spatial/geom/encoding/wkb/internal/consts
 github.com/go-spatial/geom/encoding/wkb/internal/decode
 github.com/go-spatial/geom/encoding/wkb/internal/encode
 github.com/go-spatial/geom/encoding/wkt
+github.com/go-spatial/geom/internal/debugger
+github.com/go-spatial/geom/internal/debugger/recorder
+github.com/go-spatial/geom/internal/debugger/recorder/gpkg
+github.com/go-spatial/geom/internal/rtreego
+github.com/go-spatial/geom/planar
+github.com/go-spatial/geom/planar/intersect
+github.com/go-spatial/geom/planar/makevalid
+github.com/go-spatial/geom/planar/makevalid/hitmap
+github.com/go-spatial/geom/planar/makevalid/walker
+github.com/go-spatial/geom/planar/triangulate/delaunay
+github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge
+github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision
+github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision/pseudopolygon
+github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision/testingtables
 github.com/go-spatial/geom/slippy
+github.com/go-spatial/geom/winding
 # github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
 ## explicit
 github.com/go-test/deep

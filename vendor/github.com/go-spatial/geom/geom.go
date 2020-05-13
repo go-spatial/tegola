@@ -1,7 +1,10 @@
 // Package geom describes geometry interfaces.
 package geom
 
-const TOLERANCE = 0.000001
+import (
+	"math"
+	"reflect"
+)
 
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
@@ -22,7 +25,7 @@ type MultiPointer interface {
 // LineStringer is a line of two or more points.
 type LineStringer interface {
 	Geometry
-	Verticies() [][2]float64
+	Vertices() [][2]float64
 }
 
 // MultiLineStringer is a geometry with multiple LineStrings.
@@ -76,7 +79,7 @@ func getCoordinates(g Geometry, pts *[]Point) error {
 
 	case LineStringer:
 
-		mpts := gg.Verticies()
+		mpts := gg.Vertices()
 		for i := range mpts {
 			*pts = append(*pts, Point(mpts[i]))
 		}
@@ -149,7 +152,7 @@ func getExtent(g Geometry, e *Extent) error {
 		return nil
 
 	case LineStringer:
-		e.AddPoints(gg.Verticies()...)
+		e.AddPoints(gg.Vertices()...)
 		return nil
 
 	case MultiLineStringer:
@@ -210,7 +213,7 @@ func extractLines(g Geometry, lines *[]Line) error {
 
 	case LineStringer:
 
-		v := gg.Verticies()
+		v := gg.Vertices()
 		for i := 0; i < len(v)-1; i++ {
 			*lines = append(*lines, Line{v[i], v[i+1]})
 		}
@@ -232,7 +235,7 @@ func extractLines(g Geometry, lines *[]Line) error {
 			if err := extractLines(lr, lines); err != nil {
 				return err
 			}
-			v := lr.Verticies()
+			v := lr.Vertices()
 			if len(v) > 2 && lr.IsRing() == false {
 				// create a connection from last -> first if it doesn't exist
 				*lines = append(*lines, Line{v[len(v)-1], v[0]})
@@ -271,9 +274,16 @@ func ExtractLines(g Geometry) (lines []Line, err error) {
 	return lines, err
 }
 
+// helper function to check it the given interface is nil, or the
+// value store in it is nil
+func isNil(a interface{}) bool {
+	defer func() { recover() }()
+	return a == nil || reflect.ValueOf(a).IsNil()
+}
+
 // IsEmpty returns if the geometry represents an empty geometry
 func IsEmpty(geo Geometry) bool {
-	if geo == nil {
+	if isNil(geo) {
 		return true
 	}
 	switch g := geo.(type) {
@@ -285,7 +295,7 @@ func IsEmpty(geo Geometry) bool {
 	case LineString:
 		return len(g) == 0
 	case LineStringer:
-		return len(g.Verticies()) == 0
+		return len(g.Vertices()) == 0
 	case Polygon:
 		return len(g) == 0
 	case Polygoner:
@@ -309,4 +319,17 @@ func IsEmpty(geo Geometry) bool {
 	default:
 		return true
 	}
+}
+
+// RoundToPrec will round the given value to the precision value.
+// The precision value should be a power of 10.
+func RoundToPrec(v float64, prec int) float64 {
+	if v == -0.0 {
+		return 0.0
+	}
+	if prec == 0 {
+		return math.Round(v)
+	}
+	RoundingFactor := math.Pow10(prec)
+	return math.Round(v*RoundingFactor) / RoundingFactor
 }

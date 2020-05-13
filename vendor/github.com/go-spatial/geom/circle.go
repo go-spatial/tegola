@@ -5,10 +5,6 @@ import (
 	"math"
 )
 
-func round(x, unit float64) float64 {
-	return math.Round(x/unit) * unit
-}
-
 // ErrPointsAreCoLinear is thrown when points are colinear but that is unexpected
 var ErrPointsAreCoLinear = errors.New("given points are colinear")
 
@@ -91,7 +87,7 @@ func CircleFromPoints(a, b, c [2]float64) (Circle, error) {
 	r := math.Sqrt((vA * vA) + (vB * vB))
 	return Circle{
 		Center: [2]float64{x, y},
-		Radius: round(r, 0.0001),
+		Radius: RoundToPrec(r, 4),
 	}, nil
 }
 
@@ -101,6 +97,7 @@ func (c Circle) ContainsPoint(pt [2]float64) bool {
 	// of the circle.
 	v1, v2 := c.Center[0]-pt[0], c.Center[1]-pt[1]
 	d := math.Sqrt((v1 * v1) + (v2 * v2))
+	d = RoundToPrec(d, 3)
 	return c.Radius >= d
 }
 

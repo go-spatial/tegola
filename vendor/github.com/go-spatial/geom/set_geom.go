@@ -19,7 +19,7 @@ type MultiPointSetter interface {
 // LineStringSetter is a mutable LineStringer.
 type LineStringSetter interface {
 	LineStringer
-	SetVerticies([][2]float64) error
+	SetVertices([][2]float64) error
 }
 
 // MultiLineStringSetter is a mutable MultiLineStringer.

@@ -17,7 +17,7 @@ require (
 	github.com/go-ini/ini v1.28.3-0.20170813052230-c787282c39ac // indirect
 	github.com/go-redis/redis v6.9.0+incompatible
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
-	github.com/go-spatial/geom v0.0.0-20190821234737-802ab2533ab4
+	github.com/go-spatial/geom v0.0.0-20191115190231-0905ac843a79
 	github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
 	github.com/golang/protobuf v1.0.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
