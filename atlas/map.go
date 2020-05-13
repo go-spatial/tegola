@@ -14,13 +14,14 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/mvt"
+	"github.com/go-spatial/geom/planar/makevalid"
+	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/simplify"
-	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/mvtprovider"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
@@ -211,18 +212,14 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 
 				// check if the feature SRID and map SRID are different. If they are then reporject
 				if f.SRID != m.SRID {
+
 					// TODO(arolek): support for additional projections
 					g, err := basic.ToWebMercator(f.SRID, geo)
 					if err != nil {
 						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %w", f.SRID, f.ID, err)
 					}
 					geo = g
-				}
 
-				// TODO: remove this geom conversion step once the simplify function uses geom types
-				tegolaGeo, err := convert.ToTegola(geo)
-				if err != nil {
-					return err
 				}
 
 				// add default tags, but don't overwrite a tag that already exists
@@ -232,50 +229,49 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 					}
 				}
 
-				// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-				tegolaTile := tegola.NewTile(tile.ZXY())
-
-				sg := tegolaGeo
 				// multiple ways to turn off simplification. check the atlas init() function
 				// for how the second two conditions are set
 				if !l.DontSimplify && simplifyGeometries && tile.Z < simplificationMaxZoom {
-					sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+
+					// TODO: remove this geom conversion step once the simplify function uses geom types
+					tegolaGeo, err := convert.ToTegola(geo)
+					if err != nil {
+						return err
+					}
+
+					// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
+					tegolaTile := tegola.NewTile(tile.ZXY())
+
+					sg := simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+
+					// TODO: remove this geom conversion step once the simplify function uses geom types
+					geo, err = convert.ToGeom(sg)
+					if err != nil {
+						return err
+					}
 				}
 
 				// check if we need to clip and if we do build the clip region (tile extent)
 				var clipRegion *geom.Extent
 				if !l.DontClip {
-					// CleanGeometry is expecting to operate in pixel coordinates so the clipRegion
-					// will need to be in this same coordinate system. this will change when the new
-					// make valid routing is implemented
-					pbb, err := tegolaTile.PixelBufferedBounds()
-					if err != nil {
-						return fmt.Errorf("err calculating tile pixel buffer bounds: %w", err)
-					}
-
-					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+					clipRegion = tile.Extent3857().ExpandBy(64.0)
 				}
 
-				// TODO: remove this geom conversion step once the simplify function uses geom types
-				geo, err = convert.ToGeom(sg)
+				// create a hitmap for the makevalid function
+				hm, err := hitmap.New(clipRegion, geo)
 				if err != nil {
 					return err
 				}
 
-				// TODO: remove this geom conversion step once the validate function uses geom types
-				sg, err = convert.ToTegola(geo)
+				// instantiate a new makevalid struct holding the hitmap
+				mv := makevalid.Makevalid{
+					Hitmap: hm,
+				}
+
+				// apply make valid routine
+				geo, _, err = mv.Makevalid(ctx, geo, clipRegion)
 				if err != nil {
 					return err
-				}
-
-				tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
-				if err != nil {
-					return fmt.Errorf("err making geometry valid: %w", err)
-				}
-
-				geo, err = convert.ToGeom(tegolaGeo)
-				if err != nil {
-					return nil
 				}
 
 				// tranlate the geometry to tile coordinates
