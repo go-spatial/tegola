@@ -41,7 +41,7 @@ func NewWebMercatorMap(name string) Map {
 type Map struct {
 	Name string
 	// Contains an attribution to be displayed when the map is shown to a user.
-	// 	This string is sanatized so it can't be abused as a vector for XSS or beacon tracking.
+	// 	This string is sanitized so it can't be abused as a vector for XSS or beacon tracking.
 	Attribution string
 	// The maximum extent of available map tiles in WGS:84
 	// latitude and longitude values, in the order left, bottom, right, top.
@@ -129,6 +129,7 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
+// Encode will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
 func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	// tile container
