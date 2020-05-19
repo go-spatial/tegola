@@ -181,7 +181,7 @@ func TestParse(t *testing.T) {
 								MinZoom:       env.UintPtr(10),
 								MaxZoom:       env.UintPtr(20),
 								DontSimplify:  true,
-								DontClip:  true,
+								DontClip:      true,
 							},
 						},
 					},

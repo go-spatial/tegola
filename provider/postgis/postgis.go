@@ -7,17 +7,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/mvtprovider"
+	"github.com/go-spatial/tegola/provider"
 )
 
 const Name = "postgis"
@@ -71,15 +72,11 @@ const (
 	ConfigKeyGeomType    = "geometry_type"
 )
 
-func init() {
-	provider.Register(Name, NewTileProvider, Cleanup)
-}
-
 // isSelectQuery is a regexp to check if a query starts with `SELECT`,
 // case-insensitive and ignoring any preceeding whitespace and SQL comments.
 var isSelectQuery = regexp.MustCompile(`(?i)^((\s*)(--.*\n)?)*select`)
 
-// NewTileProvider instantiates and returns a new postgis provider or an error.
+// CreateProvider instantiates and returns a new postgis provider or an error.
 // The function will validate that the config object looks good before
 // trying to create a driver. This Provider supports the following fields
 // in the provided map[string]interface{} map:
@@ -104,7 +101,7 @@ var isSelectQuery = regexp.MustCompile(`(?i)^((\s*)(--.*\n)?)*select`)
 // 			!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
 // 			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
-func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
+func CreateProvider(config dict.Dicter) (*Provider, error) {
 
 	host, err := config.String(ConfigKeyHost, nil)
 	if err != nil {
@@ -298,13 +295,13 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			// Tablename and Fields will be used to build the query.
 			// We need to do some work. We need to check to see Fields contains the geom and gid fields
 			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field list.
-			l.sql, err = genSQL(&l, p.pool, tblName, fields)
+			l.sql, err = genSQL(&l, p.pool, tblName, fields, true)
 			if err != nil {
 				return nil, fmt.Errorf("could not generate sql, for layer(%v): %v", lname, err)
 			}
 		}
 
-		if strings.Contains(os.Getenv("TEGOLA_SQL_DEBUG"), "LAYER_SQL") {
+		if debugLayerSQL {
 			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.sql)
 		}
 
@@ -326,7 +323,7 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 	// track the provider so we can clean it up later
 	providers = append(providers, p)
 
-	return p, nil
+	return &p, nil
 }
 
 // derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
@@ -435,7 +432,7 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 	tile := provider.NewTile(0, 0, 0, 64, tegola.WebMercator)
 
 	// normal replacer
-	sql, err = replaceTokens(sql, l.srid, tile)
+	sql, err = replaceTokens(sql, l, tile, true)
 	if err != nil {
 		return err
 	}
@@ -514,12 +511,12 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		return ErrLayerNotFound{layer}
 	}
 
-	sql, err := replaceTokens(plyr.sql, plyr.srid, tile)
+	sql, err := replaceTokens(plyr.sql, &plyr, tile, true)
 	if err != nil {
 		return fmt.Errorf("error replacing layer tokens for layer (%v) SQL (%v): %v", layer, sql, err)
 	}
 
-	if strings.Contains(os.Getenv("TEGOLA_SQL_DEBUG"), "EXECUTE_SQL") {
+	if debugExecuteSQL {
 		log.Printf("TEGOLA_SQL_DEBUG:EXECUTE_SQL for layer (%v): %v", layer, sql)
 	}
 
@@ -604,6 +601,64 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	}
 
 	return rows.Err()
+}
+
+func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers []mvtprovider.Layer) ([]byte, error) {
+	var (
+		err  error
+		sqls = make([]string, 0, len(layers))
+	)
+
+	for i := range layers {
+		if debug {
+			log.Printf("looking for layer: %v", layers[i])
+		}
+		l, ok := p.Layer(layers[i].Name)
+		if !ok {
+			// Should we be erroring here, or have a flag so that we don't
+			// spam the user?
+			log.Printf("provider layer not found %v", layers[i].Name)
+		}
+		if debugLayerSQL {
+			log.Printf("SQL for Layer(%v):\n%v\n", l.Name(), l.sql)
+		}
+		sql, err := replaceTokens(l.sql, &l, tile, false)
+		if err != nil {
+			return nil, err
+		}
+
+		// ref: https://postgis.net/docs/ST_AsMVT.html
+		// bytea ST_AsMVT(anyelement row, text name, integer extent, text geom_name, text feature_id_name)
+		sqls = append(sqls, fmt.Sprintf(
+			`(SELECT ST_AsMVT(q,'%s',%d,'%s','%s') AS data FROM (%s) AS q)`,
+			layers[i].MVTName,
+			tegola.DefaultExtent,
+			l.GeomFieldName(),
+			l.IDFieldName(),
+			sql,
+		))
+	}
+	subsqls := strings.Join(sqls, "||")
+	fsql := fmt.Sprintf(`SELECT (%s) AS data`, subsqls)
+	var data pgtype.Bytea
+	if debugExecuteSQL {
+		log.Printf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
+	}
+	err = p.pool.QueryRow(fsql).Scan(&data)
+	if debugExecuteSQL {
+		log.Printf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
+		if err != nil {
+			log.Printf("%s:%s: returned error %v", EnvSQLDebugName, EnvSQLDebugExecute, err)
+		} else {
+			log.Printf("%s:%s: returned %v bytes", EnvSQLDebugName, EnvSQLDebugExecute, len(data.Bytes))
+		}
+	}
+
+	// data may have garbage in it.
+	if err != nil {
+		return []byte{}, err
+	}
+	return data.Bytes, nil
 }
 
 // Close will close the Provider's database connectio

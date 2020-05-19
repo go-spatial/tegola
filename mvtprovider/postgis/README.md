@@ -1,9 +1,12 @@
-# PostGIS
-The PostGIS provider manages querying for tile requests against a Postgres database with the [PostGIS](http://postgis.net/) extension installed. The connection between tegola and Postgis is configured in a `tegola.toml` file. An example minimum connection config:
+# PostGIS MVT Provider
+
+The PostGIS MVT provider manages querying for tile requests against a Postgres database (version 12+) with the [PostGIS](http://postgis.net/)(version 3.0+) extension installed and leverages [ST_AsMVT](https://postgis.net/docs/ST_AsMVT.html) to handle the MVT encoding at the database. 
+
+The connection between tegola and PostGIS is configured in a `tegola.toml` file. An example minimum connection config:
 
 
 ```toml
-[[providers]]
+[[mvt_providers]]
 name = "test_postgis"       # provider name is referenced from map layers (required)
 type = "postgis"            # the type of data provider must be "postgis" for this data provider (required)
 host = "localhost"          # PostGIS database host (required)
@@ -15,61 +18,81 @@ password = ""               # PostGIS database password (required)
 
 ### Connection Properties
 
-- `name` (string): [Required] provider name is referenced from map layers
+- `name` (string): [Required] provider name is referenced from map layers. please note that when referencing an mvt_provider form a map layer the provider name must be prexied with `mvt_`. See example config below.
 - `type` (string): [Required] the type of data provider. must be "postgis" to use this data provider
 - `host` (string): [Required] PostGIS database host
 - `port` (int): [Required] PostGIS database port (required)
 - `database` (string): [Required] PostGIS database name
 - `user` (string): [Required] PostGIS database user
 - `password` (string): [Required] PostGIS database password
-- `srid` (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
 - `max_connections` (int): [Optional] The max connections to maintain in the connection pool. Defaults to 100. 0 means no max.
+- `srid` (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
 
 ## Provider Layers
-In addition to the connection configuration above, Provider Layers need to be configured. A Provider Layer tells tegola how to query PostGIS for a certain layer. An example minimum config:
+
+In addition to the connection configuration above, Provider Layers need to be configured. A Provider Layer tells tegola how to query PostGIS for a certain layer. When using the PostGIS MVT Provider the `ST_AsMVTGeom()` MUST be used. An example minimum config using the `sql` config option:
 
 ```toml
-[[providers.layers]]
+[[mvt_providers.layers]]
 name = "landuse"
 # this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
-tablename = "gis.zoning_base_3857"
+sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
 ```
 
 ### Provider Layers Properties
 
 - `name` (string): [Required] the name of the layer. This is used to reference this layer from map layers.
-- `tablename` (string): [*Required] the name of the database table to query against. Required if `sql` is not defined.
 - `geometry_fieldname` (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to `geom`.
 - `id_fieldname` (string): [Optional] the name of the feature id field. defaults to `gid`.
-- `fields` ([]string): [Optional] a list of fields to include alongside the feature. Can be used if `sql` is not defined.
-- `srid` (int): [Optional] the SRID of the layer. Supports `3857` (WebMercator) or `4326` (WGS84).
 - `geometry_type` (string): [Optional] the layer geometry type. If not set, the table will be inspected at startup to try and infer the gemetry type. Valid values are: `Point`, `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`.
-- `sql` (string): [*Required] custom SQL to use use. Required if `tablename` is not defined. Supports the following tokens:
+- `srid` (int): [Optional] the SRID of the layer. Supports `3857` (WebMercator) or `4326` (WGS84).
+- `sql` (string): [Required] custom SQL to use use. Supports the following tokens:
   - `!BBOX!` - [Required] will be replaced with the bounding box of the tile before the query is sent to the database. `!bbox!` and`!BOX!` are supported as well for compatibilitiy with queries from Mapnik and MapServer styles.
+  - `!X!` - [Optional] will replaced with the "X" value of the requested tile.
+  - `!Y!` - [Optional] will replaced with the "Y" value of the requested tile.
+  - `!Z!` - [Optional] will replaced with the "Z" value of the requested tile.
   - `!ZOOM!` - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
-  - `!X!` - [Optional] will be replaced with the "X" value of the requested tile.
-  - `!Y!` - [Optional] will be replaced with the "Y" value of the requested tile.
-  - `!Z!` - [Optional] will be replaced with the "Z" value of the requested tile.
   - `!SCALE_DENOMINATOR!` - [Optional] scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
   - `!PIXEL_WIDTH!` - [Optional] the pixel width in meters, assuming 256x256 tiles
   - `!PIXEL_HEIGHT!` - [Optional] the pixel height in meters, assuming 256x256 tiles
   - `!ID_FIELD!` - [Optional] the id field name
   - `!GEOM_FIELD!` - [Optional] the geom field name
-  - `!GEOM_TYPE!` - [Optional] the geom type field name
+  - `!GEOM_TYPE!` - [Optional] the geom type if defined otherwise ""
 
-`*Required`: either the `tablename` or `sql` must be defined, but not both.
+## Example mvt_provider and map config
 
-**Example minimum custom SQL config**
+**Important**: When referencing the `provider` in the `map` section of the config, you MUST prepend `mvt_` to the `provider_layer` value. This indicates to tegola that the provider is an MVT provider so tegola knows which provider section to perform the lookup. 
+
+Example:
 
 ```toml
-[[providers.layers]]
-name = "rivers"
-# custom SQL to be used for this layer. Note: that the geometery field is wrapped
-# in ST_AsBinary() and a !BBOX! token is supplied for querying the table with the tile bounds
-sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
+[[mvt_providers]]
+name = "test_postgis"       
+type = "postgis"            
+host = "localhost"          
+port = 5432                 
+database = "tegola"         
+user = "tegola"             
+password = ""
+
+  [[mvt_providers.layers]]
+  name = "landuse"
+  sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
+
+[[maps]]
+name = "cities"
+center = [-90.2,38.6,3.0]  # where to center of the map (lon, lat, zoom)
+
+    [[maps.layers]]
+    name = "landuse"
+    # note the mvt_ prefix on the name of the provider.
+    provider_layer = "mvt_test_postgis.landuse" # note the addition of "mvt_" to the provider name
+    min_zoom = 0
+    max_zoom = 14
 ```
 
 ## Environment Variable support
+
 Helpful debugging environment variables:
 
 - `TEGOLA_SQL_DEBUG`: specify the type of SQL debug information to output. Supports the following values:
@@ -84,6 +107,7 @@ $ TEGOLA_SQL_DEBUG=LAYER_SQL tegola serve --config=/path/to/conf.toml
 ```
 
 ## Testing
+
 Testing is designed to work against a live PostGIS database. To see how to set up a database check this [github actions script](https://github.com/go-spatial/tegola/blob/master/.github/worksflows/on_pr_push.yml). To run the PostGIS tests, the following environment variables need to be set:
 
 ```bash

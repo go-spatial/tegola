@@ -45,6 +45,31 @@ func (e ErrInvalidLayerZoom) Error() string {
 	)
 }
 
+// ErrMVTDifferentProviders represents when there are two different MVT providers in a map
+// definition. MVT providers have to be unique per map definition
+type ErrMVTDifferentProviders struct {
+	Original string
+	Current  string
+}
+
+func (e ErrMVTDifferentProviders) Error() string {
+	return fmt.Sprintf(
+		"config: all layer providers need to be the same, first provider is %s second provider is %s",
+		e.Original,
+		e.Current,
+	)
+}
+
+// ErrMixedProviders represents the user configuration issue of using an MVT provider with another provider
+type ErrMixedProviders struct {
+	Map string
+}
+
+func (e ErrMixedProviders) Error() string {
+	return fmt.Sprintf("config: can not mix MVT providers with normal providers for map %v", e.Map)
+}
+
+// ErrMissingEnvVar represents an environmental variable the system was unable to find in the environment
 type ErrMissingEnvVar struct {
 	EnvVar string
 }

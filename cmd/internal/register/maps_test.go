@@ -1,6 +1,7 @@
 package register_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/go-spatial/tegola/atlas"
@@ -11,10 +12,11 @@ import (
 
 func TestMaps(t *testing.T) {
 	type tcase struct {
-		atlas       atlas.Atlas
-		maps        []config.Map
-		providers   []dict.Dict
-		expectedErr error
+		atlas        atlas.Atlas
+		maps         []config.Map
+		providers    []dict.Dict
+		mvtproviders []dict.Dict
+		expectedErr  error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -32,17 +34,24 @@ func TestMaps(t *testing.T) {
 			return
 		}
 
-		err = register.Maps(&tc.atlas, tc.maps, providers)
-		if tc.expectedErr != nil {
-			if err.Error() != tc.expectedErr.Error() {
-				t.Errorf("invalid error. expected: %v, got: %v", tc.expectedErr, err.Error())
-			}
-			return
+		// init out mvt providers
+		// but first convert []env.Map -> []dict.Dicter
+		mvtProvArr := make([]dict.Dicter, len(tc.mvtproviders))
+		for i := range tc.mvtproviders {
+			mvtProvArr[i] = tc.mvtproviders[i]
 		}
+
+		mvtProviders, err := register.MVTProviders(mvtProvArr)
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 			return
 		}
+
+		err = register.Maps(&tc.atlas, tc.maps, providers, mvtProviders)
+		if !errors.Is(err, tc.expectedErr) {
+			t.Errorf("invalid error, expected %v got %v", tc.expectedErr, err)
+		}
+		return
 	}
 
 	tests := map[string]tcase{

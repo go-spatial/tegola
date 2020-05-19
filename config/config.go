@@ -28,8 +28,9 @@ type Config struct {
 	Webserver    Webserver `toml:"webserver"`
 	Cache        env.Dict  `toml:"cache"`
 	// Map of providers.
-	Providers []env.Dict
-	Maps      []Map
+	Providers    []env.Dict `toml:"providers"`
+	MVTProviders []env.Dict `toml:"mvt_providers"`
+	Maps         []Map      `toml:"maps"`
 }
 
 type Webserver struct {
@@ -37,8 +38,8 @@ type Webserver struct {
 	Port      env.String `toml:"port"`
 	URIPrefix env.String `toml:"uri_prefix"`
 	Headers   env.Dict   `toml:"headers"`
-	SSLCert env.String `toml:"ssl_cert"`
-	SSLKey env.String `toml:"ssl_key"`
+	SSLCert   env.String `toml:"ssl_cert"`
+	SSLKey    env.String `toml:"ssl_key"`
 }
 
 // A Map represents a map in the Tegola Config file.
@@ -67,22 +68,40 @@ type MapLayer struct {
 	DontClip env.Bool `toml:"dont_clip"`
 }
 
-// GetName helper to get the name we care about.
+// ProviderLayerName returns the names of the layer and provider or an error
+func (ml MapLayer) ProviderLayerName() (provider, layer string, err error) {
+	// split the provider layer (syntax is provider.layer)
+	plParts := strings.Split(string(ml.ProviderLayer), ".")
+	if len(plParts) != 2 {
+		return "", "", ErrInvalidProviderLayerName{ProviderLayerName: string(ml.ProviderLayer)}
+	}
+	return plParts[0], plParts[1], nil
+}
+
+// GetName will return the user-defined Layer name from the config,
+// or if the name is empty, return the name of the layer associated with
+// the provider
 func (ml MapLayer) GetName() (string, error) {
 	if ml.Name != "" {
 		return string(ml.Name), nil
 	}
-	// split the provider layer (syntax is provider.layer)
-	plParts := strings.Split(string(ml.ProviderLayer), ".")
-	if len(plParts) != 2 {
-		return "", ErrInvalidProviderLayerName{ProviderLayerName: string(ml.ProviderLayer)}
-	}
-
-	return plParts[1], nil
+	_, name, err := ml.ProviderLayerName()
+	return name, err
 }
 
 // checks the config for issues
 func (c *Config) Validate() error {
+
+	var name string
+	// let's get a list of mvt providers
+	mvtproviders := make(map[string]bool, len(c.MVTProviders))
+	for i := range c.MVTProviders {
+		name, _ = c.MVTProviders[i].String("name", nil)
+		if name == "" {
+			continue
+		}
+		mvtproviders[name] = true
+	}
 
 	// check for map layer name / zoom collisions
 	// map of layers to providers
@@ -92,7 +111,43 @@ func (c *Config) Validate() error {
 			mapLayers[string(m.Name)] = map[string]MapLayer{}
 		}
 
+		// Set current provider to empty, for MVT providers
+		// we can only have the same provider for all layers.
+		// This allow us to track what the first found provider
+		// is.
+		provider := ""
+		isMVTProvider := false
 		for layerKey, l := range m.Layers {
+			pname, _, err := l.ProviderLayerName()
+			if err != nil {
+				return err
+			}
+
+			if provider == "" {
+				// This is the first provider we found.
+				// For MVTProviders all others need to be the same, so store it
+				// so we can check later
+				provider = pname
+			}
+
+			// check to see if any of the prior provider or this one is
+			// an mvt provider. If it is, then the mvtProvider check needs
+			// to be done
+			isMVTProvider = isMVTProvider || mvtproviders[pname]
+
+			// only need to do this check if we are dealing with MVTProviders
+			if isMVTProvider && pname != provider {
+				// for mvt_providers we can only have the same provider
+				// for all layers
+				// check to see
+				if mvtproviders[pname] || isMVTProvider {
+					return ErrMVTDifferentProviders{
+						Original: provider,
+						Current:  pname,
+					}
+				}
+			}
+
 			name, err := l.GetName()
 			if err != nil {
 				return err
