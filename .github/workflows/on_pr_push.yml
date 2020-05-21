@@ -13,7 +13,7 @@ jobs:
       # label used to access the service container
       postgis:
         # docker hub image
-        image: postgis/postgis:9.6-2.5
+        image: postgis/postgis:12-3.0-alpine
         env:
           # set the master password for the instance
           POSTGRES_PASSWORD: postgres
@@ -100,7 +100,8 @@ jobs:
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        go get github.com/mattn/goveralls
+        cd vendor/github.com/mattn/goveralls
+        go install
         $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
 
     # converts viewer code (HTML, CSS, JS) into Go binary data

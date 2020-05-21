@@ -21,6 +21,7 @@ import (
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/simplify"
 	"github.com/go-spatial/tegola/maths/validate"
+	"github.com/go-spatial/tegola/mvtprovider"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
@@ -56,10 +57,34 @@ type Map struct {
 	// MVT output values
 	TileExtent uint64
 	TileBuffer uint64
+
+	mvtProviderName string
+	mvtProvider     mvtprovider.Tiler
+}
+
+// HasMVTProvider indicates if map is a mvt provider based map
+func (m Map) HasMVTProvider() bool { return m.mvtProvider != nil }
+
+// MVTProvider returns the mvt provider if this map is a mvt provider based map, otherwise nil
+func (m Map) MVTProvider() mvtprovider.Tiler { return m.mvtProvider }
+
+// MVTProviderName returns the mvt provider name if this map is a mvt provider based map, otherwise ""
+func (m Map) MVTProviderName() string { return m.mvtProviderName }
+
+// SetMVTProvder sets the map to be based on the passed in mvt provider, and returning the provider
+func (m *Map) SetMVTProvider(name string, p mvtprovider.Tiler) mvtprovider.Tiler {
+	m.mvtProviderName = name
+	m.mvtProvider = p
+	return p
 }
 
 // AddDebugLayers returns a copy of a Map with the debug layers appended to the layer list
 func (m Map) AddDebugLayers() Map {
+	// can not modify the layers of an mvt provider based map
+	if m.mvtProvider != nil {
+		return m
+	}
+
 	// make an explicit copy of the layers
 	layers := make([]Layer, len(m.Layers))
 	copy(layers, m.Layers)
@@ -129,9 +154,25 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
-// Encode will encode the given tile into mvt format
+func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+	// get the list of our layers
+	ptile := provider.NewTile(tile.Z, tile.X, tile.Y, uint(m.TileBuffer), uint(m.SRID))
+
+	layers := make([]mvtprovider.Layer, len(m.Layers))
+	for i := range m.Layers {
+		layers[i] = mvtprovider.Layer{
+			Name:    m.Layers[i].ProviderLayerName,
+			MVTName: m.Layers[i].MVTName(),
+		}
+	}
+	return m.mvtProvider.MVTForLayers(ctx, ptile, layers)
+
+}
+
+// encodeMVTTile will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
-func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+
 	// tile container
 	var mvtTile mvt.Tile
 	// wait group for concurrent layer fetching
@@ -291,7 +332,20 @@ func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
 	}
 
 	// encode our mvt tile
-	tileBytes, err := proto.Marshal(vtile)
+	return proto.Marshal(vtile)
+}
+
+// Encode will encode the given tile into mvt format
+func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+	var (
+		tileBytes []byte
+		err       error
+	)
+	if m.HasMVTProvider() {
+		tileBytes, err = m.encodeMVTProviderTile(ctx, tile)
+	} else {
+		tileBytes, err = m.encodeMVTTile(ctx, tile)
+	}
 	if err != nil {
 		return nil, err
 	}

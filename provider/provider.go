@@ -3,14 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 )
-
 
 // TODO(@ear7h) remove this atrocity from the code base
 // tile_t is an implementation of the Tile interface, it is
@@ -24,11 +22,11 @@ type tile_t struct {
 }
 
 func NewTile(z, x, y, buf, srid uint) Tile {
-	return &tile_t {
+	return &tile_t{
 		Tile: slippy.Tile{
-			Z:z,
-			X:x,
-			Y:y,
+			Z: z,
+			X: x,
+			Y: y,
 		},
 		buffer: buf,
 	}
@@ -53,11 +51,15 @@ type Tile interface {
 	BufferedExtent() (extent *geom.Extent, srid uint64)
 }
 
-
 type Tiler interface {
+	Layerer
+
 	// TileFeature will stream decoded features to the callback function fn
 	// if fn returns ErrCanceled, the TileFeatures method should stop processing
 	TileFeatures(ctx context.Context, layer string, t Tile, fn func(f *Feature) error) error
+}
+
+type Layerer interface {
 	// Layers returns information about the various layers the provider supports
 	Layers() ([]LayerInfo, error)
 }
@@ -115,13 +117,15 @@ func Drivers() (l []string) {
 
 // For function returns a configured provider of the given type, provided the correct config map.
 func For(name string, config dict.Dicter) (Tiler, error) {
+	err := ErrUnknownProvider{KnownProviders: Drivers()}
 	if providers == nil {
-		return nil, fmt.Errorf("no providers registered")
+		return nil, err
 	}
 
 	p, ok := providers[name]
 	if !ok {
-		return nil, fmt.Errorf("no providers registered by the name: %v, known providers: %v", name, strings.Join(Drivers(), ", "))
+		err.Name = name
+		return nil, err
 	}
 
 	return p.init(config)

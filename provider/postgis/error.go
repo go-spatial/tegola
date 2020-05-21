@@ -1,6 +1,13 @@
 package postgis
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var (
+	ErrNilLayer = errors.New("layer is nil")
+)
 
 type ErrLayerNotFound struct {
 	LayerName string

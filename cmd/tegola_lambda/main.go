@@ -72,8 +72,18 @@ func init() {
 		log.Fatal(err)
 	}
 
+	// init out mvt providers
+	mvtProvArr := make([]dict.Dicter, len(conf.MVTProviders))
+	for i := range conf.MVTProviders {
+		mvtProvArr[i] = conf.MVTProviders[i]
+	}
+	mvtProviders, err := register.MVTProviders(mvtProvArr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// register the maps
-	if err = register.Maps(nil, conf.Maps, providers); err != nil {
+	if err = register.Maps(nil, conf.Maps, providers, mvtProviders); err != nil {
 		log.Fatal(err)
 	}
 
