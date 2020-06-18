@@ -53,11 +53,11 @@ func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
 	case "help", "version":
 		return nil
 	default:
-		return initConfig(configFile, requireCache)
+		return InitConfig(configFile, requireCache)
 	}
 }
 
-func initConfig(configFile string, cacheRequired bool) (err error) {
+func InitConfig(configFile string, cacheRequired bool) (err error) {
 	log.Infof("Loading config file: %v", configFile)
 	if conf, err = config.Load(configFile); err != nil {
 		return err
