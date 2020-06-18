@@ -20,9 +20,11 @@ func TestReplaceTokens(t *testing.T) {
 		layer    Layer
 	}
 
+	ctx := context.WithValue(context.Background(), "companyId", "companyId")
+
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			sql, err := replaceTokens(tc.sql, &tc.layer, tc.tile, true)
+			sql, err := replaceTokens(ctx, tc.sql, &tc.layer, tc.tile, true)
 			if err != nil {
 				t.Errorf("unexpected error, Expected nil Got %v", err)
 				return
@@ -65,6 +67,12 @@ func TestReplaceTokens(t *testing.T) {
 			layer:    Layer{srid: tegola.WebMercator},
 			tile:     provider.NewTile(11, 1070, 676, 64, tegola.WebMercator),
 			expected: "SELECT id, 76.43702827453671 as width, 76.43702827453671 as height, 272989.38669477403 as scale_denom FROM foo WHERE geom && ST_MakeEnvelope(899816.6968478388,6.789748347570495e+06,919996.0723123164,6.809927723034973e+06,3857)",
+		},
+		"replace COMPANY_ID": {
+			sql:      "SELECT * FROM foo WHERE !COMPANY_ID! AND geom && !BBOX!",
+			layer:    Layer{srid: proj.WebMercator},
+			tile:     provider.NewTile(2, 1, 1, 64, proj.WebMercator),
+			expected: "SELECT * FROM foo WHERE company_id='\\xcompanyId' AND geom && ST_MakeEnvelope(-1.017529720390625e+07,-156543.03390625,156543.03390625,1.017529720390625e+07,3857)",
 		},
 	}
 

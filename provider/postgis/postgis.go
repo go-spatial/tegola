@@ -434,7 +434,7 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 	tile := provider.NewTile(0, 0, 0, 64, tegola.WebMercator)
 
 	// normal replacer
-	sql, err = replaceTokens(sql, l, tile, true)
+	sql, err = replaceTokens(nil, sql, l, tile, true)
 	if err != nil {
 		return err
 	}
@@ -513,7 +513,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		return ErrLayerNotFound{layer}
 	}
 
-	sql, err := replaceTokens(plyr.sql, &plyr, tile, true)
+	sql, err := replaceTokens(ctx, plyr.sql, &plyr, tile, true)
 	if err != nil {
 		return fmt.Errorf("error replacing layer tokens for layer (%v) SQL (%v): %v", layer, sql, err)
 	}
@@ -631,7 +631,7 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 		if debugLayerSQL {
 			log.Printf("SQL for Layer(%v):\n%v\n", l.Name(), l.sql)
 		}
-		sql, err := replaceTokens(l.sql, &l, tile, false)
+		sql, err := replaceTokens(ctx, l.sql, &l, tile, false)
 		if err != nil {
 			return nil, err
 		}
