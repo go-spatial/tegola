@@ -13,7 +13,7 @@ jobs:
       # label used to access the service container
       postgis:
         # docker hub image
-        image: postgis/postgis:9.6-2.5
+        image: postgis/postgis:12-3.0-alpine
         env:
           # set the master password for the instance
           POSTGRES_PASSWORD: postgres
@@ -50,7 +50,7 @@ jobs:
 
     - name: Load Postgres test data
       env:
-        TEST_DATA_URL: https://raw.githubusercontent.com/go-spatial/tegola-testdata/master/tegola.backup
+        TEST_DATA_URL: https://raw.githubusercontent.com/go-spatial/tegola-testdata/master/tegola.dump
         TEST_DATA: tegola.backup
         PGUSER: postgres
         PGHOST: localhost
@@ -100,7 +100,7 @@ jobs:
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        go get github.com/mattn/goveralls
+        go install -mod=vendor github.com/mattn/goveralls
         $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
 
     # converts viewer code (HTML, CSS, JS) into Go binary data
@@ -108,7 +108,7 @@ jobs:
     # is not used for compiling at this point
     - name: Generate bindata 
       run: |
-        cd ${GITHUB_WORKSPACE}/vendor/github.com/jteeuwen/go-bindata/go-bindata
-        go install
-        cd ${GITHUB_WORKSPACE}/server
+        go install -mod=vendor github.com/jteeuwen/go-bindata/go-bindata
+        pushd ${GITHUB_WORKSPACE}/server
         go generate ./...
+        popd
