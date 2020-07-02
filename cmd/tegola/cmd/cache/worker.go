@@ -45,6 +45,10 @@ func seedWorker(overwrite bool) func(ctx context.Context, mt MapTile) error {
 
 		//	filter down the layers we need for this zoom
 		m = m.FilterLayersByZoom(z)
+		if len(m.Layers) == 0 {
+			log.Infof("map (%v) has no layers, at zoom %v", mt.MapName, z)
+			return nil
+		}
 
 		//	check if overwriting the cache is not ok
 		if !overwrite {
