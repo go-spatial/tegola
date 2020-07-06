@@ -6,9 +6,9 @@ The connection between tegola and PostGIS is configured in a `tegola.toml` file.
 
 
 ```toml
-[[mvt_providers]]
+[[providers]]
 name = "test_postgis"       # provider name is referenced from map layers (required)
-type = "postgis"            # the type of data provider must be "postgis" for this data provider (required)
+type = "mvt_postgis"        # the type of data provider must be "mvt_postgis" for this data provider (required)
 host = "localhost"          # PostGIS database host (required)
 port = 5432                 # PostGIS database port (required)
 database = "tegola"         # PostGIS database name (required)
@@ -33,7 +33,7 @@ password = ""               # PostGIS database password (required)
 In addition to the connection configuration above, Provider Layers need to be configured. A Provider Layer tells tegola how to query PostGIS for a certain layer. When using the PostGIS MVT Provider the `ST_AsMVTGeom()` MUST be used. An example minimum config using the `sql` config option:
 
 ```toml
-[[mvt_providers.layers]]
+[[providers.layers]]
 name = "landuse"
 # this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
 sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
@@ -66,16 +66,16 @@ sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom
 Example:
 
 ```toml
-[[mvt_providers]]
+[[providers]]
 name = "test_postgis"       
-type = "postgis"            
+type = "mvt_postgis"            
 host = "localhost"          
 port = 5432                 
 database = "tegola"         
 user = "tegola"             
 password = ""
 
-  [[mvt_providers.layers]]
+  [[providers.layers]]
   name = "landuse"
   sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
 
@@ -85,8 +85,7 @@ center = [-90.2,38.6,3.0]  # where to center of the map (lon, lat, zoom)
 
     [[maps.layers]]
     name = "landuse"
-    # note the mvt_ prefix on the name of the provider.
-    provider_layer = "mvt_test_postgis.landuse" # note the addition of "mvt_" to the provider name
+    provider_layer = "test_postgis.landuse"
     min_zoom = 0
     max_zoom = 14
 ```

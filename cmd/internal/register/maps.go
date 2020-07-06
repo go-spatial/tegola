@@ -6,7 +6,6 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
-	"github.com/go-spatial/tegola/mvtprovider"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -97,7 +96,7 @@ func atlasLayerFromConfigLayer(cfg *config.MapLayer, mapName string, layerProvid
 	return layer, nil
 }
 
-func selectProvider(name string, mapName string, newMap *atlas.Map, providers map[string]provider.Tiler, mvtProviders map[string]mvtprovider.Tiler) (provider.Layerer, error) {
+func selectProvider(name string, mapName string, newMap *atlas.Map, providers map[string]provider.TilerUnion) (provider.Layerer, error) {
 	if newMap.HasMVTProvider() {
 		if newMap.MVTProviderName() != name {
 			return nil, config.ErrMVTDifferentProviders{
@@ -108,21 +107,25 @@ func selectProvider(name string, mapName string, newMap *atlas.Map, providers ma
 		return newMap.MVTProvider(), nil
 	}
 	if prvd, ok := providers[name]; ok {
-		return prvd, nil
-	}
-	if mvtprvd, ok := mvtProviders[name]; ok {
+		// Need to see what type of provider we got.
+		if prvd.Std != nil {
+			return prvd.Std, nil
+		}
+		if prvd.Mvt == nil {
+			return nil, ErrProviderNotFound{name}
+		}
 		if len(newMap.Layers) != 0 {
 			return nil, config.ErrMixedProviders{
 				Map: string(mapName),
 			}
 		}
-		return newMap.SetMVTProvider(name, mvtprvd), nil
+		return newMap.SetMVTProvider(name, prvd.Mvt), nil
 	}
 	return nil, ErrProviderNotFound{name}
 }
 
 // Maps registers maps with with atlas
-func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler, mvtProviders map[string]mvtprovider.Tiler) error {
+func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.TilerUnion) error {
 
 	var (
 		layerer provider.Layerer
@@ -143,7 +146,7 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			}
 
 			// find our layer provider
-			layerer, err = selectProvider(providerName, string(m.Name), &newMap, providers, mvtProviders)
+			layerer, err = selectProvider(providerName, string(m.Name), &newMap, providers)
 			if err != nil {
 				return err
 			}

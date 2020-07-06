@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type ErrMapNotFound struct {
 	MapName string
@@ -8,6 +11,15 @@ type ErrMapNotFound struct {
 
 func (e ErrMapNotFound) Error() string {
 	return fmt.Sprintf("config: map (%v) not found", e.MapName)
+}
+
+type ErrInvalidProviderForMap struct {
+	MapName      string
+	ProviderName string
+}
+
+func (e ErrInvalidProviderForMap) Error() string {
+	return fmt.Sprintf("config: map %s references unknown provider %s", e.MapName, e.ProviderName)
 }
 
 type ErrInvalidProviderLayerName struct {
@@ -90,4 +102,51 @@ type ErrInvalidURIPrefix string
 
 func (e ErrInvalidURIPrefix) Error() string {
 	return fmt.Sprintf("config: invalid uri_prefix (%v). uri_prefix must start with a forward slash '/' ", string(e))
+}
+
+// ErrUnknownProviderType is returned when the config contains a provider type that has not been registered
+type ErrUnknownProviderType struct {
+	Name           string // Name is the name of the entry in the config
+	Type           string // Type is the name of the data provider
+	KnownProviders []string
+}
+
+func (e ErrUnknownProviderType) Error() string {
+	return fmt.Sprintf("config: invalid type (%s) for provider %s; known providers are: %v", e.Name, e.Type, strings.Join(e.KnownProviders, ","))
+}
+
+// Is returns whether the error is of type ErrUnknownProviderType, only checking the Type value.
+func (e ErrUnknownProviderType) Is(err error) bool {
+	err1, ok := err.(ErrUnknownProviderType)
+	if !ok {
+		return false
+	}
+	return err1.Type == e.Type
+}
+
+// ErrProviderNameRequired is returned when the name of a provider is missing from the provider list
+type ErrProviderNameRequired struct {
+	Pos int
+}
+
+func (e ErrProviderNameRequired) Error() string {
+	return fmt.Sprintf("config: name field required for provider at position %v", e.Pos)
+}
+
+// ErrProviderNameDuplicate is returned when the name of a provider is duplicated in the provider list
+type ErrProviderNameDuplicate struct {
+	Pos int
+}
+
+func (e ErrProviderNameDuplicate) Error() string {
+	return fmt.Sprintf("config: name for provider at position %v is a duplicate", e.Pos)
+}
+
+// ErrProviderTypeRequired is returned when the type of a provider is missing from the provider list
+type ErrProviderTypeRequired struct {
+	Pos int
+}
+
+func (e ErrProviderTypeRequired) Error() string {
+	return fmt.Sprintf("config: type field required for provider at position %v", e.Pos)
 }

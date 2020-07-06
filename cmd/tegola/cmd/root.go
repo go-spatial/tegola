@@ -78,20 +78,8 @@ func initConfig(configFile string, cacheRequired bool) (err error) {
 		return fmt.Errorf("could not register providers: %v", err)
 	}
 
-	// init out mvt providers
-	// but first convert []env.Map -> []dict.Dicter
-	mvtProvArr := make([]dict.Dicter, len(conf.MVTProviders))
-	for i := range mvtProvArr {
-		mvtProvArr[i] = conf.MVTProviders[i]
-	}
-
-	mvtProviders, err := register.MVTProviders(mvtProvArr)
-	if err != nil {
-		return fmt.Errorf("could not register mvt_providers: %v", err)
-	}
-
 	// init our maps
-	if err = register.Maps(nil, conf.Maps, providers, mvtProviders); err != nil {
+	if err = register.Maps(nil, conf.Maps, providers); err != nil {
 		return fmt.Errorf("could not register maps: %v", err)
 	}
 	if len(conf.Cache) == 0 && cacheRequired {

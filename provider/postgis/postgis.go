@@ -17,7 +17,6 @@ import (
 	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/mvtprovider"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -613,7 +612,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	return rows.Err()
 }
 
-func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers []mvtprovider.Layer) ([]byte, error) {
+func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers []provider.Layer) ([]byte, error) {
 	var (
 		err  error
 		sqls = make([]string, 0, len(layers))

@@ -24,7 +24,7 @@ import (
 var colFinder *regexp.Regexp
 
 func init() {
-	provider.Register(Name, NewTileProvider, Cleanup)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
 	colFinder = regexp.MustCompile(`^(([a-zA-Z_][a-zA-Z0-9_]*)|"([^"]+)")\s`)
 }
 
@@ -63,7 +63,7 @@ func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
 
 	conf := make(map[string]interface{})
 	conf["name"] = "autoconfd_gpkg"
-	conf["type"] = "gpkg"
+	conf["type"] = provider.TypeStd.Prefix() + Name
 	conf["filepath"] = gpkgPath
 	conf["layers"] = make([]map[string]interface{}, len(tnames))
 	for i, tablename := range tnames {

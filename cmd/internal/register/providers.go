@@ -33,13 +33,13 @@ func (e ErrProviderTypeInvalid) Error() string {
 }
 
 // Providers registers data provider backends
-func Providers(providers []dict.Dicter) (map[string]provider.Tiler, error) {
+func Providers(providers []dict.Dicter) (map[string]provider.TilerUnion, error) {
 	// holder for registered providers
-	registeredProviders := map[string]provider.Tiler{}
+	registeredProviders := map[string]provider.TilerUnion{}
 
 	// iterate providers
 	for _, p := range providers {
-		// lookup our proivder name
+		// lookup our provider name
 		pname, err := p.String("name", nil)
 		if err != nil {
 			switch err.(type) {
@@ -52,7 +52,7 @@ func Providers(providers []dict.Dicter) (map[string]provider.Tiler, error) {
 			}
 		}
 
-		// check if a proivder with this name is alrady registered
+		// check if a provider with this name is already registered
 		_, ok := registeredProviders[pname]
 		if ok {
 			return registeredProviders, ErrProviderAlreadyRegistered(pname)

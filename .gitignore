@@ -25,3 +25,4 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+cmd/tegola_lambda/tegola_lambda

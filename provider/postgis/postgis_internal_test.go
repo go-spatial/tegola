@@ -12,7 +12,6 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
-	"github.com/go-spatial/tegola/mvtprovider"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -94,7 +93,7 @@ func TestMVTProviders(t *testing.T) {
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			config := tc.Config()
-			provider, err := NewMVTTileProvider(config)
+			prvd, err := NewMVTTileProvider(config)
 			// for now we will just check the length of the bytes.
 			if tc.err != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.err) {
@@ -107,15 +106,15 @@ func TestMVTProviders(t *testing.T) {
 				t.Errorf("NewMVTTileProvider unexpected error: %v", err)
 				return
 			}
-			layers := make([]mvtprovider.Layer, len(tc.layerNames))
+			layers := make([]provider.Layer, len(tc.layerNames))
 
 			for i := range tc.layerNames {
-				layers[i] = mvtprovider.Layer{
+				layers[i] = provider.Layer{
 					Name:    tc.layerNames[i],
 					MVTName: tc.layerNames[i],
 				}
 			}
-			mvtTile, err := provider.MVTForLayers(context.Background(), tc.tile, layers)
+			mvtTile, err := prvd.MVTForLayers(context.Background(), tc.tile, layers)
 			if err != nil {
 				t.Errorf("NewProvider unexpected error: %v", err)
 				return

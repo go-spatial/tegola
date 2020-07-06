@@ -2,13 +2,12 @@ package postgis
 
 import (
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/mvtprovider"
 	"github.com/go-spatial/tegola/provider"
 )
 
 func init() {
-	provider.Register(Name, NewTileProvider, Cleanup)
-	mvtprovider.Register(Name, NewMVTTileProvider, Cleanup)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
+	provider.MVTRegister(provider.TypeMvt.Prefix()+Name, NewMVTTileProvider, Cleanup)
 }
 
 // NewTileProvider instantiates and returns a new postgis provider or an error.
@@ -37,4 +36,4 @@ func init() {
 // 			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
 func NewTileProvider(config dict.Dicter) (provider.Tiler, error)       { return CreateProvider(config) }
-func NewMVTTileProvider(config dict.Dicter) (mvtprovider.Tiler, error) { return CreateProvider(config) }
+func NewMVTTileProvider(config dict.Dicter) (provider.MVTTiler, error) { return CreateProvider(config) }

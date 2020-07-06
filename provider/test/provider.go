@@ -2,6 +2,10 @@ package test
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"sync"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
@@ -12,23 +16,65 @@ import (
 
 const Name = "test"
 
-var Count int
+var (
+	lock     sync.Mutex
+	Count    int
+	MVTCount int
+)
 
 func init() {
-	provider.Register(Name, NewTileProvider, Cleanup)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
+	provider.MVTRegister(provider.TypeMvt.Prefix()+Name, NewMVTTileProvider, Cleanup)
 }
 
-// NewProvider setups a test provider. there are not currently any config params supported
+// NewTileProvider setups a test provider. there are not currently any config params supported
 func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
+	lock.Lock()
 	Count++
+	lock.Unlock()
 	return &TileProvider{}, nil
 }
 
+// NewMVTTileProvider setups a test provider for mvt tiles providers. The only supported parameter is
+// "test_file", which should point to a mvt tile file to return for MVTForLayers
+func NewMVTTileProvider(config dict.Dicter) (provider.MVTTiler, error) {
+	lock.Lock()
+	MVTCount++
+	lock.Unlock()
+	var mvtTile []byte
+	if config != nil {
+		path, err := config.String("test_file", nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get test_file key: %w", err)
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open test_file: %w", err)
+		}
+		mvtTile, err = ioutil.ReadAll(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read test_file: %w", err)
+		}
+	}
+	return &TileProvider{
+		MVTTile: mvtTile,
+	}, nil
+}
+
 // Cleanup cleans up all the test providers.
-func Cleanup() { Count = 0 }
+func Cleanup() {
+	lock.Lock()
+	Count = 0
+	MVTCount = 0
+	lock.Unlock()
+}
 
-type TileProvider struct{}
+// TileProvider mocks out a tile provider
+type TileProvider struct {
+	MVTTile []byte
+}
 
+// Layers returns the configured layers, there is always only one "test-layer"
 func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 	return []provider.LayerInfo{
 		layer{
@@ -39,7 +85,7 @@ func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 	}, nil
 }
 
-// TilFeatures always returns a feature with a polygon outlining the tile's Extent (not Buffered Extent)
+// TileFeatures always returns a feature with a polygon outlining the tile's Extent (not Buffered Extent)
 func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, fn func(f *provider.Feature) error) error {
 	// get tile bounding box
 	ext, srid := t.Extent()
@@ -54,4 +100,13 @@ func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provid
 	}
 
 	return fn(&debugTileOutline)
+}
+
+// MVTForLayers mocks out MVTForLayers by just returning the MVTTile bytes, this will never error
+func (tp *TileProvider) MVTForLayers(ctx context.Context, _ provider.Tile, _ []provider.Layer) ([]byte, error) {
+	// TODO(gdey): fill this out.
+	if tp == nil {
+		return nil, nil
+	}
+	return tp.MVTTile, nil
 }

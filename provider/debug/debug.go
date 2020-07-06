@@ -21,7 +21,7 @@ const (
 )
 
 func init() {
-	provider.Register(Name, NewTileProvider, nil)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, nil)
 }
 
 // NewProvider Setups a debug provider. there are not currently any config params supported

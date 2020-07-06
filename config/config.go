@@ -13,6 +13,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/provider"
 )
 
 var blacklistHeaders = []string{"content-encoding", "content-length", "content-type"}
@@ -28,11 +29,17 @@ type Config struct {
 	Webserver    Webserver `toml:"webserver"`
 	Cache        env.Dict  `toml:"cache"`
 	// Map of providers.
-	Providers    []env.Dict `toml:"providers"`
-	MVTProviders []env.Dict `toml:"mvt_providers"`
-	Maps         []Map      `toml:"maps"`
+	//  all providers must have at least two entries.
+	// 1. name -- this is the name that is referenced in
+	// the maps section
+	// 2. type -- this is the name the provider modules register
+	// themselves under. (e.g. postgis, gpkg, mvt_postgis )
+	// Note: Use the type to figure out if the provider is a mvt or std provider
+	Providers []env.Dict `toml:"providers"`
+	Maps      []Map      `toml:"maps"`
 }
 
+// Webserver represents the config options for the webserver part of Tegola
 type Webserver struct {
 	HostName  env.String `toml:"hostname"`
 	Port      env.String `toml:"port"`
@@ -52,6 +59,7 @@ type Map struct {
 	TileBuffer  *env.Int     `toml:"tile_buffer"`
 }
 
+// MapLayer represents a the config for a layer in a map
 type MapLayer struct {
 	// Name is optional. If it's not defined the name of the ProviderLayer will be used.
 	// Name can also be used to group multiple ProviderLayers under the same namespace.
@@ -89,20 +97,45 @@ func (ml MapLayer) GetName() (string, error) {
 	return name, err
 }
 
-// checks the config for issues
+// Validate checks the config for issues
 func (c *Config) Validate() error {
 
-	var name string
-	// let's get a list of mvt providers
-	mvtproviders := make(map[string]bool, len(c.MVTProviders))
-	for i := range c.MVTProviders {
-		name, _ = c.MVTProviders[i].String("name", nil)
-		if name == "" {
-			continue
-		}
-		mvtproviders[name] = true
+	var knownTypes []string
+	drivers := make(map[string]int)
+	for _, name := range provider.Drivers(provider.TypeStd) {
+		drivers[name] = int(provider.TypeStd)
+		knownTypes = append(knownTypes, name)
 	}
-
+	for _, name := range provider.Drivers(provider.TypeMvt) {
+		drivers[name] = int(provider.TypeMvt)
+		knownTypes = append(knownTypes, name)
+	}
+	// mvtproviders maps a known provider name to whether that provider is
+	// an mvt provider or not.
+	mvtproviders := make(map[string]bool, len(c.Providers))
+	for i, prvd := range c.Providers {
+		name, _ := prvd.String("name", nil)
+		if name == "" {
+			return ErrProviderNameRequired{Pos: i}
+		}
+		typ, _ := prvd.String("type", nil)
+		if typ == "" {
+			return ErrProviderTypeRequired{Pos: i}
+		}
+		// Check to see if the name has already been seen before.
+		if _, ok := mvtproviders[name]; ok {
+			return ErrProviderNameDuplicate{Pos: i}
+		}
+		drv, ok := drivers[typ]
+		if !ok {
+			return ErrUnknownProviderType{
+				Name:           name,
+				Type:           typ,
+				KnownProviders: knownTypes,
+			}
+		}
+		mvtproviders[name] = drv == int(provider.TypeMvt)
+	}
 	// check for map layer name / zoom collisions
 	// map of layers to providers
 	mapLayers := map[string]map[string]MapLayer{}
@@ -130,10 +163,18 @@ func (c *Config) Validate() error {
 				provider = pname
 			}
 
+			isMvt, doesExists := mvtproviders[pname]
+			if !doesExists {
+				return ErrInvalidProviderForMap{
+					MapName:      string(m.Name),
+					ProviderName: pname,
+				}
+			}
+
 			// check to see if any of the prior provider or this one is
 			// an mvt provider. If it is, then the mvtProvider check needs
 			// to be done
-			isMVTProvider = isMVTProvider || mvtproviders[pname]
+			isMVTProvider = isMVTProvider || isMvt
 
 			// only need to do this check if we are dealing with MVTProviders
 			if isMVTProvider && pname != provider {
@@ -208,7 +249,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// ConfigTileBuffers handles setting the tile buffer for a Map
+// ConfigureTileBuffers handles setting the tile buffer for a Map
 func (c *Config) ConfigureTileBuffers() {
 	// range our configured maps
 	for mapKey, m := range c.Maps {
@@ -265,7 +306,7 @@ func Load(location string) (conf Config, err error) {
 
 		// check the conf file exists
 		if _, err := os.Stat(location); os.IsNotExist(err) {
-			return conf, fmt.Errorf("config file at location (%v) not found!", location)
+			return conf, fmt.Errorf("config file at location (%v) not found", location)
 		}
 		// open the confi file
 		reader, err = os.Open(location)
@@ -277,6 +318,8 @@ func Load(location string) (conf Config, err error) {
 	return Parse(reader, location)
 }
 
+// LoadAndValidate will load the config from the given filename and validate it if it was
+// able to load the file
 func LoadAndValidate(filename string) (cfg Config, err error) {
 	cfg, err = Load(filename)
 	if err != nil {

@@ -21,7 +21,6 @@ import (
 	"github.com/go-spatial/tegola/internal/convert"
 	"github.com/go-spatial/tegola/maths/simplify"
 	"github.com/go-spatial/tegola/maths/validate"
-	"github.com/go-spatial/tegola/mvtprovider"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
@@ -59,20 +58,20 @@ type Map struct {
 	TileBuffer uint64
 
 	mvtProviderName string
-	mvtProvider     mvtprovider.Tiler
+	mvtProvider     provider.MVTTiler
 }
 
 // HasMVTProvider indicates if map is a mvt provider based map
 func (m Map) HasMVTProvider() bool { return m.mvtProvider != nil }
 
 // MVTProvider returns the mvt provider if this map is a mvt provider based map, otherwise nil
-func (m Map) MVTProvider() mvtprovider.Tiler { return m.mvtProvider }
+func (m Map) MVTProvider() provider.MVTTiler { return m.mvtProvider }
 
 // MVTProviderName returns the mvt provider name if this map is a mvt provider based map, otherwise ""
 func (m Map) MVTProviderName() string { return m.mvtProviderName }
 
-// SetMVTProvder sets the map to be based on the passed in mvt provider, and returning the provider
-func (m *Map) SetMVTProvider(name string, p mvtprovider.Tiler) mvtprovider.Tiler {
+// SetMVTProvider sets the map to be based on the passed in mvt provider, and returning the provider
+func (m *Map) SetMVTProvider(name string, p provider.MVTTiler) provider.MVTTiler {
 	m.mvtProviderName = name
 	m.mvtProvider = p
 	return p
@@ -158,9 +157,9 @@ func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile) ([]by
 	// get the list of our layers
 	ptile := provider.NewTile(tile.Z, tile.X, tile.Y, uint(m.TileBuffer), uint(m.SRID))
 
-	layers := make([]mvtprovider.Layer, len(m.Layers))
+	layers := make([]provider.Layer, len(m.Layers))
 	for i := range m.Layers {
-		layers[i] = mvtprovider.Layer{
+		layers[i] = provider.Layer{
 			Name:    m.Layers[i].ProviderLayerName,
 			MVTName: m.Layers[i].MVTName(),
 		}

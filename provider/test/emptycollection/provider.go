@@ -15,7 +15,7 @@ const Name = "emptycollection"
 var Count int
 
 func init() {
-	provider.Register(Name, NewTileProvider, Cleanup)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
 }
 
 // NewProvider setups a test provider. there are not currently any config params supported

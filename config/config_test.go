@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"errors"
 	"os"
 	"reflect"
 	"strconv"
@@ -9,6 +10,9 @@ import (
 
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/env"
+	_ "github.com/go-spatial/tegola/provider/debug"
+	_ "github.com/go-spatial/tegola/provider/postgis"
+	_ "github.com/go-spatial/tegola/provider/test"
 )
 
 const (
@@ -341,13 +345,15 @@ func TestValidate(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		err := tc.config.Validate()
-		if err != tc.expectedErr {
-			t.Errorf("expected err: %v got %v", tc.expectedErr, err)
-			return
+			err := tc.config.Validate()
+			if !errors.Is(err, tc.expectedErr) {
+				t.Errorf("expected err: %v got %v", tc.expectedErr, err)
+				return
+			}
 		}
 	}
 
@@ -716,14 +722,248 @@ func TestValidate(t *testing.T) {
 				Header: "Content-Encoding",
 			},
 		},
+		"7 non-existant provider type": {
+			expectedErr: config.ErrUnknownProviderType{Type: "nonexistant", Name: "provider1", KnownProviders: []string{"..."}},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "nonexistant",
+					},
+				},
+			},
+		},
+		"8 missing name field": {
+			expectedErr: config.ErrProviderNameRequired{Pos: 0},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"type": "test",
+					},
+				},
+			},
+		},
+		"8 duplicate name field": {
+			expectedErr: config.ErrProviderNameDuplicate{Pos: 1},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "test",
+					},
+					{
+						"name": "provider1",
+						"type": "test",
+					},
+				},
+			},
+		},
+		"8 missing name field at pos 1": {
+			expectedErr: config.ErrProviderNameRequired{Pos: 1},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "test",
+					},
+					{
+						"type": "test",
+					},
+				},
+			},
+		},
+		"9 missing type field": {
+			expectedErr: config.ErrProviderTypeRequired{Pos: 0},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+					},
+				},
+			},
+		},
+		"9 missing type field at pos 1": {
+			expectedErr: config.ErrProviderTypeRequired{Pos: 1},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "test",
+					},
+					{
+						"name": "provider2",
+					},
+				},
+			},
+		},
+		"10 happy 1 mvt provider only 1 layer": {
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "happy",
+						Attribution: "Test Attribution",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+						},
+					},
+				},
+			},
+		},
+		"10 happy 1 mvt provider only 2 layer": {
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "happy",
+						Attribution: "Test Attribution",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+							{
+								ProviderLayer: "provider1.land_default_z",
+							},
+						},
+					},
+				},
+			},
+		},
+		"10 happy 1 mvt, 1 std provider only 1 layer": {
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+					{
+						"name": "provider2",
+						"type": "test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "happy",
+						Attribution: "Test Attribution",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+							{
+								ProviderLayer: "provider1.land_default_z",
+							},
+						},
+					},
+				},
+			},
+		},
+		"11 invalid provider referenced in map": {
+			expectedErr: config.ErrInvalidProviderForMap{
+				MapName:      "happy",
+				ProviderName: "bad",
+			},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "happy",
+						Attribution: "Test Attribution",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "bad.water_default_z",
+							},
+						},
+					},
+				},
+			},
+		},
+		"12 mvt_provider comingle": {
+			expectedErr: config.ErrMVTDifferentProviders{
+				Original: "provider1",
+				Current:  "stdprovider1",
+			},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+					{
+						"name": "stdprovider1",
+						"type": "test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "comingle",
+						Attribution: "Test Attribution",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+							{
+								ProviderLayer: "stdprovider1.water_default_z",
+							},
+						},
+					},
+				},
+			},
+		},
+		"12 mvt_provider comingle; flip": {
+			expectedErr: config.ErrMVTDifferentProviders{
+				Original: "stdprovider1",
+				Current:  "provider1",
+			},
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "stdprovider1",
+						"type": "test",
+					},
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "comingle",
+						Attribution: "Test Attribution",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "stdprovider1.water_default_z",
+							},
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
+
 }
 
 func TestConfigureTileBuffers(t *testing.T) {
