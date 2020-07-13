@@ -1124,6 +1124,9 @@ func makeValid(plygs ...[]Line) (polygons [][][]Pt, err error) {
 		stime = etime
 	*/
 	triangleGraph, err := edgeMap.FindTriangles()
+	if err != nil {
+		return polygons, err
+	}
 	/*
 		etime = time.Now()
 		log.Println("Find Triangles took: ", etime.Sub(stime))
