@@ -9,7 +9,10 @@ export default {
   name: 'Header',
   props:{
     capabilities: Object
-  }
+  },
+  data(){
+    return {}
+  },
 }
 </script>
 
@@ -18,7 +21,8 @@ export default {
 #header {
   width: 100%;
   z-index: 100;
-  position: fixed;
+  /*position: fixed;*/
+  position: absolute;
   border-bottom: 1px solid #eaeaea;
   background-color: rgba(0,0,0,0.5);
 }
@@ -30,6 +34,7 @@ h1 {
   font-size: 16px;
   margin: 0;
 }
+
 h2 {
   padding: 10px;
   margin: 0;

@@ -1,16 +1,17 @@
 <template>
   <div id="app">
     <Mapbox v-if="capabilities && activeMap"/>
-    <Header 
+    <Header
       v-if="capabilities"
       v-bind:capabilities="capabilities"/>
-    <LeftNav 
+    <LeftNav
       v-if="capabilities"
       v-bind:capabilities="capabilities"/>
   </div>
 </template>
 
 <script>
+import "mapbox-gl/dist/mapbox-gl.css";
 import Header from './components/Header.vue';
 import LeftNav from './components/LeftNav/LeftNav.vue';
 import Mapbox from './components/Mapbox.vue';
@@ -55,7 +56,7 @@ export default {
       }
 
       return comparison;
-    }  
+    }
   },
   created: function(){
     const me = this;
@@ -63,13 +64,13 @@ export default {
     // update the global store with the API root
     mutations.setApiRoot(apiRoot);
 
-    // fetch the tegola capabilities endpoint. this is the root driver of 
+    // fetch the tegola capabilities endpoint. this is the root driver of
     // all subsequent steps
     axios.get(apiRoot + 'capabilities')
       .then(function (resp) {
         // sort our map list alphabetically
         resp.data.maps.sort(me.compareMaps);
-        
+
         // on success update the capabilities data in the global store
         mutations.setCapabilities(resp.data);
 
@@ -98,6 +99,7 @@ body, html {
   margin: 0;
 }
 
+
 .float-r {
   float: right;
   padding-left: 1rem;
@@ -120,7 +122,7 @@ body, html {
     border: 1px solid #ccc;
     box-shadow: 0 1px 2px rgba(0,0,0,0.10);
     padding: 10px;
-    pointer-events: auto; 
+    pointer-events: auto;
 }
 .mapboxgl-popup-content h4 {
     margin: 0 0 .5em 0;

@@ -1,9 +1,9 @@
 <template>
   <li v-on:click="toggleLayerVisibility(layer.name)">
-    <div class="layer-color" 
-      v-bind:style="{'background-color': getLayerColor(layer.name), visibility: visibility}"></div>    
+    <div class="layer-color"
+      v-bind:style="{'background-color': getLayerColor(layer.name), visibility: visibility}"></div>
     <div class="layer-name">
-      {{layer.name}}
+     {{layer.name}}
     </div>
     <div class="layer-zoom-range">{{zoomRange}}</div>
   </li>
@@ -90,7 +90,7 @@ li {
   flex-wrap: nowrap;
   justify-content: flex-start;
   align-items: stretch;
-  align-content: stretch;  
+  align-content: stretch;
 
 }
 li:hover {
@@ -121,6 +121,7 @@ li:hover {
   border: 1px;
   padding: 2px 3px;
   font-size: 12px;
+  /*font-size: 1em;*/
   background-color: rgba(74, 73, 73, 0.25);
   float: right;
 }
