@@ -1,48 +1,45 @@
 <template>
   <div id="app">
-    <Mapbox v-if="capabilities && activeMap"/>
-    <Header 
-      v-if="capabilities"
-      v-bind:capabilities="capabilities"/>
-    <LeftNav 
-      v-if="capabilities"
-      v-bind:capabilities="capabilities"/>
+    <Mapbox v-if="capabilities && activeMap" />
+    <Header v-if="capabilities" v-bind:capabilities="capabilities" />
+    <LeftNav v-if="capabilities" v-bind:capabilities="capabilities" />
   </div>
 </template>
 
 <script>
-import Header from './components/Header.vue';
-import LeftNav from './components/LeftNav/LeftNav.vue';
-import Mapbox from './components/Mapbox.vue';
+import "mapbox-gl/dist/mapbox-gl.css";
+import Header from "./components/Header.vue";
+import LeftNav from "./components/LeftNav/LeftNav.vue";
+import Mapbox from "./components/Mapbox.vue";
 import { store, mutations } from "./globals/store";
 
-const axios = require('axios');
+const axios = require("axios");
 
 // for production the apiRoot is empty so relative URLs are used
-let apiRoot = '';
-if (process.env.NODE_ENV != 'production'){
+let apiRoot = "";
+if (process.env.NODE_ENV != "production") {
   // for development it's easier to use a remote capabilities endpoint
-  apiRoot = 'https://osm-lambda.tegola.io/v1/';
+  apiRoot = "https://osm-lambda.tegola.io/v1/";
 }
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
     Header,
     LeftNav,
     Mapbox
   },
   computed: {
-    activeMap(){
-      return store.activeMap
+    activeMap() {
+      return store.activeMap;
     },
     capabilities() {
-      return store.capabilities
+      return store.capabilities;
     }
   },
-  methods:{
+  methods: {
     // compareMaps compares two map objects for the sake of sorting alphabetically
-    compareMaps(a, b){
+    compareMaps(a, b) {
       // ignore character casing
       const mapA = a.name.toLowerCase();
       const mapB = b.name.toLowerCase();
@@ -55,26 +52,27 @@ export default {
       }
 
       return comparison;
-    }  
+    }
   },
-  created: function(){
+  created: function () {
     const me = this;
 
     // update the global store with the API root
     mutations.setApiRoot(apiRoot);
 
-    // fetch the tegola capabilities endpoint. this is the root driver of 
+    // fetch the tegola capabilities endpoint. this is the root driver of
     // all subsequent steps
-    axios.get(apiRoot + 'capabilities')
+    axios
+      .get(apiRoot + "capabilities")
       .then(function (resp) {
         // sort our map list alphabetically
         resp.data.maps.sort(me.compareMaps);
-        
+
         // on success update the capabilities data in the global store
         mutations.setCapabilities(resp.data);
 
         // check that we have maps configured in the response data
-        if(resp.data.maps.length === 1){
+        if (resp.data.maps.length === 1) {
           // find the first map in the capabilities and set it to the activeMap
           mutations.setActiveMap(resp.data.maps[0]);
         }
@@ -82,16 +80,17 @@ export default {
       .catch(function (error) {
         // handle error
         console.log(error);
-      })
+      });
   },
-  data: function(){
-    return {}
+  data: function () {
+    return {};
   }
-}
+};
 </script>
 
 <style>
-body, html {
+body,
+html {
   font-family: Helvetica, Arial, sans-serif;
   background-color: #000;
   color: #ccc;
@@ -114,24 +113,24 @@ body, html {
 
 .mapboxgl-popup-content {
   position: relative;
-  background-color: rgba(0,0,0,0.75);
+  background-color: rgba(0, 0, 0, 0.75);
   color: #ccc;
-    border-radius: 3px;
-    border: 1px solid #ccc;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.10);
-    padding: 10px;
-    pointer-events: auto; 
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+  pointer-events: auto;
 }
 .mapboxgl-popup-content h4 {
-    margin: 0 0 .5em 0;
-    border-bottom: 1px solid #ccc;
+  margin: 0 0 0.5em 0;
+  border-bottom: 1px solid #ccc;
 }
 .mapboxgl-popup-content ul {
   margin: 0 0 1em 0;
   list-style: none;
   padding: 0;
 }
-.mapboxgl-popup-content ul>li {
+.mapboxgl-popup-content ul > li {
   list-style: none;
   padding: 0;
 }

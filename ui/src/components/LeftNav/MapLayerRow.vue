@@ -1,11 +1,16 @@
 <template>
   <li v-on:click="toggleLayerVisibility(layer.name)">
-    <div class="layer-color" 
-      v-bind:style="{'background-color': getLayerColor(layer.name), visibility: visibility}"></div>    
+    <div
+      class="layer-color"
+      v-bind:style="{
+        'background-color': getLayerColor(layer.name),
+        visibility: visibility
+      }"
+    ></div>
     <div class="layer-name">
-      {{layer.name}}
+      {{ layer.name }}
     </div>
-    <div class="layer-zoom-range">{{zoomRange}}</div>
+    <div class="layer-zoom-range">{{ zoomRange }}</div>
   </li>
 </template>
 
@@ -13,52 +18,52 @@
 import { map } from "@/globals/map";
 
 export default {
-  name: 'MapLayerRow',
+  name: "MapLayerRow",
   props: {
     layer: Object
   },
-  computed:{
-    zoomRange(){
-      return 'z' + this.layer.minzoom + '-' + this.layer.maxzoom;
+  computed: {
+    zoomRange() {
+      return "z" + this.layer.minzoom + "-" + this.layer.maxzoom;
     }
   },
-  data(){
+  data() {
     return {
-      visibility: 'visible'
-    }
+      visibility: "visible"
+    };
   },
-  methods:{
+  methods: {
     // toggleLayerVisibility will toggle a layers visibility between on and off
-    toggleLayerVisibility(layerName){
-      var visibility = map.getLayoutProperty(layerName, 'visibility');
-      if (visibility === 'visible') {
-        map.setLayoutProperty(layerName, 'visibility', 'none');
-        this.visibility = 'hidden';
+    toggleLayerVisibility(layerName) {
+      var visibility = map.getLayoutProperty(layerName, "visibility");
+      if (visibility === "visible") {
+        map.setLayoutProperty(layerName, "visibility", "none");
+        this.visibility = "hidden";
       } else {
-        map.setLayoutProperty(layerName, 'visibility', 'visible');
-        this.visibility = 'visible';
+        map.setLayoutProperty(layerName, "visibility", "visible");
+        this.visibility = "visible";
       }
     },
 
     // getLayerColor returns the color of a layer in hex value. this method
     // uses mapbox's getPaintProperty. a different paint property is used
     // for each layer type: circle, line, fill.
-    getLayerColor(layerName){
+    getLayerColor(layerName) {
       let paintPropName;
 
       let layer = map.getLayer(layerName);
-      switch (layer.type){
-        case 'fill':
-          paintPropName = 'fill-outline-color'
+      switch (layer.type) {
+        case "fill":
+          paintPropName = "fill-outline-color";
           break;
-        case 'line':
-          paintPropName = 'line-color'
+        case "line":
+          paintPropName = "line-color";
           break;
-        case 'circle':
-          paintPropName = 'circle-color'
+        case "circle":
+          paintPropName = "circle-color";
           break;
         default:
-          console.log('unsupported layer type: '+ layer.type);
+          console.log("unsupported layer type: " + layer.type);
       }
 
       if (!paintPropName) {
@@ -68,7 +73,7 @@ export default {
       return map.getPaintProperty(layerName, paintPropName);
     }
   }
-}
+};
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
@@ -90,8 +95,7 @@ li {
   flex-wrap: nowrap;
   justify-content: flex-start;
   align-items: stretch;
-  align-content: stretch;  
-
+  align-content: stretch;
 }
 li:hover {
   color: #fff;
@@ -102,22 +106,22 @@ li:hover {
   flex: 0 1 0.25em;
   height: 1.1em;
   display: inline-block;
-  border-radius: .5em;
+  border-radius: 0.5em;
   border: 1px;
 }
 
 .layer-name {
   flex: 1 1 auto;
   overflow: hidden;
-  padding: 0 .5em;
+  padding: 0 0.5em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.layer-zoom-range{
+.layer-zoom-range {
   flex: 0 1 10%;
   height: 1em;
-  border-radius: .5em;
+  border-radius: 0.5em;
   border: 1px;
   padding: 2px 3px;
   font-size: 12px;
