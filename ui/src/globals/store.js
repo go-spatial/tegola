@@ -15,17 +15,17 @@ export const store = Vue.observable({
 });
 
 export const mutations = {
-  setActiveMap(map){
+  setActiveMap(map) {
     store.mbglIsReady = false;
     store.activeMap = map;
   },
-  setApiRoot(apiRoot){
+  setApiRoot(apiRoot) {
     store.apiRoot = apiRoot;
   },
-  setCapabilities(capabilities){
+  setCapabilities(capabilities) {
     store.capabilities = capabilities;
   },
-  setMbglIsReady(val){
+  setMbglIsReady(val) {
     store.mbglIsReady = val;
   }
 };

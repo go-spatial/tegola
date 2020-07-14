@@ -1,8 +1,30 @@
 <template>
-  <div id="left-nav">
-    <h2><span v-on:click="showAllMaps">Maps</span> <span v-if="activeMap">/ {{activeMap.name}}</span></h2>
+  <div id="left-nav" class="sidebar" :class="sidebarToggleClass">
+    <div class="toggle" @click="togglesidebar">
+      <svg
+        class="toggle-arrow"
+        width="2em"
+        height="2em"
+        viewBox="0 0 16 16"
+        fill="currentColor"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M5.854 4.646a.5.5 0 0 0-.708 0l-3 3a.5.5 0 0 0 0 .708l3 3a.5.5 0 0 0 .708-.708L3.207 8l2.647-2.646a.5.5 0 0 0 0-.708z"
+        />
+        <path
+          fill-rule="evenodd"
+          d="M10 8a.5.5 0 0 0-.5-.5H3a.5.5 0 0 0 0 1h6.5A.5.5 0 0 0 10 8zm2.5 6a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 1 0v11a.5.5 0 0 1-.5.5z"
+        />
+      </svg>
+    </div>
+    <h2>
+      <span v-on:click="showAllMaps">Maps</span>
+      <span v-if="activeMap">/ {{ activeMap.name }}</span>
+    </h2>
     <div class="container">
-      <ul id="maps-list" v-if="!activeMap" >
+      <ul id="maps-list" v-if="!activeMap">
         <MapRow
           v-for="map in capabilities.maps"
           v-bind:key="map.name"
@@ -10,7 +32,7 @@
         />
       </ul>
       <ul id="map-layers-list" v-if="activeMap && mapIsReady">
-        <MapLayerRow 
+        <MapLayerRow
           v-for="layer in activeMap.layers"
           v-bind:key="layer.name"
           v-bind:layer="layer"
@@ -18,63 +40,75 @@
       </ul>
     </div>
     <div id="left-nav-footer" v-if="activeMap">
-      <div class="btn"
-        v-on:click="toggleFeatureInspector"  
-        v-bind:class="{active: inspectorIsActive}"><span class="dot"></span>Inspect Features
+      <div
+        class="btn"
+        v-on:click="toggleFeatureInspector"
+        v-bind:class="{ active: inspectorIsActive }"
+      >
+        <span class="dot"></span>Inspect Features
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import MapRow from './MapRow.vue'
-import MapLayerRow from './MapLayerRow.vue'
+import mapboxgl from "mapbox-gl";
+import MapRow from "./MapRow.vue";
+import MapLayerRow from "./MapLayerRow.vue";
 import { store, mutations } from "@/globals/store";
 import { map } from "@/globals/map";
 
-const mapboxgl = require('mapboxgl');
-
 export default {
-  name: 'LeftNav',
-  components:{
+  name: "LeftNav",
+  components: {
     MapRow,
     MapLayerRow
   },
   props: {
     capabilities: Object
   },
-  data(){
+  data() {
     return {
       inspectorIsActive: false,
-      inspector: null
-    }
+      inspector: null,
+      sidebarToggleClass: null
+    };
   },
   computed: {
-    activeMap(){
-      return store.activeMap
+    activeMap() {
+      return store.activeMap;
     },
-    mapIsReady(){
-      return store.mbglIsReady
+    mapIsReady() {
+      return store.mbglIsReady;
     }
   },
-  methods:{
-    // toggleFeatureInspector handles binding and unbinding the mouse events 
-    // necessary for the feature inspector
-    toggleFeatureInspector(){
+  methods: {
+    togglesidebar() {
+      // statement needed to execute css transition/animation only after mouse-click
+      // and not on initial page load
+      if (this.sidebarToggleClass === "sidebar-collapsed") {
+        this.sidebarToggleClass = "sidebar-expanded";
+      } else {
+        this.sidebarToggleClass = "sidebar-collapsed";
+      }
+    },
 
-      if(!this.inspector){
+    // toggleFeatureInspector handles binding and unbinding the mouse events
+    // necessary for the feature inspector
+    toggleFeatureInspector() {
+      if (!this.inspector) {
         // new popup instance
-        this.inspector = new mapboxgl.Popup();        
+        this.inspector = new mapboxgl.Popup();
       }
 
-      if (!this.inspectorIsActive){
-        map.on('mousemove', this.inspectFeatures);
+      if (!this.inspectorIsActive) {
+        map.on("mousemove", this.inspectFeatures);
         this.inspectorIsActive = true;
       } else {
-        map.off('mousemove', this.inspectFeatures);
-        
+        map.off("mousemove", this.inspectFeatures);
+
         this.inspectorIsActive = false;
-        if (this.inspector.isOpen()){
+        if (this.inspector.isOpen()) {
           this.inspector.remove();
           this.inspector = null;
         }
@@ -88,8 +122,8 @@ export default {
     // TODO (arolek): this should be refactored. It was ported from the original tegola viewer
     // and is quity ugly to look at and maintain. The UX would be better if no popup was used
     // as the feature properties often produce a list longer than the screen.
-    inspectFeatures(e){
-      var html = '';
+    inspectFeatures(e) {
+      var html = "";
       var bbox = {
         width: 10,
         height: 10
@@ -103,39 +137,52 @@ export default {
 
       // everPresent contains the keys that should be "pinned" to the top of the feature inspector. Others
       // will follow and simply be ordered by alpha. See https://github.com/go-spatial/tegola/issues/367
-      var everPresent = ['name', 'type', 'featurecla'];
-      for (var i=0, l=features.length; i<l; i++){
-        html += '<h4>'+features[i].layer.id+'</h4>';
-        html += '<ul>';
-        html += '<li>feature id <span class="float-r">'+features[i].id+'</span></li>';
+      var everPresent = ["name", "type", "featurecla"];
+      for (var i = 0, l = features.length; i < l; i++) {
+        html += "<h4>" + features[i].layer.id + "</h4>";
+        html += "<ul>";
+        html +=
+          '<li>feature id <span class="float-r">' +
+          features[i].id +
+          "</span></li>";
         everPresent.forEach(function (key) {
           if (typeof features[i].properties[key] !== "undefined") {
-            html += '<li>'+key+'<span class="float-r">'+features[i].properties[key]+'</span></li>'
+            html +=
+              "<li>" +
+              key +
+              '<span class="float-r">' +
+              features[i].properties[key] +
+              "</span></li>";
           }
         });
-        Object.keys(features[i].properties).sort().forEach(function (key) {
-          if (everPresent.indexOf(key) < 0) {
-            html += '<li>'+key+'<span class="float-r">'+features[i].properties[key]+'</span></li>';
-          }
-        });
-        html += '</ul>';
+        Object.keys(features[i].properties)
+          .sort()
+          .forEach(function (key) {
+            if (everPresent.indexOf(key) < 0) {
+              html +=
+                "<li>" +
+                key +
+                '<span class="float-r">' +
+                features[i].properties[key] +
+                "</span></li>";
+            }
+          });
+        html += "</ul>";
       }
 
-      if (html != '') {
-        this.inspector.setLngLat(e.lngLat)
-          .setHTML(html)
-          .addTo(map);
+      if (html != "") {
+        this.inspector.setLngLat(e.lngLat).setHTML(html).addTo(map);
       } else {
-        if (this.inspector.isOpen()){
+        if (this.inspector.isOpen()) {
           this.inspector.remove();
         }
       }
     },
 
-    showAllMaps(){
+    showAllMaps() {
       // remove the URL hash so the next map load does not use the current map
       // position but rather the init position for that map
-      this.removeHash()
+      this.removeHash();
 
       // remove the current active map
       mutations.setActiveMap(null);
@@ -143,30 +190,107 @@ export default {
 
     // removes the hash (#) from the URL
     // https://stackoverflow.com/questions/1397329/how-to-remove-the-hash-from-window-location-url-with-javascript-without-page-r/5298684#5298684
-    removeHash(){ 
-      history.pushState("", document.title, window.location.pathname+ window.location.search);
+    removeHash() {
+      history.pushState(
+        "",
+        document.title,
+        window.location.pathname + window.location.search
+      );
     }
   }
-}
+};
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-#left-nav {
+.sidebar {
   z-index: 100;
   width: 300px;
   position: fixed;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   flex-flow: column;
   height: 90%;
   top: 57px;
 }
 
+.toggle {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  right: -7px;
+  top: 2px;
+  cursor: pointer;
+  margin: 0;
+  fill: white;
+}
+
+.toggle-arrow {
+  fill: whitesmoke;
+}
+
+.sidebar {
+  transition: all 0.6s ease-in-out;
+}
+
+.sidebar-collapsed {
+  transform: translateX(-100%);
+}
+
+.sidebar-collapsed .toggle {
+  animation-name: slindeinearrow;
+  animation-duration: 0.6s;
+  animation-delay: 0.1s;
+  animation-fill-mode: forwards;
+  animation-direction: normal;
+}
+
+.sidebar-expanded .toggle {
+  animation-name: slideoutarrow;
+  animation-duration: 0.6s;
+  animation-delay: 0.1s;
+  animation-fill-mode: forwards;
+  animation-direction: normal;
+  transform: translateX(20px) rotate(180deg);
+}
+
+@keyframes slindeinearrow {
+  0% {
+  }
+  100% {
+    transform: translateX(20px) rotate(180deg);
+  }
+}
+
+@keyframes slideoutarrow {
+  0% {
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes slidein {
+  0% {
+  }
+  100% {
+    transform: translateX(20px) rotate(180deg);
+  }
+}
+
+@keyframes slideback {
+  0% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
 .container {
   width: 100%;
   flex: 1 1 auto;
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 #left-nav-footer {
@@ -180,7 +304,7 @@ h2 {
   border-bottom: 1px solid #ccc;
 }
 h2 span {
-  cursor: pointer;  
+  cursor: pointer;
 }
 
 #maps-list {
@@ -219,7 +343,7 @@ h2 span {
   border-color: #666;
   color: #eee;
 }
-.btn .dot{
+.btn .dot {
   border-radius: 2px;
   width: 8px;
   height: 8px;
@@ -227,7 +351,7 @@ h2 span {
   background-color: #333;
   margin-right: 6px;
 }
-.btn.active .dot{
-  background-color: #259b24;  
+.btn.active .dot {
+  background-color: #259b24;
 }
 </style>
