@@ -1,5 +1,5 @@
 <template>
-  <div id="left-nav" class="sidebar" :class="sidebartoggle">
+  <div id="left-nav" class="sidebar" :class="sidebarToggleClass">
     <div class="toggle" @click="togglesidebar">
       <svg
         class="toggle-arrow"
@@ -52,13 +52,11 @@
 </template>
 
 <script>
+import mapboxgl from "mapbox-gl";
 import MapRow from "./MapRow.vue";
 import MapLayerRow from "./MapLayerRow.vue";
 import { store, mutations } from "@/globals/store";
 import { map } from "@/globals/map";
-
-// const mapboxgl = require('mapboxgl');
-import mapboxgl from "mapbox-gl";
 
 export default {
   name: "LeftNav",
@@ -73,7 +71,7 @@ export default {
     return {
       inspectorIsActive: false,
       inspector: null,
-      sidebartoggle: "",
+      sidebarToggleClass: null,
     };
   },
   computed: {
@@ -86,15 +84,13 @@ export default {
   },
   methods: {
     togglesidebar() {
-      if (this.sidebartoggle == "sidebar-collapsed") {
-        this.sidebartoggle = "sidebar-expanded";
+      // statement needed to execute css transition/animation only after mouse-click
+      // and not on initial page load
+      if (this.sidebarToggleClass === "sidebar-collapsed") {
+        this.sidebarToggleClass = "sidebar-expanded";
       } else {
-        this.sidebartoggle = "sidebar-collapsed";
+        this.sidebarToggleClass = "sidebar-collapsed";
       }
-
-      // this.sidebartoggle = "sidebar-collapsed2"
-      this.expanded = !this.expanded;
-      this.collapsed = !this.collapsed;
     },
 
     // toggleFeatureInspector handles binding and unbinding the mouse events
@@ -207,13 +203,10 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-
-
 .sidebar {
   z-index: 100;
   width: 300px;
   position: fixed;
-  /*position: absolute;*/
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   flex-flow: column;
@@ -228,13 +221,12 @@ export default {
   right: -7px;
   top: 2px;
   cursor: pointer;
-  margin: 0px;
+  margin: 0;
   fill: white;
 }
 
 .toggle-arrow {
   fill: whitesmoke;
-
 }
 
 .sidebar {
@@ -244,7 +236,6 @@ export default {
 .sidebar-collapsed {
   transform: translateX(-100%);
 }
-
 
 .sidebar-collapsed .toggle {
   animation-name: slindeinearrow;
@@ -265,30 +256,24 @@ export default {
 
 @keyframes slindeinearrow {
   0% {
-
   }
   100% {
-
     transform: translateX(20px) rotate(180deg);
   }
 }
 
 @keyframes slideoutarrow {
   0% {
-
   }
   100% {
-
     transform: rotate(0deg);
   }
 }
 
 @keyframes slidein {
   0% {
-
   }
   100% {
-
     transform: translateX(20px) rotate(180deg);
   }
 }
