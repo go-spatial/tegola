@@ -246,6 +246,9 @@ func decipherFields(ctx context.Context, geomFieldname, idFieldname string, desc
 			// the id has to be parsed once but it can also be a tag
 			if !idParsed {
 				gid, err = gId(values[i])
+				if err != nil {
+					return 0, nil, nil, err
+				}
 				idParsed = true
 				break
 			}
