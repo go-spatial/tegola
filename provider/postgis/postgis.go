@@ -125,6 +125,9 @@ func CreateProvider(config dict.Dicter) (*Provider, error) {
 
 	sslmode := DefaultSSLMode
 	sslmode, err = config.String(ConfigKeySSLMode, &sslmode)
+	if err != nil {
+		return nil, err
+	}
 
 	sslkey := DefaultSSLKey
 	sslkey, err = config.String(ConfigKeySSLKey, &sslkey)
