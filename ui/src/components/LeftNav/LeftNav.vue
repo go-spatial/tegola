@@ -62,16 +62,16 @@ export default {
   name: "LeftNav",
   components: {
     MapRow,
-    MapLayerRow,
+    MapLayerRow
   },
   props: {
-    capabilities: Object,
+    capabilities: Object
   },
   data() {
     return {
       inspectorIsActive: false,
       inspector: null,
-      sidebarToggleClass: null,
+      sidebarToggleClass: null
     };
   },
   computed: {
@@ -80,7 +80,7 @@ export default {
     },
     mapIsReady() {
       return store.mbglIsReady;
-    },
+    }
   },
   methods: {
     togglesidebar() {
@@ -126,13 +126,13 @@ export default {
       var html = "";
       var bbox = {
         width: 10,
-        height: 10,
+        height: 10
       };
 
       // query within a few pixels of the mouse to give us some tolerance to work with
       var features = map.queryRenderedFeatures([
         [e.point.x - bbox.width / 2, e.point.y - bbox.height / 2],
-        [e.point.x + bbox.width / 2, e.point.y + bbox.height / 2],
+        [e.point.x + bbox.width / 2, e.point.y + bbox.height / 2]
       ]);
 
       // everPresent contains the keys that should be "pinned" to the top of the feature inspector. Others
@@ -196,8 +196,8 @@ export default {
         document.title,
         window.location.pathname + window.location.search
       );
-    },
-  },
+    }
+  }
 };
 </script>
 

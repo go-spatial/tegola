@@ -18,7 +18,7 @@ export default {
     let m = new mapboxgl.Map({
       container: "map",
       style: url,
-      hash: true,
+      hash: true
     });
 
     m.on("load", function () {
@@ -38,7 +38,7 @@ export default {
     });
 
     mapSetters.map(m);
-  },
+  }
 };
 </script>
 

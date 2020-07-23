@@ -27,7 +27,7 @@ export default {
   components: {
     Header,
     LeftNav,
-    Mapbox,
+    Mapbox
   },
   computed: {
     activeMap() {
@@ -35,7 +35,7 @@ export default {
     },
     capabilities() {
       return store.capabilities;
-    },
+    }
   },
   methods: {
     // compareMaps compares two map objects for the sake of sorting alphabetically
@@ -52,7 +52,7 @@ export default {
       }
 
       return comparison;
-    },
+    }
   },
   created: function () {
     const me = this;
@@ -84,7 +84,7 @@ export default {
   },
   data: function () {
     return {};
-  },
+  }
 };
 </script>
 

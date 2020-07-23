@@ -4,7 +4,7 @@
       class="layer-color"
       v-bind:style="{
         'background-color': getLayerColor(layer.name),
-        visibility: visibility,
+        visibility: visibility
       }"
     ></div>
     <div class="layer-name">
@@ -20,16 +20,16 @@ import { map } from "@/globals/map";
 export default {
   name: "MapLayerRow",
   props: {
-    layer: Object,
+    layer: Object
   },
   computed: {
     zoomRange() {
       return "z" + this.layer.minzoom + "-" + this.layer.maxzoom;
-    },
+    }
   },
   data() {
     return {
-      visibility: "visible",
+      visibility: "visible"
     };
   },
   methods: {
@@ -71,8 +71,8 @@ export default {
       }
 
       return map.getPaintProperty(layerName, paintPropName);
-    },
-  },
+    }
+  }
 };
 </script>
 

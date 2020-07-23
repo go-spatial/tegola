@@ -8,11 +8,11 @@
 export default {
   name: "Header",
   props: {
-    capabilities: Object,
+    capabilities: Object
   },
   data() {
     return {};
-  },
+  }
 };
 </script>
 
