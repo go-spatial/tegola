@@ -9,8 +9,7 @@ import (
 func PLonToX(lon float64) float64 {
 	rad := DegToRad(lon)
 	val := rad * EarthRadius
-	if val == math.NaN() {
-
+	if math.IsNaN(val) {
 		log.Println("We have an issue with lon", lon,
 			"rad", rad,
 			"val = EarthRadius * rad", val,
