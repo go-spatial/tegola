@@ -30,7 +30,9 @@ func MapHandlerTester(t *testing.T, tc MapHandlerTCase) {
 		a = newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
 	}
 	w, _, err := doRequest(a, tc.method, tc.uri, nil)
-
+	if err != nil {
+		t.Fatalf("doRequest: %v", err)
+	}
 	if w.Code != tc.expectedCode {
 		wbody := strings.TrimSpace(w.Body.String())
 		t.Log("wbody", wbody)
@@ -125,15 +127,15 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			expectedBody: "",
 		},
 		"on boundary tile": {
-			uri:          "/maps/test-map/test-layer/4/8/7.pbf",
-			atlas:        newTestMapWithBounds(0, 0, 10, 10),
-			expectedCode: http.StatusOK,
+			uri:            "/maps/test-map/test-layer/4/8/7.pbf",
+			atlas:          newTestMapWithBounds(0, 0, 10, 10),
+			expectedCode:   http.StatusOK,
 			expectedLayers: []string{"test-layer"},
 		},
 		"in boundary tile": {
-			uri:          "/maps/test-map/test-layer/4/7/7.pbf",
-			atlas:        newTestMapWithBounds(-180, -90, 180, 90),
-			expectedCode: http.StatusOK,
+			uri:            "/maps/test-map/test-layer/4/7/7.pbf",
+			atlas:          newTestMapWithBounds(-180, -90, 180, 90),
+			expectedCode:   http.StatusOK,
 			expectedLayers: []string{"test-layer"},
 		},
 		"options": {
