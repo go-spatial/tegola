@@ -552,6 +552,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		}
 	}
 
+	reportedLayerFieldName := ""
 	for rows.Next() {
 		// context check
 		if err := ctx.Err(); err != nil {
@@ -584,6 +585,12 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		if err != nil {
 			switch err.(type) {
 			case wkb.ErrUnknownGeometryType:
+				rplfn := layer + ":" + plyr.GeomFieldName()
+				// Only report to the log once. This is to prevent the logs from filling up if there are many geometries in the layer
+				if reportedLayerFieldName == "" || reportedLayerFieldName == rplfn {
+					reportedLayerFieldName = rplfn
+					log.Printf("[WARNING] Ignoring unsupported geometry in layer (%v). Only basic 2D geometry type are supported. Try using `ST_Force2D(%v)`.", layer, plyr.GeomFieldName())
+				}
 				continue
 			default:
 				return fmt.Errorf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %v", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
