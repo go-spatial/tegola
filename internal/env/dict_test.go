@@ -18,92 +18,94 @@ func TestDict(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		// setup our env vars
-		for k, v := range tc.envVars {
-			os.Setenv(k, v)
-		}
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			// setup our env vars
+			for k, v := range tc.envVars {
+				os.Setenv(k, v)
+			}
 
-		// clean up env vars
-		defer (func() {
-			for k, _ := range tc.envVars {
-				os.Unsetenv(k)
-			}
-		})()
+			// clean up env vars
+			defer (func() {
+				for k, _ := range tc.envVars {
+					os.Unsetenv(k)
+				}
+			})()
 
-		var val interface{}
-		var err error
+			var val interface{}
+			var err error
 
-		switch v := tc.expected.(type) {
-		case string:
-			val, err = tc.dict.String(tc.key, nil)
-		case []string:
-			val, err = tc.dict.StringSlice(tc.key)
-			//	empty slice check, only when err is nil
-			if err == nil && len(v) == 0 && len(val.([]string)) == 0 {
-				return
-			}
-		case bool:
-			val, err = tc.dict.Bool(tc.key, nil)
-		case []bool:
-			val, err = tc.dict.BoolSlice(tc.key)
-			//	empty slice check, only when err is nil
-			if err == nil && len(v) == 0 && len(val.([]bool)) == 0 {
-				return
-			}
-		case int:
-			val, err = tc.dict.Int(tc.key, nil)
-		case []int:
-			val, err = tc.dict.IntSlice(tc.key)
-			//	empty slice check, only when err is nil
-			if err == nil && len(v) == 0 && len(val.([]int)) == 0 {
-				return
-			}
-		case uint:
-			val, err = tc.dict.Uint(tc.key, nil)
-		case []uint:
-			val, err = tc.dict.UintSlice(tc.key)
-			//	empty slice check, only when err is nil
-			if err == nil && len(v) == 0 && len(val.([]uint)) == 0 {
-				return
-			}
-		case float32, float64:
-			val, err = tc.dict.Float(tc.key, nil)
-		case []float64:
-			val, err = tc.dict.FloatSlice(tc.key)
-			//	empty slice check, only when err is nil
-			if err == nil && len(v) == 0 && len(val.([]float64)) == 0 {
-				return
-			}
-		case nil:
-			// ignore, used for checking errors
-		default:
-			t.Errorf("invalid type: %T", tc.expected)
-			return
-		}
-
-		if tc.expectedErr != nil {
-			if err == nil {
-				t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+			switch v := tc.expected.(type) {
+			case string:
+				val, err = tc.dict.String(tc.key, nil)
+			case []string:
+				val, err = tc.dict.StringSlice(tc.key)
+				//	empty slice check, only when err is nil
+				if err == nil && len(v) == 0 && len(val.([]string)) == 0 {
+					return
+				}
+			case bool:
+				val, err = tc.dict.Bool(tc.key, nil)
+			case []bool:
+				val, err = tc.dict.BoolSlice(tc.key)
+				//	empty slice check, only when err is nil
+				if err == nil && len(v) == 0 && len(val.([]bool)) == 0 {
+					return
+				}
+			case int:
+				val, err = tc.dict.Int(tc.key, nil)
+			case []int:
+				val, err = tc.dict.IntSlice(tc.key)
+				//	empty slice check, only when err is nil
+				if err == nil && len(v) == 0 && len(val.([]int)) == 0 {
+					return
+				}
+			case uint:
+				val, err = tc.dict.Uint(tc.key, nil)
+			case []uint:
+				val, err = tc.dict.UintSlice(tc.key)
+				//	empty slice check, only when err is nil
+				if err == nil && len(v) == 0 && len(val.([]uint)) == 0 {
+					return
+				}
+			case float32, float64:
+				val, err = tc.dict.Float(tc.key, nil)
+			case []float64:
+				val, err = tc.dict.FloatSlice(tc.key)
+				//	empty slice check, only when err is nil
+				if err == nil && len(v) == 0 && len(val.([]float64)) == 0 {
+					return
+				}
+			case nil:
+				// ignore, used for checking errors
+			default:
+				t.Errorf("invalid type: %T", tc.expected)
 				return
 			}
 
-			// compare error messages
-			if tc.expectedErr.Error() != err.Error() {
-				t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+			if tc.expectedErr != nil {
+				if err == nil {
+					t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+					return
+				}
+
+				// compare error messages
+				if tc.expectedErr.Error() != err.Error() {
+					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+					return
+				}
+
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
 				return
 			}
 
-			return
-		}
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
-			return
-		}
-
-		if !reflect.DeepEqual(val, tc.expected) {
-			t.Errorf("expected %v, got %v", tc.expected, val)
-			return
+			if !reflect.DeepEqual(val, tc.expected) {
+				t.Errorf("expected %v, got %v", tc.expected, val)
+				return
+			}
 		}
 	}
 
@@ -422,78 +424,75 @@ func TestDict(t *testing.T) {
 			dict: env.Dict{
 				"interface": interface{}("hello"),
 			},
-			key:"interface",
+			key:      "interface",
 			expected: "hello",
 		},
 		"iface to bool": {
 			dict: env.Dict{
 				"interface": interface{}(true),
 			},
-			key:"interface",
+			key:      "interface",
 			expected: true,
 		},
 		"iface to int": {
 			dict: env.Dict{
 				"interface": interface{}(int(-25)),
 			},
-			key:"interface",
+			key:      "interface",
 			expected: int(-25),
 		},
 		"iface to uint": {
 			dict: env.Dict{
 				"interface": interface{}(uint(42)),
 			},
-			key:"interface",
+			key:      "interface",
 			expected: uint(42),
 		},
 		"iface to float": {
 			dict: env.Dict{
 				"interface": interface{}(-25e-10),
 			},
-			key:"interface",
+			key:      "interface",
 			expected: -25e-10,
 		},
 		"iface slice to string slice": {
 			dict: env.Dict{
 				"interface_slice": []interface{}{"hello", "world"},
 			},
-			key:"interface_slice",
+			key:      "interface_slice",
 			expected: []string{"hello", "world"},
 		},
 		"iface slice to bool slice": {
 			dict: env.Dict{
 				"interface_slice": []interface{}{true, false, false},
 			},
-			key:"interface_slice",
+			key:      "interface_slice",
 			expected: []bool{true, false, false},
 		},
 		"iface slice to int slice": {
 			dict: env.Dict{
 				"interface_slice": []interface{}{int(42), int(-25), int(1970)},
 			},
-			key:"interface_slice",
+			key:      "interface_slice",
 			expected: []int{42, -25, 1970},
 		},
 		"iface slice to uint slice": {
 			dict: env.Dict{
 				"interface_slice": []interface{}{uint(42), uint(25), uint(1970)},
 			},
-			key:"interface_slice",
+			key:      "interface_slice",
 			expected: []uint{42, 25, 1970},
 		},
 		"iface slice to float slice": {
 			dict: env.Dict{
 				"interface_slice": []interface{}{float64(42.0), float64(-25e-10), float64(1.970e4)},
 			},
-			key:"interface_slice",
+			key:      "interface_slice",
 			expected: []float64{42.0, -25e-10, 1.970e4},
 		},
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }

@@ -35,34 +35,36 @@ func TestLineString(t *testing.T) {
 		err      error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
-		got, gerr := LineString(tc.linestr, tc.extent)
-		switch {
-		case tc.err != nil && gerr == nil:
-			t.Errorf("expected error, expected %v, got nil", tc.err.Error())
-			return
-		case tc.err != nil && gerr != nil && tc.err.Error() != gerr.Error():
-			t.Errorf("unexpected error, expected %v, got %v", tc.err.Error(), gerr.Error())
-			return
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+			got, gerr := LineString(tc.linestr, tc.extent)
+			switch {
+			case tc.err != nil && gerr == nil:
+				t.Errorf("expected error, expected %v, got nil", tc.err.Error())
+				return
+			case tc.err != nil && gerr != nil && tc.err.Error() != gerr.Error():
+				t.Errorf("unexpected error, expected %v, got %v", tc.err.Error(), gerr.Error())
+				return
 
-		case tc.err == nil && gerr != nil:
-			t.Errorf("unexpected error, expected nil, got %v", gerr.Error())
-			return
-		}
-		if tc.err != nil {
-			// we are expecting an error nothing more.
-			return
-		}
-		if len(tc.expected) != len(got) {
-			t.Errorf("number of lines, expected %v got %v", len(tc.expected), len(got))
-			t.Errorf("expected: %v", tc.expected)
-			t.Errorf("got     : %v", got)
-			return
-		}
-		for i := range tc.expected {
-			if !cmp.LineStringEqual(tc.expected[i].AsGeomLineString(), got[i].AsGeomLineString()) {
-				t.Errorf("line %v,\n\texpected %#v\n\tgot %#v", i, tc.expected[i], got[i])
+			case tc.err == nil && gerr != nil:
+				t.Errorf("unexpected error, expected nil, got %v", gerr.Error())
+				return
+			}
+			if tc.err != nil {
+				// we are expecting an error nothing more.
+				return
+			}
+			if len(tc.expected) != len(got) {
+				t.Errorf("number of lines, expected %v got %v", len(tc.expected), len(got))
+				t.Errorf("expected: %v", tc.expected)
+				t.Errorf("got     : %v", got)
+				return
+			}
+			for i := range tc.expected {
+				if !cmp.LineStringEqual(tc.expected[i].AsGeomLineString(), got[i].AsGeomLineString()) {
+					t.Errorf("line %v,\n\texpected %#v\n\tgot %#v", i, tc.expected[i], got[i])
+				}
 			}
 		}
 	}
@@ -195,7 +197,6 @@ func TestLineString(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }

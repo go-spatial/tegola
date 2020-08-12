@@ -13,19 +13,21 @@ func TestCaches(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		var err error
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			var err error
 
-		_, err = register.Cache(tc.config)
-		if tc.expectedErr != nil {
-			if err.Error() != tc.expectedErr.Error() {
-				t.Errorf("invalid error. expected: %v, got %v", tc.expectedErr, err.Error())
+			_, err = register.Cache(tc.config)
+			if tc.expectedErr != nil {
+				if err.Error() != tc.expectedErr.Error() {
+					t.Errorf("invalid error. expected: %v, got %v", tc.expectedErr, err.Error())
+				}
+				return
 			}
-			return
-		}
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
-			return
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
+				return
+			}
 		}
 	}
 
@@ -44,7 +46,6 @@ func TestCaches(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }

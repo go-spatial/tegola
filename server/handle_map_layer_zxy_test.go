@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-spatial/geom/encoding/mvt/vector_tile"
+	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/golang/protobuf/proto"
 )
@@ -22,35 +22,41 @@ type MapHandlerTCase struct {
 	expectedLayers []string
 }
 
-func MapHandlerTester(t *testing.T, tc MapHandlerTCase) {
-	// setup a new router. This handles parsing our URL wildcards.
-
-	a := tc.atlas
-	if a == nil {
-		a = newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
-	}
-	w, _, err := doRequest(a, tc.method, tc.uri, nil)
-	if err != nil {
-		t.Fatalf("doRequest: %v", err)
-	}
-	if w.Code != tc.expectedCode {
-		wbody := strings.TrimSpace(w.Body.String())
-		t.Log("wbody", wbody)
-		t.Errorf("status code, expected %v got %v", tc.expectedCode, w.Code)
-		return
-	}
-	// Only try and decode as string for errors.
-	if len(tc.expectedBody) > 0 && tc.expectedCode >= 400 {
-		wbody := strings.TrimSpace(w.Body.String())
-		if string(tc.expectedBody) != wbody {
-			t.Errorf("body, expected %v got %v", string(tc.expectedBody), wbody)
+func MapHandlerTester(tc MapHandlerTCase) func(t *testing.T) {
+	return func(t *testing.T) {
+		// setup a new router. This handles parsing our URL wildcards.
+		a := tc.atlas
+		if a == nil {
+			a = newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
 		}
-		// Don't process anything else if there is an error.
-		return
-	}
+		w, _, err := doRequest(a, tc.method, tc.uri, nil)
+		if err != nil {
+			t.Fatalf("doRequest: %v", err)
+		}
 
-	// success check
-	if len(tc.expectedLayers) > 0 {
+		if w.Code != tc.expectedCode {
+			wbody := strings.TrimSpace(w.Body.String())
+			t.Log("wbody", wbody)
+			t.Errorf("status code, expected %v got %v", tc.expectedCode, w.Code)
+			return
+		}
+
+		// Only try and decode as string for errors.
+		if len(tc.expectedBody) > 0 && tc.expectedCode >= 400 {
+			wbody := strings.TrimSpace(w.Body.String())
+			if string(tc.expectedBody) != wbody {
+				t.Errorf("body, expected %v got %v", string(tc.expectedBody), wbody)
+			}
+			// Don't process anything else if there is an error.
+			return
+		}
+
+		if len(tc.expectedLayers) == 0 {
+			// Nothing left to check
+			return
+		}
+
+		// Check the expected Layers
 		var tile vectorTile.Tile
 		var responseBodyBytes []byte
 
@@ -75,6 +81,7 @@ func MapHandlerTester(t *testing.T, tc MapHandlerTCase) {
 			t.Errorf("layers, expected %v got %v", tc.expectedLayers, tileLayers)
 			return
 		}
+
 	}
 }
 
@@ -146,8 +153,7 @@ func TestHandleMapLayerZXY(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { MapHandlerTester(t, tc) })
+		t.Run(name, MapHandlerTester(tc))
 	}
 }
 
@@ -205,8 +211,7 @@ func TestHandleMapZXY(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { MapHandlerTester(t, tc) })
+		t.Run(name, MapHandlerTester(tc))
 	}
 }
 
@@ -221,7 +226,6 @@ func TestHandleMapLayerCORS(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
+		t.Run(name, CORSTest(tc))
 	}
 }

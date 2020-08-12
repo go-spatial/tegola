@@ -26,43 +26,45 @@ func TestNew(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		_, err := redis.New(tc.config)
-		if tc.expectedErr != nil {
-			if err == nil {
-				t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
-				return
-			}
-
-			// check error types
-			if reflect.TypeOf(err) != reflect.TypeOf(tc.expectedErr) {
-				t.Errorf("invalid error type. expected %T, got %T", tc.expectedErr, err)
-				return
-			}
-
-			switch e := err.(type) {
-			case *net.OpError:
-				expectedErr := tc.expectedErr.(*net.OpError)
-
-				if reflect.TypeOf(e.Err) != reflect.TypeOf(expectedErr.Err) {
-					t.Errorf("invalid error type. expected %T, got %T", expectedErr.Err, e.Err)
+			_, err := redis.New(tc.config)
+			if tc.expectedErr != nil {
+				if err == nil {
+					t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
 					return
 				}
-			default:
-				// check error messages
-				if err.Error() != tc.expectedErr.Error() {
-					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err.Error())
+
+				// check error types
+				if reflect.TypeOf(err) != reflect.TypeOf(tc.expectedErr) {
+					t.Errorf("invalid error type. expected %T, got %T", tc.expectedErr, err)
 					return
 				}
-			}
 
-			return
-		}
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
-			return
+				switch e := err.(type) {
+				case *net.OpError:
+					expectedErr := tc.expectedErr.(*net.OpError)
+
+					if reflect.TypeOf(e.Err) != reflect.TypeOf(expectedErr.Err) {
+						t.Errorf("invalid error type. expected %T, got %T", expectedErr.Err, e.Err)
+						return
+					}
+				default:
+					// check error messages
+					if err.Error() != tc.expectedErr.Error() {
+						t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err.Error())
+						return
+					}
+				}
+
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
+				return
+			}
 		}
 	}
 
@@ -118,24 +120,65 @@ func TestNew(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
 func TestSetGetPurge(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
-	type tc struct {
+	type tcase struct {
 		config       dict.Dict
 		key          cache.Key
 		expectedData []byte
 		expectedHit  bool
 	}
 
-	testcases := map[string]tc{
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			rc, err := redis.New(tc.config)
+			if err != nil {
+				t.Errorf("unexpected err, expected %v got %v", nil, err)
+				return
+			}
+
+			// test write
+			if tc.expectedHit {
+				err = rc.Set(&tc.key, tc.expectedData)
+				if err != nil {
+					t.Errorf("unexpected err, expected %v got %v", nil, err)
+				}
+				return
+			}
+
+			// test read
+			output, hit, err := rc.Get(&tc.key)
+			if err != nil {
+				t.Errorf("read failed with error, expected %v got %v", nil, err)
+				return
+			}
+			if tc.expectedHit != hit {
+				t.Errorf("read failed, wrong 'hit' value expected %t got %t", tc.expectedHit, hit)
+				return
+			}
+
+			if !reflect.DeepEqual(output, tc.expectedData) {
+				t.Errorf("read failed, expected %v got %v", output, tc.expectedData)
+				return
+			}
+
+			// test purge
+			if tc.expectedHit {
+				err = rc.Purge(&tc.key)
+				if err != nil {
+					t.Errorf("purge failed with err, expected %v got %v", nil, err)
+					return
+				}
+			}
+		}
+	}
+
+	testcases := map[string]tcase{
 		"redis cache hit": {
 			config: map[string]interface{}{},
 			key: cache.Key{
@@ -158,52 +201,15 @@ func TestSetGetPurge(t *testing.T) {
 		},
 	}
 
-	for k, tc := range testcases {
-		rc, err := redis.New(tc.config)
-		if err != nil {
-			t.Errorf("[%v] unexpected err, expected %v got %v", k, nil, err)
-			continue
-		}
-
-		// test write
-		if tc.expectedHit {
-			err = rc.Set(&tc.key, tc.expectedData)
-			if err != nil {
-				t.Errorf("[%v] unexpected err, expected %v got %v", k, nil, err)
-			}
-			continue
-		}
-
-		// test read
-		output, hit, err := rc.Get(&tc.key)
-		if err != nil {
-			t.Errorf("[%v] read failed with error, expected %v got %v", k, nil, err)
-			continue
-		}
-		if tc.expectedHit != hit {
-			t.Errorf("[%v] read failed, wrong 'hit' value expected %t got %t", k, tc.expectedHit, hit)
-			continue
-		}
-
-		if !reflect.DeepEqual(output, tc.expectedData) {
-			t.Errorf("[%v] read failed, expected %v got %v", k, output, tc.expectedData)
-			continue
-		}
-
-		// test purge
-		if tc.expectedHit {
-			err = rc.Purge(&tc.key)
-			if err != nil {
-				t.Errorf("[%v] purge failed with err, expected %v got %v", k, nil, err)
-				continue
-			}
-		}
+	for name, tc := range testcases {
+		t.Run(name, fn(tc))
 	}
+
 }
 
 func TestSetOverwrite(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
-	type tc struct {
+	type tcase struct {
 		config   dict.Dict
 		key      cache.Key
 		bytes1   []byte
@@ -211,7 +217,51 @@ func TestSetOverwrite(t *testing.T) {
 		expected []byte
 	}
 
-	testcases := map[string]tc{
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			rc, err := redis.New(tc.config)
+			if err != nil {
+				t.Errorf("unexpected err, expected %v got %v", nil, err)
+				return
+			}
+
+			// test write1
+			if err = rc.Set(&tc.key, tc.bytes1); err != nil {
+				t.Errorf("write failed with err, expected %v got %v", nil, err)
+				return
+			}
+
+			// test write2
+			if err = rc.Set(&tc.key, tc.bytes2); err != nil {
+				t.Errorf("write failed with err, expected %v got %v", nil, err)
+				return
+			}
+
+			// fetch the cache entry
+			output, hit, err := rc.Get(&tc.key)
+			if err != nil {
+				t.Errorf("read failed with err, expected %v got %v", nil, err)
+				return
+			}
+			if !hit {
+				t.Errorf("read failed, expected hit %t got %t", true, hit)
+				return
+			}
+
+			if !reflect.DeepEqual(output, tc.expected) {
+				t.Errorf("read failed, expected %v got %v)", output, tc.expected)
+				return
+			}
+
+			// clean up
+			if err = rc.Purge(&tc.key); err != nil {
+				t.Errorf("purge failed with err, expected %v got %v", nil, err)
+				return
+			}
+		}
+	}
+
+	testcases := map[string]tcase{
 		"redis overwrite": {
 			config: map[string]interface{}{},
 			key: cache.Key{
@@ -225,46 +275,8 @@ func TestSetOverwrite(t *testing.T) {
 		},
 	}
 
-	for k, tc := range testcases {
-		rc, err := redis.New(tc.config)
-		if err != nil {
-			t.Errorf("[%v] unexpected err, expected %v got %v", k, nil, err)
-			continue
-		}
-
-		// test write1
-		if err = rc.Set(&tc.key, tc.bytes1); err != nil {
-			t.Errorf("[%v] write failed with err, expected %v got %v", k, nil, err)
-			continue
-		}
-
-		// test write2
-		if err = rc.Set(&tc.key, tc.bytes2); err != nil {
-			t.Errorf("[%v] write failed with err, expected %v got %v", k, nil, err)
-			continue
-		}
-
-		// fetch the cache entry
-		output, hit, err := rc.Get(&tc.key)
-		if err != nil {
-			t.Errorf("[%v] read failed with err, expected %v got %v", k, nil, err)
-			continue
-		}
-		if !hit {
-			t.Errorf("[%v] read failed, expected hit %t got %t", k, true, hit)
-			continue
-		}
-
-		if !reflect.DeepEqual(output, tc.expected) {
-			t.Errorf("[%v] read failed, expected %v got %v)", k, output, tc.expected)
-			continue
-		}
-
-		// clean up
-		if err = rc.Purge(&tc.key); err != nil {
-			t.Errorf("[%v] purge failed with err, expected %v got %v", k, nil, err)
-			continue
-		}
+	for name, tc := range testcases {
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -277,36 +289,38 @@ func TestMaxZoom(t *testing.T) {
 		expectedHit bool
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		rc, err := redis.New(tc.config)
-		if err != nil {
-			t.Fatalf("unexpected err, expected %v got %v", nil, err)
-		}
-
-		// test write
-		if tc.expectedHit {
-			err = rc.Set(&tc.key, tc.bytes)
+			rc, err := redis.New(tc.config)
 			if err != nil {
 				t.Fatalf("unexpected err, expected %v got %v", nil, err)
 			}
-		}
 
-		// test read
-		_, hit, err := rc.Get(&tc.key)
-		if err != nil {
-			t.Fatalf("read failed with error, expected %v got %v", nil, err)
-		}
-		if tc.expectedHit != hit {
-			t.Fatalf("read failed, wrong 'hit' value expected %t got %t", tc.expectedHit, hit)
-		}
+			// test write
+			if tc.expectedHit {
+				err = rc.Set(&tc.key, tc.bytes)
+				if err != nil {
+					t.Fatalf("unexpected err, expected %v got %v", nil, err)
+				}
+			}
 
-		// test purge
-		if tc.expectedHit {
-			err = rc.Purge(&tc.key)
+			// test read
+			_, hit, err := rc.Get(&tc.key)
 			if err != nil {
-				t.Fatalf("purge failed with err, expected %v got %v", nil, err)
+				t.Fatalf("read failed with error, expected %v got %v", nil, err)
+			}
+			if tc.expectedHit != hit {
+				t.Fatalf("read failed, wrong 'hit' value expected %t got %t", tc.expectedHit, hit)
+			}
+
+			// test purge
+			if tc.expectedHit {
+				err = rc.Purge(&tc.key)
+				if err != nil {
+					t.Fatalf("purge failed with err, expected %v got %v", nil, err)
+				}
 			}
 		}
 	}
@@ -351,9 +365,6 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }

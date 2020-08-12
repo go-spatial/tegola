@@ -18,23 +18,25 @@ func TestNew(t *testing.T) {
 		err      error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		output, err := file.New(tc.config)
-		if err != nil {
+			output, err := file.New(tc.config)
+			if err != nil {
 
-			if tc.err != nil && err.Error() == tc.err.Error() {
-				// correct error returned
+				if tc.err != nil && err.Error() == tc.err.Error() {
+					// correct error returned
+					return
+				}
+				t.Errorf("unexpected error %v", err)
 				return
 			}
-			t.Errorf("unexpected error %v", err)
-			return
-		}
 
-		if !reflect.DeepEqual(tc.expected, output) {
-			t.Errorf("expected %+v got %+v", tc.expected, output)
-			return
+			if !reflect.DeepEqual(tc.expected, output) {
+				t.Errorf("expected %+v got %+v", tc.expected, output)
+				return
+			}
 		}
 	}
 
@@ -76,10 +78,7 @@ func TestNew(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -90,40 +89,42 @@ func TestSetGetPurge(t *testing.T) {
 		expected []byte
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		fc, err := file.New(tc.config)
-		if err != nil {
-			t.Errorf("%v", err)
-			return
-		}
+			fc, err := file.New(tc.config)
+			if err != nil {
+				t.Errorf("%v", err)
+				return
+			}
 
-		// test write
-		if err = fc.Set(&tc.key, tc.expected); err != nil {
-			t.Errorf("write failed. err: %v", err)
-			return
-		}
+			// test write
+			if err = fc.Set(&tc.key, tc.expected); err != nil {
+				t.Errorf("write failed. err: %v", err)
+				return
+			}
 
-		output, hit, err := fc.Get(&tc.key)
-		if err != nil {
-			t.Errorf("read failed. err: %v", err)
-			return
-		}
-		if !hit {
-			t.Errorf("read failed. should have been a hit but cache reported a miss")
-			return
-		}
+			output, hit, err := fc.Get(&tc.key)
+			if err != nil {
+				t.Errorf("read failed. err: %v", err)
+				return
+			}
+			if !hit {
+				t.Errorf("read failed. should have been a hit but cache reported a miss")
+				return
+			}
 
-		if !reflect.DeepEqual(output, tc.expected) {
-			t.Errorf("expected %v got %v", tc.expected, output)
-			return
-		}
+			if !reflect.DeepEqual(output, tc.expected) {
+				t.Errorf("expected %v got %v", tc.expected, output)
+				return
+			}
 
-		// test purge
-		if err = fc.Purge(&tc.key); err != nil {
-			t.Errorf("purge failed. err: %v", err)
-			return
+			// test purge
+			if err = fc.Purge(&tc.key); err != nil {
+				t.Errorf("purge failed. err: %v", err)
+				return
+			}
 		}
 	}
 
@@ -142,10 +143,7 @@ func TestSetGetPurge(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -158,47 +156,49 @@ func TestSetOverwrite(t *testing.T) {
 		expected []byte
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		fc, err := file.New(tc.config)
-		if err != nil {
-			t.Errorf("%v", err)
-			return
-		}
+			fc, err := file.New(tc.config)
+			if err != nil {
+				t.Errorf("%v", err)
+				return
+			}
 
-		// test write1
-		if err = fc.Set(&tc.key, tc.bytes1); err != nil {
-			t.Errorf("write failed. err: %v", err)
-			return
-		}
+			// test write1
+			if err = fc.Set(&tc.key, tc.bytes1); err != nil {
+				t.Errorf("write failed. err: %v", err)
+				return
+			}
 
-		// test write2
-		if err = fc.Set(&tc.key, tc.bytes2); err != nil {
-			t.Errorf("write failed. err: %v", err)
-			return
-		}
+			// test write2
+			if err = fc.Set(&tc.key, tc.bytes2); err != nil {
+				t.Errorf("write failed. err: %v", err)
+				return
+			}
 
-		// fetch the cache entry
-		output, hit, err := fc.Get(&tc.key)
-		if err != nil {
-			t.Errorf("read failed. err: %v", err)
-			return
-		}
-		if !hit {
-			t.Errorf("read failed. should have been a hit but cache reported a miss")
-			return
-		}
+			// fetch the cache entry
+			output, hit, err := fc.Get(&tc.key)
+			if err != nil {
+				t.Errorf("read failed. err: %v", err)
+				return
+			}
+			if !hit {
+				t.Errorf("read failed. should have been a hit but cache reported a miss")
+				return
+			}
 
-		if !reflect.DeepEqual(output, tc.expected) {
-			t.Errorf("expected %v got %v", tc.expected, output)
-			return
-		}
+			if !reflect.DeepEqual(output, tc.expected) {
+				t.Errorf("expected %v got %v", tc.expected, output)
+				return
+			}
 
-		// clean up
-		if err = fc.Purge(&tc.key); err != nil {
-			t.Errorf("purge failed. err: %v", err)
-			return
+			// clean up
+			if err = fc.Purge(&tc.key); err != nil {
+				t.Errorf("purge failed. err: %v", err)
+				return
+			}
 		}
 	}
 
@@ -219,10 +219,7 @@ func TestSetOverwrite(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -234,37 +231,39 @@ func TestMaxZoom(t *testing.T) {
 		expectedHit bool
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		fc, err := file.New(tc.config)
-		if err != nil {
-			t.Errorf("err: %v", err)
-			return
-		}
-
-		// test set
-		if err = fc.Set(&tc.key, tc.bytes); err != nil {
-			t.Errorf("write failed. err: %v", err)
-			return
-		}
-
-		// fetch the cache entry
-		_, hit, err := fc.Get(&tc.key)
-		if err != nil {
-			t.Errorf("read failed. err: %v", err)
-			return
-		}
-		if hit != tc.expectedHit {
-			t.Errorf("expectedHit %v got %v", tc.expectedHit, hit)
-			return
-		}
-
-		// clean up
-		if tc.expectedHit {
-			if err != fc.Purge(&tc.key) {
-				t.Errorf("%v", err)
+			fc, err := file.New(tc.config)
+			if err != nil {
+				t.Errorf("err: %v", err)
 				return
+			}
+
+			// test set
+			if err = fc.Set(&tc.key, tc.bytes); err != nil {
+				t.Errorf("write failed. err: %v", err)
+				return
+			}
+
+			// fetch the cache entry
+			_, hit, err := fc.Get(&tc.key)
+			if err != nil {
+				t.Errorf("read failed. err: %v", err)
+				return
+			}
+			if hit != tc.expectedHit {
+				t.Errorf("expectedHit %v got %v", tc.expectedHit, hit)
+				return
+			}
+
+			// clean up
+			if tc.expectedHit {
+				if err != fc.Purge(&tc.key) {
+					t.Errorf("%v", err)
+					return
+				}
 			}
 		}
 	}
@@ -312,9 +311,6 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }

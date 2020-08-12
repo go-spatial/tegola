@@ -23,41 +23,43 @@ func TestHandleCapabilities(t *testing.T) {
 		expected server.Capabilities
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		var err error
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			var err error
 
-		server.HostName = tc.hostname
-		server.Port = tc.port
-		a := newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
+			server.HostName = tc.hostname
+			server.Port = tc.port
+			a := newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
 
-		w, _, err := doRequest(a, tc.method, tc.uri, nil)
-		if err != nil {
-			t.Fatal(err)
+			w, _, err := doRequest(a, tc.method, tc.uri, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if w.Code != http.StatusOK {
+				t.Errorf("status code, expected %v got %v", http.StatusOK, w.Code)
+				return
+			}
+
+			bytes, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("error response body, expected nil got %v", err)
+				return
+			}
+
+			var capabilities server.Capabilities
+
+			// read the respons body
+			if err := json.Unmarshal(bytes, &capabilities); err != nil {
+				t.Errorf("error unmarshal JSON, expected nil got %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(tc.expected, capabilities) {
+				t.Errorf("response body, \n  expected %+v\n  got %+v", tc.expected, capabilities)
+			}
+
 		}
-
-		if w.Code != http.StatusOK {
-			t.Errorf("status code, expected %v got %v", http.StatusOK, w.Code)
-			return
-		}
-
-		bytes, err := ioutil.ReadAll(w.Body)
-		if err != nil {
-			t.Errorf("error response body, expected nil got %v", err)
-			return
-		}
-
-		var capabilities server.Capabilities
-
-		// read the respons body
-		if err := json.Unmarshal(bytes, &capabilities); err != nil {
-			t.Errorf("error unmarshal JSON, expected nil got %v", err)
-			return
-		}
-
-		if !reflect.DeepEqual(tc.expected, capabilities) {
-			t.Errorf("response body, \n  expected %+v\n  got %+v", tc.expected, capabilities)
-		}
-
 	}
 
 	tests := map[string]tcase{
@@ -304,8 +306,7 @@ func TestHandleCapabilities(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -321,7 +322,6 @@ func TestHandleCapabilitiesCORS(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
+		t.Run(name, CORSTest(tc))
 	}
 }

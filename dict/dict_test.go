@@ -16,49 +16,51 @@ func TestDict(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
 
-		var val interface{}
-		var err error
+			var val interface{}
+			var err error
 
-		switch tc.expected.(type) {
-		case string:
-			val, err = tc.dict.String(tc.key, nil)
-		case bool:
-			val, err = tc.dict.Bool(tc.key, nil)
-		case int:
-			val, err = tc.dict.Int(tc.key, nil)
-		case uint:
-			val, err = tc.dict.Uint(tc.key, nil)
-		case float32, float64:
-			val, err = tc.dict.Float(tc.key, nil)
-		default:
-			t.Errorf("invalid type: %T", tc.expected)
-			return
-		}
-
-		if tc.expectedErr != nil {
-			if err == nil {
-				t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+			switch tc.expected.(type) {
+			case string:
+				val, err = tc.dict.String(tc.key, nil)
+			case bool:
+				val, err = tc.dict.Bool(tc.key, nil)
+			case int:
+				val, err = tc.dict.Int(tc.key, nil)
+			case uint:
+				val, err = tc.dict.Uint(tc.key, nil)
+			case float32, float64:
+				val, err = tc.dict.Float(tc.key, nil)
+			default:
+				t.Errorf("invalid type: %T", tc.expected)
 				return
 			}
 
-			// compare error messages
-			if tc.expectedErr.Error() != err.Error() {
-				t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+			if tc.expectedErr != nil {
+				if err == nil {
+					t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+					return
+				}
+
+				// compare error messages
+				if tc.expectedErr.Error() != err.Error() {
+					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+					return
+				}
+
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
 				return
 			}
 
-			return
-		}
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
-			return
-		}
-
-		if !reflect.DeepEqual(val, tc.expected) {
-			t.Errorf("expected %v, got %v", tc.expected, val)
-			return
+			if !reflect.DeepEqual(val, tc.expected) {
+				t.Errorf("expected %v, got %v", tc.expected, val)
+				return
+			}
 		}
 	}
 
@@ -85,9 +87,6 @@ func TestDict(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }

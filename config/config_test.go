@@ -56,40 +56,42 @@ func TestParse(t *testing.T) {
 	setEnv()
 	defer unsetEnv()
 
-	fn := func(t *testing.T, tc tcase) {
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
 
-		r := strings.NewReader(tc.config)
+			r := strings.NewReader(tc.config)
 
-		conf, err := config.Parse(r, "")
-		if err != nil {
-			t.Error(err)
-			return
-		}
+			conf, err := config.Parse(r, "")
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-		// compare the various parts fo the config
-		if !reflect.DeepEqual(conf.LocationName, tc.expected.LocationName) {
-			t.Errorf("expected LocationName \n\n %+v \n\n got \n\n %+v ", tc.expected.LocationName, conf.LocationName)
-			return
-		}
+			// compare the various parts fo the config
+			if !reflect.DeepEqual(conf.LocationName, tc.expected.LocationName) {
+				t.Errorf("expected LocationName \n\n %+v \n\n got \n\n %+v ", tc.expected.LocationName, conf.LocationName)
+				return
+			}
 
-		if !reflect.DeepEqual(conf.Webserver, tc.expected.Webserver) {
-			t.Errorf("expected Webserver output \n\n %+v \n\n got \n\n %+v ", tc.expected.Webserver, conf.Webserver)
-			return
-		}
+			if !reflect.DeepEqual(conf.Webserver, tc.expected.Webserver) {
+				t.Errorf("expected Webserver output \n\n %+v \n\n got \n\n %+v ", tc.expected.Webserver, conf.Webserver)
+				return
+			}
 
-		if !reflect.DeepEqual(conf.Providers, tc.expected.Providers) {
-			t.Errorf("expected Providers output \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected.Providers, conf.Providers)
-			return
-		}
+			if !reflect.DeepEqual(conf.Providers, tc.expected.Providers) {
+				t.Errorf("expected Providers output \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected.Providers, conf.Providers)
+				return
+			}
 
-		if !reflect.DeepEqual(conf.Maps, tc.expected.Maps) {
-			t.Errorf("expected Maps output \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected.Maps, conf.Maps)
-			return
-		}
+			if !reflect.DeepEqual(conf.Maps, tc.expected.Maps) {
+				t.Errorf("expected Maps output \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected.Maps, conf.Maps)
+				return
+			}
 
-		if !reflect.DeepEqual(conf, tc.expected) {
-			t.Errorf("expected \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected, conf)
-			return
+			if !reflect.DeepEqual(conf, tc.expected) {
+				t.Errorf("expected \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected, conf)
+				return
+			}
 		}
 	}
 
@@ -332,10 +334,7 @@ func TestParse(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -972,13 +971,15 @@ func TestConfigureTileBuffers(t *testing.T) {
 		expected config.Config
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		tc.config.ConfigureTileBuffers()
-		if !reflect.DeepEqual(tc.expected, tc.config) {
-			t.Errorf("expected \n\n %+v \n\n got \n\n %+v", tc.expected, tc.config)
-			return
+			tc.config.ConfigureTileBuffers()
+			if !reflect.DeepEqual(tc.expected, tc.config) {
+				t.Errorf("expected \n\n %+v \n\n got \n\n %+v", tc.expected, tc.config)
+				return
+			}
 		}
 	}
 
@@ -1075,9 +1076,6 @@ func TestConfigureTileBuffers(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }

@@ -12,34 +12,36 @@ func TestToTegolaToGeom(t *testing.T) {
 		geom geom.Geometry
 		err  error
 	}
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
-		gott, err := ToTegola(tc.geom)
-		if tc.err == nil && err != nil {
-			t.Errorf("Unexpected error, expected nil got %v", err)
-			return
-		}
-		if tc.err != nil && err == nil {
-			t.Errorf("Unexpected error, expected %v got nil", tc.err)
-			return
-		}
-		if tc.err != nil && err != nil && tc.err != err {
-			t.Errorf("Unexpected error, expected %v got %v", tc.err, err)
-			return
-		}
-		if tc.err != nil {
-			return
-		}
-		t.Logf("Tegola geometry %v", gott)
-		got, err := ToGeom(gott)
-		if tc.err == nil && err != nil {
-			t.Logf("Tegola geometry %#v", gott)
-			t.Errorf("Unexpected error, expected nil got %v", err)
-			return
-		}
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+			gott, err := ToTegola(tc.geom)
+			if tc.err == nil && err != nil {
+				t.Errorf("Unexpected error, expected nil got %v", err)
+				return
+			}
+			if tc.err != nil && err == nil {
+				t.Errorf("Unexpected error, expected %v got nil", tc.err)
+				return
+			}
+			if tc.err != nil && err != nil && tc.err != err {
+				t.Errorf("Unexpected error, expected %v got %v", tc.err, err)
+				return
+			}
+			if tc.err != nil {
+				return
+			}
+			t.Logf("Tegola geometry %v", gott)
+			got, err := ToGeom(gott)
+			if tc.err == nil && err != nil {
+				t.Logf("Tegola geometry %#v", gott)
+				t.Errorf("Unexpected error, expected nil got %v", err)
+				return
+			}
 
-		if !cmp.GeometryEqual(tc.geom, got) {
-			t.Errorf("unequal geometry, expected %v got %v", tc.geom, got)
+			if !cmp.GeometryEqual(tc.geom, got) {
+				t.Errorf("unequal geometry, expected %v got %v", tc.geom, got)
+			}
 		}
 	}
 	tests := map[string]tcase{
@@ -78,7 +80,6 @@ func TestToTegolaToGeom(t *testing.T) {
 		*/
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }

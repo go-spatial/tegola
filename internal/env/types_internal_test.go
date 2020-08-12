@@ -13,42 +13,44 @@ func TestReplaceEnvVar(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		// setup our env vars
-		for k, v := range tc.envVars {
-			os.Setenv(k, v)
-		}
-
-		// clean up env vars
-		defer (func() {
-			for k, _ := range tc.envVars {
-				os.Unsetenv(k)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			// setup our env vars
+			for k, v := range tc.envVars {
+				os.Setenv(k, v)
 			}
-		})()
 
-		out, err := replaceEnvVar(tc.in)
-		if tc.expectedErr != nil {
-			if err == nil {
-				t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+			// clean up env vars
+			defer (func() {
+				for k, _ := range tc.envVars {
+					os.Unsetenv(k)
+				}
+			})()
+
+			out, err := replaceEnvVar(tc.in)
+			if tc.expectedErr != nil {
+				if err == nil {
+					t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+					return
+				}
+
+				// compare error messages
+				if tc.expectedErr.Error() != err.Error() {
+					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+					return
+				}
+
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
 				return
 			}
 
-			// compare error messages
-			if tc.expectedErr.Error() != err.Error() {
-				t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+			if out != tc.expected {
+				t.Errorf("expected %v, got %v", tc.expected, out)
 				return
 			}
-
-			return
-		}
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
-			return
-		}
-
-		if out != tc.expected {
-			t.Errorf("expected %v, got %v", tc.expected, out)
-			return
 		}
 	}
 
@@ -67,9 +69,6 @@ func TestReplaceEnvVar(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }

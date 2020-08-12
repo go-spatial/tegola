@@ -20,39 +20,41 @@ type CORSTestCase struct {
 	uri      string
 }
 
-func CORSTest(t *testing.T, tc CORSTestCase) {
-	var err error
+func CORSTest(tc CORSTestCase) func(*testing.T) {
+	return func(t *testing.T) {
+		var err error
 
-	server.HostName = tc.hostname
-	server.Port = tc.port
-	server.URIPrefix = "/"
+		server.HostName = tc.hostname
+		server.Port = tc.port
+		server.URIPrefix = "/"
 
-	// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
-	router := server.NewRouter(nil)
+		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+		router := server.NewRouter(nil)
 
-	r, err := http.NewRequest(http.MethodOptions, tc.uri, nil)
-	if err != nil {
-		t.Fatal(err)
-		return
-	}
+		r, err := http.NewRequest(http.MethodOptions, tc.uri, nil)
+		if err != nil {
+			t.Fatal(err)
+			return
+		}
 
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("wrong status code: expected %v, got %v", http.StatusOK, w.Code)
-		return
-	}
+		if w.Code != http.StatusOK {
+			t.Errorf("wrong status code: expected %v, got %v", http.StatusOK, w.Code)
+			return
+		}
 
-	headers := w.Header()
+		headers := w.Header()
 
-	if !reflect.DeepEqual(headers["Access-Control-Allow-Origin"], []string{DefaultCORSAllowedOrigin}) {
-		t.Errorf("wrong header for Access-Control-Allow-Origin. expected %v got %v", DefaultCORSAllowedOrigin, headers["Access-Control-Allow-Origin"])
-		return
-	}
+		if !reflect.DeepEqual(headers["Access-Control-Allow-Origin"], []string{DefaultCORSAllowedOrigin}) {
+			t.Errorf("wrong header for Access-Control-Allow-Origin. expected %v got %v", DefaultCORSAllowedOrigin, headers["Access-Control-Allow-Origin"])
+			return
+		}
 
-	if !reflect.DeepEqual(headers["Access-Control-Allow-Methods"], []string{"GET, OPTIONS"}) {
-		t.Errorf("wrong header for Access-Control-Allow-Methods. expected %v got %v", []string{"GET", "OPTIONS"}, headers["Access-Control-Allow-Methods"])
-		return
+		if !reflect.DeepEqual(headers["Access-Control-Allow-Methods"], []string{"GET, OPTIONS"}) {
+			t.Errorf("wrong header for Access-Control-Allow-Methods. expected %v got %v", []string{"GET", "OPTIONS"}, headers["Access-Control-Allow-Methods"])
+			return
+		}
 	}
 }

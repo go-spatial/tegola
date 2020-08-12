@@ -6,11 +6,12 @@ import (
 	"reflect"
 	"testing"
 
+	"math/rand"
+
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/azblob"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
-	"math/rand"
 )
 
 const TESTENV = "RUN_AZBLOB_TESTS"
@@ -24,29 +25,31 @@ func TestNew(t *testing.T) {
 		err            error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		c, err := azblob.New(tc.config)
-		if err != nil {
-			if tc.err == nil {
-				t.Errorf("unexpected err %v", err)
+			c, err := azblob.New(tc.config)
+			if err != nil {
+				if tc.err == nil {
+					t.Errorf("unexpected err %v", err)
+					return
+				}
+
+				if err.Error() == tc.err.Error() {
+					// correct error returned
+					return
+				}
+				t.Errorf("unexpected err, got %v expected %v", err, tc.err)
 				return
 			}
 
-			if err.Error() == tc.err.Error() {
-				// correct error returned
+			azb := c.(*azblob.Cache)
+
+			if tc.expectReadOnly != azb.ReadOnly {
+				t.Errorf("unexpected (*azblob.Cache).ReadOnly value got %v expected %v", azb.ReadOnly, tc.expectReadOnly)
 				return
 			}
-			t.Errorf("unexpected err, got %v expected %v", err, tc.err)
-			return
-		}
-
-		azb := c.(*azblob.Cache)
-
-		if tc.expectReadOnly != azb.ReadOnly {
-			t.Errorf("unexpected (*azblob.Cache).ReadOnly value got %v expected %v", azb.ReadOnly, tc.expectReadOnly)
-			return
 		}
 	}
 
@@ -77,10 +80,7 @@ func TestNew(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -93,41 +93,43 @@ func TestSetGetPurge(t *testing.T) {
 		expected []byte
 	}
 
-	fn := func(t *testing.T, tc tcase) {
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
 
-		fc, err := azblob.New(tc.config)
-		if err != nil {
-			t.Errorf("%v", err)
-			return
-		}
+			fc, err := azblob.New(tc.config)
+			if err != nil {
+				t.Errorf("%v", err)
+				return
+			}
 
-		// test write
-		if err = fc.Set(&tc.key, tc.expected); err != nil {
-			t.Errorf("write failed. err: %v", err)
-			return
-		}
+			// test write
+			if err = fc.Set(&tc.key, tc.expected); err != nil {
+				t.Errorf("write failed. err: %v", err)
+				return
+			}
 
-		output, hit, err := fc.Get(&tc.key)
-		if err != nil {
-			t.Errorf("read failed. err: %v", err)
-			return
-		}
-		if !hit {
-			t.Errorf("read failed. should have been a hit but cache reported a miss")
-			return
-		}
+			output, hit, err := fc.Get(&tc.key)
+			if err != nil {
+				t.Errorf("read failed. err: %v", err)
+				return
+			}
+			if !hit {
+				t.Errorf("read failed. should have been a hit but cache reported a miss")
+				return
+			}
 
-		if !reflect.DeepEqual(output, tc.expected) {
-			t.Errorf("expected %v got %v", tc.expected, output)
-			return
-		}
+			if !reflect.DeepEqual(output, tc.expected) {
+				t.Errorf("expected %v got %v", tc.expected, output)
+				return
+			}
 
-		// test purge
-		if err = fc.Purge(&tc.key); err != nil {
-			t.Errorf("purge failed. err: %v", err)
-			return
-		}
+			// test purge
+			if err = fc.Purge(&tc.key); err != nil {
+				t.Errorf("purge failed. err: %v", err)
+				return
+			}
 
+		}
 	}
 
 	tests := map[string]tcase{
@@ -162,10 +164,7 @@ func TestSetGetPurge(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -187,50 +186,52 @@ func TestSetOverwrite(t *testing.T) {
 		expected []byte
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		// This test must be run in series otherwise
-		// there is a race condition in the
-		// initialization routine (the same test file must
-		// be created and destroyed)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			// This test must be run in series otherwise
+			// there is a race condition in the
+			// initialization routine (the same test file must
+			// be created and destroyed)
 
-		fc, err := azblob.New(tc.config)
-		if err != nil {
-			t.Errorf("%v", err)
-			return
-		}
+			fc, err := azblob.New(tc.config)
+			if err != nil {
+				t.Errorf("%v", err)
+				return
+			}
 
-		// test write1
-		if err = fc.Set(&tc.key, tc.bytes1); err != nil {
-			t.Errorf("write 1 failed. err: %v", err)
-			return
-		}
+			// test write1
+			if err = fc.Set(&tc.key, tc.bytes1); err != nil {
+				t.Errorf("write 1 failed. err: %v", err)
+				return
+			}
 
-		// test write2
-		if err = fc.Set(&tc.key, tc.bytes2); err != nil {
-			t.Errorf("write 2 failed. err: %v", err)
-			return
-		}
+			// test write2
+			if err = fc.Set(&tc.key, tc.bytes2); err != nil {
+				t.Errorf("write 2 failed. err: %v", err)
+				return
+			}
 
-		// fetch the cache entry
-		output, hit, err := fc.Get(&tc.key)
-		if err != nil {
-			t.Errorf("read failed. err: %v", err)
-			return
-		}
-		if !hit {
-			t.Errorf("read failed. should have been a hit but cache reported a miss")
-			return
-		}
+			// fetch the cache entry
+			output, hit, err := fc.Get(&tc.key)
+			if err != nil {
+				t.Errorf("read failed. err: %v", err)
+				return
+			}
+			if !hit {
+				t.Errorf("read failed. should have been a hit but cache reported a miss")
+				return
+			}
 
-		if !reflect.DeepEqual(output, tc.expected) {
-			t.Errorf("expected %v got %v", tc.expected, output)
-			return
-		}
+			if !reflect.DeepEqual(output, tc.expected) {
+				t.Errorf("expected %v got %v", tc.expected, output)
+				return
+			}
 
-		// clean up
-		if err = fc.Purge(&tc.key); err != nil {
-			t.Errorf("purge failed. err: %v", err)
-			return
+			// clean up
+			if err = fc.Purge(&tc.key); err != nil {
+				t.Errorf("purge failed. err: %v", err)
+				return
+			}
 		}
 	}
 
@@ -253,10 +254,7 @@ func TestSetOverwrite(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -270,40 +268,42 @@ func TestMaxZoom(t *testing.T) {
 		expectedHit bool
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		// This test must be run in series otherwise
-		// there is a race condition in the
-		// initialization routine (the same test file must
-		// be created and destroyed)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			// This test must be run in series otherwise
+			// there is a race condition in the
+			// initialization routine (the same test file must
+			// be created and destroyed)
 
-		fc, err := azblob.New(tc.config)
-		if err != nil {
-			t.Errorf("error initializing %v", err)
-			return
-		}
-
-		// test set
-		if err = fc.Set(&tc.key, tc.bytes); err != nil {
-			t.Errorf("write failed. err: %v", err)
-			return
-		}
-
-		// fetch the cache entry
-		_, hit, err := fc.Get(&tc.key)
-		if err != nil {
-			t.Errorf("read failed. err: %v", err)
-			return
-		}
-		if hit != tc.expectedHit {
-			t.Errorf("expectedHit %v got %v", tc.expectedHit, hit)
-			return
-		}
-
-		// clean up
-		if tc.expectedHit {
-			if err != fc.Purge(&tc.key) {
-				t.Errorf("error cleaning %v", err)
+			fc, err := azblob.New(tc.config)
+			if err != nil {
+				t.Errorf("error initializing %v", err)
 				return
+			}
+
+			// test set
+			if err = fc.Set(&tc.key, tc.bytes); err != nil {
+				t.Errorf("write failed. err: %v", err)
+				return
+			}
+
+			// fetch the cache entry
+			_, hit, err := fc.Get(&tc.key)
+			if err != nil {
+				t.Errorf("read failed. err: %v", err)
+				return
+			}
+			if hit != tc.expectedHit {
+				t.Errorf("expectedHit %v got %v", tc.expectedHit, hit)
+				return
+			}
+
+			// clean up
+			if tc.expectedHit {
+				if err != fc.Purge(&tc.key) {
+					t.Errorf("error cleaning %v", err)
+					return
+				}
 			}
 		}
 	}
@@ -357,9 +357,6 @@ func TestMaxZoom(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			fn(t, tc)
-		})
+		t.Run(name, fn(tc))
 	}
 }

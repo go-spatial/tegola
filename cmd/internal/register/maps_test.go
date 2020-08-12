@@ -18,26 +18,28 @@ func TestMaps(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		var err error
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			var err error
 
-		// convert []dict.Dict -> []dict.Dicter
-		provArr := make([]dict.Dicter, len(tc.providers))
-		for i := range provArr {
-			provArr[i] = tc.providers[i]
-		}
+			// convert []dict.Dict -> []dict.Dicter
+			provArr := make([]dict.Dicter, len(tc.providers))
+			for i := range provArr {
+				provArr[i] = tc.providers[i]
+			}
 
-		providers, err := register.Providers(provArr)
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
+			providers, err := register.Providers(provArr)
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
+				return
+			}
+
+			err = register.Maps(&tc.atlas, tc.maps, providers)
+			if !errors.Is(err, tc.expectedErr) {
+				t.Errorf("invalid error, expected %v got %v", tc.expectedErr, err)
+			}
 			return
 		}
-
-		err = register.Maps(&tc.atlas, tc.maps, providers)
-		if !errors.Is(err, tc.expectedErr) {
-			t.Errorf("invalid error, expected %v got %v", tc.expectedErr, err)
-		}
-		return
 	}
 
 	tests := map[string]tcase{
@@ -135,7 +137,6 @@ func TestMaps(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }

@@ -15,15 +15,61 @@ import (
 )
 
 func TestHandleMapCapabilities(t *testing.T) {
-	// setup a new provider
-	testcases := []struct {
+	type tcase struct {
 		handler   http.Handler
 		hostName  string
 		port      string
 		uri       string
 		reqMethod string
 		expected  tilejson.TileJSON
-	}{
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			var err error
+
+			server.HostName = tc.hostName
+			server.Port = tc.port
+
+			// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
+			router := server.NewRouter(nil)
+
+			r, err := http.NewRequest(tc.reqMethod, tc.uri, nil)
+			if err != nil {
+				t.Fatal(err)
+				return
+			}
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+
+			if w.Code != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got (%v) expected (%v)", w.Code, http.StatusOK)
+				return
+			}
+
+			bytes, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("err reading response body: %v", err)
+				return
+			}
+
+			var tileJSON tilejson.TileJSON
+			// read the response body
+			if err := json.Unmarshal(bytes, &tileJSON); err != nil {
+				t.Errorf("unable to unmarshal JSON response body: %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(tc.expected, tileJSON) {
+				t.Errorf("response body and expected do not match \n%+v\n%+v", tc.expected, tileJSON)
+				return
+			}
+
+		}
+	}
+
+	testcases := []tcase{
 		{
 			handler:   server.HandleCapabilities{},
 			hostName:  "",
@@ -155,46 +201,8 @@ func TestHandleMapCapabilities(t *testing.T) {
 		},
 	}
 
-	for i, test := range testcases {
-		var err error
-
-		server.HostName = test.hostName
-		server.Port = test.port
-
-		// setup a new router. this handles parsing our URL wildcards (i.e. :map_name, :z, :x, :y)
-		router := server.NewRouter(nil)
-
-		r, err := http.NewRequest(test.reqMethod, test.uri, nil)
-		if err != nil {
-			t.Fatal(err)
-			continue
-		}
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, r)
-
-		if w.Code != http.StatusOK {
-			t.Errorf("[%v] handler returned wrong status code: got (%v) expected (%v)", i, w.Code, http.StatusOK)
-			continue
-		}
-
-		bytes, err := ioutil.ReadAll(w.Body)
-		if err != nil {
-			t.Errorf("[%v] err reading response body: %v", i, err)
-			continue
-		}
-
-		var tileJSON tilejson.TileJSON
-		// read the response body
-		if err := json.Unmarshal(bytes, &tileJSON); err != nil {
-			t.Errorf("[%v] unable to unmarshal JSON response body: %v", i, err)
-			continue
-		}
-
-		if !reflect.DeepEqual(test.expected, tileJSON) {
-			t.Errorf("[%v] response body and expected do not match \n%+v\n%+v", i, test.expected, tileJSON)
-			continue
-		}
+	for i, tc := range testcases {
+		t.Run(fmt.Sprintf("%d", i), fn(tc))
 	}
 }
 
@@ -206,7 +214,6 @@ func TestHandleMapCapabilitiesCORS(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { CORSTest(t, tc) })
+		t.Run(name, CORSTest(tc))
 	}
 }

@@ -13,25 +13,27 @@ func TestProviders(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		var err error
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			var err error
 
-		// convert []dict.Dict -> []dict.Dicter
-		provArr := make([]dict.Dicter, len(tc.config))
-		for i := range provArr {
-			provArr[i] = tc.config[i]
-		}
-
-		_, err = register.Providers(provArr)
-		if tc.expectedErr != nil {
-			if err.Error() != tc.expectedErr.Error() {
-				t.Errorf("invalid error. expected: %v, got %v", tc.expectedErr, err.Error())
+			// convert []dict.Dict -> []dict.Dicter
+			provArr := make([]dict.Dicter, len(tc.config))
+			for i := range provArr {
+				provArr[i] = tc.config[i]
 			}
-			return
-		}
-		if err != nil {
-			t.Errorf("unexpected err: %v", err)
-			return
+
+			_, err = register.Providers(provArr)
+			if tc.expectedErr != nil {
+				if err.Error() != tc.expectedErr.Error() {
+					t.Errorf("invalid error. expected: %v, got %v", tc.expectedErr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected err: %v", err)
+				return
+			}
 		}
 	}
 
@@ -93,7 +95,6 @@ func TestProviders(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
