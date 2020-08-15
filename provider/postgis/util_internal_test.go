@@ -140,11 +140,11 @@ func TestDecipherFields(t *testing.T) {
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			rows, err := conn.Query(tc.sql)
-			defer rows.Close()
 			if err != nil {
 				t.Errorf("Error performing query: %v", err)
 				return
 			}
+			defer rows.Close()
 
 			var rowCount int
 			for rows.Next() {
