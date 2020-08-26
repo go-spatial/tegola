@@ -18,7 +18,7 @@ password = ""               # PostGIS database password (required)
 
 ### Connection Properties
 
-- `name` (string): [Required] provider name is referenced from map layers. please note that when referencing an mvt_provider form a map layer the provider name must be prexied with `mvt_`. See example config below.
+- `name` (string): [Required] provider name is referenced from map layers.
 - `type` (string): [Required] the type of data provider. must be "postgis" to use this data provider
 - `host` (string): [Required] PostGIS database host
 - `port` (int): [Required] PostGIS database port (required)
@@ -35,7 +35,9 @@ In addition to the connection configuration above, Provider Layers need to be co
 ```toml
 [[providers.layers]]
 name = "landuse"
+# MVT data provider must use SQL statements
 # this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
+# Wrapping the geom with ST_AsMVTGeom is required. 
 sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
 ```
 
@@ -59,11 +61,7 @@ sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom
   - `!GEOM_FIELD!` - [Optional] the geom field name
   - `!GEOM_TYPE!` - [Optional] the geom type if defined otherwise ""
 
-## Example mvt_provider and map config
-
-**Important**: When referencing the `provider` in the `map` section of the config, you MUST prepend `mvt_` to the `provider_layer` value. This indicates to tegola that the provider is an MVT provider so tegola knows which provider section to perform the lookup. 
-
-Example:
+## Example mvt_postgis and map config
 
 ```toml
 [[providers]]
@@ -83,26 +81,11 @@ password = ""
 name = "cities"
 center = [-90.2,38.6,3.0]  # where to center of the map (lon, lat, zoom)
 
-    [[maps.layers]]
-    name = "landuse"
-    provider_layer = "test_postgis.landuse"
-    min_zoom = 0
-    max_zoom = 14
-```
-
-## Environment Variable support
-
-Helpful debugging environment variables:
-
-- `TEGOLA_SQL_DEBUG`: specify the type of SQL debug information to output. Supports the following values:
-  - `LAYER_SQL`: print layer SQL as they’re parsed from the config file.
-  - `EXECUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
-  - `LAYER_SQL:EXECUTE_SQL`: print `LAYER_SQL` and `EXECUTE_SQL`.
-
-Example:
-
-```
-$ TEGOLA_SQL_DEBUG=LAYER_SQL tegola serve --config=/path/to/conf.toml
+  [[maps.layers]]
+  name = "landuse"
+  provider_layer = "test_postgis.landuse"
+  min_zoom = 0
+  max_zoom = 14
 ```
 
 ## Testing
