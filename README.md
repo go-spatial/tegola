@@ -101,9 +101,12 @@ Return [TileJSON](https://github.com/mapbox/tilejson-spec) details about the map
 Return an auto generated [Mapbox GL Style](https://www.mapbox.com/mapbox-gl-js/style-spec/) for the configured map.
 
 ## Configuration
+
 The tegola config file uses the [TOML](https://github.com/toml-lang/toml) format. The following example shows how to configure a PostGIS data provider with two layers. The first layer includes a `tablename`, `geometry_field` and an `id_field`. The second layer uses a custom `sql` statement instead of the `tablename` property.
 
 Under the `maps` section, map layers are associated with data provider layers and their `min_zoom` and `max_zoom` values are defined. Optionally, `default_tags` can be setup which will be encoded into the layer. If the same tags are returned from a data provider, the data provider's values will take precedence.
+
+### Example config file:
 
 ```toml
 [webserver]
@@ -111,9 +114,9 @@ port = ":9090"              # port to bind the web server to. defaults ":8080"
 ssl_cert = "fullchain.pem"  # ssl cert for serving by https
 ssl_key = "privkey.pem"     # ssl key for serving by https
 
-	[webserver.headers]
-	Access-Control-Allow-Origin = "*"
-	Cache-Control = "no-cache, no-store, must-revalidate"
+  [webserver.headers]
+  Access-Control-Allow-Origin = "*"
+  Cache-Control = "no-cache, no-store, must-revalidate"
 
 [cache]                     # configure a tile cache
 type = "file"               # a file cache will cache to the local file system
@@ -130,96 +133,97 @@ user = "tegola"             # postgis database user (required)
 password = ""               # postgis database password (required)
 srid = 3857                 # The default srid for this provider. Defaults to WebMercator (3857) (optional)
 max_connections = 50        # The max connections to maintain in the connection pool. Default is 100. (optional)
-ssl_mode = "prefer"        # PostgreSQL SSL mode*. Default is "disable". (optional)
+ssl_mode = "prefer"         # PostgreSQL SSL mode*. Default is "disable". (optional)
 
-	[[providers.layers]]
-	name = "landuse"                    # will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857"  # sql or tablename are required
-	geometry_fieldname = "geom"         # geom field. default is geom
-	id_fieldname = "gid"                # geom id field. default is gid
-	srid = 4326                         # the srid of table's geo data. Defaults to WebMercator (3857)
+  [[providers.layers]]
+  name = "landuse"                    # will be encoded as the layer name in the tile
+  tablename = "gis.zoning_base_3857"  # sql or tablename are required
+  geometry_fieldname = "geom"         # geom field. default is geom
+  id_fieldname = "gid"                # geom id field. default is gid
+  srid = 4326                         # the srid of table's geo data. Defaults to WebMercator (3857)
 
-	[[providers.layers]]
-	name = "roads"                      # will be encoded as the layer name in the tile
-	tablename = "gis.zoning_base_3857"  # sql or tablename are required
-	geometry_fieldname = "geom"         # geom field. default is geom
-	geometry_type = "linestring"        # geometry type. if not set, tables are inspected at startup to try and infer the gemetry type
-	id_fieldname = "gid"                # geom id field. default is gid
-	fields = [ "class", "name" ]        # Additional fields to include in the select statement.
+  [[providers.layers]]
+  name = "roads"                      # will be encoded as the layer name in the tile
+  tablename = "gis.zoning_base_3857"  # sql or tablename are required
+  geometry_fieldname = "geom"         # geom field. default is geom
+  geometry_type = "linestring"        # geometry type. if not set, tables are inspected at startup to try and infer the gemetry type
+  id_fieldname = "gid"                # geom id field. default is gid
+  fields = [ "class", "name" ]        # Additional fields to include in the select statement.
 
-	[[providers.layers]]
-	name = "rivers"                     # will be encoded as the layer name in the tile
-	geometry_fieldname = "geom"         # geom field. default is geom
-	id_fieldname = "gid"                # geom id field. default is gid
-	# Custom sql to be used for this layer. Note: that the geometery field is wraped
-	# in a ST_AsBinary() and the use of the !BBOX! token
-	sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
+  [[providers.layers]]
+  name = "rivers"                     # will be encoded as the layer name in the tile
+  geometry_fieldname = "geom"         # geom field. default is geom
+  id_fieldname = "gid"                # geom id field. default is gid
+  # Custom sql to be used for this layer. Note: that the geometery field is wraped
+  # in a ST_AsBinary() and the use of the !BBOX! token
+  sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM gis.rivers WHERE geom && !BBOX!"
 
-	[[providers.layers]]
-	name = "buildings"                  # will be encoded as the layer name in the tile
-	geometry_fieldname = "geom"         # geom field. default is geom
-	id_fieldname = "gid"                # geom id field. default is gid
-	# Custom sql to be used for this layer as a sub query. ST_AsBinary and
-	# !BBOX! filter are applied automatically.
-	sql = "(SELECT gid, geom, type FROM buildings WHERE scalerank = !ZOOM! LIMIT 1000) AS sub"
+  [[providers.layers]]
+  name = "buildings"                  # will be encoded as the layer name in the tile
+  geometry_fieldname = "geom"         # geom field. default is geom
+  id_fieldname = "gid"                # geom id field. default is gid
+  # Custom sql to be used for this layer as a sub query. ST_AsBinary and
+  # !BBOX! filter are applied automatically.
+  sql = "(SELECT gid, geom, type FROM buildings WHERE scalerank = !ZOOM! LIMIT 1000) AS sub"
 
-# register mvt data providers
-# note mvt data providers can not be conflated with any other providers of any type in a map.
-# thus a map may only contain a single mvt_provider.
-[[mvt_providers]]
-name = "test_postgis"       # provider name is referenced from map layers (required)
-type = "postgis"            # the type of data provider must be "postgis" for this data provider (required)
+# maps are made up of layers
+[[maps]]
+name = "zoning"                              # used in the URL to reference this map (/maps/zoning)
+
+  [[maps.layers]]
+  name = "landuse"                         # name is optional. If it's not defined the name of the ProviderLayer will be used.
+	                                         # It can also be used to group multiple ProviderLayers under the same namespace.
+  provider_layer = "test_postgis.landuse"  # must match a data provider layer
+  min_zoom = 12                            # minimum zoom level to include this layer
+  max_zoom = 16                            # maximum zoom level to include this layer
+
+    [maps.layers.default_tags]           # table of default tags to encode in the tile. SQL statements will override
+    class = "park"
+
+  [[maps.layers]]
+  name = "rivers"                          # name is optional. If it's not defined the name of the ProviderLayer will be used.
+                                           # It can also be used to group multiple ProviderLayers under the same namespace.
+  provider_layer = "test_postgis.rivers"   # must match a data provider layer
+  dont_simplify = true                     # optionally, turn off simplification for this layer. Default is false.
+  dont_clip = true                         # optionally, turn off clipping for this layer. Default is false.
+  min_zoom = 10                            # minimum zoom level to include this layer
+  max_zoom = 18                            # maximum zoom level to include this layer
+```
+
+\* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#environment-variables) on injecting environment variables into the config.
+
+### Example config using Postres 12 / PostGIS 3.0 ST_AsMVT():
+
+```toml
+# register a MVT data provider. MVT data providers have the prefix "mvt_" in their type
+# note mvt data providers can not be conflated with any other providers of any type in a map
+# thus a map may only contain a single mvt provider.
+[[providers]]
+name = "my_postgis"         # provider name is referenced from map layers (required). 
+type = "mvt_postgis"        # the type of data provider must be "mvt_postgis" for this data provider (required)
 host = "localhost"          # PostGIS database host (required)
 port = 5432                 # PostGIS database port (required)
 database = "tegola"         # PostGIS database name (required)
 user = "tegola"             # PostGIS database user (required)
 password = ""               # PostGIS database password (required
 
-[[mvt_providers.layers]]
-name = "landuse"
-# MVT data provider must use SQL statements
-# this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
-sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
+  [[providers.layers]]
+  name = "landuse"
+  # MVT data provider must use SQL statements
+  # this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
+  # Wrapping the geom with ST_AsMVTGeom is required. 
+  sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
 
 # maps are made up of layers
 [[maps]]
-name = "zoning"                              # used in the URL to reference this map (/maps/:map_name)
+name = "zoning"                           # used in the URL to reference this map (/maps/zoning)
 
-	[[maps.layers]]
-	name = "landuse"                         # name is optional. If it's not defined the name of the ProviderLayer will be used.
-	                                         # It can also be used to group multiple ProviderLayers under the same namespace.
-	provider_layer = "test_postgis.landuse"  # must match a data provider layer
-	min_zoom = 12                            # minimum zoom level to include this layer
-	max_zoom = 16                            # maximum zoom level to include this layer
-
-		[maps.layers.default_tags]           # table of default tags to encode in the tile. SQL statements will override
-		class = "park"
-
-	[[maps.layers]]
-	name = "rivers"                          # name is optional. If it's not defined the name of the ProviderLayer will be used.
-	                                         # It can also be used to group multiple ProviderLayers under the same namespace.
-	provider_layer = "test_postgis.rivers"   # must match a data provider layer
-	dont_simplify = true                     # optionally, turn off simplification for this layer. Default is false.
-	dont_clip = true                         # optionally, turn off clipping for this layer. Default is false.
-	min_zoom = 10                            # minimum zoom level to include this layer
-	max_zoom = 18                            # maximum zoom level to include this layer
-
-
-# note that this map is only using mvt_test_postgis provider. 
-# it can not conflate any other providers
-[[maps]]
-name = "landuse_mvt"
-
-	 [[maps.layers]]
-	 name = "landuse"
-	 provider_layer = "mvt_test_postgis.landuse" # note the mvt data provider name is prefixed with `mvt_`
-	 min_zoom = 12                            # minimum zoom level to include this layer
-	 max_zoom = 16                            # maximum zoom level to include this layer
-
-
+  [[maps.layers]]
+  name = "landuse"                        # name is optional. If it's not defined the name of the ProviderLayer will be used.
+  provider_layer = "my_postgis.landuse"   # must match a data provider layer
+  min_zoom = 10                           # minimum zoom level to include this layer
+  max_zoom = 16                           # maximum zoom level to include this layer
 ```
-
-\* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#environment-variables) on injecting environment variables into the config.
 
 ## Environment Variables
 
@@ -241,7 +245,8 @@ srid = 3857
 max_connections = "${POSTGIS_MAX_CONN}"
 ```
 
-#### SQL Debugging
+## SQL Debugging
+
 The following environment variables can be used for debugging:
 
 `TEGOLA_SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
@@ -262,7 +267,6 @@ The following environment variables can be used to control various runtime optio
 - `DontSimplifyGeo` to turn off simplification for all layers.
 - `SimplifyMaxZoom={{int}}` to set the max zoom that simplification will apply to. (14 is default)
 
-
 ## Client side debugging
 
 When debugging client side, it's often helpful to to see an outline of a tile along with it's Z/X/Y values. To encode a debug layer into every tile add the query string variable `debug=true` to the URL template being used to request tiles. For example:
@@ -279,12 +283,10 @@ The requested tile will be encode a layer with the `name` value set to `debug` a
 
 ## Building from source
 
-Tegola is written in [Go](https://golang.org/) and requires Go 1.x to compile from source. (We support the three newest versions of Go.) To build tegola from source, make sure you have Go installed and have cloned the repository to your `$GOPATH`. Navigate to the repository then run the following commands:
-
+Tegola is written in [Go](https://golang.org/) and requires Go 1.14 to compile from source. (We support the two newest versions of Go.) To build tegola from source, make sure you have Go installed and have cloned the repository. Navigate to the repository then run the following command:
 
 ```bash
-cd cmd/tegola/
-go build
+cd cmd/tegola/ && go build -mod vendor
 ```
 
 You will now have a binary named `tegola` in the current directory which is [ready for running](#running-tegola).
@@ -307,7 +309,9 @@ go build -tags 'noRedisCache noGpkgProvider noViewer'
 ```
 
 ## License
+
 See [license](LICENSE.md) file in repo.
 
 ## Looking for a vector tile style editor?
+
 Once you have tegola running you're likely going to want to work on your map's cartography. Give [fresco](https://github.com/go-spatial/fresco) a try!
