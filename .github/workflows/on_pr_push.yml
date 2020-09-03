@@ -112,14 +112,3 @@ jobs:
         pushd ${GITHUB_WORKSPACE}/server
         go generate ./...
         popd
-
-    # we require generated code to be commited to the repo so this checks to make sure 
-    # the results of the last go generate command 
-    - name: Check if generated output caused a git diff
-      run: |
-        git diff --quiet
-        exit_status=$?
-        if [ $exit_status -eq 1 ]; then
-          echo "go generate output not the same as repository initial state. please commit all out from go generate."
-        fi
-        exit $exit_status
