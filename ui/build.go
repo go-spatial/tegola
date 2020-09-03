@@ -12,10 +12,14 @@ import (
 	"strings"
 )
 
-var showOutput bool
+var (
+	showOutput   bool
+	bindataDebug bool
+)
 
 func init() {
 	flag.BoolVar(&showOutput, "show-output", false, "show command output")
+	flag.BoolVar(&bindataDebug, "bindata-debug", false, "generate bin-data in debug mode")
 }
 
 func printOutput(out []byte) {
@@ -63,6 +67,11 @@ func main() {
 	// build app
 	run("npm", "run", "build")
 	// build bindata
-	run("go-bindata", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
+	if bindataDebug {
+		run("go-bindata", "-debug", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
+	} else {
+		run("go-bindata", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
+	}
+
 	fmt.Printf("success\n")
 }
