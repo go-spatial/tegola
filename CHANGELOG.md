@@ -1,3 +1,25 @@
+## 0.12.1 (2020-09-04)
+**Bug Fixes**
+* fixed the internal viewer not using the most recent version (@ARolek)
+
+## 0.12.0 (2020-08-26)
+**Features**
+* proj: implemented the go-spatial/proj package (@meilinger)
+* mvt_providers: brought in mvt_postgis enabling support for ST_AsMVT from postgis. (#556 @gdey)
+* viewer: the maps layer list can now be hidden (@mapl)
+
+**Bug Fixes**
+* cache seeding: handle map zooms with no layers (#698 @ARolek)  
+* provider/postgis: fix dropped errors (@alrs)
+* server: fix dropped test error (@alrs)
+* providers/postgis: When ignoring UnknownGeometryType log the issue (@gdey).
+
+**Maintenance**
+* mvt: Split out Transformation, Simplification, and Clipping from encodeGeometry (#224 @ARolek).
+* mvt: remove local mvt package and vendor from geom (@ear7h)
+* basic: remove tegola.Geometry type from basic.ToWebMercator (#622 @ear7h)
+* basic: normalized table tests to style of table tests (@gdey)
+
 ## 0.11.0 (2020-05-04)
 **Features**
 * Added SSL Support (#82 @ear7h)
