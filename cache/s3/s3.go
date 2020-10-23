@@ -154,9 +154,11 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	// setup the s3 session.
 	// if the accessKey and secreteKey are not provided (static creds) then the provider chain is used
 	// http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html
-	s3cache.Client = s3.New(
-		session.New(&awsConfig),
-	)
+	sess, err := session.NewSession(&awsConfig)
+	if err != nil {
+		return nil, err
+	}
+	s3cache.Client = s3.New(sess)
 
 	// check for control_access_list env var
 	acl := os.Getenv("AWS_ACL")
