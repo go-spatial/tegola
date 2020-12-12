@@ -45,7 +45,7 @@ jobs:
         name: version
 
     - name: Set tegola version
-      run: echo "::set-env name=VERSION::$(cat version/version.txt)"
+      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
 
     - name: Set up Go 1.14
       uses: actions/setup-go@v2
@@ -140,7 +140,7 @@ jobs:
         name: version
 
     - name: Set tegola version
-      run: echo "::set-env name=VERSION::$(cat version/version.txt)"
+      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
 
     - name: Build and tag Docker container
       run: |
@@ -176,7 +176,7 @@ jobs:
         name: version
 
     - name: Set tegola version
-      run: echo "::set-env name=VERSION::$(cat version/version.txt)"
+      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
 
     - name: Set up Go 1.14
       uses: actions/setup-go@v1
