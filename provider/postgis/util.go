@@ -16,8 +16,13 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
+// isMVT will return true if the provider is MVT based
+func isMVT(providerType string) bool {
+	return providerType == MVTProviderType
+}
+
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
-func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string, buffer bool) (sql string, err error) {
+func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string, buffer bool, providerType string) (sql string, err error) {
 
 	// we need to hit the database to see what the fields are.
 	if len(flds) == 0 {
@@ -61,10 +66,19 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string, buffer 
 
 	// to avoid field names possibly colliding with Postgres keywords,
 	// we wrap the field names in quotes
+
 	if fgeom == -1 {
-		flds = append(flds, fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField))
+		if isMVT(providerType) {
+			flds = append(flds, fmt.Sprintf(`"%v" AS "%[1]v"`, l.geomField))
+		} else {
+			flds = append(flds, fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField))
+		}
 	} else {
-		flds[fgeom] = fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField)
+		if isMVT(providerType) {
+			flds[fgeom] = fmt.Sprintf(`"%v" AS "%[1]v"`, l.geomField)
+		} else {
+			flds[fgeom] = fmt.Sprintf(`ST_AsBinary("%v") AS "%[1]v"`, l.geomField)
+		}
 	}
 
 	// add required id field
@@ -74,7 +88,13 @@ func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string, buffer 
 
 	selectClause := strings.Join(flds, ", ")
 
-	return fmt.Sprintf(stdSQL, selectClause, tblname, l.geomField), nil
+	sqlTmpl := stdSQL
+
+	if isMVT(providerType) {
+		sqlTmpl = mvtSQL
+	}
+
+	return fmt.Sprintf(sqlTmpl, selectClause, tblname, l.geomField), nil
 }
 
 const (
@@ -306,6 +326,6 @@ func gId(v interface{}) (gid uint64, err error) {
 	case string:
 		return strconv.ParseUint(aval, 10, 64)
 	default:
-		return gid, fmt.Errorf("unable to convert field into a uint64.")
+		return gid, fmt.Errorf("unable to convert field into a uint64")
 	}
 }

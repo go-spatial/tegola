@@ -10,6 +10,11 @@ func init() {
 	provider.MVTRegister(provider.TypeMvt.Prefix()+Name, NewMVTTileProvider, Cleanup)
 }
 
+const (
+	MVTProviderType = "mvt_postgis"
+	ProviderType    = "postgis"
+)
+
 // NewTileProvider instantiates and returns a new postgis provider or an error.
 // The function will validate that the config object looks good before
 // trying to create a driver. This Provider supports the following fields
@@ -35,5 +40,9 @@ func init() {
 // 			!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
 // 			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
-func NewTileProvider(config dict.Dicter) (provider.Tiler, error)       { return CreateProvider(config) }
-func NewMVTTileProvider(config dict.Dicter) (provider.MVTTiler, error) { return CreateProvider(config) }
+func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
+	return CreateProvider(config, ProviderType)
+}
+func NewMVTTileProvider(config dict.Dicter) (provider.MVTTiler, error) {
+	return CreateProvider(config, MVTProviderType)
+}
