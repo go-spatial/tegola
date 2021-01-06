@@ -35,5 +35,9 @@ func init() {
 // 			!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
 // 			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
-func NewTileProvider(config dict.Dicter) (provider.Tiler, error)       { return CreateProvider(config) }
-func NewMVTTileProvider(config dict.Dicter) (provider.MVTTiler, error) { return CreateProvider(config) }
+func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
+	return CreateProvider(config, "postgis")
+}
+func NewMVTTileProvider(config dict.Dicter) (provider.MVTTiler, error) {
+	return CreateProvider(config, "mvt_postgis")
+}
