@@ -65,12 +65,12 @@ sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom
 
 ```toml
 [[providers]]
-name = "test_postgis"       
-type = "mvt_postgis"            
-host = "localhost"          
-port = 5432                 
-database = "tegola"         
-user = "tegola"             
+name = "test_postgis"
+type = "mvt_postgis"
+host = "localhost"
+port = 5432
+database = "tegola"
+user = "tegola"
 password = ""
 
   [[providers.layers]]
@@ -86,6 +86,39 @@ center = [-90.2,38.6,3.0]  # where to center of the map (lon, lat, zoom)
   provider_layer = "test_postgis.landuse"
   min_zoom = 0
   max_zoom = 14
+```
+
+## Example mvt_postgis and map config for SRID 4326
+
+When using a 4326 projection with ST_AsMVT the SQL statement needs to be modified. ST_AsMVTGeom is expecting data in 3857 projection so the geometries and the `!BBOX!` token need to be transformed prior to `ST_AsMVTGeom` processing them. For example:
+
+```toml
+[[providers]]
+name = "test_postgis"
+type = "mvt_postgis"
+host = "localhost"
+port = 5432
+database = "tegola"
+user = "tegola"
+password = ""
+srid = 4326 # setting the srid on the provider to 4326 will cause the !BBOX! value to use the 4326 projection.
+
+  [[providers.layers]]
+  name = "landuse"
+  # the !BBOX! token used in the WHERE clause is not reprojected so it can match 4326 data
+  # the matched data AND the !BBOX! are then reporojected to 3857 prior to being passed to ST_AsMVTGeom
+  sql = "SELECT ST_AsMVTGeom(ST_Transform(geom, 3857),ST_Transform(!BBOX!,3857)) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
+
+[[maps]]
+name = "cities"
+center = [-90.2,38.6,3.0]  # where to center of the map (lon, lat, zoom)
+
+  [[maps.layers]]
+  name = "landuse"
+  provider_layer = "test_postgis.landuse"
+  min_zoom = 0
+  max_zoom = 14
+
 ```
 
 ## Testing
