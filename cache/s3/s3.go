@@ -40,6 +40,7 @@ const (
 	ConfigKeyACL            = "access_control_list" //	defaults to ""
 	ConfigKeyCacheControl   = "cache_control"       //	defaults to ""
 	ConfigKeyContentType    = "content_type"        //	defaults to "application/vnd.mapbox-vector-tile"
+	ConfigKeyS3ForcePath    = "force_path_style"
 )
 
 const (
@@ -49,6 +50,7 @@ const (
 	DefaultSecretKey   = ""
 	DefaultContentType = mvt.MimeType
 	DefaultEndpoint    = ""
+	DefaultS3ForcePath = false
 )
 
 // testData is used during New() to confirm the ability to write, read and purge the cache
@@ -150,6 +152,14 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	if endpoint != "" {
 		awsConfig.Endpoint = aws.String(endpoint)
 	}
+
+	s3ForcePathStyle := DefaultS3ForcePath
+	s3ForcePathStyle, err = config.Bool(ConfigKeyS3ForcePath, &s3ForcePathStyle)
+	if err != nil {
+		return nil, err
+	}
+
+	awsConfig.S3ForcePathStyle = aws.Bool(s3ForcePathStyle)
 
 	// setup the s3 session.
 	// if the accessKey and secreteKey are not provided (static creds) then the provider chain is used
