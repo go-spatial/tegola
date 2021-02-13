@@ -27,13 +27,10 @@ jobs:
         name: version
         path: ${{ github.workspace }}/version.txt
 
-  build_nix:
-    name: Build for Linux, MacOS and AWS Lambda
+  build_linux:
+    name: Build for Linux and AWS Lambda
     needs: gen_version
     runs-on: ubuntu-latest
-    strategy:
-      matrix: 
-        goos: ['darwin', 'linux']
 
     steps:
     - name: Check out code
@@ -52,10 +49,10 @@ jobs:
       with:
         go-version: 1.14
 
-    - name: Build for ${{ matrix.goos }}
+    - name: Build for Linux
       env:
         # build architecture
-        GOOS: ${{ matrix.goos }}
+        GOOS: linux
       run: |
           cd cmd/tegola
           go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}"
@@ -70,7 +67,7 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v2-preview
       with:
-        name: tegola_${{ matrix.goos }}_amd64
+        name: tegola_linux_amd64
         path: cmd/tegola/tegola.zip
 
     - name: Upload release asset
@@ -81,12 +78,10 @@ jobs:
       with:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: cmd/tegola/tegola.zip
-        asset_name: tegola_${{ matrix.goos }}_amd64.zip
+        asset_name: tegola_linux_amd64.zip
         asset_content_type: application/zip
 
     - name: Build tegola_lambda
-      # only run the lambda build once during the build matrix
-      if: matrix.goos == 'linux'
       env:
         # build architecture
         GOOS: linux
@@ -97,22 +92,18 @@ jobs:
     # workaround for archives losing permissions 
     # https://github.com/actions/upload-artifact/issues/38
     - name: Zip archive permissions workaround
-      # only run the lambda build once during the build matrix
-      if: matrix.goos == 'linux'
       run: |
         cd cmd/tegola_lambda
         zip -9 -D tegola.zip tegola_lambda
 
     - name: Upload build artifacts
-      # only run the lambda build once during the build matrix
-      if: matrix.goos == 'linux'
       uses: actions/upload-artifact@v2-preview
       with:
         name: tegola_lambda
         path: cmd/tegola_lambda/tegola.zip
 
     - name: Upload release asset
-      if: matrix.goos == 'linux' && github.event_name == 'release'
+      if: github.event_name == 'release'
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -120,6 +111,59 @@ jobs:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: cmd/tegola_lambda/tegola.zip
         asset_name: tegola_lambda.zip
+        asset_content_type: application/zip
+
+  build_macos:
+    name: Build for MacOS
+    needs: gen_version
+    runs-on: macos-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Download version artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: version
+
+    - name: Set Tegola version
+      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
+
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14
+
+    - name: Build for Darwin
+      env:
+        GOOS: darwin
+      run: |
+          cd cmd/tegola
+          go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}"
+
+    # workaround for archives losing permissions
+    # https://github.com/actions/upload-artifact/issues/38
+    - name: Zip archive permissions workaround
+      run: |
+        cd cmd/tegola
+        zip -9 -D tegola.zip tegola
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2-preview
+      with:
+        name: tegola_darwin_amd64
+        path: cmd/tegola/tegola.zip
+
+    - name: Upload release asset
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: cmd/tegola/tegola.zip
+        asset_name: tegola_darwin_amd64.zip
         asset_content_type: application/zip
 
   build_docker:
