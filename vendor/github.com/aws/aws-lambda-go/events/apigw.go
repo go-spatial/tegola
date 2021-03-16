@@ -49,6 +49,7 @@ type APIGatewayRequestIdentity struct {
 	CognitoIdentityID             string `json:"cognitoIdentityId"`
 	Caller                        string `json:"caller"`
 	APIKey                        string `json:"apiKey"`
+	APIKeyID                      string `json:"apiKeyId"`
 	AccessKey                     string `json:"accessKey"`
 	SourceIP                      string `json:"sourceIp"`
 	CognitoAuthenticationType     string `json:"cognitoAuthenticationType"`
@@ -167,6 +168,7 @@ type APIGatewayCustomAuthorizerPolicy struct {
 	Statement []IAMPolicyStatement
 }
 
+// IAMPolicyStatement represents one statement from IAM policy with action, effect and resource
 type IAMPolicyStatement struct {
 	Action   []string
 	Effect   string
