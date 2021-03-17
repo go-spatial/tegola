@@ -27,22 +27,43 @@ type InitFunc func(dicter dict.Dicter) (Interface, error)
 
 // Interface
 type Interface interface {
+
 	// Handler returns a http.Handler for the metrics route
 	Handler(route string) http.Handler
-	// InstrumentedHttpHandler returns an http.Handler that will instrument the given http handler, for the
-	// route and method that was given
-	InstrumentedHttpHandler(method, route string, handler http.Handler) http.Handler
 
 	// Returns the name of observer
 	Name() string
+
+	APIObserver
+	ViewerObserver
 }
 
-// InstrumentHandler is a convenience  function
-func InstrumentHandler(method, route string, observer Interface, handler http.Handler) (string, string, http.Handler) {
+type APIObserver interface {
+	// InstrumentedAPIHttpHandler returns an http.Handler that will instrument the given http handler, for the
+	// route and method that was given
+	InstrumentedAPIHttpHandler(method, route string, handler http.Handler) http.Handler
+}
+
+type ViewerObserver interface {
+	// InstrumentedViewerHttpHandler returns an http.Handler that will instrument the given http handler, for the
+	// route and method that was given
+	InstrumentedViewerHttpHandler(method, route string, handler http.Handler) http.Handler
+}
+
+// InstrumentAPIHandler is a convenience  function
+func InstrumentAPIHandler(method, route string, observer APIObserver, handler http.Handler) (string, string, http.Handler) {
 	if observer == nil {
 		return method, route, handler
 	}
-	return method, route, observer.InstrumentedHttpHandler(method, route, handler)
+	return method, route, observer.InstrumentedAPIHttpHandler(method, route, handler)
+}
+
+// InstrumentViewHandler is a convenience  function
+func InstrumentViewerHandler(method, route string, observer ViewerObserver, handler http.Handler) (string, string, http.Handler) {
+	if observer == nil {
+		return method, route, handler
+	}
+	return method, route, observer.InstrumentedViewerHttpHandler(method, route, handler)
 }
 
 // observers is a list of the current that have been registered with the system
