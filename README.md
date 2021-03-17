@@ -11,7 +11,7 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 ## Features
 - Native geometry processing (simplification, clipping, make valid, intersection, contains, scaling, translation)
 - [Mapbox Vector Tile v2 specification](https://github.com/mapbox/vector-tile-spec) compliant.
-- Embedded viewer with auto generated style for quick data visualization and inspection.
+- An embedded viewer with an automatically generated style for quick data visualization and inspection.
 - Support for [PostGIS](provider/postgis) and [GeoPackage](provider/gpkg) data providers. Extensible design to support additional data providers.
 - Support for several cache backends: [file](cache/file), [s3](cache/s3), [redis](cache/redis), [azure blob store](cache/azblob).
 - Cache seeding and invalidation via individual tiles (ZXY), lat / lon bounds and ZXY tile list.
@@ -45,7 +45,7 @@ Use "tegola [command] --help" for more information about a command.
 
 ## Running tegola as a vector tile server
 1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/go-spatial/tegola/releases).
-2. Setup your config file and run. Dy default tegola looks for a `config.toml` in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
+2. Set up your config file and run. By default, Tegola looks for a `config.toml` in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
 ```
 ./tegola serve --config=/path/to/config.toml
@@ -57,7 +57,7 @@ Use "tegola [command] --help" for more information about a command.
 /
 ```
 
-The server root will display a built in viewer with an auto generated style. For example:
+The server root will display the built-in viewer with an automatically generated style. For example:
 
 ![tegola built in viewer](https://raw.githubusercontent.com/go-spatial/tegola/v0.4.0/docs/screenshots/built-in-viewer.png "tegola built in viewer")
 
@@ -196,7 +196,7 @@ name = "zoning"                              # used in the URL to reference this
 
 \* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#environment-variables) on injecting environment variables into the config.
 
-### Example config using Postres 12 / PostGIS 3.0 ST_AsMVT():
+### Example config using Postgres 12 / PostGIS 3.0 ST_AsMVT():
 
 ```toml
 # register a MVT data provider. MVT data providers have the prefix "mvt_" in their type
@@ -253,10 +253,10 @@ max_connections = "${POSTGIS_MAX_CONN}"
 
 The following environment variables can be used for debugging:
 
-`TEGOLA_SQL_DEBUG` specify the type of SQL debug information to output. Currently support two values:
+`TEGOLA_SQL_DEBUG` specify the type of SQL debug information to output. Currently, supporting two values:
 
-- `LAYER_SQL`: print layer SQL as they are parsed from the config file.
-- `EXECUTE_SQL`: print SQL that is executed for each tile request and the number of items it returns or an error.
+- `LAYER_SQL` will print layer SQL as they are parsed from the config file.
+- `EXECUTE_SQL` will print SQL that is executed for each tile request, and the number of items it returns or an error.
 
 #### Usage
 
@@ -273,27 +273,27 @@ The following environment variables can be used to control various runtime optio
 
 ## Client side debugging
 
-When debugging client side, it's often helpful to to see an outline of a tile along with it's Z/X/Y values. To encode a debug layer into every tile add the query string variable `debug=true` to the URL template being used to request tiles. For example:
+When debugging client side, it's often helpful to see an outline of a tile along with it's Z/X/Y values. To encode a debug layer into every tile add the query string variable `debug=true` to the URL template being used to request tiles. For example:
 
 ```
 http://localhost:8080/maps/mymap/{z}/{x}/{y}.vector.pbf?debug=true
 ```
 
-The requested tile will be encode a layer with the `name` value set to `debug` and include two features:
+The requested tile will be encoded with a layer that has the `name` value set to `debug` and includes the three following features. 
 
- - `debug_outline`: a line feature that traces the border of the tile
- - `debug_text`: a point feature in the middle of the tile with the following tags:
- - `zxy`: a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
+ - `debug_outline` is a line feature that traces the border of the tile
+ - `debug_text` is a point feature in the middle of the tile with the following tags:
+ - `zxy` is a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
 
 ## Building from source
 
-Tegola is written in [Go](https://golang.org/) and requires Go 1.16 to compile from source. To build tegola from source, make sure you have Go installed and have cloned the repository. Navigate to the repository then run the following command:
+Tegola is written in [Go](https://golang.org/) and requires Go 1.16 to compile from the source. (We support the two newest versions of Go.) To build tegola from the source, make sure you have Go installed and have cloned the repository. Navigate to the repository then run the following command:
 
 ```bash
 cd cmd/tegola/ && go build -mod vendor
 ```
 
-You will now have a binary named `tegola` in the current directory which is [ready for running](#running-tegola).
+You will now have a binary named `tegola` in the current directory which is [ready to run.](#running-tegola-as-a-vector-tile-server).
 
 **Build Flags**
 The following build flags can be used to turn off certain features of tegola:
@@ -303,11 +303,11 @@ The following build flags can be used to turn off certain features of tegola:
 - `noRedisCache` - turn off the Redis cache back end.
 - `noPostgisProvider` - turn off the PostGIS data provider.
 - `noGpkgProvider` - turn off the GeoPackage data provider. Note, GeoPackage uses CGO and will be turned off if the environment variable `CGO_ENABLED=0` is set prior to building.
-- `noViewer` - turn off the built in viewer.
+- `noViewer` - turn off the built-in viewer.
 - `pprof` - enable [Go profiler](https://golang.org/pkg/net/http/pprof/). Start profile server by setting the environment `TEGOLA_HTTP_PPROF_BIND` environment (e.g. `TEGOLA_HTTP_PPROF_BIND=localhost:6060`).
 - `noPrometheusObserver` - turn off support for the Prometheus metric end point.
 
-Example of using the build flags to turn of the Redis cache back end, the GeoPackage provider and the built in viewer.
+Example of using the build flags to turn of the Redis cache back end, the GeoPackage provider and the built-in viewer.
 
 ```bash
 go build -tags 'noRedisCache noGpkgProvider noViewer'
@@ -315,8 +315,8 @@ go build -tags 'noRedisCache noGpkgProvider noViewer'
 
 ## License
 
-See [license](LICENSE.md) file in repo.
+See [license](LICENSE.md) file in the repo.
 
 ## Looking for a vector tile style editor?
 
-Once you have tegola running you're likely going to want to work on your map's cartography. Give [fresco](https://github.com/go-spatial/fresco) a try!
+After Tegola is running you're likely going to want to work on your map's cartography. Give [fresco](https://github.com/go-spatial/fresco) a try!

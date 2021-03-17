@@ -134,7 +134,7 @@ func (tu TilerUnion) Layers() ([]LayerInfo, error) {
 // InitFunc initialize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
 type InitFunc func(dicter dict.Dicter) (Tiler, error)
 
-// CleanupFunc is called to when the system is shuting down, this allows the provider to cleanup.
+// CleanupFunc is called to when the system is shutting down, this allows the provider to cleanup.
 type CleanupFunc func()
 
 type pfns struct {

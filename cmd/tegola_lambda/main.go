@@ -116,7 +116,7 @@ func init() {
 }
 
 func main() {
-	// the second argument here tells algnhasa to watch for the MVT MimeType Content-Type headers
+	// the second argument here tells algnhsa to watch for the MVT MimeType Content-Type headers
 	// if it detects this in the response the payload will be base64 encoded. Lambda needs to be configured
 	// to handle binary responses so it can convert the base64 encoded payload back into binary prior
 	// to sending to the client

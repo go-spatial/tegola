@@ -169,7 +169,7 @@ TileChannelLoop:
 				break
 			}
 
-			{ // worker error occured.
+			{ // worker error occurred.
 				errLock.RLock()
 				e := mapTileErr
 				errLock.RUnlock()

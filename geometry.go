@@ -1,4 +1,4 @@
-// Package tegola describes the basic geometeries that can be used to convert to
+// Package tegola describes the basic geometries that can be used to convert to
 // and from.
 package tegola
 

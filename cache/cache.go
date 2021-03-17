@@ -21,7 +21,7 @@ type Interface interface {
 }
 
 // ParseKey will parse a string in the format /:map/:layer/:z/:x/:y into a Key struct. The :layer value is optional
-// ParseKey also supports other OS delimeters (i.e. Windows - "\")
+// ParseKey also supports other OS delimiters (i.e. Windows - "\")
 func ParseKey(str string) (*Key, error) {
 	var err error
 	var key Key
@@ -30,7 +30,7 @@ func ParseKey(str string) (*Key, error) {
 	// will fail our keyParts check since it uses backslashes.
 	str = filepath.ToSlash(str)
 
-	// remove the basepath and the first slash, then split the parts
+	// remove the base-path and the first slash, then split the parts
 	keyParts := strings.Split(strings.TrimLeft(str, "/"), "/")
 	// we're expecting a z/x/y scheme
 	if len(keyParts) < 3 || len(keyParts) > 5 {
@@ -57,7 +57,7 @@ func ParseKey(str string) (*Key, error) {
 		zxy = keyParts
 	}
 
-	// parse our URL vals to ints
+	// parse our URL vals into integers
 	var placeholder uint64
 	placeholder, err = strconv.ParseUint(zxy[0], 10, 32)
 	if err != nil || placeholder > tegola.MaxZ {
@@ -145,7 +145,7 @@ func Register(cacheType string, init InitFunc) error {
 	return nil
 }
 
-// Registered returns the caché's that have been registered.
+// Registered returns the cache's that have been registered.
 func Registered() (c []string) {
 	for k := range cache {
 		c = append(c, k)

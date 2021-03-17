@@ -55,7 +55,7 @@ func init() {
 	}
 }
 
-// defaultAtlas is instanitated for convenience
+// defaultAtlas is instantiated for convenience
 var defaultAtlas = &Atlas{}
 
 const (

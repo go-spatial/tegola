@@ -29,7 +29,7 @@ var serverCmd = &cobra.Command{
 		gdcmd.OnComplete(provider.Cleanup)
 
 		// check config for server port setting
-		// if you set the port via the comand line it will override the port setting in the config
+		// if you set the port via the command line it will override the port setting in the config
 		if serverPort == defaultHTTPPort && conf.Webserver.Port != "" {
 			serverPort = string(conf.Webserver.Port)
 		}

@@ -132,7 +132,7 @@ func hostName(r *http.Request) string {
 	return r.Host
 }
 
-// various checks to determin if the request is http or https. the scheme is needed for the TileURLs
+// various checks to determine if the request is http or https. the scheme is needed for the TileURLs
 // r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
 func scheme(r *http.Request) string {
 	if r.Header.Get("X-Forwarded-Proto") != "" {
@@ -174,13 +174,13 @@ func buildCapabilitiesURL(r *http.Request, uriParts []string, query url.Values) 
 	return fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, uri), q)
 }
 
-// corsHanlder is used to respond to all OPTIONS requests for registered routes
+// corsHandler is used to respond to all OPTIONS requests for registered routes
 func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
 	setHeaders(w)
 	return
 }
 
-// setHeaders sets deafult headers and user defined headers
+// setHeaders sets default headers and user defined headers
 func setHeaders(w http.ResponseWriter) {
 	// add our default CORS headers
 	for name, val := range DefaultCORSHeaders {

@@ -1,5 +1,5 @@
 /*
-Package math contins generic math functions that we need for doing transforms.
+Package math contains generic math functions that we need for doing transforms.
 this package will augment the go math library.
 */
 package maths
@@ -331,6 +331,8 @@ func Exp2(p uint64) uint64 {
 
 // Minimum of uints
 func Min(x, y uint) uint {
-	if x < y {return x}
+	if x < y {
+		return x
+	}
 	return y
 }

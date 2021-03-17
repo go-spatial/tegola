@@ -49,7 +49,7 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 			// buffer which will hold a copy of the response for writing to the cache
 			var buff bytes.Buffer
 
-			// ovewrite our current responseWriter with a tileCacheResponseWriter
+			// overwrite our current responseWriter with a tileCacheResponseWriter
 			w = newTileCacheResponseWriter(w, &buff)
 
 			next.ServeHTTP(w, r)
@@ -89,7 +89,7 @@ func newTileCacheResponseWriter(resp http.ResponseWriter, w io.Writer) http.Resp
 	}
 }
 
-// tileCacheResponsWriter wraps http.ResponseWriter (https://golang.org/pkg/net/http/#ResponseWriter)
+// tileCacheResponseWriter wraps http.ResponseWriter (https://golang.org/pkg/net/http/#ResponseWriter)
 // to additionally write the response to a cache when there is a cache MISS
 type tileCacheResponseWriter struct {
 	// status response code

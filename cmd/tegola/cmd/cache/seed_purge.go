@@ -60,7 +60,7 @@ var (
 var SeedPurgeCmd = &cobra.Command{
 	Use:     "seed",
 	Aliases: []string{"purge"},
-	Short:   "seed or pruge tiles from the cache",
+	Short:   "seed or purge tiles from the cache",
 	Long:    "command to seed or purge tiles from the cache",
 	Example: "tegola cache seed --bounds lng,lat,lng,lat",
 }
@@ -83,7 +83,7 @@ func init() {
 	SeedPurgeCmd.AddCommand(TileNameCmd)
 }
 
-// seedPurgeCmdValidate will validate the presistent flags and set associated variables as needed
+// seedPurgeCmdValidate will validate the persistent flags and set associated variables as needed
 func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 
 	if cmd.HasParent() {
@@ -185,9 +185,9 @@ func seedPurgeCommand(cmd *cobra.Command, args []string) (err error) {
 	}()
 
 	log.Info("zoom list: ", zooms)
-	tilechannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms)
+	tileChannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms)
 
-	return doWork(ctx, tilechannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
+	return doWork(ctx, tileChannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 }
 
 func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint) *TileChannel {
