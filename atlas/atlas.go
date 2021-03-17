@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-spatial/tegola/internal/observer"
+
 	"github.com/go-spatial/tegola/observability"
 
 	"github.com/go-spatial/geom/slippy"
@@ -237,10 +239,16 @@ func (a *Atlas) SetObservability(o observability.Interface) {
 }
 
 func (a *Atlas) Observer() observability.Interface {
+	var o observability.Interface
 	if a == nil {
-		return defaultAtlas.Observer()
+		o = defaultAtlas.Observer()
+	} else {
+		o = a.observer
 	}
-	return a.observer
+	if _, ok := o.(observer.Null); ok {
+		return nil
+	}
+	return o
 }
 
 // AllMaps returns all registered maps in defaultAtlas

@@ -20,6 +20,12 @@ type Interface interface {
 	Purge(key *Key) error
 }
 
+// Wrapped Cache are for cache backend that wrap other cache backends
+// Original will return the first cache backend to be wrapped
+type Wrapped interface {
+	Original() Interface
+}
+
 // ParseKey will parse a string in the format /:map/:layer/:z/:x/:y into a Key struct. The :layer value is optional
 // ParseKey also supports other OS delimiters (i.e. Windows - "\")
 func ParseKey(str string) (*Key, error) {

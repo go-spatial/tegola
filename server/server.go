@@ -65,21 +65,27 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	r.OptionsHandler = corsHandler
 
 	if o != nil && o != observability.NullObserver {
-		// Only setup the /metrics endpoint if we have a configured observer
-		log.Infof("Setting up observer: %v", o.Name())
-		group.UsingContext().Handler(http.MethodGet, "/metrics", o.Handler("/metrics"))
+		const (
+			metricsRoute = "/metrics"
+		)
+		if h := o.Handler(metricsRoute); h != nil {
+			// Only setup the /metrics endpoint if we have a configured observer
+			log.Infof("Setting up observer: %v", o.Name())
+			group.UsingContext().Handler(http.MethodGet, metricsRoute, h)
+		}
 	}
+
 	// capabilities endpoints
-	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/capabilities", o, HeadersHandler(HandleCapabilities{})))
-	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/capabilities/:map_name", o, HeadersHandler(HandleMapCapabilities{})))
+	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities", o, HeadersHandler(HandleCapabilities{})))
+	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities/:map_name", o, HeadersHandler(HandleMapCapabilities{})))
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/maps/:map_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
-	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/maps/:map_name/:layer_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
+	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
+	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/:layer_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
 
 	// map style
-	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/maps/:map_name/style.json", o, HeadersHandler(HandleMapStyle{})))
+	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/style.json", o, HeadersHandler(HandleMapStyle{})))
 
 	// setup viewer routes, which can be excluded via build flags
 	setupViewer(o, group)
