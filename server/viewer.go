@@ -11,7 +11,7 @@ import (
 	"github.com/go-spatial/tegola/server/bindata"
 )
 
-// setupViewer in this file is used for reigstering the viewer routes when the viewer
+// setupViewer in this file is used for registering the viewer routes when the viewer
 // is included in the build (default)
 func setupViewer(group *httptreemux.Group) {
 	prefixStripper := FilePathPrefixStripper{

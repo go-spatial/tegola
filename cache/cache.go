@@ -123,7 +123,7 @@ func (k Key) String() string {
 		strconv.FormatUint(uint64(k.Y), 10))
 }
 
-// InitFunc initilize a cache given a config map.
+// InitFunc initialize a cache given a config map.
 // The InitFunc should validate the config map, and report any errors.
 // This is called by the For function.
 type InitFunc func(dict.Dicter) (Interface, error)
@@ -154,7 +154,7 @@ func Registered() (c []string) {
 	return c
 }
 
-// For function returns a configed cache of the given type, provided the correct config map.
+// For function returns a configured cache of the given type, provided the correct config map.
 func For(cacheType string, config dict.Dicter) (Interface, error) {
 	if cache == nil {
 		return nil, fmt.Errorf("No cache backends registered.")

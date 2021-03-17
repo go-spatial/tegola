@@ -63,7 +63,7 @@ const (
 
 // Atlas holds a collection of maps.
 // If the pointer to Atlas is nil, it will make use of the default atlas; as the container for maps.
-// This is equaivalent to using the functions in the package.
+// This is equivalent to using the functions in the package.
 // An Atlas is safe to use concurrently.
 type Atlas struct {
 	// for managing current access to the map container
