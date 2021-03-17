@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-spatial/tegola/observability"
+
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
@@ -72,6 +74,9 @@ type Atlas struct {
 	maps map[string]Map
 	// holds a reference to the cache backend
 	cacher cache.Interface
+
+	// holds a reference to the observer backend
+	observer observability.Interface
 }
 
 // AllMaps returns a slice of all maps contained in the Atlas so far.
@@ -222,6 +227,22 @@ func (a *Atlas) SetCache(c cache.Interface) {
 	a.cacher = c
 }
 
+// SetObservability will set the observability backend
+func (a *Atlas) SetObservability(o observability.Interface) {
+	if a == nil {
+		defaultAtlas.SetObservability(o)
+		return
+	}
+	a.observer = o
+}
+
+func (a *Atlas) Observer() observability.Interface {
+	if a == nil {
+		return defaultAtlas.Observer()
+	}
+	return a.observer
+}
+
 // AllMaps returns all registered maps in defaultAtlas
 func AllMaps() []Map {
 	return defaultAtlas.AllMaps()
@@ -258,3 +279,6 @@ func SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 func PurgeMapTile(m Map, tile *tegola.Tile) error {
 	return defaultAtlas.PurgeMapTile(m, tile)
 }
+
+// SetObservability sets the observability backend for the defaultAtlas
+func SetObservability(o observability.Interface) { defaultAtlas.SetObservability(o) }

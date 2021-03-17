@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"path"
 
+	"github.com/go-spatial/tegola/observability"
+
 	"github.com/dimfeld/httptreemux"
 
 	"github.com/go-spatial/tegola/atlas"
@@ -55,26 +57,32 @@ var (
 
 // NewRouter set's up the our routes.
 func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
+	o := a.Observer()
 	r := httptreemux.New()
 	group := r.NewGroup(URIPrefix)
 
 	// one handler to respond to all OPTIONS requests for registered routes with our CORS headers
 	r.OptionsHandler = corsHandler
 
+	if o != nil && o != observability.NullObserver {
+		// Only setup the /metrics endpoint if we have a configured observer
+		log.Infof("Setting up observer: %v", o.Name())
+		group.UsingContext().Handler(http.MethodGet, "/metrics", o.Handler("/metrics"))
+	}
 	// capabilities endpoints
-	group.UsingContext().Handler("GET", "/capabilities", HeadersHandler(HandleCapabilities{}))
-	group.UsingContext().Handler("GET", "/capabilities/:map_name", HeadersHandler(HandleMapCapabilities{}))
+	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/capabilities", o, HeadersHandler(HandleCapabilities{})))
+	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/capabilities/:map_name", o, HeadersHandler(HandleMapCapabilities{})))
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler("GET", "/maps/:map_name/:z/:x/:y", HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
-	group.UsingContext().Handler("GET", "/maps/:map_name/:layer_name/:z/:x/:y", HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY))))
+	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/maps/:map_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
+	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/maps/:map_name/:layer_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
 
 	// map style
-	group.UsingContext().Handler("GET", "/maps/:map_name/style.json", HeadersHandler(HandleMapStyle{}))
+	group.UsingContext().Handler(observability.InstrumentHandler(http.MethodGet, "/maps/:map_name/style.json", o, HeadersHandler(HandleMapStyle{})))
 
 	// setup viewer routes, which can be excluded via build flags
-	setupViewer(group)
+	setupViewer(o, group)
 
 	return r
 }

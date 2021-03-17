@@ -97,5 +97,10 @@ func initConfig(configFile string, cacheRequired bool) (err error) {
 			atlas.SetCache(cache)
 		}
 	}
+	observer, err := register.Observer(conf.Observer)
+	if err != nil {
+		return err
+	}
+	atlas.SetObservability(observer)
 	return nil
 }

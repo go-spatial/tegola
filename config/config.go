@@ -28,6 +28,7 @@ type Config struct {
 	LocationName string
 	Webserver    Webserver `toml:"webserver"`
 	Cache        env.Dict  `toml:"cache"`
+	Observer     env.Dict  `toml:"observer"`
 	// Map of providers.
 	//  all providers must have at least two entries.
 	// 1. name -- this is the name that is referenced in

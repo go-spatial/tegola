@@ -118,6 +118,9 @@ ssl_key = "privkey.pem"     # ssl key for serving by https
   Access-Control-Allow-Origin = "*"
   Cache-Control = "no-cache, no-store, must-revalidate"
 
+[observer]
+type = "prometheus"         # configure the prometheus metric end point
+
 [cache]                     # configure a tile cache
 type = "file"               # a file cache will cache to the local file system
 basepath = "/tmp/tegola"    # where to write the file cache
@@ -301,6 +304,7 @@ The following build flags can be used to turn off certain features of tegola:
 - `noGpkgProvider` - turn off the GeoPackage data provider. Note, GeoPackage uses CGO and will be turned off if the environment variable `CGO_ENABLED=0` is set prior to building.
 - `noViewer` - turn off the built in viewer.
 - `pprof` - enable [Go profiler](https://golang.org/pkg/net/http/pprof/). Start profile server by setting the environment `TEGOLA_HTTP_PPROF_BIND` environment (e.g. `TEGOLA_HTTP_PPROF_BIND=localhost:6060`).
+- `noPrometheusObserver` - turn off support for the Prometheus metric end point.
 
 Example of using the build flags to turn of the Redis cache back end, the GeoPackage provider and the built in viewer.
 
