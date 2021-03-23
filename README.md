@@ -24,7 +24,7 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 ## Usage
 ```
 tegola is a vector tile server
-Version: v0.12.0
+Version: v0.13.0
 
 Usage:
   tegola [command]
@@ -282,11 +282,11 @@ The requested tile will be encode a layer with the `name` value set to `debug` a
 
  - `debug_outline`: a line feature that traces the border of the tile
  - `debug_text`: a point feature in the middle of the tile with the following tags:
-   - `zxy`: a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
+ - `zxy`: a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
 
 ## Building from source
 
-Tegola is written in [Go](https://golang.org/) and requires Go 1.14 to compile from source. (We support the two newest versions of Go.) To build tegola from source, make sure you have Go installed and have cloned the repository. Navigate to the repository then run the following command:
+Tegola is written in [Go](https://golang.org/) and requires Go 1.16 to compile from source. To build tegola from source, make sure you have Go installed and have cloned the repository. Navigate to the repository then run the following command:
 
 ```bash
 cd cmd/tegola/ && go build -mod vendor
