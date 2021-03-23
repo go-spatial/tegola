@@ -44,10 +44,10 @@ jobs:
     - name: Set tegola version
       run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
 
-    - name: Set up Go 1.14
+    - name: Set up Go 1.16
       uses: actions/setup-go@v2
       with:
-        go-version: 1.14
+        go-version: 1.16
 
     - name: Build for Linux
       env:
@@ -130,10 +130,10 @@ jobs:
     - name: Set Tegola version
       run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
 
-    - name: Set up Go 1.14
+    - name: Set up Go 1.16
       uses: actions/setup-go@v2
       with:
-        go-version: 1.14
+        go-version: 1.16
 
     - name: Build for Darwin
       env:
@@ -210,9 +210,6 @@ jobs:
     steps:
     - name: Check out code
       uses: actions/checkout@v2
-#      with:
-        # necessary until Go modules have been adopted in this repo
- #       path: go\src\github.com\go-spatial\tegola
 
     - name: Download version artifact
       uses: actions/download-artifact@v1
@@ -222,15 +219,12 @@ jobs:
     - name: Set tegola version
       run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
 
-    - name: Set up Go 1.14
+    - name: Set up Go 1.16
       uses: actions/setup-go@v1
       with:
-        go-version: 1.14
+        go-version: 1.16
 
     - name: Build for Windows
-#      env:
-        # necessary until Go modules have been adopted in this repo
-#        GOPATH: ${{ github.workspace }}\go
       run: |
           cd cmd\tegola
           go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=$Env:VERSION"

@@ -27,7 +27,7 @@
 #  $ docker run -v /path/to/docker-config:/opt/tegola_config -p 8080 tegola serve
 
 # Intermediary container for building
-FROM golang:1.15.6-alpine3.12 AS build
+FROM golang:1.16.2-alpine3.12 AS build
 
 ARG VERSION="Version Not Set"
 ENV VERSION="${VERSION}"

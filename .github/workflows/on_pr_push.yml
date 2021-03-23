@@ -5,9 +5,6 @@ jobs:
   test:
     name: Test on Ubuntu
     runs-on: ubuntu-latest
-    strategy:
-      matrix: 
-        go: ['1.14']
 
     services:
       # label used to access the service container
@@ -36,10 +33,10 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - name: Set up Go ${{ matrix.go }}
+    - name: Set up Go 1.16
       uses: actions/setup-go@v2
       with:
-        go-version: ${{ matrix.go }}
+        go-version: 1.16
 
     - name: Env Debug
       run: |

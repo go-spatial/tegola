@@ -1,6 +1,6 @@
 module github.com/go-spatial/tegola
 
-go 1.14
+go 1.16
 
 require (
 	github.com/Azure/azure-pipeline-go v0.0.0-20180607212504-7571e8eb0876 // indirect
