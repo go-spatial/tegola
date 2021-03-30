@@ -23,7 +23,7 @@ require (
 	github.com/jackc/pgx v3.2.0+incompatible
 	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
 	github.com/karalabe/xgo v0.0.0-20180416083054-f99c776585a0 // indirect
-	github.com/mattn/go-sqlite3 v1.10.1-0.20190315083729-31f5bb843b78
+	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/mattn/goveralls v0.0.5
 	github.com/pborman/uuid v1.2.0
 	github.com/prometheus/client_golang v1.9.0
