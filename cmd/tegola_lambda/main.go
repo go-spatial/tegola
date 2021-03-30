@@ -15,12 +15,11 @@ import (
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/build"
 	"github.com/go-spatial/tegola/server"
 )
 
 var (
-	// Version set at build time via the CI
-	Version = "version not set"
 	// mux is a reference to the http muxer. it's stored as a package
 	// var so we can take advantage of Lambda's "Global State".
 	mux *httptreemux.TreeMux
@@ -90,7 +89,7 @@ func init() {
 	}
 
 	// set our server version
-	server.Version = Version
+	server.Version = build.Version
 	if conf.Webserver.HostName != "" {
 		server.HostName = string(conf.Webserver.HostName)
 	}
@@ -116,6 +115,7 @@ func init() {
 }
 
 func main() {
+	build.Commands = []string{"lambda"}
 	// the second argument here tells algnhsa to watch for the MVT MimeType Content-Type headers
 	// if it detects this in the response the payload will be base64 encoded. Lambda needs to be configured
 	// to handle binary responses so it can convert the base64 encoded payload back into binary prior

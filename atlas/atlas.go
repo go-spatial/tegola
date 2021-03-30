@@ -79,6 +79,12 @@ type Atlas struct {
 
 	// holds a reference to the observer backend
 	observer observability.Interface
+
+	// should publish the build info on change of observer
+	// this is set by calling PublishBuildInfo, which will publish
+	// the build info on the observer and insure changes to observer
+	// also publishes the build info.
+	publishBuildInfo bool
 }
 
 // AllMaps returns a slice of all maps contained in the Atlas so far.
@@ -236,19 +242,35 @@ func (a *Atlas) SetObservability(o observability.Interface) {
 		return
 	}
 	a.observer = o
+	if a.publishBuildInfo {
+		a.observer.PublishBuildInfo()
+	}
 }
 
 func (a *Atlas) Observer() observability.Interface {
-	var o observability.Interface
 	if a == nil {
-		o = defaultAtlas.Observer()
-	} else {
-		o = a.observer
+		return defaultAtlas.Observer()
 	}
-	if _, ok := o.(observer.Null); ok {
+	if a.observer == nil {
 		return nil
 	}
-	return o
+	if _, ok := a.observer.(observer.Null); ok {
+		return nil
+	}
+	return a.observer
+}
+
+func (a *Atlas) PublishBuildInfo() {
+	if a == nil {
+		defaultAtlas.PublishBuildInfo()
+		return
+	}
+	o := a.Observer()
+	if o == nil {
+		return
+	}
+	a.publishBuildInfo = true
+	o.PublishBuildInfo()
 }
 
 // AllMaps returns all registered maps in defaultAtlas
@@ -290,3 +312,5 @@ func PurgeMapTile(m Map, tile *tegola.Tile) error {
 
 // SetObservability sets the observability backend for the defaultAtlas
 func SetObservability(o observability.Interface) { defaultAtlas.SetObservability(o) }
+
+func PublishBuildInfo() { defaultAtlas.PublishBuildInfo() }

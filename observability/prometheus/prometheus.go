@@ -1,14 +1,13 @@
 package prometheus
 
 import (
+	"log"
 	"net/http"
-
-	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/go-spatial/tegola/observability"
+	"sync"
 
 	"github.com/go-spatial/tegola/dict"
-
+	"github.com/go-spatial/tegola/observability"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -45,6 +44,8 @@ type observer struct {
 
 	httpHandlers map[string]*httpHandler
 	registry     prometheus.Registerer
+
+	publishedBuildInfo sync.Once
 }
 
 func New(config dict.Dicter) (observability.Interface, error) {
@@ -58,12 +59,18 @@ func New(config dict.Dicter) (observability.Interface, error) {
 		obs.observeVars = []string{":map_name", ":layer_name", ":z"}
 	}
 
+	NewBuildInfo(obs.registry)
+
 	return &obs, nil
 }
 
 func (*observer) Name() string { return Name }
 
 func (observer) Handler(string) http.Handler { return promhttp.Handler() }
+func (obs *observer) PublishBuildInfo() {
+	log.Printf("publishing build info")
+	obs.publishedBuildInfo.Do(PublishBuildInfo)
+}
 
 func (obs *observer) InstrumentedAPIHttpHandler(method, route string, next http.Handler) http.Handler {
 	if obs == nil {

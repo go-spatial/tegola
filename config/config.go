@@ -309,7 +309,7 @@ func Load(location string) (conf Config, err error) {
 		if _, err := os.Stat(location); os.IsNotExist(err) {
 			return conf, fmt.Errorf("config file at location (%v) not found", location)
 		}
-		// open the confi file
+		// open the config file
 		reader, err = os.Open(location)
 		if err != nil {
 			return conf, fmt.Errorf("error opening local config file (%v): %v ", location, err)

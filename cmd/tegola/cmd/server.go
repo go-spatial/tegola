@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-spatial/tegola/atlas"
+
 	"github.com/go-spatial/cobra"
+	"github.com/go-spatial/tegola/internal/build"
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"
@@ -35,8 +38,10 @@ var serverCmd = &cobra.Command{
 		}
 
 		// set our server version
-		server.Version = Version
+		server.Version = build.Version
 		server.HostName = string(conf.Webserver.HostName)
+		build.Commands = append(build.Commands, cmd.Name())
+		atlas.PublishBuildInfo()
 
 		// set user defined response headers
 		for name, value := range conf.Webserver.Headers {

@@ -140,7 +140,7 @@ jobs:
         GOOS: darwin
       run: |
           cd cmd/tegola
-          go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}"
+          go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/internal/build.Version=${VERSION}"
 
     # workaround for archives losing permissions
     # https://github.com/actions/upload-artifact/issues/38

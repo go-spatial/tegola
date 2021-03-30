@@ -7,6 +7,8 @@ type Null struct{}
 // Handler does nothing.
 func (Null) Handler(string) http.Handler { return nil }
 
+func (Null) PublishBuildInfo() {}
+
 // InstrumentedAPIHttpHandler does not do anything and just returns the handler
 func (Null) InstrumentedAPIHttpHandler(_, _ string, handler http.Handler) http.Handler {
 	return handler

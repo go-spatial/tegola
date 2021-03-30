@@ -9,13 +9,12 @@ import (
 	cachecmd "github.com/go-spatial/tegola/cmd/tegola/cmd/cache"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/build"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
 var (
 	configFile string
-	// set at build time via the CI
-	Version = "version not set"
 	// parsed config
 	conf config.Config
 
@@ -43,14 +42,16 @@ var RootCmd = &cobra.Command{
 	Use:   "tegola",
 	Short: "tegola is a vector tile server",
 	Long: fmt.Sprintf(`tegola is a vector tile server
-Version: %v`, Version),
+Version: %v`, build.Version),
 	PersistentPreRunE: rootCmdValidatePersistent,
 }
 
 func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
 	requireCache := RequireCache || cachecmd.RequireCache
-	switch cmd.CalledAs() {
+	cmdName := cmd.CalledAs()
+	switch cmdName {
 	case "help", "version":
+		build.Commands = append(build.Commands, cmdName)
 		return nil
 	default:
 		return initConfig(configFile, requireCache)

@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/go-spatial/tegola/internal/build"
+
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
@@ -132,6 +134,7 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 
 		return fmt.Errorf("expected purge/seed got (%v) for command name", cmdName)
 	}
+	build.Commands = append(build.Commands, "cache", cmdName)
 
 	return nil
 
@@ -168,12 +171,13 @@ func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
 	return nil
 }
 
-func seedPurgeCommand(cmd *cobra.Command, args []string) (err error) {
+func seedPurgeCommand(_ *cobra.Command, _ []string) (err error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer gdcmd.New().Complete()
 	gdcmd.OnComplete(provider.Cleanup)
+	atlas.PublishBuildInfo()
 
 	go func() {
 		select {

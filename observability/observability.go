@@ -34,6 +34,9 @@ type Interface interface {
 	// Returns the name of observer
 	Name() string
 
+	// PublishBuildInfo will send out a piece of metric to represent the build information if it makes sense to do so.
+	PublishBuildInfo()
+
 	APIObserver
 	ViewerObserver
 }
