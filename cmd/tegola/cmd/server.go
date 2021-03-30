@@ -3,15 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
-	"github.com/go-spatial/tegola/atlas"
-
 	"github.com/go-spatial/cobra"
+	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/build"
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
+	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/server"
 )
@@ -30,6 +30,7 @@ var serverCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		gdcmd.New()
 		gdcmd.OnComplete(provider.Cleanup)
+		gdcmd.OnComplete(observability.Cleanup)
 
 		// check config for server port setting
 		// if you set the port via the command line it will override the port setting in the config
@@ -41,7 +42,7 @@ var serverCmd = &cobra.Command{
 		server.Version = build.Version
 		server.HostName = string(conf.Webserver.HostName)
 		build.Commands = append(build.Commands, cmd.Name())
-		atlas.PublishBuildInfo()
+		atlas.StartSubProcesses()
 
 		// set user defined response headers
 		for name, value := range conf.Webserver.Headers {

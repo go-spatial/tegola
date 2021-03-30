@@ -9,13 +9,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-spatial/tegola/internal/observer"
-
-	"github.com/go-spatial/tegola/observability"
-
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/internal/observer"
+	"github.com/go-spatial/tegola/observability"
 )
 
 var (
@@ -80,7 +78,7 @@ type Atlas struct {
 	// holds a reference to the observer backend
 	observer observability.Interface
 
-	// should publish the build info on change of observer
+	// publishBuildInfo indicates if we should publish the build info on change of observer
 	// this is set by calling PublishBuildInfo, which will publish
 	// the build info on the observer and insure changes to observer
 	// also publishes the build info.
@@ -232,6 +230,11 @@ func (a *Atlas) SetCache(c cache.Interface) {
 		defaultAtlas.SetCache(c)
 		return
 	}
+	// let's see if we have an observer set. If so, we need to wrap
+	// the given cache with the observer.
+	if a.observer != nil {
+		c = a.observer.InstrumentedCache(c)
+	}
 	a.cacher = c
 }
 
@@ -241,9 +244,19 @@ func (a *Atlas) SetObservability(o observability.Interface) {
 		defaultAtlas.SetObservability(o)
 		return
 	}
+	if a.observer != nil {
+		a.observer.Shutdown()
+	}
 	a.observer = o
 	if a.publishBuildInfo {
-		a.observer.PublishBuildInfo()
+		a.observer.Init()
+	}
+	if a.cacher != nil {
+		if w, ok := a.cacher.(observability.Cache); ok && w.IsObserver() {
+			a.cacher = o.InstrumentedCache(w.Original())
+		} else {
+			a.cacher = o.InstrumentedCache(a.cacher)
+		}
 	}
 }
 
@@ -260,9 +273,9 @@ func (a *Atlas) Observer() observability.Interface {
 	return a.observer
 }
 
-func (a *Atlas) PublishBuildInfo() {
+func (a *Atlas) StartSubProcesses() {
 	if a == nil {
-		defaultAtlas.PublishBuildInfo()
+		defaultAtlas.StartSubProcesses()
 		return
 	}
 	o := a.Observer()
@@ -270,7 +283,7 @@ func (a *Atlas) PublishBuildInfo() {
 		return
 	}
 	a.publishBuildInfo = true
-	o.PublishBuildInfo()
+	o.Init()
 }
 
 // AllMaps returns all registered maps in defaultAtlas
@@ -313,4 +326,4 @@ func PurgeMapTile(m Map, tile *tegola.Tile) error {
 // SetObservability sets the observability backend for the defaultAtlas
 func SetObservability(o observability.Interface) { defaultAtlas.SetObservability(o) }
 
-func PublishBuildInfo() { defaultAtlas.PublishBuildInfo() }
+func StartSubProcesses() { defaultAtlas.StartSubProcesses() }

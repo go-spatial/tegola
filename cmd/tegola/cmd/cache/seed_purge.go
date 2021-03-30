@@ -6,16 +6,15 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/go-spatial/tegola/internal/build"
-
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/internal/build"
+	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
-
-	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 )
 
 const defaultUsage = `Usage:{{if .Runnable}}
@@ -177,7 +176,8 @@ func seedPurgeCommand(_ *cobra.Command, _ []string) (err error) {
 	defer cancel()
 	defer gdcmd.New().Complete()
 	gdcmd.OnComplete(provider.Cleanup)
-	atlas.PublishBuildInfo()
+	gdcmd.OnComplete(observability.Cleanup)
+	atlas.StartSubProcesses()
 
 	go func() {
 		select {
