@@ -20,7 +20,7 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 - Support for [AWS Lambda](cmd/tegola_lambda).
 - Support for serving HTTPS.
 - Support for [PostGIS ST_AsMVT](mvtprovider/postgis).
-- Support for [Prometheus](observability/prometheus) observability.
+- Support for [Prometheus](observability/prometheus/README.md) observability.
 
 ## Usage
 ```
