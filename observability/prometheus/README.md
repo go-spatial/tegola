@@ -42,6 +42,7 @@ A gauge with build information from the running command
 * revision - the git short revision number
 * version - the set version number
 * command - the running command
+* tags - the build tags that were used to build the Tegola Binary
 
 
 Use this in conjunction with other command to compare metrics across
