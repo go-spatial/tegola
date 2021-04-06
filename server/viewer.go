@@ -29,8 +29,15 @@ type FilePathPrefixStripper struct {
 }
 
 func (fsps *FilePathPrefixStripper) Open(name string) (http.File, error) {
-	if URIPrefix != "/" {
-		name = strings.TrimPrefix(name, URIPrefix)
+	// Don't want to modify the Global.
+	// TODO(GDEY): Why is URIPrefix a global? Can it change after startup?
+	prefix := URIPrefix
+	// Strip any leading "/" from the URIPrefix.
+	if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
+		prefix = prefix[:len(prefix)-1]
+	}
+	if prefix != "" {
+		name = strings.TrimPrefix(name, prefix)
 	}
 
 	return fsps.fs.Open(name)
