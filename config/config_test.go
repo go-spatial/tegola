@@ -957,6 +957,113 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
+		"13 reserved parameter token": {
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name: "bad_param",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+						},
+						Parameters: []config.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!BBOX!",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTokenReserved{
+				MapName: "bad_param",
+				Parameter: config.QueryParameter{
+					Name:  "param",
+					Token: "!BBOX!",
+				},
+			},
+		},
+		"14 duplicate parameter name": {
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name: "dupe_param_name",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+						},
+						Parameters: []config.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!PARAM!",
+							},
+							{
+								Name:  "param",
+								Token: "!PARAM2!",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamNameDuplicate{
+				MapName: "dupe_param_name",
+				Parameter: config.QueryParameter{
+					Name:  "param",
+					Token: "!PARAM2!",
+				},
+			},
+		},
+		"15 duplicate parameter token": {
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "provider1",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name: "dupe_param_token",
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water_default_z",
+							},
+						},
+						Parameters: []config.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!PARAM!",
+							},
+							{
+								Name:  "param2",
+								Token: "!PARAM!",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTokenDuplicate{
+				MapName: "dupe_param_token",
+				Parameter: config.QueryParameter{
+					Name:  "param2",
+					Token: "!PARAM!",
+				},
+			},
+		},
 	}
 
 	for name, tc := range tests {

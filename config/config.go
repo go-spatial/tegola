@@ -16,6 +16,45 @@ import (
 	"github.com/go-spatial/tegola/provider"
 )
 
+const (
+	BboxToken             = "!BBOX!"
+	ZoomToken             = "!ZOOM!"
+	XToken                = "!X!"
+	YToken                = "!Y!"
+	ZToken                = "!Z!"
+	ScaleDenominatorToken = "!SCALE_DENOMINATOR!"
+	PixelWidthToken       = "!PIXEL_WIDTH!"
+	PixelHeightToken      = "!PIXEL_HEIGHT!"
+	IdFieldToken          = "!ID_FIELD!"
+	GeomFieldToken        = "!GEOM_FIELD!"
+	GeomTypeToken         = "!GEOM_TYPE!"
+)
+
+// ReservedTokens for query injection
+var ReservedTokens = []string{
+	BboxToken,
+	ZoomToken,
+	XToken,
+	YToken,
+	ZToken,
+	ScaleDenominatorToken,
+	PixelWidthToken,
+	PixelHeightToken,
+	IdFieldToken,
+	GeomFieldToken,
+	GeomTypeToken,
+}
+
+// IsReservedToken returns true if the specified token is reserved
+func IsReservedToken(token string) bool {
+	for _, t := range ReservedTokens {
+		if token == t {
+			return true
+		}
+	}
+	return false
+}
+
 var blacklistHeaders = []string{"content-encoding", "content-length", "content-type"}
 
 // Config represents a tegola config file.
@@ -52,12 +91,55 @@ type Webserver struct {
 
 // A Map represents a map in the Tegola Config file.
 type Map struct {
-	Name        env.String   `toml:"name"`
-	Attribution env.String   `toml:"attribution"`
-	Bounds      []env.Float  `toml:"bounds"`
-	Center      [3]env.Float `toml:"center"`
-	Layers      []MapLayer   `toml:"layers"`
-	TileBuffer  *env.Int     `toml:"tile_buffer"`
+	Name        env.String       `toml:"name"`
+	Attribution env.String       `toml:"attribution"`
+	Bounds      []env.Float      `toml:"bounds"`
+	Center      [3]env.Float     `toml:"center"`
+	Layers      []MapLayer       `toml:"layers"`
+	Parameters  []QueryParameter `toml:"params"`
+	TileBuffer  *env.Int         `toml:"tile_buffer"`
+}
+
+// ValidateParams ensures configured params don't conflict with existing
+// query tokens or have overlapping names
+func (m Map) ValidateParams() error {
+	if len(m.Parameters) == 0 {
+		return nil
+	}
+
+	var usedNames, usedTokens []string
+
+	for _, param := range m.Parameters {
+		if IsReservedToken(param.Token) {
+			return ErrParamTokenReserved{
+				MapName:   string(m.Name),
+				Parameter: param,
+			}
+		}
+
+		for _, name := range usedNames {
+			if name == param.Name {
+				return ErrParamNameDuplicate{
+					MapName:   string(m.Name),
+					Parameter: param,
+				}
+			}
+		}
+
+		for _, token := range usedTokens {
+			if token == param.Token {
+				return ErrParamTokenDuplicate{
+					MapName:   string(m.Name),
+					Parameter: param,
+				}
+			}
+		}
+
+		usedNames = append(usedNames, param.Name)
+		usedTokens = append(usedTokens, param.Token)
+	}
+
+	return nil
 }
 
 // MapLayer represents a the config for a layer in a map
@@ -69,10 +151,10 @@ type MapLayer struct {
 	MinZoom       *env.Uint   `toml:"min_zoom"`
 	MaxZoom       *env.Uint   `toml:"max_zoom"`
 	DefaultTags   interface{} `toml:"default_tags"`
-	// DontSimplify indicates wheather feature simplification should be applied.
+	// DontSimplify indicates whether feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify
 	DontSimplify env.Bool `toml:"dont_simplify"`
-	// DontClip indicates wheather feature clipping should be applied.
+	// DontClip indicates whether feature clipping should be applied.
 	// We use a negative in the name so the default is to clipping
 	DontClip env.Bool `toml:"dont_clip"`
 }
@@ -96,6 +178,13 @@ func (ml MapLayer) GetName() (string, error) {
 	}
 	_, name, err := ml.ProviderLayerName()
 	return name, err
+}
+
+// QueryParameter represents an HTTP query parameter specified for use with
+// a given map instance.
+type QueryParameter struct {
+	Name  string `toml:"name"`
+	Token string `toml:"token"`
 }
 
 // Validate checks the config for issues
@@ -141,6 +230,12 @@ func (c *Config) Validate() error {
 	// map of layers to providers
 	mapLayers := map[string]map[string]MapLayer{}
 	for mapKey, m := range c.Maps {
+
+		// validate any declared query parameters
+		if err := m.ValidateParams(); err != nil {
+			return err
+		}
+
 		if _, ok := mapLayers[string(m.Name)]; !ok {
 			mapLayers[string(m.Name)] = map[string]MapLayer{}
 		}
@@ -149,7 +244,7 @@ func (c *Config) Validate() error {
 		// we can only have the same provider for all layers.
 		// This allow us to track what the first found provider
 		// is.
-		provider := ""
+		currProvider := ""
 		isMVTProvider := false
 		for layerKey, l := range m.Layers {
 			pname, _, err := l.ProviderLayerName()
@@ -157,11 +252,11 @@ func (c *Config) Validate() error {
 				return err
 			}
 
-			if provider == "" {
+			if currProvider == "" {
 				// This is the first provider we found.
 				// For MVTProviders all others need to be the same, so store it
 				// so we can check later
-				provider = pname
+				currProvider = pname
 			}
 
 			isMvt, doesExists := mvtproviders[pname]
@@ -178,13 +273,13 @@ func (c *Config) Validate() error {
 			isMVTProvider = isMVTProvider || isMvt
 
 			// only need to do this check if we are dealing with MVTProviders
-			if isMVTProvider && pname != provider {
+			if isMVTProvider && pname != currProvider {
 				// for mvt_providers we can only have the same provider
 				// for all layers
 				// check to see
 				if mvtproviders[pname] || isMVTProvider {
 					return ErrMVTDifferentProviders{
-						Original: provider,
+						Original: currProvider,
 						Current:  pname,
 					}
 				}

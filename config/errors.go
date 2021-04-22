@@ -13,6 +13,36 @@ func (e ErrMapNotFound) Error() string {
 	return fmt.Sprintf("config: map (%v) not found", e.MapName)
 }
 
+type ErrParamTokenReserved struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamTokenReserved) Error() string {
+	return fmt.Sprintf("config: map %s has parameter %s referencing reserved token %s",
+		e.MapName, e.Parameter.Name, e.Parameter.Token)
+}
+
+type ErrParamNameDuplicate struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamNameDuplicate) Error() string {
+	return fmt.Sprintf("config: map %s redeclares duplicate parameter with name %s",
+		e.MapName, e.Parameter.Name)
+}
+
+type ErrParamTokenDuplicate struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamTokenDuplicate) Error() string {
+	return fmt.Sprintf("config: map %s redeclares existing parameter token %s in param %s",
+		e.MapName, e.Parameter.Token, e.Parameter.Name)
+}
+
 type ErrInvalidProviderForMap struct {
 	MapName      string
 	ProviderName string
