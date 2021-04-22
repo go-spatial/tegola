@@ -20,7 +20,7 @@ var (
 	// parsed config
 	conf config.Config
 
-	// require cache
+	// RequireCache in this instance
 	RequireCache bool
 )
 
@@ -77,11 +77,11 @@ var RootCmd = &cobra.Command{
 	Use:   "tegola",
 	Short: "tegola is a vector tile server",
 	Long: fmt.Sprintf(`tegola is a vector tile server
-Version: %v`, build.Version),
+		Version: %v`, build.Version),
 	PersistentPreRunE: rootCmdValidatePersistent,
 }
 
-func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
+func rootCmdValidatePersistent(cmd *cobra.Command, _ []string) (err error) {
 	requireCache := RequireCache || cachecmd.RequireCache
 	cmdName := cmd.CalledAs()
 	switch cmdName {
