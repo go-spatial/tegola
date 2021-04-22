@@ -155,6 +155,11 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			}
 			newMap.Layers = append(newMap.Layers, layer)
 		}
+
+		if len(m.Parameters) > 0 {
+			a.AddParams(string(m.Name), m.Parameters)
+		}
+
 		a.AddMap(newMap)
 	}
 	return nil

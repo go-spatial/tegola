@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,61 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 )
+
+const (
+	BboxToken             = "!BBOX!"
+	ZoomToken             = "!ZOOM!"
+	XToken                = "!X!"
+	YToken                = "!Y!"
+	ZToken                = "!Z!"
+	ScaleDenominatorToken = "!SCALE_DENOMINATOR!"
+	PixelWidthToken       = "!PIXEL_WIDTH!"
+	PixelHeightToken      = "!PIXEL_HEIGHT!"
+	IdFieldToken          = "!ID_FIELD!"
+	GeomFieldToken        = "!GEOM_FIELD!"
+	GeomTypeToken         = "!GEOM_TYPE!"
+)
+
+// ReservedTokens for query injection
+var ReservedTokens = []string{
+	BboxToken,
+	ZoomToken,
+	XToken,
+	YToken,
+	ZToken,
+	ScaleDenominatorToken,
+	PixelWidthToken,
+	PixelHeightToken,
+	IdFieldToken,
+	GeomFieldToken,
+	GeomTypeToken,
+}
+
+// IsReservedToken returns true if the specified token is reserved
+func IsReservedToken(token string) bool {
+	for _, t := range ReservedTokens {
+		if token == t {
+			return true
+		}
+	}
+	return false
+}
+
+// ParamTypeDecoders is a collection of parsers for different types of user-defined parameters
+var ParamTypeDecoders = map[string]func(string) (interface{}, error){
+	"int": func(s string) (interface{}, error) {
+		return strconv.Atoi(s)
+	},
+	"float": func(s string) (interface{}, error) {
+		return strconv.ParseFloat(s, 32)
+	},
+	"string": func(s string) (interface{}, error) {
+		return s, nil
+	},
+	"bool": func(s string) (interface{}, error) {
+		return strconv.ParseBool(s)
+	},
+}
 
 var blacklistHeaders = []string{"content-encoding", "content-length", "content-type"}
 
@@ -52,12 +108,79 @@ type Webserver struct {
 
 // A Map represents a map in the Tegola Config file.
 type Map struct {
-	Name        env.String   `toml:"name"`
-	Attribution env.String   `toml:"attribution"`
-	Bounds      []env.Float  `toml:"bounds"`
-	Center      [3]env.Float `toml:"center"`
-	Layers      []MapLayer   `toml:"layers"`
-	TileBuffer  *env.Int     `toml:"tile_buffer"`
+	Name        env.String       `toml:"name"`
+	Attribution env.String       `toml:"attribution"`
+	Bounds      []env.Float      `toml:"bounds"`
+	Center      [3]env.Float     `toml:"center"`
+	Layers      []MapLayer       `toml:"layers"`
+	Parameters  []QueryParameter `toml:"params"`
+	TileBuffer  *env.Int         `toml:"tile_buffer"`
+}
+
+// ValidateParams ensures configured params don't conflict with existing
+// query tokens or have overlapping names
+func (m Map) ValidateParams() error {
+	if len(m.Parameters) == 0 {
+		return nil
+	}
+
+	var usedNames, usedTokens []string
+
+	for _, param := range m.Parameters {
+		if _, ok := ParamTypeDecoders[param.Type]; !ok {
+			return ErrParamUnknownType{
+				MapName:   string(m.Name),
+				Parameter: param,
+			}
+		}
+
+		if len(param.DefaultSQL) > 0 && len(param.DefaultValue) > 0 {
+			return ErrParamTwoDefaults{
+				MapName:   string(m.Name),
+				Parameter: param,
+			}
+		}
+
+		if len(param.DefaultValue) > 0 {
+			decoderFn := ParamTypeDecoders[param.Type]
+			if _, err := decoderFn(param.DefaultValue); err != nil {
+				return ErrParamInvalidDefault{
+					MapName:   string(m.Name),
+					Parameter: param,
+				}
+			}
+		}
+
+		if IsReservedToken(param.Token) {
+			return ErrParamTokenReserved{
+				MapName:   string(m.Name),
+				Parameter: param,
+			}
+		}
+
+		for _, name := range usedNames {
+			if name == param.Name {
+				return ErrParamNameDuplicate{
+					MapName:   string(m.Name),
+					Parameter: param,
+				}
+			}
+		}
+
+		for _, token := range usedTokens {
+			if token == param.Token {
+				return ErrParamTokenDuplicate{
+					MapName:   string(m.Name),
+					Parameter: param,
+				}
+			}
+		}
+
+		usedNames = append(usedNames, param.Name)
+		usedTokens = append(usedTokens, param.Token)
+	}
+
+	return nil
 }
 
 // MapLayer represents a the config for a layer in a map
@@ -99,6 +222,37 @@ func (ml MapLayer) GetName() (string, error) {
 	}
 	_, name, err := ml.ProviderLayerName()
 	return name, err
+}
+
+// QueryParameter represents an HTTP query parameter specified for use with
+// a given map instance.
+type QueryParameter struct {
+	Name  string `toml:"name"`
+	Token string `toml:"token"`
+	Type  string `toml:"type"`
+	SQL   string `toml:"sql"`
+	// DefaultSQL replaces SQL if param wasn't passed. Either default_sql or
+	// default_value can be specified
+	DefaultSQL   string `toml:"default_sql"`
+	DefaultValue string `toml:"default_value"`
+	IsRequired   bool
+}
+
+// Normalize will normalize param and set the default values
+func (param *QueryParameter) Normalize() {
+	param.Token = strings.ToUpper(param.Token)
+
+	sql := "?"
+	if len(param.SQL) > 0 {
+		sql = param.SQL
+	}
+	param.SQL = sql
+
+	isRequired := true
+	if len(param.DefaultSQL) > 0 || len(param.DefaultValue) > 0 {
+		isRequired = false
+	}
+	param.IsRequired = isRequired
 }
 
 // Validate checks the config for issues
@@ -144,6 +298,12 @@ func (c *Config) Validate() error {
 	// map of layers to providers
 	mapLayers := map[string]map[string]MapLayer{}
 	for mapKey, m := range c.Maps {
+
+		// validate any declared query parameters
+		if err := m.ValidateParams(); err != nil {
+			return err
+		}
+
 		if _, ok := mapLayers[string(m.Name)]; !ok {
 			mapLayers[string(m.Name)] = map[string]MapLayer{}
 		}
@@ -152,7 +312,7 @@ func (c *Config) Validate() error {
 		// we can only have the same provider for all layers.
 		// This allow us to track what the first found provider
 		// is.
-		provider := ""
+		currentProvider := ""
 		isMVTProvider := false
 		for layerKey, l := range m.Layers {
 			pname, _, err := l.ProviderLayerName()
@@ -160,11 +320,11 @@ func (c *Config) Validate() error {
 				return err
 			}
 
-			if provider == "" {
+			if currentProvider == "" {
 				// This is the first provider we found.
 				// For MVTProviders all others need to be the same, so store it
 				// so we can check later
-				provider = pname
+				currentProvider = pname
 			}
 
 			isMvt, doesExists := mvtproviders[pname]
@@ -181,13 +341,13 @@ func (c *Config) Validate() error {
 			isMVTProvider = isMVTProvider || isMvt
 
 			// only need to do this check if we are dealing with MVTProviders
-			if isMVTProvider && pname != provider {
+			if isMVTProvider && pname != currentProvider {
 				// for mvt_providers we can only have the same provider
 				// for all layers
 				// check to see
 				if mvtproviders[pname] || isMVTProvider {
 					return ErrMVTDifferentProviders{
-						Original: provider,
+						Original: currentProvider,
 						Current:  pname,
 					}
 				}
@@ -286,9 +446,16 @@ func (c *Config) ConfigureTileBuffers() {
 // Parse will parse the Tegola config file provided by the io.Reader.
 func Parse(reader io.Reader, location string) (conf Config, err error) {
 	// decode conf file, don't care about the meta data.
-	_, err = toml.DecodeReader(reader, &conf)
+	_, err = toml.NewDecoder(reader).Decode(&conf)
 	if err != nil {
 		return conf, err
+	}
+
+	for _, m := range conf.Maps {
+		for k, p := range m.Parameters {
+			p.Normalize()
+			m.Parameters[k] = p
+		}
 	}
 
 	conf.LocationName = location
