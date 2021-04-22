@@ -13,6 +13,73 @@ func (e ErrMapNotFound) Error() string {
 	return fmt.Sprintf("config: map (%v) not found", e.MapName)
 }
 
+type ErrParamTokenReserved struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamTokenReserved) Error() string {
+	return fmt.Sprintf("config: map %s has parameter %s referencing reserved token %s",
+		e.MapName, e.Parameter.Name, e.Parameter.Token)
+}
+
+type ErrParamNameDuplicate struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamNameDuplicate) Error() string {
+	return fmt.Sprintf("config: map %s redeclares duplicate parameter with name %s",
+		e.MapName, e.Parameter.Name)
+}
+
+type ErrParamTokenDuplicate struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamTokenDuplicate) Error() string {
+	return fmt.Sprintf("config: map %s redeclares existing parameter token %s in param %s",
+		e.MapName, e.Parameter.Token, e.Parameter.Name)
+}
+
+type ErrParamUnknownType struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamUnknownType) Error() string {
+	validTypes := make([]string, len(ParamTypeDecoders))
+	i := 0
+	for k := range ParamTypeDecoders {
+		validTypes[i] = k
+		i++
+	}
+
+	return fmt.Sprintf("config: map %s has type %s in param %s, which is not one of the known types: %s",
+		e.MapName, e.Parameter.Type, e.Parameter.Name, strings.Join(validTypes, ","))
+}
+
+type ErrParamTwoDefaults struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamTwoDefaults) Error() string {
+	return fmt.Sprintf("config: map %s has both default_value and default_sql defined in param %s",
+		e.MapName, e.Parameter.Name)
+}
+
+type ErrParamInvalidDefault struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamInvalidDefault) Error() string {
+	return fmt.Sprintf("config: map %s has default value in param %s that doesn't match the parameter's type %s",
+		e.MapName, e.Parameter.Name, e.Parameter.Type)
+}
+
 type ErrInvalidProviderForMap struct {
 	MapName      string
 	ProviderName string

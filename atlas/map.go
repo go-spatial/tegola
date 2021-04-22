@@ -27,7 +27,7 @@ import (
 	"github.com/go-spatial/tegola/provider/debug"
 )
 
-// NewMap creates a new map with the necessary default values
+// NewWebMercatorMap creates a new map with the necessary default values
 func NewWebMercatorMap(name string) Map {
 	return Map{
 		Name: name,
@@ -40,6 +40,7 @@ func NewWebMercatorMap(name string) Map {
 	}
 }
 
+// Map defines a Web Mercator map
 type Map struct {
 	Name string
 	// Contains an attribution to be displayed when the map is shown to a user.
@@ -360,7 +361,10 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 	}
 
 	// add layers to our tile
-	mvtTile.AddLayers(mvtLayers...)
+	err := mvtTile.AddLayers(mvtLayers...)
+	if err != nil {
+		return nil, err
+	}
 
 	// generate the MVT tile
 	vtile, err := mvtTile.VTile(ctx)

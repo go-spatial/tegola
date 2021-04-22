@@ -156,7 +156,26 @@ func TestParse(t *testing.T) {
 					max_zoom = 20
 					dont_simplify = true
 					dont_clip = true
-					dont_clean = true`,
+					dont_clean = true
+
+					[[maps.params]]
+					name = "param1"
+					token = "!param1!"
+					type = "string"
+					
+					[[maps.params]]
+					name = "param2"
+					token = "!PARAM2!"
+					type = "int"
+					sql = "AND ANSWER = ?"
+					default_value = "42"
+					
+					[[maps.params]]
+					name = "param3"
+					token = "!PARAM3!"
+					type = "float"
+					default_sql = "AND PI = 3.1415926"
+					`,
 			expected: config.Config{
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
@@ -206,6 +225,31 @@ func TestParse(t *testing.T) {
 								DontSimplify:  true,
 								DontClip:      true,
 								DontClean:     true,
+							},
+						},
+						Parameters: []config.QueryParameter{
+							{
+								Name:       "param1",
+								Token:      "!PARAM1!",
+								SQL:        "?",
+								Type:       "string",
+								IsRequired: true,
+							},
+							{
+								Name:         "param2",
+								Token:        "!PARAM2!",
+								Type:         "int",
+								SQL:          "AND ANSWER = ?",
+								DefaultValue: "42",
+								IsRequired:   false,
+							},
+							{
+								Name:       "param3",
+								Token:      "!PARAM3!",
+								Type:       "float",
+								SQL:        "?",
+								DefaultSQL: "AND PI = 3.1415926",
+								IsRequired: false,
 							},
 						},
 					},
@@ -1186,6 +1230,191 @@ func TestValidate(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+		"13 reserved parameter token": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name: "bad_param",
+						Parameters: []config.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!BBOX!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTokenReserved{
+				MapName: "bad_param",
+				Parameter: config.QueryParameter{
+					Name:  "param",
+					Token: "!BBOX!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 duplicate parameter name": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name: "dupe_param_name",
+						Parameters: []config.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+							{
+								Name:  "param",
+								Token: "!PARAM2!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamNameDuplicate{
+				MapName: "dupe_param_name",
+				Parameter: config.QueryParameter{
+					Name:  "param",
+					Token: "!PARAM2!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 duplicate parameter token": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name: "dupe_param_token",
+						Parameters: []config.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+							{
+								Name:  "param2",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTokenDuplicate{
+				MapName: "dupe_param_token",
+				Parameter: config.QueryParameter{
+					Name:  "param2",
+					Token: "!PARAM!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 parameter unknown type": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name: "unknown_param_type",
+						Parameters: []config.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!BBOX!",
+								Type:  "foo",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamUnknownType{
+				MapName: "unknown_param_type",
+				Parameter: config.QueryParameter{
+					Name:  "param",
+					Token: "!BBOX!",
+					Type:  "foo",
+				},
+			},
+		},
+		"13 parameter two defaults": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name: "unknown_two_defaults",
+						Parameters: []config.QueryParameter{
+							{
+								Name:         "param",
+								Token:        "!BBOX!",
+								Type:         "string",
+								DefaultSQL:   "foo",
+								DefaultValue: "bar",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTwoDefaults{
+				MapName: "unknown_two_defaults",
+				Parameter: config.QueryParameter{
+					Name:         "param",
+					Token:        "!BBOX!",
+					Type:         "string",
+					DefaultSQL:   "foo",
+					DefaultValue: "bar",
+				},
+			},
+		},
+		"13 parameter invalid default": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name: "parameter_invalid_default",
+
+						Parameters: []config.QueryParameter{
+							{
+								Name:         "param",
+								Token:        "!BBOX!",
+								Type:         "int",
+								DefaultValue: "foo",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamInvalidDefault{
+				MapName: "parameter_invalid_default",
+				Parameter: config.QueryParameter{
+					Name:         "param",
+					Token:        "!BBOX!",
+					Type:         "int",
+					DefaultValue: "foo",
+				},
+			},
+		},
+		"13 invalid token name": {
+			config: config.Config{
+				Maps: []config.Map{
+					{
+						Name: "parameter_invalid_token",
+						Parameters: []config.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!Token with spaces!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamBadTokenName{
+				MapName: "parameter_invalid_token",
+				Parameter: config.QueryParameter{
+					Name:  "param",
+					Token: "!Token with spaces!",
+					Type:  "int",
 				},
 			},
 		},

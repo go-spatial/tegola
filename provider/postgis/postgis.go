@@ -17,6 +17,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/tegola"
+	conf "github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/observability"
@@ -150,7 +151,7 @@ func (p *Provider) Collectors(prefix string, cfgFn func(configKey string) map[st
 
 const (
 	// We quote the field and table names to prevent colliding with postgres keywords.
-	stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + bboxToken
+	stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + conf.BboxToken
 	mvtSQL = `SELECT %[1]v FROM %[2]v`
 
 	// SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
@@ -195,7 +196,7 @@ const (
 )
 
 // isSelectQuery is a regexp to check if a query starts with `SELECT`,
-// case-insensitive and ignoring any preceeding whitespace and SQL comments.
+// case-insensitive and ignoring any preceding whitespace and SQL comments.
 var isSelectQuery = regexp.MustCompile(`(?i)^((\s*)(--.*\n)?)*select`)
 
 type hstoreOID struct {
@@ -453,7 +454,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 
 	dbconfig, err := BuildDBConfig(uri.String())
 	if err != nil {
-		return nil, fmt.Errorf("Failed while building db config: %w", err)
+		return nil, fmt.Errorf("failed while building db config: %v", err)
 	}
 
 	srid := DefaultSRID
@@ -472,7 +473,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 
 	pool, err := pgxpool.ConnectConfig(context.Background(), &p.config)
 	if err != nil {
-		return nil, fmt.Errorf("Failed while creating connection pool: %w", err)
+		return nil, fmt.Errorf("failed while creating connection pool: %v", err)
 	}
 	p.pool = &connectionPoolCollector{Pool: pool}
 
@@ -488,7 +489,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 
 		lName, err := layer.String(ConfigKeyLayerName, nil)
 		if err != nil {
-			return nil, fmt.Errorf("For layer (%v) we got the following error trying to get the layer's name field: %w", i, err)
+			return nil, fmt.Errorf("for layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
 		}
 
 		if j, ok := lyrsSeen[lName]; ok {
@@ -565,8 +566,8 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 			// convert !BOX! (MapServer) and !bbox! (Mapnik) to !BBOX! for compatibility
 			sql := strings.Replace(strings.Replace(sql, "!BOX!", "!BBOX!", -1), "!bbox!", "!BBOX!", -1)
 			// make sure that the sql has a !BBOX! token
-			if !strings.Contains(sql, bboxToken) {
-				return nil, fmt.Errorf("SQL for layer (%v) %v is missing required token: %v", i, lName, bboxToken)
+			if !strings.Contains(sql, conf.BboxToken) {
+				return nil, fmt.Errorf("SQL for layer (%v) %v is missing required token: %v", i, lName, conf.BboxToken)
 			}
 			if !strings.Contains(sql, "*") {
 				if !strings.Contains(sql, geomfld) {
@@ -613,7 +614,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 	return &p, nil
 }
 
-// derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
+// ConfigTLS is derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
 func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string, cc *pgxpool.Config) error {
 
 	switch sslMode {
@@ -725,6 +726,9 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 		return err
 	}
 
+	// remove all parameter tokens for inspection
+	sql = stripParams(sql)
+
 	rows, err := p.pool.Query(context.Background(), sql)
 	if err != nil {
 		return err
@@ -811,6 +815,12 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	sql, err := replaceTokens(plyr.sql, &plyr, tile, true)
 	if err := ctxErr(ctx, err); err != nil {
 		return fmt.Errorf("error replacing layer tokens for layer (%v) SQL (%v): %w", layer, sql, err)
+	}
+
+	// replace configured query parameters if any
+	sql, err = replaceParams(ctx, sql)
+	if err != nil {
+		return err
 	}
 
 	if debugExecuteSQL {
@@ -951,6 +961,12 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 		}
 		sql, err := replaceTokens(l.sql, &l, tile, false)
 		if err := ctxErr(ctx, err); err != nil {
+			return nil, err
+		}
+
+		// replace configured query parameters if any
+		sql, err = replaceParams(ctx, sql)
+		if err != nil {
 			return nil, err
 		}
 

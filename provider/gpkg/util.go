@@ -6,11 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom"
-)
-
-const (
-	bboxToken = "!BBOX!"
-	zoomToken = "!ZOOM!"
+	"github.com/go-spatial/tegola/config"
 )
 
 func replaceTokens(qtext string, zoom uint, extent *geom.Extent) string {
@@ -34,8 +30,8 @@ func replaceTokens(qtext string, zoom uint, extent *geom.Extent) string {
 	tokenReplacer := strings.NewReplacer(
 		// The BBOX token requires parameters ordered as [maxx, minx, maxy, miny] and checks for overlap.
 		// 	Until support for named parameters, we'll only support one BBOX token per query.
-		bboxToken, fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY()),
-		zoomToken, strconv.FormatUint(uint64(zoom), 10),
+		config.BboxToken, fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY()),
+		config.ZoomToken, strconv.FormatUint(uint64(zoom), 10),
 	)
 
 	return tokenReplacer.Replace(qtext)

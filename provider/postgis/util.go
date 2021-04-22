@@ -10,6 +10,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgproto3/v2"
@@ -97,20 +98,6 @@ func genSQL(l *Layer, pool *connectionPoolCollector, tblname string, flds []stri
 	return fmt.Sprintf(sqlTmpl, selectClause, tblname, l.geomField), nil
 }
 
-const (
-	bboxToken             = "!BBOX!"
-	zoomToken             = "!ZOOM!"
-	xToken                = "!X!"
-	yToken                = "!Y!"
-	zToken                = "!Z!"
-	scaleDenominatorToken = "!SCALE_DENOMINATOR!"
-	pixelWidthToken       = "!PIXEL_WIDTH!"
-	pixelHeightToken      = "!PIXEL_HEIGHT!"
-	idFieldToken          = "!ID_FIELD!"
-	geomFieldToken        = "!GEOM_FIELD!"
-	geomTypeToken         = "!GEOM_TYPE!"
-)
-
 // replaceTokens replaces tokens in the provided SQL string
 //
 // !BBOX! - the bounding box of the tile
@@ -169,23 +156,66 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 	// replace query string tokens
 	z, x, y := tile.ZXY()
 	tokenReplacer := strings.NewReplacer(
-		bboxToken, bbox,
-		zoomToken, strconv.FormatUint(uint64(z), 10),
-		zToken, strconv.FormatUint(uint64(z), 10),
-		xToken, strconv.FormatUint(uint64(x), 10),
-		yToken, strconv.FormatUint(uint64(y), 10),
-		idFieldToken, lyr.IDFieldName(),
-		geomFieldToken, lyr.GeomFieldName(),
-		geomTypeToken, geoType,
-		scaleDenominatorToken, strconv.FormatFloat(scaleDenominator, 'f', -1, 64),
-		pixelWidthToken, strconv.FormatFloat(pixelWidth, 'f', -1, 64),
-		pixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', -1, 64),
+		config.BboxToken, bbox,
+		config.ZoomToken, strconv.FormatUint(uint64(z), 10),
+		config.ZToken, strconv.FormatUint(uint64(z), 10),
+		config.XToken, strconv.FormatUint(uint64(x), 10),
+		config.YToken, strconv.FormatUint(uint64(y), 10),
+		config.ScaleDenominatorToken, strconv.FormatFloat(scaleDenominator, 'f', -1, 64),
+		config.PixelWidthToken, strconv.FormatFloat(pixelWidth, 'f', -1, 64),
+		config.PixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', -1, 64),
+		config.IdFieldToken, lyr.IDFieldName(),
+		config.GeomFieldToken, lyr.GeomFieldName(),
+		config.GeomTypeToken, geoType,
 	)
 
 	uppercaseTokenSQL := uppercaseTokens(sql)
 
 	return tokenReplacer.Replace(uppercaseTokenSQL), nil
 }
+
+// replaceParams substitutes configured query parameter tokens for their values
+// within the provided SQL string
+func replaceParams(ctx context.Context, sql string) (string, error) {
+	if ctx.Value("params") == nil {
+		return sql, nil
+	}
+
+	params, ok := ctx.Value("params").(map[string]string)
+	if !ok {
+		return "", fmt.Errorf("param value is not a map: %v ",
+			ctx.Value("params"))
+	}
+
+	replacerVals := make([]string, 0)
+
+	for token, val := range params {
+		if val != "" && !paramValRe.Match([]byte(val)) {
+			return "", fmt.Errorf("param value for token %s contains illegal characters: %s ",
+				token, val)
+		}
+
+		replacerVals = append(replacerVals, token, val)
+	}
+
+	// generate replacer from token/value pairs
+	replacer := strings.NewReplacer(replacerVals...)
+
+	uppercaseTokenSQL := uppercaseTokens(sql)
+
+	return replacer.Replace(uppercaseTokenSQL), nil
+}
+
+// stripParams will remove all parameter tokens from the query
+func stripParams(sql string) string {
+	return tokenRe.ReplaceAllStringFunc(sql, func(s string) string {
+		return ""
+	})
+}
+
+// paramValRe restricts parameter values to a limited character set to prevent
+// SQL injection attacks. TODO This is very primitive and needs more thought.
+var paramValRe = regexp.MustCompile("[a-zA-Z0-9,._-]+")
 
 var tokenRe = regexp.MustCompile("![a-zA-Z0-9_-]+!")
 
