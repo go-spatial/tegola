@@ -174,6 +174,46 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 	return tokenReplacer.Replace(uppercaseTokenSQL), nil
 }
 
+// replaceParams substitutes configured query parameter tokens for their values
+// within the provided SQL string
+func replaceParams(ctx context.Context, sql string) (string, error) {
+	if ctx.Value("params") == nil {
+		return sql, nil
+	}
+
+	var params map[string]string
+	params = ctx.Value("params").(map[string]string)
+
+	replacerVals := make([]string, 0)
+
+	for token, val := range params {
+		if val != "" && !paramValRe.Match([]byte(val)) {
+			return "", fmt.Errorf("Param value for token %s contains illegal characters: %s ",
+				token, val)
+		}
+
+		replacerVals = append(replacerVals, token, val)
+	}
+
+	// generate replacer from token/value pairs
+	replacer := strings.NewReplacer(replacerVals...)
+
+	uppercaseTokenSQL := uppercaseTokens(sql)
+
+	return replacer.Replace(uppercaseTokenSQL), nil
+}
+
+// stripParams will remove all parameter tokens from the query
+func stripParams(sql string) string {
+	return tokenRe.ReplaceAllStringFunc(sql, func(s string) string {
+		return ""
+	})
+}
+
+// paramValRe restricts parameter values to a limited character set to prevent
+// SQL injection attacks. TODO This is very primitive and needs more thought.
+var paramValRe = regexp.MustCompile("[a-zA-Z0-9,._-]+")
+
 var tokenRe = regexp.MustCompile("![a-zA-Z0-9_-]+!")
 
 //	uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can

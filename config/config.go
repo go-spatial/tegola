@@ -187,6 +187,22 @@ type QueryParameter struct {
 	Token string `toml:"token"`
 }
 
+// QueryParameters is an array of QueryParameter
+type QueryParameters []QueryParameter
+
+// Clean will return the list of parameters with all upper-cased token names
+func (params QueryParameters) Clean() QueryParameters {
+	var cleanParams []QueryParameter
+	for _, param := range params {
+		cleanParams = append(cleanParams, QueryParameter{
+			Name:  param.Name,
+			Token: strings.ToUpper(param.Token),
+		})
+	}
+
+	return cleanParams
+}
+
 // Validate checks the config for issues
 func (c *Config) Validate() error {
 

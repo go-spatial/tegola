@@ -156,8 +156,29 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m = m.AddDebugLayers()
 	}
 
-	encodeCtx := context.WithValue(r.Context(), observability.ObserveVarMapName, m.Name)
-	pbyte, err := m.Encode(encodeCtx, tile)
+	ctx := context.WithValue(r.Context(), observability.ObserveVarMapName, m.Name)
+	var params map[string]string
+
+	// check for query parameters and populate param map with their values
+	if req.Atlas.HasParams(req.mapName) {
+		params = make(map[string]string)
+		err = r.ParseForm()
+		if err == nil {
+			for _, param := range req.Atlas.GetParams(req.mapName) {
+				val := r.Form.Get(param.Name)
+				// empty values are injected here to replace tokens with
+				// an empty string during sql query parameter replacement
+				params[param.Token] = val
+			}
+
+			// update context passed to encoding if any params were parsed
+			if len(params) > 0 {
+				ctx = context.WithValue(ctx, "params", params)
+			}
+		}
+	}
+
+	pbyte, err := m.Encode(ctx, tile)
 	if err != nil {
 		switch err {
 		case context.Canceled:
@@ -176,7 +197,11 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", mvt.MimeType)
 	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(pbyte)))
 	w.WriteHeader(http.StatusOK)
-	w.Write(pbyte)
+
+	_, err = w.Write(pbyte)
+	if err != nil {
+		log.Errorf("error writing tile z:%v, x:%v, y:%v - %v", req.z, req.x, req.y, err)
+	}
 
 	// check for tile size warnings
 	if len(pbyte) > MaxTileSize {

@@ -560,6 +560,9 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 		return err
 	}
 
+	// remove all parameter tokens for inspection
+	sql = stripParams(sql)
+
 	rows, err := p.pool.Query(sql)
 	if err != nil {
 		return err
@@ -646,6 +649,12 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	sql, err := replaceTokens(plyr.sql, &plyr, tile, true)
 	if err != nil {
 		return fmt.Errorf("error replacing layer tokens for layer (%v) SQL (%v): %v", layer, sql, err)
+	}
+
+	// replace configured query parameters if any
+	sql, err = replaceParams(ctx, sql)
+	if err != nil {
+		return err
 	}
 
 	if debugExecuteSQL {
@@ -781,6 +790,12 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 			log.Printf("SQL for Layer(%v):\n%v\n", l.Name(), l.sql)
 		}
 		sql, err := replaceTokens(l.sql, &l, tile, false)
+		if err != nil {
+			return nil, err
+		}
+
+		// replace configured query parameters if any
+		sql, err = replaceParams(ctx, l.sql)
 		if err != nil {
 			return nil, err
 		}

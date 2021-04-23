@@ -12,6 +12,7 @@ import (
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/observer"
 	"github.com/go-spatial/tegola/observability"
 )
@@ -77,6 +78,10 @@ type Atlas struct {
 
 	// holds a reference to the observer backend
 	observer observability.Interface
+
+	// holds a reference to configured query parameters for maps
+	// key = map name
+	params map[string][]config.QueryParameter
 
 	// publishBuildInfo indicates if we should publish the build info on change of observer
 	// this is set by calling PublishBuildInfo, which will publish
@@ -211,6 +216,36 @@ func (a *Atlas) AddMap(m Map) {
 	}
 
 	a.maps[m.Name] = m
+}
+
+// AddParams adds the given query parameters to the atlas params map
+// keyed by the map name, with upper-cased tokens
+func (a *Atlas) AddParams(name string, params []config.QueryParameter) {
+	if a == nil {
+		defaultAtlas.AddParams(name, params)
+		return
+	}
+	if a.params == nil {
+		a.params = make(map[string][]config.QueryParameter)
+	}
+	a.params[name] = config.QueryParameters(params).Clean()
+}
+
+// GetParams returns any configured query parameters for the given
+// map by name
+func (a *Atlas) GetParams(name string) []config.QueryParameter {
+	if a == nil {
+		return defaultAtlas.GetParams(name)
+	}
+	return a.params[name]
+}
+
+// HasParams returns true if the given map by name has configured query parameters
+func (a *Atlas) HasParams(name string) bool {
+	if a == nil {
+		return defaultAtlas.HasParams(name)
+	}
+	return len(a.params[name]) > 0
 }
 
 // GetCache returns the registered cache if one is registered, otherwise nil
