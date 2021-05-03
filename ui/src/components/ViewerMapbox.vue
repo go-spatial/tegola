@@ -6,7 +6,7 @@
 import { store, mutations } from "@/globals/store";
 import { mapSetters } from "@/globals/map";
 import ToggleTileBoundariesControl from "./MapboxControls";
-import mapboxgl from "mapbox-gl";
+import maplibregl from "maplibre-gl";
 
 export default {
   name: "ViewerMapbox",
@@ -14,8 +14,8 @@ export default {
     // build the style url
     let url = store.apiRoot + "maps/" + store.activeMap.name + "/style.json";
 
-    // instantiate Mapbox GL
-    let m = new mapboxgl.Map({
+    // instantiate MapLibre GL
+    let m = new maplibregl.Map({
       container: "map",
       style: url,
       hash: true
@@ -23,7 +23,7 @@ export default {
 
     m.on("load", function () {
       // add navigation control
-      let nav = new mapboxgl.NavigationControl();
+      let nav = new maplibregl.NavigationControl();
       m.addControl(nav, "bottom-right");
 
       // custom controls

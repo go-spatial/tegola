@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import mapboxgl from "mapbox-gl";
+import maplibregl from "maplibre-gl";
 import MapRow from "./MapRow.vue";
 import MapLayerRow from "./MapLayerRow.vue";
 import { store, mutations } from "@/globals/store";
@@ -94,7 +94,7 @@ export default {
     toggleFeatureInspector() {
       if (!this.inspector) {
         // new popup instance
-        this.inspector = new mapboxgl.Popup();
+        this.inspector = new maplibregl.Popup();
       }
 
       if (!this.inspectorIsActive) {

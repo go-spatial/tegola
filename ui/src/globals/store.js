@@ -1,6 +1,6 @@
-import Vue from "vue";
+import { reactive } from "vue";
 
-export const store = Vue.observable({
+export const store = reactive({
   // activeMap is the map the user is currently interacting with
   activeMap: null,
 
