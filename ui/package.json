@@ -1,47 +1,53 @@
 {
-  "name": "tegola",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
-  },
-  "dependencies": {
-    "axios": "^0.21.1",
-    "core-js": "^3.6.5",
-    "mapbox-gl": "~1.11.0",
-    "vue": "^2.6.11"
-  },
-  "devDependencies": {
-    "@vue/cli-plugin-babel": "~4.4.6",
-    "@vue/cli-plugin-eslint": "~4.4.6",
-    "@vue/cli-service": "^4.5.12",
-    "babel-eslint": "~10.0.3",
-    "eslint": "^6.8.0",
-    "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-prettier": "^3.1.4",
-    "eslint-plugin-vue": "6.2.2",
-    "prettier": "2.0.5",
-    "vue-template-compiler": "~2.6.11"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/essential",
-      "plugin:prettier/recommended",
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "parser": "babel-eslint"
-    },
-    "rules": {}
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions"
-  ]
+	"name": "tegola",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"serve": "vue-cli-service serve",
+		"build": "vue-cli-service build",
+		"lint": "vue-cli-service lint",
+		"dev2": "NODE_ENV=development vite",
+		"dev": "vite",
+		"start": "NODE_ENV=development vite",
+		"preview": "vite preview",
+		"vite-build": "vite build"
+	},
+	"dependencies": {
+		"axios": "^0.21.1",
+		"core-js": "^3.6.5",
+		"maplibre-gl": ">=1.14.0",
+		"vue": "^2.6.11"
+	},
+	"devDependencies": {
+		"babel-eslint": "~10.0.3",
+		"eslint": "^6.8.0",
+		"eslint-config-prettier": "^6.11.0",
+		"eslint-plugin-prettier": "^3.1.4",
+		"eslint-plugin-vue": "6.2.2",
+		"prettier": "2.0.5",
+		"vue-template-compiler": "~2.6.11",
+		"vite": "^2.1.0",
+		"vite-plugin-vue2": "^1.4.4",
+		"@vitejs/plugin-legacy": "^1.3.2",
+		"@vue/compiler-sfc": "^3.0.5"
+	},
+	"eslintConfig": {
+		"root": true,
+		"env": {
+			"node": true
+		},
+		"extends": [
+			"plugin:vue/essential",
+			"plugin:prettier/recommended",
+			"eslint:recommended"
+		],
+		"parserOptions": {
+			"parser": "babel-eslint"
+		},
+		"rules": {}
+	},
+	"browserslist": [
+		"> 1%",
+		"last 2 versions"
+	]
 }

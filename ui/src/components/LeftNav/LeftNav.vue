@@ -52,7 +52,8 @@
 </template>
 
 <script>
-import mapboxgl from "mapbox-gl";
+//import mapboxgl from "mapbox-gl";
+import mapboxgl from "maplibre-gl";
 import MapRow from "./MapRow.vue";
 import MapLayerRow from "./MapLayerRow.vue";
 import { store, mutations } from "@/globals/store";

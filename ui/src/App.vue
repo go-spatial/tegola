@@ -7,19 +7,22 @@
 </template>
 
 <script>
-import "mapbox-gl/dist/mapbox-gl.css";
+// import "mapbox-gl/dist/mapbox-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 import Header from "./components/Header.vue";
 import LeftNav from "./components/LeftNav/LeftNav.vue";
 import Mapbox from "./components/Mapbox.vue";
 import { store, mutations } from "./globals/store";
+import axios from "axios";
 
-const axios = require("axios");
+// const axios = require("axios");
 
 // for production the apiRoot is empty so relative URLs are used
 let apiRoot = "";
 if (process.env.NODE_ENV != "production") {
   // for development it's easier to use a remote capabilities endpoint
-  apiRoot = "https://osm-lambda.tegola.io/v1/";
+  // apiRoot = "https://osm-lambda.tegola.io/v1/";
+  apiRoot = "https://tegola-osm-demo.go-spatial.org/v1/";
 }
 
 export default {

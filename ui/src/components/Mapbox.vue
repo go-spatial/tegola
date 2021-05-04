@@ -6,7 +6,8 @@
 import { store, mutations } from "@/globals/store";
 import { mapSetters } from "@/globals/map";
 import ToggleTileBoundariesControl from "./MapboxControls";
-import mapboxgl from "mapbox-gl";
+//import mapboxgl from "mapbox-gl";
+import mapboxgl from "maplibre-gl";
 
 export default {
   name: "Mapbox",

@@ -5,6 +5,7 @@ tmp
 .DS_Store
 ui/node_modules
 ui/dist
+ui/build
 
 # local env files
 .env.local
