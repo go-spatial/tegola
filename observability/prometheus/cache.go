@@ -46,6 +46,13 @@ func newCache(registry prometheus.Registerer, prefix string, observeVars []strin
 		},
 		names,
 	)
+	c.errors = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "errors",
+			Help: "A counter of the number of tile errors",
+		},
+		names,
+	)
 
 	c.durationSeconds = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -72,6 +79,7 @@ func newCache(registry prometheus.Registerer, prefix string, observeVars []strin
 		c.missesCounter,
 		c.durationSeconds,
 		c.responseSizeBytes,
+		c.errors,
 	)
 
 	return &c
