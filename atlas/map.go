@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-spatial/tegola/observability"
+
 	"github.com/golang/protobuf/proto"
 
 	"github.com/go-spatial/geom"
@@ -59,6 +61,8 @@ type Map struct {
 
 	mvtProviderName string
 	mvtProvider     provider.MVTTiler
+
+	observer observability.Interface
 }
 
 // HasMVTProvider indicates if map is a mvt provider based map
@@ -75,6 +79,28 @@ func (m *Map) SetMVTProvider(name string, p provider.MVTTiler) provider.MVTTiler
 	m.mvtProviderName = name
 	m.mvtProvider = p
 	return p
+}
+
+func (m Map) Collectors(prefix string, config func(configKey string) map[string]interface{}) ([]observability.Collector, error) {
+	if m.mvtProviderName != "" {
+		collect, ok := m.mvtProvider.(observability.Observer)
+		if !ok {
+			return nil, nil
+		}
+		return collect.Collectors(prefix, config)
+	}
+	// not an mvtProvider, so need to ask each layer instead
+	var collection []observability.Collector
+	for i := range m.Layers {
+		aCollection, err := m.Layers[i].Collectors(prefix, config)
+		if err != nil {
+			return nil, err
+		}
+		if len(aCollection) != 0 {
+			collection = append(collection, aCollection...)
+		}
+	}
+	return collection, nil
 }
 
 // AddDebugLayers returns a copy of a Map with the debug layers appended to the layer list

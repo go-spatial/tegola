@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-spatial/tegola/observability"
+
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom/encoding/mvt"
 	"github.com/go-spatial/geom/slippy"
@@ -154,7 +156,8 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m = m.AddDebugLayers()
 	}
 
-	pbyte, err := m.Encode(r.Context(), tile)
+	encodeCtx := context.WithValue(r.Context(), observability.ObserveVarMapName, m.Name)
+	pbyte, err := m.Encode(encodeCtx, tile)
 	if err != nil {
 		switch err {
 		case context.Canceled:

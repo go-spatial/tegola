@@ -88,18 +88,9 @@ func newCache(registry prometheus.Registerer, prefix string, observeVars []strin
 // labelNames returns the label name based on the configured observeVars and "sub_command"
 func (co *cache) labelNames() (names []string) {
 	names = []string{"sub_command"}
-	for _, keyName := range co.observeVars {
-		switch keyName {
-		case observability.ObserveVarMapName:
-			names = append(names, "map_name")
-		case observability.ObserveVarLayerName:
-			names = append(names, "layer_name")
-		case observability.ObserveVarTileX:
-			names = append(names, "x")
-		case observability.ObserveVarTileY:
-			names = append(names, "y")
-		case observability.ObserveVarTileZ:
-			names = append(names, "z")
+	for _, key := range co.observeVars {
+		if name := observability.LabelForObserveVar(key); name != "" {
+			names = append(names, name)
 		}
 	}
 	return names

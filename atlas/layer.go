@@ -2,6 +2,7 @@ package atlas
 
 import (
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -31,4 +32,12 @@ func (l *Layer) MVTName() string {
 	}
 
 	return l.ProviderLayerName
+}
+
+func (l Layer) Collectors(prefix string, config func(configKey string) map[string]interface{}) ([]observability.Collector, error) {
+	collect, ok := l.Provider.(observability.Observer)
+	if !ok {
+		return nil, nil
+	}
+	return collect.Collectors(prefix, config)
 }

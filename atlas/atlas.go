@@ -121,6 +121,7 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 		return defaultAtlas.SeedMapTile(ctx, m, z, x, y)
 	}
 
+	ctx = context.WithValue(ctx, observability.ObserveVarMapName, m.Name)
 	// confirm we have a cache backend
 	if a.cacher == nil {
 		return ErrMissingCache
@@ -257,6 +258,15 @@ func (a *Atlas) SetObservability(o observability.Interface) {
 		} else {
 			a.cacher = o.InstrumentedCache(a.cacher)
 		}
+	}
+	for _, aMap := range a.maps {
+
+		collectors, err := aMap.Collectors("tegola", o.CollectorConfig)
+		if err != nil {
+			log.Printf("failed to register collector for map: %v ignoring", aMap.Name)
+			continue
+		}
+		o.MustRegister(collectors...)
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"sort"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	tegolaCache "github.com/go-spatial/tegola/cache"
 
 	"github.com/go-spatial/tegola/dict"
@@ -17,6 +19,8 @@ const (
 	ObserveVarTileY     = ":y"
 	ObserveVarTileZ     = ":z"
 )
+
+type Collector = prometheus.Collector
 
 // ErrObserverAlreadyExists is returned if an observer try to register to an observer type that has already registered
 type ErrObserverAlreadyExists string
@@ -52,6 +56,12 @@ type Interface interface {
 	// Shutdown should shutdown any subsystems that Init setup
 	Shutdown()
 
+	// MustRegister will register any custom collectors. It will panic if there is an error
+	MustRegister(collectors ...Collector)
+
+	// CollectorConfig returns the config for a given key, or nil, if the key does not exist
+	CollectorConfig(key string) map[string]interface{}
+
 	APIObserver
 	ViewerObserver
 	CacheObserver
@@ -77,6 +87,13 @@ type Cache interface {
 	tegolaCache.Interface
 	tegolaCache.Wrapped
 	IsObserver() bool
+}
+
+// Observer is able to be observed via the collectors it provides
+type Observer interface {
+	// Collectors should return a set of collectors that will be registered by the default observability provider,
+	// to get the configuration; use the provided function and your config key.
+	Collectors(prefix string, config func(configKey string) map[string]interface{}) ([]Collector, error)
 }
 
 // InstrumentAPIHandler is a convenience  function
@@ -156,5 +173,22 @@ func Cleanup() {
 			continue
 		}
 		o.CleanUp()
+	}
+}
+
+func LabelForObserveVar(key string) string {
+	switch key {
+	case ObserveVarMapName:
+		return "map_name"
+	case ObserveVarLayerName:
+		return "layer_name"
+	case ObserveVarTileX:
+		return "x"
+	case ObserveVarTileY:
+		return "y"
+	case ObserveVarTileZ:
+		return "z"
+	default:
+		return ""
 	}
 }

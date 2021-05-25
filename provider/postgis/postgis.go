@@ -8,7 +8,13 @@ import (
 	"io/ioutil"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/go-spatial/tegola/observability"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -22,14 +28,121 @@ import (
 
 const Name = "postgis"
 
+type connectionPoolCollector struct {
+	*pgx.ConnPool
+	maxConnectionDesc        *prometheus.Desc
+	currentConnectionsDesc   *prometheus.Desc
+	availableConnectionsDesc *prometheus.Desc
+}
+
+func (c connectionPoolCollector) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(c, ch)
+}
+
+func (c connectionPoolCollector) Collect(ch chan<- prometheus.Metric) {
+	if c.ConnPool == nil {
+		return
+	}
+	stat := c.ConnPool.Stat()
+	ch <- prometheus.MustNewConstMetric(
+		c.maxConnectionDesc,
+		prometheus.GaugeValue,
+		float64(stat.MaxConnections),
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.currentConnectionsDesc,
+		prometheus.GaugeValue,
+		float64(stat.CurrentConnections),
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.availableConnectionsDesc,
+		prometheus.GaugeValue,
+		float64(stat.AvailableConnections),
+	)
+}
+
+func (c *connectionPoolCollector) Collectors(prefix string, _ func(configKey string) map[string]interface{}) ([]observability.Collector, error) {
+	if c == nil {
+		return nil, nil
+	}
+	if prefix != "" && !strings.HasSuffix(prefix, "_") {
+		prefix = prefix + "_"
+	}
+
+	c.maxConnectionDesc = prometheus.NewDesc(
+		prefix+"postgres_max_connections",
+		"Max number of postgres connections in the pool",
+		nil,
+		nil,
+	)
+
+	c.currentConnectionsDesc = prometheus.NewDesc(
+		prefix+"postgres_current_connections",
+		"Current number of postgres connections in the pool",
+		nil,
+		nil,
+	)
+
+	c.availableConnectionsDesc = prometheus.NewDesc(
+		prefix+"postgres_available_connections",
+		"Current number of available postgres connections in the pool",
+		nil,
+		nil,
+	)
+	return []observability.Collector{c}, nil
+}
+
 // Provider provides the postgis data provider.
 type Provider struct {
 	config pgx.ConnPoolConfig
-	pool   *pgx.ConnPool
+	pool   *connectionPoolCollector
 	// map of layer name and corresponding sql
 	layers     map[string]Layer
 	srid       uint64
-	firstlayer string
+	firstLayer string
+
+	// collectorsRegistered keeps track if we have already collectorsRegistered these collectors
+	// as the Collectors function will be called for each map and layer, but
+	// we are going to assign those during runtime, instead of at registration
+	// time; so we will only return these collectors on the first call.
+	collectorsRegistered bool
+
+	// Collectors for Query times
+	mvtProviderQueryHistogramSeconds *prometheus.HistogramVec
+	queryHistogramSeconds            *prometheus.HistogramVec
+}
+
+func (p *Provider) Collectors(prefix string, cfgFn func(configKey string) map[string]interface{}) ([]observability.Collector, error) {
+	if p.collectorsRegistered {
+		return nil, nil
+	}
+
+	buckets := []float64{.1, 1, 5, 20}
+	collectors, err := p.pool.Collectors(prefix, cfgFn)
+	if err != nil {
+		return nil, err
+	}
+
+	p.mvtProviderQueryHistogramSeconds = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    prefix + "_mvt_provider_sql_query_seconds",
+			Help:    "A histogram of query time for sql for mvt providers",
+			Buckets: buckets,
+		},
+		[]string{"map_name", "z"},
+	)
+
+	p.queryHistogramSeconds = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    prefix + "_provider_sql_query_seconds",
+			Help:    "A histogram of query time for sql for providers",
+			Buckets: buckets,
+		},
+		[]string{"map_name", "layer_name", "z"},
+	)
+
+	p.collectorsRegistered = true
+	return append(collectors, p.mvtProviderQueryHistogramSeconds, p.queryHistogramSeconds), nil
 }
 
 const (
@@ -188,9 +301,11 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 		},
 	}
 
-	if p.pool, err = pgx.NewConnPool(p.config); err != nil {
+	pool, err := pgx.NewConnPool(p.config)
+	if err != nil {
 		return nil, fmt.Errorf("Failed while creating connection pool: %v", err)
 	}
+	p.pool = &connectionPoolCollector{ConnPool: pool}
 
 	layers, err := config.MapSlice(ConfigKeyLayers)
 	if err != nil {
@@ -202,60 +317,60 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 
 	for i, layer := range layers {
 
-		lname, err := layer.String(ConfigKeyLayerName, nil)
+		lName, err := layer.String(ConfigKeyLayerName, nil)
 		if err != nil {
 			return nil, fmt.Errorf("For layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
 		}
 
-		if j, ok := lyrsSeen[lname]; ok {
-			return nil, fmt.Errorf("%v layer name is duplicated in both layer %v and layer %v", lname, i, j)
+		if j, ok := lyrsSeen[lName]; ok {
+			return nil, fmt.Errorf("%v layer name is duplicated in both layer %v and layer %v", lName, i, j)
 		}
 
-		lyrsSeen[lname] = i
+		lyrsSeen[lName] = i
 		if i == 0 {
-			p.firstlayer = lname
+			p.firstLayer = lName
 		}
 
 		fields, err := layer.StringSlice(ConfigKeyFields)
 		if err != nil {
-			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, lname, ConfigKeyFields, err)
+			return nil, fmt.Errorf("for layer (%v) %v %v field had the following error: %v", i, lName, ConfigKeyFields, err)
 		}
 
 		geomfld := "geom"
 		geomfld, err = layer.String(ConfigKeyGeomField, &geomfld)
 		if err != nil {
-			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
+			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lName, err)
 		}
 
 		idfld := ""
 		idfld, err = layer.String(ConfigKeyGeomIDField, &idfld)
 		if err != nil {
-			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
+			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lName, err)
 		}
 		if idfld == geomfld {
-			return nil, fmt.Errorf("for layer (%v) %v: %v (%v) and %v field (%v) is the same", i, lname, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
+			return nil, fmt.Errorf("for layer (%v) %v: %v (%v) and %v field (%v) is the same", i, lName, ConfigKeyGeomField, geomfld, ConfigKeyGeomIDField, idfld)
 		}
 
 		geomType := ""
 		geomType, err = layer.String(ConfigKeyGeomType, &geomType)
 		if err != nil {
-			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lname, err)
+			return nil, fmt.Errorf("for layer (%v) %v : %v", i, lName, err)
 		}
 
 		var tblName string
-		tblName, err = layer.String(ConfigKeyTablename, &lname)
+		tblName, err = layer.String(ConfigKeyTablename, &lName)
 		if err != nil {
-			return nil, fmt.Errorf("for %v layer (%v) %v has an error: %v", i, lname, ConfigKeyTablename, err)
+			return nil, fmt.Errorf("for %v layer (%v) %v has an error: %v", i, lName, ConfigKeyTablename, err)
 		}
 
 		var sql string
 		sql, err = layer.String(ConfigKeySQL, &sql)
 		if err != nil {
-			return nil, fmt.Errorf("for %v layer (%v) %v has an error: %v", i, lname, ConfigKeySQL, err)
+			return nil, fmt.Errorf("for %v layer (%v) %v has an error: %v", i, lName, ConfigKeySQL, err)
 		}
 
-		if tblName != lname && sql != "" {
-			log.Printf("both %v and %v field are specified for layer (%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lname)
+		if tblName != lName && sql != "" {
+			log.Printf("both %v and %v field are specified for layer (%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lName)
 		}
 
 		var lsrid = srid
@@ -264,7 +379,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 		}
 
 		l := Layer{
-			name:      lname,
+			name:      lName,
 			idField:   idfld,
 			geomField: geomfld,
 			srid:      uint64(lsrid),
@@ -282,14 +397,14 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 			sql := strings.Replace(strings.Replace(sql, "!BOX!", "!BBOX!", -1), "!bbox!", "!BBOX!", -1)
 			// make sure that the sql has a !BBOX! token
 			if !strings.Contains(sql, bboxToken) {
-				return nil, fmt.Errorf("SQL for layer (%v) %v is missing required token: %v", i, lname, bboxToken)
+				return nil, fmt.Errorf("SQL for layer (%v) %v is missing required token: %v", i, lName, bboxToken)
 			}
 			if !strings.Contains(sql, "*") {
 				if !strings.Contains(sql, geomfld) {
-					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the geometry field: %v", i, lname, geomfld)
+					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the geometry field: %v", i, lName, geomfld)
 				}
 				if !strings.Contains(sql, idfld) {
-					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lname, sql)
+					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lName, sql)
 				}
 			}
 
@@ -300,12 +415,12 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 			// and if not add them to the list. If Fields list is empty/nil we will use '*' for the field list.
 			l.sql, err = genSQL(&l, p.pool, tblName, fields, true, providerType)
 			if err != nil {
-				return nil, fmt.Errorf("could not generate sql, for layer(%v): %v", lname, err)
+				return nil, fmt.Errorf("could not generate sql, for layer(%v): %v", lName, err)
 			}
 		}
 
 		if debugLayerSQL {
-			log.Printf("SQL for Layer(%v):\n%v\n", lname, l.sql)
+			log.Printf("SQL for Layer(%v):\n%v\n", lName, l.sql)
 		}
 
 		// set the layer geom type
@@ -319,7 +434,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 			}
 		}
 
-		lyrs[lname] = l
+		lyrs[lName] = l
 	}
 	p.layers = lyrs
 
@@ -494,7 +609,7 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 // if no name is provider, the first layer is returned
 func (p *Provider) Layer(name string) (Layer, bool) {
 	if name == "" {
-		return p.layers[p.firstlayer], true
+		return p.layers[p.firstLayer], true
 	}
 
 	layer, ok := p.layers[name]
@@ -514,6 +629,15 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 
 // TileFeatures adheres to the provider.Tiler interface
 func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
+
+	var mapName string
+	{
+		mapNameVal := ctx.Value(observability.ObserveVarMapName)
+		if mapNameVal != nil {
+			// if it's not convertible to a string, we will ignore it.
+			mapName, _ = mapNameVal.(string)
+		}
+	}
 	// fetch the provider layer
 	plyr, ok := p.Layer(layer)
 	if !ok {
@@ -534,7 +658,17 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		return err
 	}
 
+	now := time.Now()
 	rows, err := p.pool.Query(sql)
+	if p.queryHistogramSeconds != nil {
+		z, _, _ := tile.ZXY()
+		lbls := prometheus.Labels{
+			"z":          strconv.FormatUint(uint64(z), 10),
+			"map_name":   mapName,
+			"layer_name": layer,
+		}
+		p.queryHistogramSeconds.With(lbls).Observe(time.Since(now).Seconds())
+	}
 	if err != nil {
 		return fmt.Errorf("error running layer (%v) SQL (%v): %v", layer, sql, err)
 	}
@@ -621,9 +755,18 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 
 func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers []provider.Layer) ([]byte, error) {
 	var (
-		err  error
-		sqls = make([]string, 0, len(layers))
+		err     error
+		sqls    = make([]string, 0, len(layers))
+		mapName string
 	)
+
+	{
+		mapNameVal := ctx.Value(observability.ObserveVarMapName)
+		if mapNameVal != nil {
+			// if it's not convertible to a string, we will ignore it.
+			mapName, _ = mapNameVal.(string)
+		}
+	}
 
 	for i := range layers {
 		if debug {
@@ -631,7 +774,7 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 		}
 		l, ok := p.Layer(layers[i].Name)
 		if !ok {
-			// Should we be erroring here, or have a flag so that we don't
+			// Should we error here, or have a flag so that we don't
 			// spam the user?
 			log.Printf("provider layer not found %v", layers[i].Name)
 		}
@@ -644,7 +787,7 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 		}
 
 		// ref: https://postgis.net/docs/ST_AsMVT.html
-		// bytea ST_AsMVT(anyelement row, text name, integer extent, text geom_name, text feature_id_name)
+		// bytea ST_AsMVT(any_element row, text name, integer extent, text geom_name, text feature_id_name)
 
 		var featureIDName string
 
@@ -669,7 +812,19 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 	if debugExecuteSQL {
 		log.Printf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
 	}
-	err = p.pool.QueryRow(fsql).Scan(&data)
+	{
+		now := time.Now()
+		err = p.pool.QueryRow(fsql).Scan(&data)
+		if p.mvtProviderQueryHistogramSeconds != nil {
+			z, _, _ := tile.ZXY()
+			lbls := prometheus.Labels{
+				"z":        strconv.FormatUint(uint64(z), 10),
+				"map_name": mapName,
+			}
+			p.mvtProviderQueryHistogramSeconds.With(lbls).Observe(time.Since(now).Seconds())
+		}
+	}
+
 	if debugExecuteSQL {
 		log.Printf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
 		if err != nil {

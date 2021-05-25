@@ -22,7 +22,7 @@ func isMVT(providerType string) bool {
 }
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
-func genSQL(l *Layer, pool *pgx.ConnPool, tblname string, flds []string, buffer bool, providerType string) (sql string, err error) {
+func genSQL(l *Layer, pool *connectionPoolCollector, tblname string, flds []string, buffer bool, providerType string) (sql string, err error) {
 
 	// we need to hit the database to see what the fields are.
 	if len(flds) == 0 {
@@ -260,7 +260,7 @@ func decipherFields(ctx context.Context, geomFieldname, idFieldname string, desc
 		switch desc.Name {
 		case geomFieldname:
 			if geom, ok = values[i].([]byte); !ok {
-				return 0, nil, nil, fmt.Errorf("unable to convert geometry field (%v) into bytes.", geomFieldname)
+				return 0, nil, nil, fmt.Errorf("unable to convert geometry field (%v) into bytes", geomFieldname)
 			}
 		case idFieldname:
 			// the id has to be parsed once but it can also be a tag

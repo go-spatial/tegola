@@ -156,6 +156,14 @@ func (obs *observer) Shutdown() {
 	cleanUpFunctionsLck.Unlock()
 }
 
+func (obs *observer) MustRegister(collectors ...observability.Collector) {
+	obs.registry.MustRegister(collectors...)
+}
+
+func (_ *observer) CollectorConfig(_ string) map[string]interface{} {
+	return make(map[string]interface{})
+}
+
 func (obs *observer) PublishBuildInfo() { obs.publishedBuildInfo.Do(PublishBuildInfo) }
 
 func (obs *observer) InstrumentedAPIHttpHandler(method, route string, next http.Handler) http.Handler {
@@ -200,7 +208,10 @@ var (
 func cleanUp() {
 	cleanUpFunctionsLck.Lock()
 	for i := range cleanUpFunctions {
-		cleanUpFunctions[i]()
+		if cleanUpFunctions[i] != nil {
+			cleanUpFunctions[i]()
+			cleanUpFunctions[i] = nil
+		}
 	}
 	cleanUpFunctions = cleanUpFunctions[:0]
 	cleanUpFunctionsLck.Unlock()
