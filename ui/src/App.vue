@@ -19,7 +19,7 @@ const axios = require("axios");
 let apiRoot = "";
 if (process.env.NODE_ENV != "production") {
   // for development it's easier to use a remote capabilities endpoint
-  apiRoot = "https://osm-lambda.tegola.io/v1/";
+  apiRoot = "https://tegola-osm-demo.go-spatial.org/v1/";
 }
 
 export default {

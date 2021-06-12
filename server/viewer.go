@@ -1,8 +1,9 @@
-// +build !noViewer
+// +build !noViewer,!go1.16
 
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -19,7 +20,8 @@ func setupViewer(o observability.Interface, group *httptreemux.Group) {
 	prefixStripper := FilePathPrefixStripper{
 		fs: bindata.AssetFileSystem(),
 	}
-
+	//
+	fmt.Println("not using embed")
 	group.UsingContext().Handler(observability.InstrumentViewerHandler(http.MethodGet, "/", o, http.FileServer(&prefixStripper)))
 	group.UsingContext().Handler(observability.InstrumentViewerHandler(http.MethodGet, "/*path", o, http.FileServer(&prefixStripper)))
 }
