@@ -3,7 +3,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/dimfeld/httptreemux"
@@ -15,7 +14,6 @@ import (
 // is included in the build (default)
 func setupViewer(o observability.Interface, group *httptreemux.Group) {
 
-	fmt.Println("using embed with go1.16")
 	group.UsingContext().Handler(observability.InstrumentViewerHandler(http.MethodGet, "/", o, http.FileServer(ui.GetDistFileSystem())))
 	group.UsingContext().Handler(observability.InstrumentViewerHandler(http.MethodGet, "/*path", o, http.FileServer(ui.GetDistFileSystem())))
 }
