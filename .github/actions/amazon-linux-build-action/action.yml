@@ -1,0 +1,12 @@
+name: 'Amazon Linux build container'
+description: 'Used for building tegola_lambda'
+inputs:
+  args:  
+    description: 'Should always be three dots'
+    required: true
+    default: '...'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.args }}

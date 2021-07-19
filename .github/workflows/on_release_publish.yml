@@ -8,7 +8,7 @@ jobs:
 
   gen_version:
     name: Generate software version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
     # on release we want to use release.tag_name for the version
@@ -22,7 +22,7 @@ jobs:
       run: echo ${{ github.sha }} | cut -c1-7 > ${{ github.workspace }}/version.txt
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v2-preview
+      uses: actions/upload-artifact@v2
       with:
         name: version
         path: ${{ github.workspace }}/version.txt
@@ -30,7 +30,7 @@ jobs:
   build_linux:
     name: Build for Linux and AWS Lambda
     needs: gen_version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
     - name: Check out code
@@ -65,7 +65,7 @@ jobs:
         zip -9 -D tegola.zip tegola
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v2-preview
+      uses: actions/upload-artifact@v2
       with:
         name: tegola_linux_amd64
         path: cmd/tegola/tegola.zip
@@ -81,13 +81,27 @@ jobs:
         asset_name: tegola_linux_amd64.zip
         asset_content_type: application/zip
 
+  build_tegola_lambda:
+    name: Build tegola_lambda on Amazon Linux
+    needs: gen_version
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Download version artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: version
+
+    - name: Set tegola version
+      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
+
     - name: Build tegola_lambda
-      env:
-        # build architecture
-        GOOS: linux
-      run: |
-          cd cmd/tegola_lambda
-          go build -mod vendor -ldflags "-w -X main.Version=${VERSION}"
+      uses: ./.github/actions/amazon-linux-build-action
+      with:
+        args: '...'
 
     # workaround for archives losing permissions 
     # https://github.com/actions/upload-artifact/issues/38
@@ -97,7 +111,7 @@ jobs:
         zip -9 -D tegola.zip tegola_lambda
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v2-preview
+      uses: actions/upload-artifact@v2
       with:
         name: tegola_lambda
         path: cmd/tegola_lambda/tegola.zip
@@ -150,7 +164,7 @@ jobs:
         zip -9 -D tegola.zip tegola
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v2-preview
+      uses: actions/upload-artifact@v2
       with:
         name: tegola_darwin_amd64
         path: cmd/tegola/tegola.zip
@@ -169,7 +183,7 @@ jobs:
   build_docker:
     name: Build Docker image and publish to Docker Hub
     needs: gen_version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       DOCKERHUB_ORG: gospatial
       DOCKERHUB_REPO: tegola
