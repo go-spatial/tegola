@@ -1,5 +1,3 @@
-// +build !noViewer go1.16
-
 package ui
 
 import (
