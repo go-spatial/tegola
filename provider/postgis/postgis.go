@@ -185,7 +185,7 @@ const (
 )
 
 // isSelectQuery is a regexp to check if a query starts with `SELECT`,
-// case-insensitive and ignoring any preceeding whitespace and SQL comments.
+// case-insensitive and ignoring any preceding whitespace and SQL comments.
 var isSelectQuery = regexp.MustCompile(`(?i)^((\s*)(--.*\n)?)*select`)
 
 // CreateProvider instantiates and returns a new postgis provider or an error.
@@ -443,7 +443,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 	return &p, nil
 }
 
-// ConfigTLS derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
+// ConfigTLS is derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
 func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string, cc *pgx.ConnConfig) error {
 
 	switch sslMode {
