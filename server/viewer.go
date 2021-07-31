@@ -1,4 +1,4 @@
-// +build !noViewer
+// +build !noViewer,!go1.16
 
 package server
 
