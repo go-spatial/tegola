@@ -23,7 +23,7 @@ if (process.env.NODE_ENV != "production") {
 }
 
 export default {
-  name: "Tegola Viewer",
+  name: "TegolaViewer",
   components: {
     Header,
     LeftNav,
