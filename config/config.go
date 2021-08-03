@@ -183,8 +183,9 @@ func (ml MapLayer) GetName() (string, error) {
 // QueryParameter represents an HTTP query parameter specified for use with
 // a given map instance.
 type QueryParameter struct {
-	Name  string `toml:"name"`
-	Token string `toml:"token"`
+	Name    string `toml:"name"`
+	Token   string `toml:"token"`
+	Default string `toml:"default"`
 }
 
 // QueryParameters is an array of QueryParameter
@@ -195,8 +196,9 @@ func (params QueryParameters) Clean() QueryParameters {
 	var cleanParams []QueryParameter
 	for _, param := range params {
 		cleanParams = append(cleanParams, QueryParameter{
-			Name:  param.Name,
-			Token: strings.ToUpper(param.Token),
+			Name:    param.Name,
+			Token:   strings.ToUpper(param.Token),
+			Default: param.Default,
 		})
 	}
 

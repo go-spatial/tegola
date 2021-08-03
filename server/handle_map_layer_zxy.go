@@ -165,9 +165,16 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = r.ParseForm()
 		if err == nil {
 			for _, param := range req.Atlas.GetParams(req.mapName) {
+				// Fetch parameter values
 				val := r.Form.Get(param.Name)
-				// empty values are injected here to replace tokens with
+				// Empty values are injected here to replace tokens with
 				// an empty string during sql query parameter replacement
+				// otherwise, the default value is used if configured.
+				if val == "" && param.Default != "" {
+					val = param.Default
+				}
+
+				// inject parameter value or default into params map
 				params[param.Token] = val
 			}
 
