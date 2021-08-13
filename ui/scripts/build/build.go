@@ -1,5 +1,3 @@
-// +build ignore
-
 package main
 
 import (
@@ -15,11 +13,13 @@ import (
 var (
 	showOutput   bool
 	bindataDebug bool
+	bindataRun   string
 )
 
 func init() {
 	flag.BoolVar(&showOutput, "show-output", false, "show command output")
 	flag.BoolVar(&bindataDebug, "bindata-debug", false, "generate bin-data in debug mode")
+	flag.StringVar(&bindataRun, "bindata-run", "auto", "specify if bindata is run, by default this script will not run bindata if the compiler supports the embed package. Possible values: auto/yes/no")
 }
 
 func printOutput(out []byte) {
@@ -55,6 +55,13 @@ func fileDir() string {
 
 func main() {
 	flag.Parse()
+	switch bindataRun {
+	case "auto", "yes", "no":
+		//nop
+	default:
+		fmt.Printf("Invalid --bindata-run value: %s\n", bindataRun)
+		os.Exit(1)
+	}
 	// Change into the directory this file lives in.
 	if err := os.Chdir(fileDir()); err != nil {
 		fmt.Printf("Failed to change dir to: %v\nerror: %v\n", fileDir(), err)
@@ -67,10 +74,13 @@ func main() {
 	// build app
 	run("npm", "run", "build")
 	// build bindata
-	if bindataDebug {
-		run("go-bindata", "-debug", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
-	} else {
-		run("go-bindata", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
+
+	if bindataRun == "yes" || (bindataRun == "auto" && !embedSupport) {
+		if bindataDebug {
+			run("go-bindata", "-debug", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
+		} else {
+			run("go-bindata", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
+		}
 	}
 
 	fmt.Printf("success\n")

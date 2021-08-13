@@ -31,6 +31,6 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 In order to compile the UI for inclusion in tegola, run the following commands from the `ui` folder:
 
 ```console
-$ go run build.go
+$ go run ./scripts/build/
 ```
 

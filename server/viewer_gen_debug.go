@@ -1,5 +1,5 @@
 // +build bindataDebug
-//go:generate go run ../ui/build.go -bindata-debug
+//go:generate go run ../ui/scripts/build/ --bindata-run yes -bindata-debug
 
 package server
 
