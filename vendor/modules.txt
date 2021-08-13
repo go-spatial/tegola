@@ -4,9 +4,10 @@ github.com/Azure/azure-pipeline-go/pipeline
 # github.com/Azure/azure-storage-blob-go v0.0.0-20180706173141-f0a732ea9441
 ## explicit
 github.com/Azure/azure-storage-blob-go/2017-07-29/azblob
-# github.com/BurntSushi/toml v0.3.1
+# github.com/BurntSushi/toml v0.4.1
 ## explicit
 github.com/BurntSushi/toml
+github.com/BurntSushi/toml/internal
 # github.com/ajstarks/svgo v0.0.0-20170507103333-2489f1e6d405
 ## explicit
 github.com/ajstarks/svgo
