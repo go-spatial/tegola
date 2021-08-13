@@ -302,6 +302,9 @@ func Load(location string) (conf Config, err error) {
 
 		// set the reader to the response body
 		reader = res.Body
+	} else if location == "-" {
+		log.Infof("loading local config from stdin")
+		reader = os.Stdin
 	} else {
 		log.Infof("loading local config (%v)", location)
 
