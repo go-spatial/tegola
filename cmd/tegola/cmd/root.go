@@ -24,7 +24,8 @@ var (
 
 func init() {
 	// root
-	RootCmd.PersistentFlags().StringVar(&configFile, "config", "config.toml", "path to config file")
+	RootCmd.PersistentFlags().StringVar(&configFile, "config", "config.toml",
+		"path or http url to a config file, or \"-\" for stdin")
 
 	// server
 	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
