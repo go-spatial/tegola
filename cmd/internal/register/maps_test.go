@@ -140,3 +140,42 @@ func TestMaps(t *testing.T) {
 		t.Run(name, fn(tc))
 	}
 }
+
+func TestSanitizeAttribution(t *testing.T) {
+	type tcase struct {
+		input    string
+		expected string
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			result := register.SanitizeAttribution(tc.input)
+			if result != tc.expected {
+				t.Errorf("expected %v got %v", tc.expected, result)
+			}
+		}
+	}
+
+	tests := map[string]tcase {
+		"plain text": {
+			input:    `foo`,
+			expected: `foo`,
+		},
+		"HTML must escaped": {
+			input:    `<script>true</script>`,
+			expected: `&lt;script&gt;true&lt;/script&gt;`,
+		},
+		"link must not escaped": {
+			input:    `<a href="http://example.com">foo</a>`,
+			expected: `<a href="http://example.com">foo</a>`,
+		},
+		"2 links": {
+			input:    `foo <a href="http://example.com">bar</a> - <a href="http://example.com" target="_blank">zoo</a>`,
+			expected: `foo <a href="http://example.com">bar</a> - <a href="http://example.com" target="_blank">zoo</a>`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}

@@ -2,6 +2,8 @@ package register
 
 import (
 	"html"
+	"regexp"
+	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
@@ -11,7 +13,7 @@ import (
 
 func webMercatorMapFromConfigMap(cfg config.Map) (newMap atlas.Map) {
 	newMap = atlas.NewWebMercatorMap(string(cfg.Name))
-	newMap.Attribution = html.EscapeString(string(cfg.Attribution))
+	newMap.Attribution = SanitizeAttribution(string(cfg.Attribution))
 
 	// convert from env package
 	for i, v := range cfg.Center {
@@ -160,4 +162,17 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 		a.AddMap(newMap)
 	}
 	return nil
+}
+
+// Find allow HTML tag
+var allowTags = regexp.MustCompile(`&lt;(a\s(.+?)|/a)&gt;`)
+
+// Escapes HTML special characters except allow tags
+func SanitizeAttribution(attribution string) string {
+	result := html.EscapeString(attribution)
+	tags := allowTags.FindAllString(result, -1)
+	for _, tag := range tags {
+		result = strings.Replace(result, tag, html.UnescapeString(tag), 1)
+	}
+	return result
 }
