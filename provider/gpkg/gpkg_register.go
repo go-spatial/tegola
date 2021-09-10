@@ -314,13 +314,19 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 				return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
 			}
 
+			d, ok := geomTableDetails[tablename]
+			if !ok {
+				return nil, fmt.Errorf("table %q does not exist", tablename)
+			}
+
+
 			layer.tablename = tablename
 			layer.tagFieldnames = tagFieldnames
-			layer.geomFieldname = geomTableDetails[tablename].geomFieldname
-			layer.geomType = geomTableDetails[tablename].geomType
+			layer.geomFieldname = d.geomFieldname
+			layer.geomType = d.geomType
 			layer.idFieldname = idFieldname
-			layer.srid = geomTableDetails[tablename].srid
-			layer.bbox = *geomTableDetails[tablename].bbox
+			layer.srid = d.srid
+			layer.bbox = *d.bbox
 
 		} else { // layerConf[ConfigKeySQL] exists
 			var customSQL string

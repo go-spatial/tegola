@@ -208,6 +208,8 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 					feature.Tags[cols[i]] = v
 				case string:
 					feature.Tags[cols[i]] = v
+				case float64:
+					feature.Tags[cols[i]] = v
 
 				default:
 					// TODO(arolek): return this error?
