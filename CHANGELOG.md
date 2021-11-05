@@ -1,3 +1,42 @@
+## 0.14.0 (2021-11-05)
+
+Features:
+
+* Added Observability to postgis data provider (@gdey #780)
+* Added observability to tile cache (@gdey #766)
+* Allow link in attribution (@underspica #798)
+
+Bugs:
+
+* Fixed file cache: `Error: error reading from cache: too many open files` (@ARolek #586)
+
+Maintenance: 
+
+* Refactor tegola_lambda CI to use Amazon Linux for building (@arolek #790)
+* Upgrade mattn/go-sqlite3 (@gdey)
+* Split out httpAPI and httpViewer instrumentation  (@gdey)
+* Refactored BuildInfo into a package (@gdey)
+* Update TOML package (@ear7h #799)
+
+## 0.13.0 (2021-03-23)
+**Features**
+
+* cache/s3: Allow forcing path style for s3 compatible API requests (#745 @johngian)
+* observability: [experimental] Initial implementation of observability support for Prometheus. Provides go runtime metrics and a "/metrics". (# #714 @gdey )
+
+**Bug Fixes**
+
+* Fixed MacOS release builds don't include support for GeoPackage providers (#736 @flother )
+* ci: Fixed GH Action env syntax (@ARolek)
+* docker: Version bumps in Dockerfile (@ARolek)
+* dataprovider/postgis/mvt: Fix SQL parsing for MVT provider (#744 @johngian)
+
+**Maintenance**
+
+* cache/s3: updated deprecated function (@alrs)
+* dataprovider/postgis: Updated mvt_postgis README regarding 4326 projection (@ARolek)
+* ui: Bumps elliptic from 6.5.3 to 6.5.4. dependency (#749 @dependabot)
+
 ## 0.12.1 (2020-09-04)
 **Bug Fixes**
 * fixed the internal viewer not using the most recent version (@ARolek)
