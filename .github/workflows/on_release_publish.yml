@@ -54,6 +54,7 @@ jobs:
         # build architecture
         GOOS: linux
       run: |
+          go generate ./...
           cd cmd/tegola
           go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}"
 
@@ -153,6 +154,7 @@ jobs:
       env:
         GOOS: darwin
       run: |
+          go generate ./...
           cd cmd/tegola
           go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/internal/build.Version=${VERSION}"
 
@@ -240,6 +242,7 @@ jobs:
 
     - name: Build for Windows
       run: |
+          go generate ./...
           cd cmd\tegola
           go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=$Env:VERSION"
 
@@ -251,9 +254,6 @@ jobs:
 
     - name: Compress release asset
       if: github.event_name == 'release'
-      #env:
-        # necessary until Go modules have been adopted in this repo
-        #GOPATH: ${{ github.workspace }}\go
       run: |
           cd cmd\tegola
           7z a tegola.zip tegola.exe

@@ -15,4 +15,5 @@ LDFLAGS_REVISION="-X github.com/go-spatial/tegola/internal/build.GitRevision=${T
 
 LDFLAGS="-w ${LDFLAGS_VERSION} ${LDFLAGS_BRANCH} ${LDFLAGS_REVISION}"
 
+go generate ./...
 go build -ldflags "${LDFLAGS}" -o "tegola_${TEGOLA_BRANCH}" github.com/go-spatial/tegola/cmd/tegola

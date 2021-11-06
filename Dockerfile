@@ -37,11 +37,16 @@ ENV VERSION="${VERSION}"
 # development as these layers are drawn from cache after the first build.
 RUN apk update \ 
 	&& apk add musl-dev=1.1.24-r10 \
-	&& apk add gcc=9.3.0-r2
+	&& apk add gcc=9.3.0-r2 \
+	&& apk add npm # used for the compiling the UI
 
 # Set up source for compilation
 RUN mkdir -p /go/src/github.com/go-spatial/tegola
 COPY . /go/src/github.com/go-spatial/tegola
+
+# Run go generate
+RUN cd /go/src/github.com/go-spatial/tegola \
+	&& go generate ./...
 
 # Build binary
 RUN cd /go/src/github.com/go-spatial/tegola/cmd/tegola \

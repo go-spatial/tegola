@@ -15,6 +15,9 @@
 #	-e VERSION
 #
 
+# run go generate
+go generate ./...
+
 # move to the tegola_lambda folder
 cd cmd/tegola_lambda
 
