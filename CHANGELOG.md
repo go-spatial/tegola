@@ -17,6 +17,7 @@ Maintenance:
 * Split out httpAPI and httpViewer instrumentation  (@gdey)
 * Refactored BuildInfo into a package (@gdey)
 * Update TOML package (@ear7h #799)
+* ui: don't run bindata when using embed (@ear7h #801)
 
 ## 0.13.0 (2021-03-23)
 **Features**
