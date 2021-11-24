@@ -1,7 +1,9 @@
 package redis
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -19,24 +21,26 @@ const (
 	ConfigKeyDB       = "db"
 	ConfigKeyMaxZoom  = "max_zoom"
 	ConfigKeyTTL      = "ttl"
+	ConfigKeySSL      = "ssl"
+)
+
+var (
+	// default values
+	defaultNetwork  = "tcp"
+	defaultAddress  = "127.0.0.1:6379"
+	defaultPassword = ""
+	defaultDB       = 0
+	defaultMaxZoom  = uint(tegola.MaxZ)
+	defaultTTL      = 0
+	defaultSSL      = false
 )
 
 func init() {
 	cache.Register(CacheType, New)
 }
 
-func New(config dict.Dicter) (rcache cache.Interface, err error) {
-
-	// default values
-	defaultNetwork := "tcp"
-	defaultAddress := "127.0.0.1:6379"
-	defaultPassword := ""
-	defaultDB := 0
-	defaultMaxZoom := uint(tegola.MaxZ)
-	defaultTTL := 0
-
-	c := config
-
+// CreateOptions creates redis.Options from an implicit or explicit c
+func CreateOptions(c dict.Dicter) (opts *redis.Options, err error) {
 	network, err := c.String(ConfigKeyNetwork, &defaultNetwork)
 	if err != nil {
 		return nil, err
@@ -45,6 +49,15 @@ func New(config dict.Dicter) (rcache cache.Interface, err error) {
 	addr, err := c.String(ConfigKeyAddress, &defaultAddress)
 	if err != nil {
 		return nil, err
+	}
+
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	if host == "" {
+		return nil, &ErrHostMissing{msg: fmt.Sprintf("no host provided in '%s'", addr)}
 	}
 
 	password, err := c.String(ConfigKeyPassword, &defaultPassword)
@@ -57,14 +70,34 @@ func New(config dict.Dicter) (rcache cache.Interface, err error) {
 		return nil, err
 	}
 
-	client := redis.NewClient(&redis.Options{
+	o := &redis.Options{
 		Network:     network,
 		Addr:        addr,
 		Password:    password,
 		DB:          db,
 		PoolSize:    2,
 		DialTimeout: 3 * time.Second,
-	})
+	}
+
+	ssl, err := c.Bool(ConfigKeySSL, &defaultSSL)
+	if err != nil {
+		return nil, err
+	}
+
+	if ssl {
+		o.TLSConfig = &tls.Config{ServerName: host}
+	}
+
+	return o, nil
+}
+
+func New(c dict.Dicter) (rcache cache.Interface, err error) {
+	opts, err := CreateOptions(c)
+	if err != nil {
+		return nil, err
+	}
+
+	client := redis.NewClient(opts)
 
 	pong, err := client.Ping().Result()
 	if err != nil {
@@ -74,7 +107,7 @@ func New(config dict.Dicter) (rcache cache.Interface, err error) {
 		return nil, fmt.Errorf("redis did not respond with 'PONG', '%s'", pong)
 	}
 
-	// the config map's underlying value is int
+	// the c map's underlying value is int
 	maxZoom, err := c.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
 	if err != nil {
 		return nil, err

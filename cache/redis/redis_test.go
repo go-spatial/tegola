@@ -1,12 +1,14 @@
 package redis_test
 
 import (
+	"crypto/tls"
 	"net"
 	"os"
 	"reflect"
 	"syscall"
 	"testing"
 
+	goredis "github.com/go-redis/redis"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/redis"
 	"github.com/go-spatial/tegola/dict"
@@ -15,6 +17,199 @@ import (
 
 // TESTENV is the environment variable that must be set to "yes" to run the redis tests.
 const TESTENV = "RUN_REDIS_TESTS"
+
+func TestCreateOptions(t *testing.T) {
+	ttools.ShouldSkip(t, TESTENV)
+
+	type tcase struct {
+		name        string
+		config      dict.Dict
+		expected    *goredis.Options
+		expectedErr error
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+
+			actual, err := redis.CreateOptions(tc.config)
+			if tc.expectedErr == nil && err != nil {
+				t.Fatalf("unexpected error: %q", err)
+				return
+			}
+			if tc.expectedErr != nil && err != nil {
+				if reflect.TypeOf(err) != reflect.TypeOf(tc.expectedErr) {
+					t.Errorf("invalid error type. expected %T, got %T", tc.expectedErr, err)
+					return
+				}
+				return
+			}
+			compareOptions(t, actual, tc.expected)
+		}
+	}
+
+	tests := map[string]tcase{
+		"test complete config": {
+			config: map[string]interface{}{
+				"network":  "tcp",
+				"address":  "127.0.0.1:6379",
+				"password": "test",
+				"db":       0,
+				"max_zoom": uint(10),
+				"ssl":      false,
+			},
+			expected: &goredis.Options{
+				Network:  "tcp",
+				DB:       0,
+				Addr:     "127.0.0.1:6379",
+				Password: "test",
+			},
+		},
+		"test empty config": {
+			config: map[string]interface{}{},
+			expected: &goredis.Options{
+				Network:  "tcp",
+				DB:       0,
+				Addr:     "127.0.0.1:6379",
+				Password: "",
+			},
+		},
+		"test ssl config": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network":  "tcp",
+				"address":  "127.0.0.1:6379",
+				"password": "test",
+				"db":       0,
+				"max_zoom": uint(10),
+				"ssl":      true,
+			},
+			expected: &goredis.Options{
+				Network:   "tcp",
+				DB:        0,
+				Addr:      "127.0.0.1:6379",
+				Password:  "test",
+				TLSConfig: &tls.Config{ /* no deep comparison */ },
+			},
+		},
+		"test bad address": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network":  "tcp",
+				"address":  2,
+				"password": "test",
+				"db":       0,
+			},
+			expectedErr: dict.ErrKeyType{
+				Key:   "addr",
+				Value: 2,
+				T:     reflect.TypeOf(""),
+			},
+		},
+		"test bad host": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network": "tcp",
+				"address": "::8080",
+				"db":      0,
+			},
+			expectedErr: &net.AddrError{ /* no deep comparison */ },
+		},
+		"test missing host": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network": "tcp",
+				"address": ":8080",
+				"db":      0,
+			},
+			expectedErr: &redis.ErrHostMissing{},
+		},
+		"test missing port": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network": "tcp",
+				"address": "localhost",
+				"db":      0,
+			},
+			expectedErr: &net.AddrError{ /* no deep comparison */ },
+		},
+		"test bad db": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network": "tcp",
+				"address": "127.0.0.1:6379",
+				"db":      "fails",
+			},
+			expectedErr: dict.ErrKeyType{
+				Key:   "db",
+				Value: "fails",
+				T:     reflect.TypeOf(1),
+			},
+		},
+		"test bad password": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network":  "tcp",
+				"address":  "127.0.0.1:6379",
+				"password": 0,
+			},
+			expectedErr: dict.ErrKeyType{
+				Key:   "password",
+				Value: 0,
+				T:     reflect.TypeOf(""),
+			},
+		},
+		"test bad network": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network": 0,
+				"address": "127.0.0.1:6379",
+			},
+			expectedErr: dict.ErrKeyType{
+				Key:   "network",
+				Value: 0,
+				T:     reflect.TypeOf(1),
+			},
+		},
+		"test bad ssl": {
+			name: "test test ssl config",
+			config: map[string]interface{}{
+				"network": "tcp",
+				"address": "127.0.0.1:6379",
+				"ssl":     0,
+			},
+			expectedErr: dict.ErrKeyType{
+				Key:   "ssl",
+				Value: 0,
+				T:     reflect.TypeOf(true),
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
+func compareOptions(t *testing.T, actual, expected *goredis.Options) {
+	t.Helper()
+
+	if actual.Addr != expected.Addr {
+		t.Errorf("got %q, want %q", actual.Addr, expected.Addr)
+	}
+	if actual.DB != expected.DB {
+		t.Errorf("DB: got %q, expected %q", actual.DB, expected.DB)
+	}
+	if actual.TLSConfig == nil && expected.TLSConfig != nil {
+		t.Errorf("got nil TLSConfig, expected a TLSConfig")
+	}
+	if actual.TLSConfig != nil && expected.TLSConfig == nil {
+		t.Errorf("got TLSConfig, expected no TLSConfig")
+	}
+	if actual.Password != expected.Password {
+		t.Errorf("Password: got %q, expected %q", actual.Password, expected.Password)
+	}
+}
 
 // TestNew will run tests against a local redis instance
 // on 127.0.0.1:6379
@@ -76,10 +271,27 @@ func TestNew(t *testing.T) {
 				"password": "",
 				"db":       0,
 				"max_zoom": uint(10),
+				"ssl":      false,
 			},
 		},
 		"implicit config": {
 			config: map[string]interface{}{},
+		},
+		"bad config address": {
+			config: map[string]interface{}{"address": 0},
+			expectedErr: dict.ErrKeyType{
+				Key:   "address",
+				Value: 0,
+				T:     reflect.TypeOf(""),
+			},
+		},
+		"bad config ttl": {
+			config: map[string]interface{}{"ttl": "fails"},
+			expectedErr: dict.ErrKeyType{
+				Key:   "ttl",
+				Value: "fails",
+				T:     reflect.TypeOf(1),
+			},
 		},
 		"bad address": {
 			config: map[string]interface{}{
