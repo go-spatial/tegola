@@ -16,3 +16,5 @@ The rediscache config supports the following properties:
 - `db` (int): [Optional] the database within the Redis instance to cache to.
 - `max_zoom` (int): [Optional] the max zoom the cache should cache to. After this zoom, Set() calls will return before doing work.
 - `ttl` (int): [Optional] the key ttl time in seconds. Defaults to 0 (the key has no expiration time).
+- `ssl` (bool): [Optional] encrypt connection to the Redis server. Defaults to false (no SSL/TLS)
+
