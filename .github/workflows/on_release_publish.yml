@@ -1,6 +1,7 @@
 name: On release publish
 on: 
   push:
+  pull_request:
   release:
     types: [published]
 
@@ -18,7 +19,7 @@ jobs:
 
     # when it's not a release build use the commit hash for the version tag
     - name: Set tegola version (use commit hash)
-      if: github.event_name == 'push'
+      if: github.event_name != 'release'
       run: echo ${{ github.sha }} | cut -c1-7 > ${{ github.workspace }}/version.txt
 
     - name: Upload build artifacts
