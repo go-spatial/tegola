@@ -2,10 +2,11 @@ package postgis
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/ttools"
@@ -123,15 +124,20 @@ func TestDecipherFields(t *testing.T) {
 		expectedTags     map[string]interface{}
 	}
 
-	cc := pgx.ConnConfig{
-		Host:     os.Getenv("PGHOST"),
-		Port:     5432,
-		Database: os.Getenv("PGDATABASE"),
-		User:     os.Getenv("PGUSER"),
-		Password: os.Getenv("PGPASSWORD"),
+	host := os.Getenv("PGHOST")
+	port := 5432
+	db := os.Getenv("PGDATABASE")
+	user := os.Getenv("PGUSER")
+	password := os.Getenv("PGPASSWORD")
+
+	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, db)
+	dbconfig, err := BuildDBConfig(cs)
+
+	if err != nil {
+		t.Fatalf("unable to build db config: %v", err)
 	}
 
-	conn, err := pgx.Connect(cc)
+	conn, err := pgxpool.ConnectConfig(context.Background(), dbconfig)
 	if err != nil {
 		t.Fatalf("unable to connect to database: %v", err)
 	}
@@ -139,7 +145,7 @@ func TestDecipherFields(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			rows, err := conn.Query(tc.sql)
+			rows, err := conn.Query(context.Background(), tc.sql)
 			if err != nil {
 				t.Errorf("Error performing query: %v", err)
 				return

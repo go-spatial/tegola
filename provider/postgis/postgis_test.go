@@ -1,6 +1,7 @@
 package postgis_test
 
 import (
+	"fmt"
 	"testing"
 
 	"context"
@@ -9,17 +10,24 @@ import (
 	"github.com/go-spatial/tegola/internal/ttools"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func TestTLSConfig(t *testing.T) {
 
-	testConnConfig := pgx.ConnConfig{
-		Host:     "testhost",
-		Port:     8080,
-		Database: "testdb",
-		User:     "testuser",
-		Password: "testpassword",
+	var (
+		host     = "testhost"
+		port     = 8080
+		database = "testdb"
+		user     = "testuser"
+		password = "testpassword"
+	)
+
+	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, database)
+	testConnConfig, err := postgis.BuildDBConfig(cs)
+
+	if err != nil {
+		t.Fatalf("unable to build db config: %v", err)
 	}
 
 	type tcase struct {
@@ -27,13 +35,13 @@ func TestTLSConfig(t *testing.T) {
 		sslKey      string
 		sslCert     string
 		sslRootCert string
-		testFunc    func(config pgx.ConnConfig)
+		testFunc    func(config *pgxpool.Config)
 		shouldError bool
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			err := postgis.ConfigTLS(tc.sslMode, tc.sslKey, tc.sslCert, tc.sslRootCert, &testConnConfig)
+			err := postgis.ConfigTLS(tc.sslMode, tc.sslKey, tc.sslCert, tc.sslRootCert, testConnConfig)
 			if !tc.shouldError && err != nil {
 				t.Errorf("unable to create a new provider: %v", err)
 				return
@@ -53,7 +61,7 @@ func TestTLSConfig(t *testing.T) {
 			sslCert:     "",
 			sslRootCert: "",
 			shouldError: true,
-			testFunc: func(config pgx.ConnConfig) {
+			testFunc: func(config *pgxpool.Config) {
 			},
 		},
 		"2": {
@@ -62,17 +70,9 @@ func TestTLSConfig(t *testing.T) {
 			sslCert:     "",
 			sslRootCert: "",
 			shouldError: false,
-			testFunc: func(config pgx.ConnConfig) {
-				if config.UseFallbackTLS != false {
-					t.Error("When using disable ssl mode; UseFallbackTLS, expected false got true")
-				}
-
-				if config.TLSConfig != nil {
-					t.Errorf("When using disable ssl mode; UseFallbackTLS, expected nil got %v", testConnConfig.TLSConfig)
-				}
-
-				if config.FallbackTLSConfig != nil {
-					t.Errorf("When using disable ssl mode; UseFallbackTLS, expected nil got %v", testConnConfig.FallbackTLSConfig)
+			testFunc: func(config *pgxpool.Config) {
+				if config.ConnConfig.TLSConfig != nil {
+					t.Errorf("When using disable ssl mode; UseFallbackTLS, expected nil got %v", testConnConfig.ConnConfig.TLSConfig)
 				}
 			},
 		},
@@ -82,16 +82,8 @@ func TestTLSConfig(t *testing.T) {
 			sslCert:     "",
 			sslRootCert: "",
 			shouldError: false,
-			testFunc: func(config pgx.ConnConfig) {
-				if config.UseFallbackTLS != true {
-					t.Error("When using allow ssl mode; UseFallbackTLS, expected true got false")
-				}
-
-				if config.FallbackTLSConfig == nil {
-					t.Error("When using allow ssl mode; UseFallbackTLS, expected not nil got nil")
-				}
-
-				if config.FallbackTLSConfig != nil && config.FallbackTLSConfig.InsecureSkipVerify == false {
+			testFunc: func(config *pgxpool.Config) {
+				if config.ConnConfig.TLSConfig.InsecureSkipVerify == false {
 					t.Error("When using allow ssl mode; UseFallbackTLS.InsecureSkipVerify, expected true got false")
 				}
 			},
@@ -102,20 +94,12 @@ func TestTLSConfig(t *testing.T) {
 			sslCert:     "",
 			sslRootCert: "",
 			shouldError: false,
-			testFunc: func(config pgx.ConnConfig) {
-				if config.UseFallbackTLS != true {
-					t.Error("When using prefer ssl mode; UseFallbackTLS, expected true got false")
-				}
-
-				if config.FallbackTLSConfig != nil {
-					t.Errorf("When using prefer ssl mode; UseFallbackTLS, expected nil got %v", config.FallbackTLSConfig)
-				}
-
-				if config.TLSConfig == nil {
+			testFunc: func(config *pgxpool.Config) {
+				if config.ConnConfig.TLSConfig == nil {
 					t.Error("When using prefer ssl mode; TLSConfig, expected not nil got nil")
 				}
 
-				if config.TLSConfig != nil && config.TLSConfig.InsecureSkipVerify == false {
+				if config.ConnConfig.TLSConfig != nil && config.ConnConfig.TLSConfig.InsecureSkipVerify == false {
 					t.Error("When using prefer ssl mode; TLSConfig.InsecureSkipVerify, expected true got false")
 				}
 			},
@@ -126,12 +110,12 @@ func TestTLSConfig(t *testing.T) {
 			sslCert:     "",
 			sslRootCert: "",
 			shouldError: false,
-			testFunc: func(config pgx.ConnConfig) {
-				if config.TLSConfig == nil {
+			testFunc: func(config *pgxpool.Config) {
+				if config.ConnConfig.TLSConfig == nil {
 					t.Error("When using prefer ssl mode; TLSConfig, expected not nil got nil")
 				}
 
-				if config.TLSConfig != nil && config.TLSConfig.InsecureSkipVerify == false {
+				if config.ConnConfig.TLSConfig != nil && config.ConnConfig.TLSConfig.InsecureSkipVerify == false {
 					t.Error("When using prefer ssl mode; TLSConfig.InsecureSkipVerify, expected true got false")
 				}
 			},
@@ -142,13 +126,13 @@ func TestTLSConfig(t *testing.T) {
 			sslCert:     "",
 			sslRootCert: "",
 			shouldError: false,
-			testFunc: func(config pgx.ConnConfig) {
-				if config.TLSConfig == nil {
+			testFunc: func(config *pgxpool.Config) {
+				if config.ConnConfig.TLSConfig == nil {
 					t.Error("When using prefer ssl mode; TLSConfig, expected not nil got nil")
 				}
 
-				if config.TLSConfig != nil && config.TLSConfig.ServerName != testConnConfig.Host {
-					t.Errorf("When using prefer ssl mode; TLSConfig.ServerName, expected %s got %s", testConnConfig.Host, config.TLSConfig.ServerName)
+				if config.ConnConfig.TLSConfig != nil && config.ConnConfig.TLSConfig.ServerName != testConnConfig.ConnConfig.Host {
+					t.Errorf("When using prefer ssl mode; TLSConfig.ServerName, expected %s got %s", testConnConfig.ConnConfig.Host, config.ConnConfig.TLSConfig.ServerName)
 				}
 			},
 		},
@@ -158,13 +142,13 @@ func TestTLSConfig(t *testing.T) {
 			sslCert:     "",
 			sslRootCert: "",
 			shouldError: false,
-			testFunc: func(config pgx.ConnConfig) {
-				if config.TLSConfig == nil {
+			testFunc: func(config *pgxpool.Config) {
+				if config.ConnConfig.TLSConfig == nil {
 					t.Error("When using prefer ssl mode; TLSConfig, expected not nil got nil")
 				}
 
-				if config.TLSConfig != nil && config.TLSConfig.ServerName != testConnConfig.Host {
-					t.Errorf("When using prefer ssl mode; TLSConfig.ServerName, expected %s got %s", testConnConfig.Host, config.TLSConfig.ServerName)
+				if config.ConnConfig.TLSConfig != nil && config.ConnConfig.TLSConfig.ServerName != testConnConfig.ConnConfig.Host {
+					t.Errorf("When using prefer ssl mode; TLSConfig.ServerName, expected %s got %s", testConnConfig.ConnConfig.Host, config.ConnConfig.TLSConfig.ServerName)
 				}
 			},
 		},
@@ -473,7 +457,9 @@ func TestTileFeatures(t *testing.T) {
 				LayerConfig: []map[string]interface{}{{
 					postgis.ConfigKeyLayerName: "missing_geom_field_name",
 					postgis.ConfigKeyGeomField: "geom",
-					postgis.ConfigKeySQL:       "SELECT ST_AsBinary(geom) FROM three_d_test WHERE geom && !BBOX!",
+					// this SQL is a workaround the normal !BBOX! token check. We don't care about the bounding
+					// box query, but rather simulating the missing geom column to trigger the error we're testing for.
+					postgis.ConfigKeySQL: "SELECT ST_AsBinary(geom), !BBOX! AS bbox FROM three_d_test",
 				}},
 			},
 			tile: provider.NewTile(16, 11241, 26168, 64, tegola.WebMercator),
