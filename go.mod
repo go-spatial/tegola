@@ -18,7 +18,6 @@ require (
 	github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/golang/protobuf v1.4.3
-	github.com/jackc/pgproto3 v1.1.0
 	github.com/jackc/pgproto3/v2 v2.2.0
 	github.com/jackc/pgtype v1.9.1
 	github.com/jackc/pgx/v4 v4.14.1

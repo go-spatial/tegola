@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -158,10 +159,15 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	encodeCtx := context.WithValue(r.Context(), observability.ObserveVarMapName, m.Name)
 	pbyte, err := m.Encode(encodeCtx, tile)
+
 	if err != nil {
-		switch err {
-		case context.Canceled:
+		switch {
+		case errors.Is(err, context.Canceled):
 			// TODO: add debug logs
+			// do nothing
+			return
+		case strings.Contains(err.Error(), "operation was canceled"):
+			// do nothing
 			return
 		default:
 			errMsg := fmt.Sprintf("error marshalling tile: %v", err)

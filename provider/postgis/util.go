@@ -12,8 +12,8 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/jackc/pgx"
-	"github.com/jackc/pgx/pgtype"
+	"github.com/jackc/pgproto3/v2"
+	"github.com/jackc/pgtype"
 )
 
 // isMVT will return true if the provider is MVT based
@@ -37,7 +37,7 @@ func genSQL(l *Layer, pool *connectionPoolCollector, tblname string, flds []stri
 			return "", err
 		}
 
-		rows, err := pool.Query(sql)
+		rows, err := pool.Query(context.Background(), sql)
 		if err != nil {
 			return "", err
 		}
@@ -45,13 +45,13 @@ func genSQL(l *Layer, pool *connectionPoolCollector, tblname string, flds []stri
 
 		fdescs := rows.FieldDescriptions()
 		if len(fdescs) == 0 {
-			return "", fmt.Errorf("No fields were returned for table %v", tblname)
+			return "", fmt.Errorf("no fields were returned for table %v", tblname)
 		}
 
 		// to avoid field names possibly colliding with Postgres keywords,
 		// we wrap the field names in quotes
 		for i := range fdescs {
-			flds = append(flds, fdescs[i].Name)
+			flds = append(flds, string(fdescs[i].Name))
 		}
 	}
 
@@ -144,12 +144,12 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 	// TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
 	minGeo, err := basic.FromWebMercator(srid, geom.Point{extent.MinX(), extent.MinY()})
 	if err != nil {
-		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
+		return "", fmt.Errorf("Error trying to convert tile point: %w ", err)
 	}
 
 	maxGeo, err := basic.FromWebMercator(srid, geom.Point{extent.MaxX(), extent.MaxY()})
 	if err != nil {
-		return "", fmt.Errorf("Error trying to convert tile point: %v ", err)
+		return "", fmt.Errorf("Error trying to convert tile point: %w ", err)
 	}
 
 	minPt, maxPt := minGeo.(geom.Point), maxGeo.(geom.Point)
@@ -209,7 +209,7 @@ func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 		}
 	case pgtype.BoolOID, pgtype.ByteaOID, pgtype.TextOID, pgtype.OIDOID, pgtype.VarcharOID, pgtype.JSONBOID:
 		return val, nil
-	case pgtype.Int8OID, pgtype.Int2OID, pgtype.Int4OID, pgtype.Float4OID, pgtype.Float8OID:
+	case pgtype.Int8OID, pgtype.Int2OID, pgtype.NumericOID, pgtype.Int4OID, pgtype.Float4OID, pgtype.Float8OID:
 		switch vt := val.(type) {
 		case int8:
 			return int64(vt), nil
@@ -238,13 +238,14 @@ func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 }
 
 // decipherFields is responsible for processing the SQL result set, decoding geometries, ids and feature tags.
-func decipherFields(ctx context.Context, geomFieldname, idFieldname string, descriptions []pgx.FieldDescription, values []interface{}) (gid uint64, geom []byte, tags map[string]interface{}, err error) {
+func decipherFields(ctx context.Context, geomFieldname, idFieldname string, descriptions []pgproto3.FieldDescription, values []interface{}) (gid uint64, geom []byte, tags map[string]interface{}, err error) {
 	var ok bool
 
 	tags = make(map[string]interface{})
 
 	var idParsed bool
 	for i := range values {
+
 		// do a quick check
 		if err := ctx.Err(); err != nil {
 			return 0, nil, nil, err
@@ -256,8 +257,9 @@ func decipherFields(ctx context.Context, geomFieldname, idFieldname string, desc
 		}
 
 		desc := descriptions[i]
+		descName := string(desc.Name)
 
-		switch desc.Name {
+		switch descName {
 		case geomFieldname:
 			if geom, ok = values[i].([]byte); !ok {
 				return 0, nil, nil, fmt.Errorf("unable to convert geometry field (%v) into bytes", geomFieldname)
@@ -284,18 +286,16 @@ func decipherFields(ctx context.Context, geomFieldname, idFieldname string, desc
 						tags[k] = v.String
 					}
 				}
-			case *pgtype.Numeric:
+			case pgtype.Numeric:
 				var num float64
 				vex.AssignTo(&num)
-
-				tags[desc.Name] = num
+				tags[descName] = num
 			default:
-				value, err := transformVal(desc.DataType, values[i])
+				value, err := transformVal(pgtype.OID(desc.DataTypeOID), values[i])
 				if err != nil {
-					return gid, geom, tags, fmt.Errorf("unable to convert field [%v] (%v) of type (%v - %v) to a suitable value: %+v", i, desc.Name, desc.DataType, desc.DataTypeName, values[i])
+					return gid, geom, tags, fmt.Errorf("unable to convert field [%v] (%v) of type (%v - %v) to a suitable value: %+v (%T)", i, descName, desc.DataTypeOID, pgtype.OID(desc.DataTypeOID), values[i], values[i])
 				}
-
-				tags[desc.Name] = value
+				tags[descName] = value
 			}
 		}
 	}
@@ -328,4 +328,16 @@ func gId(v interface{}) (gid uint64, err error) {
 	default:
 		return gid, fmt.Errorf("unable to convert field into a uint64")
 	}
+}
+
+// ctxErr will check if the supplied context has an error (i.e. context canceled)
+// and if so, return that error, else return the supplied error. This is useful
+// as not all of Go's stdlib has adopted error wrapping so context.Canceled
+// errors are not always easy to capture.
+func ctxErr(ctx context.Context, err error) error {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return ctxErr
+	}
+
+	return err
 }

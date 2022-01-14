@@ -323,6 +323,14 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 				case errors.Is(err, context.Canceled):
 					// Do nothing if we were cancelled.
 
+				// the underlying net.Dial function is not properly reporting
+				// context.Canceled errors. Because of this, a string check on the error is performed.
+				// there's an open issue for this and it appears it will be fixed eventually
+				// but for now we have this check to avoid unnecessary logs
+				// https://github.com/golang/go/issues/36208
+				case strings.Contains(err.Error(), "operation was canceled"):
+					// Do nothing, context was canceled
+
 				default:
 					z, x, y := tile.ZXY()
 					// TODO (arolek): should we return an error to the response or just log the error?
