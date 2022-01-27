@@ -22,11 +22,25 @@ jobs:
       if: github.event_name != 'release'
       run: echo ${{ github.sha }} | cut -c1-7 > ${{ github.workspace }}/version.txt
 
-    - name: Upload build artifacts
+    - name: Upload build artifact version
       uses: actions/upload-artifact@v2
       with:
         name: version
         path: ${{ github.workspace }}/version.txt
+
+    # when it's not a release but we want to perform an action on a new push/pr to default branch
+    # we need the default branch ref, which in case of tegola changes with the version
+    - name: Get tegola default branch ref
+      run: |
+        DEFAULT_BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
+        echo "DEFAULT_BRANCH=$DEFAULT_BRANCH" >> $GITHUB_ENV
+        echo "refs/heads/$DEFAULT_BRANCH" > ${{ github.workspace }}/default-branch-ref.txt
+
+    - name: Upload build artifacts default branch ref
+      uses: actions/upload-artifact@v2
+      with:
+        name: default-branch-ref
+        path: ${{ github.workspace }}/default-branch-ref.txt
 
   build_linux:
     name: Build for Linux and AWS Lambda
@@ -198,22 +212,36 @@ jobs:
       with:
         name: version
 
+    - name: Download default-branch-ref artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: default-branch-ref
+
     - name: Set tegola version
       run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
+
+    - name: Set tegola default branch ref
+      run: echo "DEFAULT_BRANCH_REF=$(cat default-branch-ref/default-branch-ref.txt)" >> $GITHUB_ENV
 
     - name: Build and tag Docker container
       run: |
         docker build -t tegola --build-arg VERSION=${VERSION} .
         docker tag tegola:latest ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION}
         docker tag tegola:latest ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:latest
+        docker tag tegola:latest ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:edge
 
-    - name: Publish Docker container
-      if: github.event_name == 'release'
+    - name: Publish Docker edge container
+      if: github.ref == env.DEFAULT_BRANCH_REF
       env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
       run: |
         echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USER} --password-stdin
+        docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:edge
+
+    - name: Publish Docker container
+      if: github.event_name == 'release'
+      run: |
         docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION}
         docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:latest
 
@@ -269,4 +297,3 @@ jobs:
         asset_path: cmd\tegola\tegola.zip
         asset_name: tegola_windows_amd64.zip
         asset_content_type: application/zip
-
