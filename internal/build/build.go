@@ -1,5 +1,7 @@
 package build
 
+//go:generate go run build_tags.go -v -source=../..
+
 import (
 	"sort"
 	"strings"

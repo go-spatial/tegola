@@ -1,3 +1,4 @@
+//go:build pprof
 // +build pprof
 
 package main
@@ -25,14 +26,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-spatial/tegola/internal/build"
 	"github.com/go-spatial/tegola/internal/log"
 )
 
 func init() {
-	// add ourself to the build
-	build.Tags = append(build.Tags, "pprof")
-
 	if bind := os.Getenv("TEGOLA_HTTP_PPROF_BIND"); bind != "" {
 		go func() {
 			log.Infof("Starting up profiler on %v", bind)

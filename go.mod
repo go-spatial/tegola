@@ -16,7 +16,6 @@ require (
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 	github.com/go-spatial/geom v0.0.0-20190821234737-802ab2533ab4
 	github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
-	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/jackc/pgproto3/v2 v2.2.0
 	github.com/jackc/pgtype v1.9.1
