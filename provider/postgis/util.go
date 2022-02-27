@@ -3,7 +3,6 @@ package postgis
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgproto3/v2"
 	"github.com/jackc/pgtype"
@@ -200,7 +200,7 @@ func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 	default:
 		switch vt := val.(type) {
 		default:
-			log.Printf("%v type is not supported. (Expected it to be a stringer type)", valType)
+			log.Errorf("%v type is not supported. (Expected it to be a stringer type)", valType)
 			return nil, fmt.Errorf("%v type is not supported. (Expected it to be a stringer type)", valType)
 		case fmt.Stringer:
 			return vt.String(), nil

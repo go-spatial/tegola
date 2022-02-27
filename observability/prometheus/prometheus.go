@@ -2,7 +2,6 @@ package prometheus
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -15,6 +14,7 @@ import (
 
 	tegolaCache "github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -120,7 +120,7 @@ func (obs *observer) init() {
 					return
 				case <-ticker.C:
 					if err := pusher.Add(); err != nil && !errorReported {
-						log.Printf("could not push to Pushgateway (%v): %v", obs.pushURL, err)
+						log.Errorf("could not push to Pushgateway (%v): %v", obs.pushURL, err)
 						errorReported = true
 					}
 				}
@@ -138,7 +138,7 @@ func (obs *observer) init() {
 			cancel()
 		}
 		if err := pusher.Add(); err != nil {
-			log.Printf("could not push to Pushgateway (%v): %v", obs.pushURL, err)
+			log.Errorf("could not push to Pushgateway (%v): %v", obs.pushURL, err)
 		}
 		wg.Wait()
 	})

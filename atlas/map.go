@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/convert"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths/simplify"
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/provider"
@@ -335,7 +335,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 					z, x, y := tile.ZXY()
 					// TODO (arolek): should we return an error to the response or just log the error?
 					// we can't just write to the response as the waitgroup is going to write to the response as well
-					log.Printf("err fetching tile (z: %v, x: %v, y: %v) features: %v", z, x, y, err)
+					log.Errorf("err fetching tile (z: %v, x: %v, y: %v) features: %v", z, x, y, err)
 				}
 				return
 			}

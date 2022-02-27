@@ -1,7 +1,6 @@
 package observability
 
 import (
-	"log"
 	"net/http"
 	"sort"
 
@@ -10,6 +9,7 @@ import (
 	tegolaCache "github.com/go-spatial/tegola/cache"
 
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 const (
@@ -159,7 +159,7 @@ func For(observerType string, config dict.Dicter) (Interface, error) {
 	o, ok := observers[observerType]
 	if !ok {
 		i, _ := noneInit(nil)
-		log.Printf("did not find %v", observerType)
+		log.Errorf("did not find %v", observerType)
 		return i, ErrObserverIsNotRegistered(observerType)
 	}
 	return o.Init(config)

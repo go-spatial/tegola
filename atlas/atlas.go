@@ -3,7 +3,6 @@ package atlas
 
 import (
 	"context"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/internal/observer"
 	"github.com/go-spatial/tegola/observability"
 )
@@ -29,7 +29,7 @@ func init() {
 	options := strings.ToLower(os.Getenv("TEGOLA_OPTIONS"))
 	if strings.Contains(options, "dontsimplifygeo") {
 		simplifyGeometries = false
-		log.Println("simplification is disable")
+		log.Debugf("simplification is disable")
 	}
 
 	if strings.Contains(options, "simplifymaxzoom=") {
@@ -45,13 +45,13 @@ func init() {
 
 		i, err := strconv.Atoi(options[idx:eidx])
 		if err != nil {
-			log.Printf("invalid value for SimplifyMaxZoom (%v). using default (%v).", options[idx:eidx], simplificationMaxZoom)
+			log.Errorf("invalid value for SimplifyMaxZoom (%v). using default (%v).", options[idx:eidx], simplificationMaxZoom)
 			return
 		}
 
 		simplificationMaxZoom = uint(i + 1)
 
-		log.Printf("SimplifyMaxZoom set to (%v)", simplificationMaxZoom)
+		log.Debugf("SimplifyMaxZoom set to (%v)", simplificationMaxZoom)
 	}
 }
 
@@ -263,7 +263,7 @@ func (a *Atlas) SetObservability(o observability.Interface) {
 
 		collectors, err := aMap.Collectors("tegola", o.CollectorConfig)
 		if err != nil {
-			log.Printf("failed to register collector for map: %v ignoring", aMap.Name)
+			log.Errorf("failed to register collector for map: %v ignoring", aMap.Name)
 			continue
 		}
 		o.MustRegister(collectors...)

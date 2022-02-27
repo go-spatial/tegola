@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/go-spatial/geom/encoding/wkb"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgproto3/v2"
@@ -425,7 +425,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 		}
 
 		if tblName != lName && sql != "" {
-			log.Printf("both %v and %v field are specified for layer (%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lName)
+			log.Debugf("both %v and %v field are specified for layer (%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lName)
 		}
 
 		var lsrid = srid
@@ -475,7 +475,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 		}
 
 		if debugLayerSQL {
-			log.Printf("SQL for Layer(%v):\n%v\n", lName, l.sql)
+			log.Debugf("SQL for Layer(%v):\n%v\n", lName, l.sql)
 		}
 
 		// set the layer geom type
@@ -700,7 +700,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	}
 
 	if debugExecuteSQL {
-		log.Printf("TEGOLA_SQL_DEBUG:EXECUTE_SQL for layer (%v): %v", layer, sql)
+		log.Debugf("TEGOLA_SQL_DEBUG:EXECUTE_SQL for layer (%v): %v", layer, sql)
 	}
 
 	// context check
@@ -783,7 +783,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 				// Only report to the log once. This is to prevent the logs from filling up if there are many geometries in the layer
 				if reportedLayerFieldName == "" || reportedLayerFieldName == rplfn {
 					reportedLayerFieldName = rplfn
-					log.Printf("[WARNING] Ignoring unsupported geometry in layer (%v). Only basic 2D geometry type are supported. Try using `ST_Force2D(%v)`.", layer, plyr.GeomFieldName())
+					log.Warnf("Ignoring unsupported geometry in layer (%v). Only basic 2D geometry type are supported. Try using `ST_Force2D(%v)`.", layer, plyr.GeomFieldName())
 				}
 				continue
 			default:
@@ -824,16 +824,16 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 
 	for i := range layers {
 		if debug {
-			log.Printf("looking for layer: %v", layers[i])
+			log.Debugf("looking for layer: %v", layers[i])
 		}
 		l, ok := p.Layer(layers[i].Name)
 		if !ok {
 			// Should we error here, or have a flag so that we don't
 			// spam the user?
-			log.Printf("provider layer not found %v", layers[i].Name)
+			log.Warnf("provider layer not found %v", layers[i].Name)
 		}
 		if debugLayerSQL {
-			log.Printf("SQL for Layer(%v):\n%v\n", l.Name(), l.sql)
+			log.Debugf("SQL for Layer(%v):\n%v\n", l.Name(), l.sql)
 		}
 		sql, err := replaceTokens(l.sql, &l, tile, false)
 		if err := ctxErr(ctx, err); err != nil {
@@ -864,7 +864,7 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 	fsql := fmt.Sprintf(`SELECT (%s) AS data`, subsqls)
 	var data pgtype.Bytea
 	if debugExecuteSQL {
-		log.Printf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
+		log.Debugf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
 	}
 	{
 		now := time.Now()
@@ -880,11 +880,11 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers [
 	}
 
 	if debugExecuteSQL {
-		log.Printf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
+		log.Debugf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
 		if err != nil {
-			log.Printf("%s:%s: returned error %v", EnvSQLDebugName, EnvSQLDebugExecute, err)
+			log.Errorf("%s:%s: returned error %v", EnvSQLDebugName, EnvSQLDebugExecute, err)
 		} else {
-			log.Printf("%s:%s: returned %v bytes", EnvSQLDebugName, EnvSQLDebugExecute, len(data.Bytes))
+			log.Debugf("%s:%s: returned %v bytes", EnvSQLDebugName, EnvSQLDebugExecute, len(data.Bytes))
 		}
 	}
 
@@ -904,7 +904,7 @@ var providers []Provider
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
 	if len(providers) > 0 {
-		log.Printf("cleaning up postgis providers")
+		log.Infof("cleaning up postgis providers")
 	}
 
 	for i := range providers {

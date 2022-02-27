@@ -71,6 +71,10 @@ func SetOutput(w io.Writer) {
 	logger.SetOutput(w)
 }
 
+func GetLogLevel() Level {
+	return level
+}
+
 func SetLogLevel(lvl Level) {
 	lock.Lock()
 	IsTrace = false
