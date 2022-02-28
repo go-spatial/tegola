@@ -17,10 +17,11 @@ The s3cache config supports the following properties:
 - `aws_access_key_id` (string): [Optional] the AWS access key id to use.
 - `aws_secret_access_key` (string): [Optional] the AWS secret access key to use.
 - `max_zoom` (int): [Optional] the max zoom the cache should cache to. After this zoom, Set() calls will return before doing work.
-- `endpoint` (string): the endpoint where the S3 compliant backend is located. only necessary for non-AWS deployments. defaults to ''.
-- `access_control_list` (string): the S3 access control to set on the file when putting the file. defaults to ''.
-- `cache_control` (string): the HTTP cache control header to set on the file when putting the file. defaults to ''.
-- `content_type` (string): the http MIME-type set on the file when putting the file. defaults to 'application/vnd.mapbox-vector-tile'.
+- `endpoint` (string): [Optional] the endpoint where the S3 compliant backend is located. only necessary for non-AWS deployments. defaults to ''.
+- `access_control_list` (string): [Optional] the S3 access control to set on the file when putting the file. defaults to ''.
+- `cache_control` (string): [Optional] the HTTP cache control header to set on the file when putting the file. defaults to ''.
+- `content_type` (string): [Optional] the http MIME-type set on the file when putting the file. defaults to 'application/vnd.mapbox-vector-tile'.
+- `force_path_style` (bool): [Optional] use path-style addressing instead of virtual hosted-style addressing (i.e. http://s3.amazonaws.com/BUCKET/KEY instead of http://BUCKET.s3.amazonaws.com/KEY)
 
 
 ## Credential chain
