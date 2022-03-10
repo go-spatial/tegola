@@ -95,12 +95,6 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	return nil
 }
 
-func logAndError(w http.ResponseWriter, code int, format string, vals ...interface{}) {
-	msg := fmt.Sprintf(format, vals...)
-	log.Info(msg)
-	http.Error(w, msg, code)
-}
-
 // URI scheme: /maps/:map_name/:layer_name/:z/:x/:y
 // map_name - map name in the config file
 // layer_name - name of the single map layer to render
@@ -127,15 +121,20 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// filter down the layers we need for this zoom
 	m = m.FilterLayersByZoom(req.z)
 	if len(m.Layers) == 0 {
-		logAndError(w, http.StatusNotFound, "map (%v) has no layers, at zoom %v", req.mapName, req.z)
+		msg := fmt.Sprintf("map (%v) has no layers, at zoom %v", req.mapName, req.z)
+		log.Debug(msg)
+		http.Error(w, msg, http.StatusNotFound)
 		return
 	}
 
 	if req.layerName != "" {
 		m = m.FilterLayersByName(req.layerName)
 		if len(m.Layers) == 0 {
-			logAndError(w, http.StatusNotFound, "map (%v) has no layers, for LayerName %v at zoom %v", req.mapName, req.layerName, req.z)
+			msg := fmt.Sprintf("map (%v) has no layers, for LayerName %v at zoom %v", req.mapName, req.layerName, req.z)
+			log.Debug(msg)
+			http.Error(w, msg, http.StatusNotFound)
 			return
+
 		}
 	}
 
@@ -147,7 +146,9 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// make a new extent
 		textent := tile.Extent4326()
 		if _, intersect := m.Bounds.Intersect(textent); !intersect {
-			logAndError(w, http.StatusNotFound, "map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
+			msg := fmt.Sprintf("map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
+			log.Debug(msg)
+			http.Error(w, msg, http.StatusNotFound)
 			return
 		}
 	}
