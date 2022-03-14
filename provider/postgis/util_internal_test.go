@@ -125,7 +125,7 @@ func TestDecipherFields(t *testing.T) {
 	}
 
 	host := os.Getenv("PGHOST")
-	port := 5432
+	port := os.Getenv("PGPORT")
 	db := os.Getenv("PGDATABASE")
 	user := os.Getenv("PGUSER")
 	password := os.Getenv("PGPASSWORD")
