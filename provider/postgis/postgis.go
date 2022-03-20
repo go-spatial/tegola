@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -156,34 +158,40 @@ const (
 )
 
 const (
-	DefaultPort    = 5432
-	DefaultSRID    = tegola.WebMercator
-	DefaultMaxConn = 100
-	DefaultSSLMode = "disable"
-	DefaultSSLKey  = ""
-	DefaultSSLCert = ""
+	DefaultURI             = ""
+	DefaultPort            = 5432
+	DefaultSRID            = tegola.WebMercator
+	DefaultMaxConn         = 100
+	DefaultMaxConnIdleTime = "30m"
+	DefaultMaxConnLifetime = "1h"
+	DefaultSSLMode         = "prefer"
+	DefaultSSLKey          = ""
+	DefaultSSLCert         = ""
 )
 
 const (
-	ConfigKeyHost        = "host"
-	ConfigKeyPort        = "port"
-	ConfigKeyDB          = "database"
-	ConfigKeyUser        = "user"
-	ConfigKeyPassword    = "password"
-	ConfigKeySSLMode     = "ssl_mode"
-	ConfigKeySSLKey      = "ssl_key"
-	ConfigKeySSLCert     = "ssl_cert"
-	ConfigKeySSLRootCert = "ssl_root_cert"
-	ConfigKeyMaxConn     = "max_connections"
-	ConfigKeySRID        = "srid"
-	ConfigKeyLayers      = "layers"
-	ConfigKeyLayerName   = "name"
-	ConfigKeyTablename   = "tablename"
-	ConfigKeySQL         = "sql"
-	ConfigKeyFields      = "fields"
-	ConfigKeyGeomField   = "geometry_fieldname"
-	ConfigKeyGeomIDField = "id_fieldname"
-	ConfigKeyGeomType    = "geometry_type"
+	ConfigKeyURI             = "uri"
+	ConfigKeyHost            = "host"
+	ConfigKeyPort            = "port"
+	ConfigKeyDB              = "database"
+	ConfigKeyUser            = "user"
+	ConfigKeyPassword        = "password"
+	ConfigKeySSLMode         = "ssl_mode"
+	ConfigKeySSLKey          = "ssl_key"
+	ConfigKeySSLCert         = "ssl_cert"
+	ConfigKeySSLRootCert     = "ssl_root_cert"
+	ConfigKeyMaxConn         = "max_connections"
+	ConfigKeyMaxConnIdleTime = "max_connection_idle_time"
+	ConfigKeyMaxConnLifetime = "max_connection_lifetime"
+	ConfigKeySRID            = "srid"
+	ConfigKeyLayers          = "layers"
+	ConfigKeyLayerName       = "name"
+	ConfigKeyTablename       = "tablename"
+	ConfigKeySQL             = "sql"
+	ConfigKeyFields          = "fields"
+	ConfigKeyGeomField       = "geometry_fieldname"
+	ConfigKeyGeomIDField     = "id_fieldname"
+	ConfigKeyGeomType        = "geometry_type"
 )
 
 // isSelectQuery is a regexp to check if a query starts with `SELECT`,
@@ -195,9 +203,147 @@ type hstoreOID struct {
 	hasInit bool
 }
 
+// validateURI validates for minimum requirements for a valid postgresql uri
+func validateURI(u string) error {
+	uri, err := url.Parse(u)
+	if err != nil {
+		return ErrInvalidURI{Err: err}
+	}
+
+	if uri.Scheme != "postgres" && uri.Scheme != "postgresql" {
+		return ErrInvalidURI{
+			Msg: fmt.Sprintf("invalid connection scheme (%v)", uri.Scheme),
+		}
+	}
+
+	if uri.User == nil {
+		return ErrInvalidURI{Msg: "auth credentials missing"}
+	}
+
+	host, port, err := net.SplitHostPort(uri.Host)
+	if err != nil {
+		return ErrInvalidURI{
+			Err: fmt.Errorf("splitting host port error: %w", err),
+		}
+	}
+
+	if host == "" {
+		return ErrInvalidURI{
+			Msg: fmt.Sprintf("address %v:%v: missing host in address", host, port),
+		}
+	}
+
+	if uri.Path == "" {
+		return ErrInvalidURI{Msg: "missing database"}
+	}
+
+	return nil
+}
+
+// TODO: (iwpnd) to be removed/refactored in v0.17.0
+// BuildURI creates a database URI from config
+func BuildURI(config dict.Dicter) (*url.URL, *url.Values, error) {
+
+	sslmode := DefaultSSLMode
+	sslmode, err := config.String(ConfigKeySSLMode, &sslmode)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	uri := DefaultURI
+	uri, err = config.String(ConfigKeyURI, &uri)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// if uri is set in the config, we add sslmode and return early
+	if uri != "" {
+		log.Warn("Connecting to PostGIS with host/port combination is deprecated. Please use connection string instead.")
+
+		if err := validateURI(uri); err != nil {
+			return nil, nil, err
+		}
+
+		parsedUri, err := url.Parse(uri)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// parse query to make sure sslmode is attached
+		parsedQuery, err := url.ParseQuery(parsedUri.RawQuery)
+		if err != nil {
+			return &url.URL{}, nil, err
+		}
+
+		if ok := parsedQuery.Get("sslmode"); ok == "" {
+			parsedQuery.Add("sslmode", sslmode)
+		}
+
+		parsedUri.RawQuery = parsedQuery.Encode()
+
+		return parsedUri, &parsedQuery, nil
+	}
+
+	host, err := config.String(ConfigKeyHost, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	port := DefaultPort
+	if port, err = config.Int(ConfigKeyPort, &port); err != nil {
+		return nil, nil, err
+	}
+
+	db, err := config.String(ConfigKeyDB, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	user, err := config.String(ConfigKeyUser, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	password, err := config.String(ConfigKeyPassword, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	maxcon := DefaultMaxConn
+	if maxcon, err = config.Int(ConfigKeyMaxConn, &maxcon); err != nil {
+		return nil, nil, err
+	}
+
+	idletime := DefaultMaxConnIdleTime
+	if idletime, err = config.String(ConfigKeyMaxConnIdleTime, &idletime); err != nil {
+		return nil, nil, err
+	}
+
+	lifetime := DefaultMaxConnLifetime
+	if lifetime, err = config.String(ConfigKeyMaxConnLifetime, &lifetime); err != nil {
+		return nil, nil, err
+	}
+
+	params := &url.Values{}
+	params.Add("sslmode", sslmode)
+	params.Add("pool_max_conns", fmt.Sprintf("%v", maxcon))
+	params.Add("pool_max_conn_lifetime", lifetime)
+	params.Add("pool_max_conn_idle_time", idletime)
+
+	u := &url.URL{
+		Scheme:   "postgres",
+		Host:     fmt.Sprintf("%v:%v", host, port),
+		User:     url.UserPassword(user, password),
+		Path:     db,
+		RawQuery: params.Encode(),
+	}
+
+	return u, params, nil
+}
+
 // BuildDBConfig build db config with defaults
-func BuildDBConfig(cs string) (*pgxpool.Config, error) {
-	dbconfig, err := pgxpool.ParseConfig(cs)
+func BuildDBConfig(uri string) (*pgxpool.Config, error) {
+	dbconfig, err := pgxpool.ParseConfig(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -278,32 +424,12 @@ func BuildDBConfig(cs string) (*pgxpool.Config, error) {
 // 			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
 func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) {
-
-	host, err := config.String(ConfigKeyHost, nil)
+	uri, params, err := BuildURI(config)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := config.String(ConfigKeyDB, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	user, err := config.String(ConfigKeyUser, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	password, err := config.String(ConfigKeyPassword, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	sslmode := DefaultSSLMode
-	sslmode, err = config.String(ConfigKeySSLMode, &sslmode)
-	if err != nil {
-		return nil, err
-	}
+	sslmode := params.Get("sslmode")
 
 	sslkey := DefaultSSLKey
 	sslkey, err = config.String(ConfigKeySSLKey, &sslkey)
@@ -323,28 +449,14 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 		return nil, err
 	}
 
-	port := DefaultPort
-	if port, err = config.Int(ConfigKeyPort, &port); err != nil {
-		return nil, err
-	}
-
-	maxcon := DefaultMaxConn
-	if maxcon, err = config.Int(ConfigKeyMaxConn, &maxcon); err != nil {
-		return nil, err
+	dbconfig, err := BuildDBConfig(uri.String())
+	if err != nil {
+		return nil, fmt.Errorf("Failed while building db config: %w", err)
 	}
 
 	srid := DefaultSRID
 	if srid, err = config.Int(ConfigKeySRID, &srid); err != nil {
 		return nil, err
-	}
-
-	// TODO: allow connection string option in config
-	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=%v&pool_max_conns=%v",
-		user, password, host, port, db, sslmode, maxcon)
-
-	dbconfig, err := BuildDBConfig(cs)
-	if err != nil {
-		return nil, fmt.Errorf("Failed while building db config: %w", err)
 	}
 
 	if err = ConfigTLS(sslmode, sslkey, sslcert, sslrootcert, dbconfig); err != nil {
