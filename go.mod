@@ -20,7 +20,6 @@ require (
 	github.com/jackc/pgproto3/v2 v2.2.0
 	github.com/jackc/pgtype v1.9.1
 	github.com/jackc/pgx/v4 v4.14.1
-	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/mattn/goveralls v0.0.5
 	github.com/pborman/uuid v1.2.0
