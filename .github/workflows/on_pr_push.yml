@@ -100,12 +100,8 @@ jobs:
         go install -mod=vendor github.com/mattn/goveralls
         $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
 
-    # converts viewer code (HTML, CSS, JS) into Go binary data
-    # this is run to make sure the client side code builds but the bindata
-    # is not used for compiling at this point
-    - name: Generate bindata 
+    - name: Build embeded UI
       run: |
-        go install -mod=vendor github.com/jteeuwen/go-bindata/go-bindata
         pushd ${GITHUB_WORKSPACE}/server
         go generate ./...
         popd

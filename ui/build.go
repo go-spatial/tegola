@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -66,12 +67,6 @@ func main() {
 	run("npm", "install")
 	// build app
 	run("npm", "run", "build")
-	// build bindata
-	if bindataDebug {
-		run("go-bindata", "-debug", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
-	} else {
-		run("go-bindata", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
-	}
 
 	fmt.Printf("success\n")
 }
