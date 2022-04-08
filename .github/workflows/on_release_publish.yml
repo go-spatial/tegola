@@ -62,10 +62,10 @@ jobs:
     - name: Set tegola version
       run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
 
-    - name: Set up Go 1.16
+    - name: Set up Go 1.18
       uses: actions/setup-go@v2
       with:
-        go-version: 1.16
+        go-version: 1.18
 
     - name: Build for Linux
       env:
