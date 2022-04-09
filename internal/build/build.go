@@ -1,6 +1,6 @@
 package build
 
-//go:generate go run build_tags.go -v -source=../..
+//go:generate go run tags/tags.go -v -runCommand="internal/build/tags.go" -source=../..
 
 import (
 	"sort"

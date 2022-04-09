@@ -14,6 +14,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go/build"
@@ -61,23 +62,20 @@ func getPackages(dir string) (pkgs []string, err error) {
 		panic(err)
 		return nil, err
 	}
-	errChan := make(chan error, 1)
-
+	if err = list.Start(); err != nil {
+		return nil, err
+	}
 	scanner := bufio.NewScanner(stdout)
-	go func() {
-		errChan <- list.Run()
-	}()
 	for scanner.Scan() {
 		pkgs = append(pkgs, scanner.Text())
 	}
+	if err = list.Wait(); err != nil {
+		return pkgs, fmt.Errorf("failed on close: %w",err)
+	}
 
 	// wait for the list.Run to finish
-	err = <-errChan
-	if err != nil {
-		return nil, err
-	}
 	if err = scanner.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scanner error: %w",err)
 	}
 	return pkgs, nil
 }
@@ -89,6 +87,14 @@ type getTagsOptions struct {
 	IgnorePackages []string
 	// IgnoreTags is a list of tag regular expressions that should be used to ignore tags
 	IgnoreTags []string
+}
+
+func getImportPackage(path string, srcDir string, mode build.ImportMode) (*build.Package, error) {
+	_, dir, err := buildPackageSource(srcDir, path)
+	if err != nil {
+		return nil, err
+	}
+	return build.ImportDir(dir, build.IgnoreVendor)
 }
 
 // getTags will get the list of packages in the source directory and then return all the build tags
@@ -123,9 +129,9 @@ NextPackagePath:
 				continue NextPackagePath
 			}
 		}
-		pkg, err := build.Import(pkgPath, sourceDir, build.IgnoreVendor)
+		pkg, err := getImportPackage(pkgPath, sourceDir, build.IgnoreVendor)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Failed to import `%v` from `%v` (ignore vendor directory): %w", pkgPath, sourceDir, err)
 		}
 		if options.IgnoreCommands && pkg.IsCommand() {
 			continue
@@ -153,10 +159,30 @@ NextPackagePath:
 }
 
 func buildPackageSource(sourceDir, pkgPath string) (name, dir string, err error) {
-	pkg, err := build.Import(pkgPath, sourceDir, build.IgnoreVendor)
+	list := exec.Command("go", "list", "-json", pkgPath)
+	list.Dir = sourceDir
+	so, err := list.StdoutPipe()
 	if err != nil {
-		return "", "", err
+		panic(err)
 	}
+	if err = list.Start(); err != nil {
+		panic(err)
+	}
+
+	type pkgInfo struct {
+		Dir  string
+		Name string
+		Root string
+	}
+	var pkg pkgInfo
+
+	if err = json.NewDecoder(so).Decode(&pkg); err != nil {
+		panic(err)
+	}
+	if err = list.Wait(); err != nil {
+		panic(err)
+	}
+
 	return pkg.Name, pkg.Dir, nil
 }
 
