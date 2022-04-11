@@ -5,18 +5,19 @@ github.com/Azure/azure-pipeline-go/pipeline
 ## explicit
 github.com/Azure/azure-storage-blob-go/2017-07-29/azblob
 # github.com/BurntSushi/toml v0.4.1
-## explicit
+## explicit; go 1.16
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
 # github.com/ajstarks/svgo v0.0.0-20170507103333-2489f1e6d405
 ## explicit
 github.com/ajstarks/svgo
 # github.com/akrylysov/algnhsa v0.12.1
-## explicit
+## explicit; go 1.12
 github.com/akrylysov/algnhsa
 # github.com/arolek/p v0.0.0-20191103215535-df3c295ed582
-## explicit
+## explicit; go 1.13
 # github.com/aws/aws-lambda-go v1.13.3
+## explicit; go 1.12
 github.com/aws/aws-lambda-go/events
 github.com/aws/aws-lambda-go/lambda
 github.com/aws/aws-lambda-go/lambda/handlertrace
@@ -64,8 +65,10 @@ github.com/aws/aws-sdk-go/service/s3/internal/arn
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
+## explicit; go 1.11
 github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash/v2 v2.1.1
+## explicit; go 1.11
 github.com/cespare/xxhash/v2
 # github.com/dimfeld/httptreemux v5.0.1+incompatible
 ## explicit
@@ -101,85 +104,103 @@ github.com/go-spatial/geom/slippy
 ## explicit
 github.com/go-test/deep
 # github.com/gofrs/uuid v4.0.0+incompatible
+## explicit
 github.com/gofrs/uuid
 # github.com/golang/protobuf v1.4.3
-## explicit
+## explicit; go 1.9
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 # github.com/google/uuid v1.0.0
+## explicit
 github.com/google/uuid
 # github.com/inconshreveable/mousetrap v1.0.0
+## explicit
 github.com/inconshreveable/mousetrap
 # github.com/jackc/chunkreader/v2 v2.0.1
+## explicit; go 1.12
 github.com/jackc/chunkreader/v2
 # github.com/jackc/pgconn v1.10.1
+## explicit; go 1.12
 github.com/jackc/pgconn
 github.com/jackc/pgconn/internal/ctxwatch
 github.com/jackc/pgconn/stmtcache
 # github.com/jackc/pgio v1.0.0
+## explicit; go 1.12
 github.com/jackc/pgio
 # github.com/jackc/pgpassfile v1.0.0
+## explicit; go 1.12
 github.com/jackc/pgpassfile
 # github.com/jackc/pgproto3/v2 v2.2.0
-## explicit
+## explicit; go 1.12
 github.com/jackc/pgproto3/v2
 # github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b
+## explicit; go 1.14
 github.com/jackc/pgservicefile
 # github.com/jackc/pgtype v1.9.1
-## explicit
+## explicit; go 1.13
 github.com/jackc/pgtype
 github.com/jackc/pgtype/ext/gofrs-uuid
 # github.com/jackc/pgx/v4 v4.14.1
-## explicit
+## explicit; go 1.13
 github.com/jackc/pgx/v4
 github.com/jackc/pgx/v4/internal/sanitize
 github.com/jackc/pgx/v4/pgxpool
 # github.com/jackc/puddle v1.2.0
+## explicit; go 1.12
 github.com/jackc/puddle
 # github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
+## explicit
 github.com/jmespath/go-jmespath
 # github.com/mattn/go-sqlite3 v1.14.6
-## explicit
+## explicit; go 1.12
 github.com/mattn/go-sqlite3
 # github.com/mattn/goveralls v0.0.5
-## explicit
+## explicit; go 1.11
 github.com/mattn/goveralls
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
+## explicit
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/pborman/uuid v1.2.0
 ## explicit
 github.com/pborman/uuid
 # github.com/prometheus/client_golang v1.9.0
-## explicit
+## explicit; go 1.11
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
 github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_golang/prometheus/push
 # github.com/prometheus/client_model v0.2.0
+## explicit; go 1.9
 github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.15.0
+## explicit; go 1.11
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
 # github.com/prometheus/procfs v0.2.0
+## explicit; go 1.12
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
 # github.com/spf13/pflag v1.0.1
+## explicit
 github.com/spf13/pflag
 # github.com/theckman/goconstraint v1.10.1-0.20180216224824-e867bde6e4e1
 ## explicit
 github.com/theckman/goconstraint/go1.8/gte
 # golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+## explicit; go 1.17
 golang.org/x/crypto/pbkdf2
 # golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/text v0.3.6
+## explicit; go 1.11
 golang.org/x/text/cases
 golang.org/x/text/internal
 golang.org/x/text/internal/language
@@ -194,9 +215,10 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # golang.org/x/tools v0.0.0-20200507205054-480da3ebd79c
-## explicit
+## explicit; go 1.11
 golang.org/x/tools/cover
 # google.golang.org/protobuf v1.23.0
+## explicit; go 1.9
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
