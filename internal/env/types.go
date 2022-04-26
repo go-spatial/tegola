@@ -53,6 +53,20 @@ func replaceEnvVar(in string) (string, error) {
 
 //TODO(@ear7h): implement UnmarshalJSON for types
 
+func (t *Dict) UnmarshalTOML(v interface{}) error {
+	var d *Dict
+	var err error
+
+	d, err = ParseDict(v)
+	if err != nil {
+		return err
+	}
+
+	*t = *d
+
+	return nil
+}
+
 type Bool bool
 
 func BoolPtr(v Bool) *Bool {
