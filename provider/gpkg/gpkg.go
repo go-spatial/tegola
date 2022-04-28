@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package gpkg
@@ -260,6 +261,8 @@ func geomNameToGeom(name string) (geom.Geometry, error) {
 		return geom.MultiLineString{}, nil
 	case "MULTIPOLYGON":
 		return geom.MultiPolygon{}, nil
+	case "GEOMETRY":
+		return geom.ErrUnknownGeometry{}, nil
 	}
 
 	return nil, fmt.Errorf("unsupported geometry type: %v", name)
