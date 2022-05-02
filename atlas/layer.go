@@ -17,13 +17,13 @@ type Layer struct {
 	// default tags to include when encoding the layer. provider tags take precedence
 	DefaultTags map[string]interface{}
 	GeomType    geom.Geometry
-	// DontSimplify indicates wheather feature simplification should be applied.
+	// DontSimplify indicates whether feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify
 	DontSimplify bool
-	// DontClip indicates wheather feature clipping should be applied.
+	// DontClip indicates whether feature clipping should be applied.
 	// We use a negative in the name so the default is to clip
 	DontClip bool
-	// DontClean indicates wheather feature cleaning (e.g. make valid) should be applied.
+	// DontClean indicates whether feature cleaning (e.g. make valid) should be applied.
 	// We use a negative in the name so the default is to clean
 	DontClean bool
 }
