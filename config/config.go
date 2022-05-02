@@ -75,6 +75,9 @@ type MapLayer struct {
 	// DontClip indicates wheather feature clipping should be applied.
 	// We use a negative in the name so the default is to clipping
 	DontClip env.Bool `toml:"dont_clip"`
+	// DontClip indicates wheather feature cleaning (e.g. make valid) should be applied.
+	// We use a negative in the name so the default is to clean
+	DontClean env.Bool `toml:"dont_clean"`
 }
 
 // ProviderLayerName returns the names of the layer and provider or an error

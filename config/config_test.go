@@ -139,7 +139,8 @@ func TestParse(t *testing.T) {
 					min_zoom = 10
 					max_zoom = 20
 					dont_simplify = true
-					dont_clip = true`,
+					dont_clip = true
+					dont_clean = true`,
 			expected: config.Config{
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
@@ -188,6 +189,7 @@ func TestParse(t *testing.T) {
 								MaxZoom:       env.UintPtr(20),
 								DontSimplify:  true,
 								DontClip:      true,
+								DontClean:     true,
 							},
 						},
 					},

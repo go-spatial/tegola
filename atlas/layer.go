@@ -23,6 +23,9 @@ type Layer struct {
 	// DontClip indicates wheather feature clipping should be applied.
 	// We use a negative in the name so the default is to clip
 	DontClip bool
+	// DontClean indicates wheather feature cleaning (e.g. make valid) should be applied.
+	// We use a negative in the name so the default is to clean
+	DontClean bool
 }
 
 // MVTName will return the value that will be encoded in the Name field when the layer is encoded as MVT

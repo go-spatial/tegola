@@ -88,6 +88,7 @@ func atlasLayerFromConfigLayer(cfg *config.MapLayer, mapName string, layerProvid
 	layer.ProviderLayerName = layerName
 	layer.DontSimplify = bool(cfg.DontSimplify)
 	layer.DontClip = bool(cfg.DontClip)
+	layer.DontClean = bool(cfg.DontClean)
 
 	if cfg.MinZoom != nil {
 		layer.MinZoom = uint(*cfg.MinZoom)

@@ -300,9 +300,13 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 					return err
 				}
 
-				tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
-				if err != nil {
-					return fmt.Errorf("err making geometry valid: %w", err)
+				if !l.DontClean {
+					tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
+					if err != nil {
+						return fmt.Errorf("err making geometry valid: %w", err)
+					}
+				} else {
+					tegolaGeo = sg
 				}
 
 				geo, err = convert.ToGeom(tegolaGeo)
