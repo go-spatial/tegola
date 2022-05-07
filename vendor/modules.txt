@@ -191,6 +191,21 @@ github.com/spf13/pflag
 # github.com/theckman/goconstraint v1.10.1-0.20180216224824-e867bde6e4e1
 ## explicit
 github.com/theckman/goconstraint/go1.8/gte
+# go.uber.org/atomic v1.7.0
+## explicit; go 1.13
+go.uber.org/atomic
+# go.uber.org/multierr v1.6.0
+## explicit; go 1.12
+go.uber.org/multierr
+# go.uber.org/zap v1.21.0
+## explicit; go 1.13
+go.uber.org/zap
+go.uber.org/zap/buffer
+go.uber.org/zap/internal/bufferpool
+go.uber.org/zap/internal/color
+go.uber.org/zap/internal/exit
+go.uber.org/zap/zapcore
+go.uber.org/zap/zaptest/observer
 # golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 ## explicit; go 1.17
 golang.org/x/crypto/pbkdf2
@@ -214,8 +229,8 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/tools v0.0.0-20200507205054-480da3ebd79c
-## explicit; go 1.11
+# golang.org/x/tools v0.1.5
+## explicit; go 1.17
 golang.org/x/tools/cover
 # google.golang.org/protobuf v1.23.0
 ## explicit; go 1.9
