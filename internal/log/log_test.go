@@ -7,6 +7,10 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 const ExpectedFilename = "log_test.go"
@@ -117,7 +121,8 @@ func testLoggingF(tc testLoggingFTCase) (string, func(*testing.T)) {
 	name := fmt.Sprintf("%s %s %s", tc.loggerLevel, tc.msgLevel, msg)
 	return name, func(t *testing.T) {
 		testOut := bytes.NewBufferString("")
-		SetOutput(testOut)
+		standard.SetOutput(testOut)
+
 		SetLogLevel(tc.loggerLevel)
 
 		loggerCalls[tc.msgLevel](tc.msg, tc.msgArgs...)
@@ -216,7 +221,8 @@ func testLogging(tc testLoggingFTCase) (string, func(*testing.T)) {
 	name := fmt.Sprintf("%s %s %s", tc.loggerLevel, tc.msgLevel, msg)
 	return name, func(t *testing.T) {
 		testOut := bytes.NewBufferString("")
-		SetOutput(testOut)
+		standard.SetOutput(testOut)
+
 		SetLogLevel(tc.loggerLevel)
 
 		loggerCalls[tc.msgLevel](tc.msgArgs...)
@@ -272,4 +278,89 @@ func TestLogging(t *testing.T) {
 		t.Run(testLogging(tc))
 	}
 
+}
+
+func TestLogJSON(t *testing.T) {
+	type tcase struct {
+		level  Level
+		format string
+		args   string
+		fops   func(string, ...interface{})
+		expMsg string
+		expLvl zapcore.Level
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
+			zS := zap.New(observedZapCore).Sugar()
+			zapLogger = &ZapLogger{zS}
+			logger = zapLogger
+
+			SetLogLevel(tc.level)
+
+			tc.fops(tc.format, tc.args)
+
+			if observedLogs.Len() < 1 {
+				t.Fatal("Should've observed logs")
+			}
+
+			allLogs := observedLogs.All()
+
+			if allLogs[0].Message != tc.expMsg {
+				t.Fatalf("expected message: %v, got: %v", tc.expMsg, allLogs[0].Message)
+			}
+
+			if allLogs[0].Level != tc.expLvl {
+				t.Fatalf("expected level: %v, got: %v", tc.expLvl, allLogs[0].Level)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"Infof": {
+			level:  INFO,
+			format: "Infof json %v",
+			args:   "logger",
+			fops: func(format string, args ...interface{}) {
+				Infof(format, args...)
+			},
+			expMsg: "Infof json logger",
+			expLvl: zapcore.InfoLevel,
+		},
+		"Debugf": {
+			level:  DEBUG,
+			format: "Debugf json %v",
+			args:   "logger",
+			fops: func(format string, args ...interface{}) {
+				Debugf(format, args...)
+			},
+			expMsg: "Debugf json logger",
+			expLvl: zapcore.DebugLevel,
+		},
+		"Warnf": {
+			level:  WARN,
+			format: "Warnf json %v",
+			args:   "logger",
+			fops: func(format string, args ...interface{}) {
+				Warnf(format, args...)
+			},
+			expMsg: "Warnf json logger",
+			expLvl: zapcore.WarnLevel,
+		},
+		"Errorf": {
+			level:  ERROR,
+			format: "Errorf json %v",
+			args:   "logger",
+			fops: func(format string, args ...interface{}) {
+				Errorf(format, args...)
+			},
+			expMsg: "Errorf json logger",
+			expLvl: zapcore.ErrorLevel,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
 }
