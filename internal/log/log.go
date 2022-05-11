@@ -26,10 +26,10 @@ func init() {
 
 func SetLogger(n string) {
 	switch n {
-	case "zap":
+	case ZAP:
 		buildZapLogger()
 		logger = zapLogger
-	case "standard":
+	case STANDARD:
 		logger = standard
 	default:
 		logger = standard
