@@ -258,8 +258,6 @@ func BuildURI(config dict.Dicter) (*url.URL, *url.Values, error) {
 
 	// if uri is set in the config, we add sslmode and return early
 	if uri != "" {
-		log.Warn("Connecting to PostGIS with host/port combination is deprecated. Please use connection string instead.")
-
 		if err := validateURI(uri); err != nil {
 			return nil, nil, err
 		}
@@ -329,6 +327,10 @@ func BuildURI(config dict.Dicter) (*url.URL, *url.Values, error) {
 	params.Add("pool_max_conns", fmt.Sprintf("%v", maxcon))
 	params.Add("pool_max_conn_lifetime", lifetime)
 	params.Add("pool_max_conn_idle_time", idletime)
+
+	if uri == "" {
+		log.Warn("Connecting to PostGIS with connection parameters is deprecated. Use 'uri' instead.")
+	}
 
 	u := &url.URL{
 		Scheme:   "postgres",
