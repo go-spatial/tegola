@@ -275,10 +275,15 @@ func (c *Config) ConfigureTileBuffers() {
 func Parse(reader io.Reader, location string) (conf Config, err error) {
 	// decode conf file, don't care about the meta data.
 	_, err = toml.DecodeReader(reader, &conf)
+	if err != nil {
+		return conf, err
+	}
+
 	conf.LocationName = location
+
 	conf.ConfigureTileBuffers()
 
-	return conf, err
+	return conf, nil
 }
 
 // Load will load and parse the config file from the given location.

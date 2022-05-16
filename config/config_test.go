@@ -16,14 +16,17 @@ import (
 )
 
 const (
-	ENV_TEST_PORT        = ":8888"
-	ENV_TEST_CENTER_X    = -76.275329586789
-	ENV_TEST_CENTER_Y    = 39.153492567373
-	ENV_TEST_CENTER_Z    = 8.0
-	ENV_TEST_HOST_1      = "cdn"
-	ENV_TEST_HOST_2      = "tegola"
-	ENV_TEST_HOST_3      = "io"
-	ENV_TEST_HOST_CONCAT = ENV_TEST_HOST_1 + "." + ENV_TEST_HOST_2 + "." + ENV_TEST_HOST_3
+	ENV_TEST_PORT                    = ":8888"
+	ENV_TEST_CENTER_X                = -76.275329586789
+	ENV_TEST_CENTER_Y                = 39.153492567373
+	ENV_TEST_CENTER_Z                = 8.0
+	ENV_TEST_HOST_1                  = "cdn"
+	ENV_TEST_HOST_2                  = "tegola"
+	ENV_TEST_HOST_3                  = "io"
+	ENV_TEST_HOST_CONCAT             = ENV_TEST_HOST_1 + "." + ENV_TEST_HOST_2 + "." + ENV_TEST_HOST_3
+	ENV_TEST_WEBSERVER_HEADER_STRING = "s-maxage=10"
+	ENV_TEST_WEBSERVER_PORT          = "1234"
+	ENV_TEST_PROVIDER_LAYER          = "provider1.water_0_5"
 )
 
 func setEnv() {
@@ -38,6 +41,9 @@ func setEnv() {
 	os.Setenv("ENV_TEST_HOST_1", ENV_TEST_HOST_1)
 	os.Setenv("ENV_TEST_HOST_2", ENV_TEST_HOST_2)
 	os.Setenv("ENV_TEST_HOST_3", ENV_TEST_HOST_3)
+	os.Setenv("ENV_TEST_WEBSERVER_HEADER_STRING", ENV_TEST_WEBSERVER_HEADER_STRING)
+	os.Setenv("ENV_TEST_WEBSERVER_PORT", ENV_TEST_WEBSERVER_PORT)
+	os.Setenv("ENV_TEST_PROVIDER_LAYER", ENV_TEST_PROVIDER_LAYER)
 }
 
 func unsetEnv() {
@@ -45,12 +51,16 @@ func unsetEnv() {
 	os.Unsetenv("ENV_TEST_CENTER_X")
 	os.Unsetenv("ENV_TEST_CENTER_Y")
 	os.Unsetenv("ENV_TEST_CENTER_Z")
+	os.Unsetenv("ENV_TEST_WEBSERVER_HEADER_STRING")
+	os.Unsetenv("ENV_TEST_WEBSERVER_PORT")
+	os.Unsetenv("ENV_TEST_PROVIDER_LAYER")
 }
 
 func TestParse(t *testing.T) {
 	type tcase struct {
-		config   string
-		expected config.Config
+		config      string
+		expected    config.Config
+		expectedErr error
 	}
 
 	setEnv()
@@ -62,6 +72,22 @@ func TestParse(t *testing.T) {
 			r := strings.NewReader(tc.config)
 
 			conf, err := config.Parse(r, "")
+
+			if tc.expectedErr != nil {
+				if err == nil {
+					t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+					return
+				}
+
+				// compare error messages
+				if tc.expectedErr.Error() != err.Error() {
+					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+					return
+				}
+
+				return
+			}
+
 			if err != nil {
 				t.Error(err)
 				return
@@ -198,7 +224,13 @@ func TestParse(t *testing.T) {
 			config: `
 				[webserver]
 				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
-				port = "${ENV_TEST_PORT}"
+				port = "${ENV_TEST_WEBSERVER_PORT}"
+                
+                [webserver.headers]
+                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
+				   Test = "Test"
+                   # impossible but to test ParseDict
+                   Impossible-Header = {"test" = "${ENV_TEST_WEBSERVER_HEADER_STRING}"}
 
 				[[providers]]
 				name = "provider1"
@@ -229,8 +261,8 @@ func TestParse(t *testing.T) {
 
 					[[maps.layers]]
 					name = "water"
-					provider_layer = "provider1.water_0_5"
-
+					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
+            
 					[[maps.layers]]
 					name = "water"
 					provider_layer = "provider1.water_6_10"
@@ -258,7 +290,14 @@ func TestParse(t *testing.T) {
 				LocationName: "",
 				Webserver: config.Webserver{
 					HostName: ENV_TEST_HOST_CONCAT,
-					Port:     ENV_TEST_PORT,
+					Port:     ENV_TEST_WEBSERVER_PORT,
+					Headers: env.Dict{
+						"Cache-Control": ENV_TEST_WEBSERVER_HEADER_STRING,
+						"Test":          "Test",
+						"Impossible-Header": env.Dict{
+							"test": ENV_TEST_WEBSERVER_HEADER_STRING,
+						},
+					},
 				},
 				Providers: []env.Dict{
 					{
@@ -295,7 +334,7 @@ func TestParse(t *testing.T) {
 						Layers: []config.MapLayer{
 							{
 								Name:          "water",
-								ProviderLayer: "provider1.water_0_5",
+								ProviderLayer: ENV_TEST_PROVIDER_LAYER,
 								MinZoom:       nil,
 								MaxZoom:       nil,
 							},
@@ -330,6 +369,73 @@ func TestParse(t *testing.T) {
 					},
 				},
 			},
+		},
+		"3 missing env": {
+			config: `
+				[webserver]
+				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
+				port = "${ENV_TEST_WEBSERVER_PORT}"
+                
+                [webserver.headers]
+                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
+				   Test = "${I_AM_MISSING}"
+
+				[[providers]]
+				name = "provider1"
+				type = "postgis"
+				host = "localhost"
+				port = 5432
+				database = "osm_water" 
+				user = "admin"
+				password = ""
+
+					[[providers.layers]]
+					name = "water_0_5"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+					[[providers.layers]]
+					name = "water_6_10"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+				[[maps]]
+				name = "osm"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10
+
+				[[maps]]
+				name = "osm_2"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = [-76.275329586789, 39.153492567373, 8.0]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_0_5"
+					min_zoom = 0
+					max_zoom = 5
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10`,
+			expected:    config.Config{},
+			expectedErr: env.ErrEnvVar("I_AM_MISSING"),
 		},
 	}
 
