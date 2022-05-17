@@ -20,8 +20,20 @@ type Interface interface {
 }
 
 func init() {
-	logger = standard
+	SetLogger(STANDARD)
 	SetLogLevel(INFO)
+}
+
+func SetLogger(n string) {
+	switch n {
+	case ZAP:
+		buildZapLogger()
+		logger = zapLogger
+	case STANDARD:
+		logger = standard
+	default:
+		logger = standard
+	}
 }
 
 type Level int
@@ -34,6 +46,12 @@ const (
 	WARN
 	ERROR
 	FATAL
+)
+
+// Supported Loggers
+const (
+	STANDARD string = "standard"
+	ZAP      string = "zap"
 )
 
 var (

@@ -16,12 +16,24 @@ import (
 var (
 	logLevel   string
 	configFile string
+	logger     string
 	// parsed config
 	conf config.Config
 
 	// require cache
 	RequireCache bool
 )
+
+func validateSupportedLoggers(logger string) error {
+	switch logger {
+	case log.STANDARD:
+		return nil
+	case log.ZAP:
+		return nil
+	default:
+		return fmt.Errorf("invalid logger %s", logger)
+	}
+}
 
 func getLogLevelFromString(level string) (log.Level, error) {
 	switch level {
@@ -46,6 +58,8 @@ func init() {
 		"path or http url to a config file, or \"-\" for stdin")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "INFO",
 		"work in progress - set log level to: TRACE, DEBUG, INFO, WARN or ERROR")
+	RootCmd.PersistentFlags().StringVar(&logger, "logger", "standard",
+		"set logger to: standard, zap - default: standard")
 
 	// server
 	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
@@ -76,11 +90,17 @@ func rootCmdValidatePersistent(cmd *cobra.Command, args []string) (err error) {
 		build.Commands = append(build.Commands, cmdName)
 		return nil
 	default:
-		return initConfig(configFile, requireCache, logLevel)
+		return initConfig(configFile, requireCache, logLevel, logger)
 	}
 }
 
-func initConfig(configFile string, cacheRequired bool, logLevel string) (err error) {
+func initConfig(configFile string, cacheRequired bool, logLevel string, logger string) (err error) {
+	err = validateSupportedLoggers(logger)
+	if err != nil {
+		return err
+	}
+	log.SetLogger(logger)
+
 	// set log level before the first log is called
 	level, err := getLogLevelFromString(logLevel)
 	if err != nil {
