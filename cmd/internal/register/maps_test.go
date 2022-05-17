@@ -8,6 +8,7 @@ import (
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/env"
 )
 
 func TestMaps(t *testing.T) {
@@ -103,14 +104,16 @@ func TestMaps(t *testing.T) {
 				Provider:      "test",
 			},
 		},
-		"default tags invalid": {
+		"default tags": {
 			maps: []config.Map{
 				{
 					Name: "foo",
 					Layers: []config.MapLayer{
 						{
 							ProviderLayer: "test.debug-tile-outline",
-							DefaultTags:   false, // should be a map[string]interface{}
+							DefaultTags: env.Dict{
+								"test": "test",
+							},
 						},
 					},
 				},
@@ -120,9 +123,6 @@ func TestMaps(t *testing.T) {
 					"name": "test",
 					"type": "debug",
 				},
-			},
-			expectedErr: register.ErrDefaultTagsInvalid{
-				ProviderLayer: "test.debug-tile-outline",
 			},
 		},
 		"success": {
@@ -156,7 +156,7 @@ func TestSanitizeAttribution(t *testing.T) {
 		}
 	}
 
-	tests := map[string]tcase {
+	tests := map[string]tcase{
 		"plain text": {
 			input:    `foo`,
 			expected: `foo`,

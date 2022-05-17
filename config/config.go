@@ -64,11 +64,11 @@ type Map struct {
 type MapLayer struct {
 	// Name is optional. If it's not defined the name of the ProviderLayer will be used.
 	// Name can also be used to group multiple ProviderLayers under the same namespace.
-	Name          env.String  `toml:"name"`
-	ProviderLayer env.String  `toml:"provider_layer"`
-	MinZoom       *env.Uint   `toml:"min_zoom"`
-	MaxZoom       *env.Uint   `toml:"max_zoom"`
-	DefaultTags   interface{} `toml:"default_tags"`
+	Name          env.String `toml:"name"`
+	ProviderLayer env.String `toml:"provider_layer"`
+	MinZoom       *env.Uint  `toml:"min_zoom"`
+	MaxZoom       *env.Uint  `toml:"max_zoom"`
+	DefaultTags   env.Dict   `toml:"default_tags"`
 	// DontSimplify indicates whether feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify
 	DontSimplify env.Bool `toml:"dont_simplify"`

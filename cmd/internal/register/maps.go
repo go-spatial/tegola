@@ -50,7 +50,6 @@ func atlasLayerFromConfigLayer(cfg *config.MapLayer, mapName string, layerProvid
 	var (
 		// providerLayer is primary used for error reporting.
 		providerLayer = string(cfg.ProviderLayer)
-		ok            bool
 	)
 	// read the provider's layer names
 	// don't care about the error.
@@ -73,11 +72,7 @@ func atlasLayerFromConfigLayer(cfg *config.MapLayer, mapName string, layerProvid
 	layer.GeomType = layerInfo.GeomType()
 
 	if cfg.DefaultTags != nil {
-		if layer.DefaultTags, ok = cfg.DefaultTags.(map[string]interface{}); !ok {
-			return layer, ErrDefaultTagsInvalid{
-				ProviderLayer: providerLayer,
-			}
-		}
+		layer.DefaultTags = cfg.DefaultTags
 	}
 
 	// if layerProvider is not a provider.Tiler this will return nil, so
