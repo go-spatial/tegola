@@ -1,3 +1,26 @@
+## 0.15.0 (2022-05-18)
+
+Features
+
+* Redis SSL connection via redis.ParseURL (#815 @iwpnd) 
+* Updated providers/postgis to use pgx4. This enables use of Postgres versions 12+ (@iwpnd #820)
+* providers/postgis: allow connection URI and add additional config parameters (@iwpnd #841)
+* expose SetLogLevel in cli (@iwpnd part of #831)
+* Add a dont_clean option (@roelarents  #847)
+
+Enhancements
+
+* ci: publish edge image on push or pr to default_branch_ref (@iwpnd) 
+* chore: switch to internal/log (@iwpnd #837)
+* chore: remove logAndError (@iwpnd #839)
+* chore: add docker-compose local dev env (@iwpnd #840)
+* removed go-bindata for embedding the internal viewer in favor of the native go embed (@ARolek #843)
+* fix: replace environment variables in webserver headers (@iwpnd #597, #844)
+
+Documentation
+
+* Update S3 cache properties documentation around `force_path_style` (@flowrean #835)
+
 ## 0.14.0 (2021-11-05)
 
 Features:
