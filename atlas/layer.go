@@ -2,6 +2,7 @@ package atlas
 
 import (
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
 )
@@ -15,7 +16,7 @@ type Layer struct {
 	// instantiated provider
 	Provider provider.Tiler
 	// default tags to include when encoding the layer. provider tags take precedence
-	DefaultTags map[string]interface{}
+	DefaultTags env.Dict
 	GeomType    geom.Geometry
 	// DontSimplify indicates whether feature simplification should be applied.
 	// We use a negative in the name so the default is to simplify

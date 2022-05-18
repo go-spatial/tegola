@@ -27,6 +27,7 @@ const (
 	ENV_TEST_WEBSERVER_HEADER_STRING = "s-maxage=10"
 	ENV_TEST_WEBSERVER_PORT          = "1234"
 	ENV_TEST_PROVIDER_LAYER          = "provider1.water_0_5"
+	ENV_TEST_MAP_LAYER_DEFAULT_TAG   = "postgis"
 )
 
 func setEnv() {
@@ -44,6 +45,7 @@ func setEnv() {
 	os.Setenv("ENV_TEST_WEBSERVER_HEADER_STRING", ENV_TEST_WEBSERVER_HEADER_STRING)
 	os.Setenv("ENV_TEST_WEBSERVER_PORT", ENV_TEST_WEBSERVER_PORT)
 	os.Setenv("ENV_TEST_PROVIDER_LAYER", ENV_TEST_PROVIDER_LAYER)
+	os.Setenv("ENV_TEST_MAP_LAYER_DEFAULT_TAG", ENV_TEST_MAP_LAYER_DEFAULT_TAG)
 }
 
 func unsetEnv() {
@@ -54,6 +56,7 @@ func unsetEnv() {
 	os.Unsetenv("ENV_TEST_WEBSERVER_HEADER_STRING")
 	os.Unsetenv("ENV_TEST_WEBSERVER_PORT")
 	os.Unsetenv("ENV_TEST_PROVIDER_LAYER")
+	os.Unsetenv("ENV_TEST_MAP_LAYER_DEFAULT_TAG")
 }
 
 func TestParse(t *testing.T) {
@@ -264,7 +267,7 @@ func TestParse(t *testing.T) {
 					[[maps.layers]]
 					name = "water"
 					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
-            
+
 					[[maps.layers]]
 					name = "water"
 					provider_layer = "provider1.water_6_10"
@@ -282,6 +285,9 @@ func TestParse(t *testing.T) {
 					provider_layer = "provider1.water_0_5"
 					min_zoom = 0
 					max_zoom = 5
+
+                    [maps.layers.default_tags]
+                    provider = "${ENV_TEST_MAP_LAYER_DEFAULT_TAG}"
 
 					[[maps.layers]]
 					name = "water"
@@ -360,6 +366,9 @@ func TestParse(t *testing.T) {
 								ProviderLayer: "provider1.water_0_5",
 								MinZoom:       env.UintPtr(0),
 								MaxZoom:       env.UintPtr(5),
+								DefaultTags: env.Dict{
+									"provider": ENV_TEST_MAP_LAYER_DEFAULT_TAG,
+								},
 							},
 							{
 								Name:          "water",
