@@ -45,7 +45,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&configFile, "config", "config.toml",
 		"path or http url to a config file, or \"-\" for stdin")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "INFO",
-		"work in progress - set log level to: TRACE, DEBUG, INFO, WARN or ERROR")
+		"set log level to: TRACE, DEBUG, INFO, WARN or ERROR")
 
 	// server
 	serverCmd.Flags().StringVarP(&serverPort, "port", "p", ":8080", "port to bind tile server to")
