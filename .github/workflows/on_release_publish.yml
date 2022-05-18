@@ -244,7 +244,11 @@ jobs:
 
     - name: Publish Docker container
       if: github.event_name == 'release'
+      env:
+          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
       run: |
+        echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USER} --password-stdin
         docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION}
         docker push ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:latest
 
