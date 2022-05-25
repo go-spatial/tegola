@@ -29,13 +29,19 @@
 # Intermediary container for building
 FROM golang:1.16.2-alpine3.12 AS build
 
-ARG VERSION="Version Not Set"
-ENV VERSION="${VERSION}"
+ARG BUILDPKG="github.com/go-spatial/tegola/internal/build"
+ARG VER="Version Not Set"
+ARG BRANCH="not set"
+ARG REVISION="not set"
+ENV VERSION="${VER}"
+ENV GIT_BRANCH="${BRANCH}"
+ENV GIT_REVISION="${REVISION}"
+ENV BUILD_PKG="${BUILDPKG}"
 
 # Only needed for CGO support at time of build, results in no noticable change in binary size
 # incurs approximately 1:30 extra build time (1:54 vs 0:27) to install packages.  Doesn't impact
 # development as these layers are drawn from cache after the first build.
-RUN apk update \ 
+RUN apk update \
 	&& apk add musl-dev=1.1.24-r10 \
 	&& apk add gcc=9.3.0-r2
 
@@ -43,9 +49,15 @@ RUN apk update \
 RUN mkdir -p /go/src/github.com/go-spatial/tegola
 COPY . /go/src/github.com/go-spatial/tegola
 
+
+RUN env
+
 # Build binary
 RUN cd /go/src/github.com/go-spatial/tegola/cmd/tegola \
- 	&& go build -v -ldflags "-w -X 'github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}'" -gcflags "-N -l" -o /opt/tegola \
+ 	&& go build -v  \
+    -ldflags "-w -X '${BUILD_PKG}.Version=${VERSION}' -X '${BUILD_PKG}.GitRevision=${GIT_REVISION}' -X '${BUILD_PKG}.GitBranch=${GIT_BRANCH}'" \
+    -gcflags "-N -l" \
+    -o /opt/tegola \
 	&& chmod a+x /opt/tegola
 
 # Create minimal deployment image, just alpine & the binary

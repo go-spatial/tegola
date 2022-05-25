@@ -13,9 +13,14 @@ import (
 var dist embed.FS
 
 func GetDistFileSystem() http.FileSystem {
-	distfs, err := fs.Sub(dist, "dist")
+	distFS := GetDistFS()
+	return http.FS(distFS)
+}
+
+func GetDistFS() fs.FS {
+	distFS, err := fs.Sub(dist, "dist")
 	if err != nil {
 		log.Fatal(err)
 	}
-	return http.FS(distfs)
+	return distFS
 }

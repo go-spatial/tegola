@@ -194,7 +194,12 @@ name = "zoning"                              # used in the URL to reference this
   max_zoom = 18                            # maximum zoom level to include this layer
 ```
 
-\* more on PostgreSQL SSL mode [here](https://www.postgresql.org/docs/9.2/static/libpq-ssl.html). The `postgis` config also supports "ssl_cert" and "ssl_key" options are required, corresponding semantically with "PGSSLKEY" and "PGSSLCERT". These options do not check for environment variables automatically. See the section [below](#environment-variables) on injecting environment variables into the config.
+ 
+More information on PostgreSQL SSL modes can be found [here](https://www.postgresql.org/docs/current/libpq-ssl.html). 
+The `postgis` config also supports _"ssl_key"_ and _"ssl_cert"_ options are required, corresponding semantically with 
+_"PGSSLKEY"_ and _"PGSSLCERT"_. These options do not check for environment variables automatically. 
+
+See the section [below](#environment-variables) on injecting environment variables into the config.
 
 ### Example config using Postgres 12 / PostGIS 3.0 ST_AsMVT():
 
@@ -287,13 +292,17 @@ The requested tile will be encoded with a layer that has the `name` value set to
 
 ## Building from source
 
-Tegola is written in [Go](https://golang.org/) and requires Go 1.16 to compile from the source. (We support the two newest versions of Go.) To build tegola from the source, make sure you have Go installed and have cloned the repository. Navigate to the repository then run the following command:
+
+Tegola is written in [Go](https://golang.org/) and requires [Go 1.17](https://go.dev/dl/) or higher to compile from the source. 
+(We support the two newest versions of Go.) 
+To build tegola from the source, make sure you have Go installed and have cloned the repository. 
+Navigate to the repository then run the following command:
 
 ```bash
-cd cmd/tegola/ && go build -mod vendor
+go generate ... && cd cmd/tegola/ && go build -mod vendor
 ```
 
-You will now have a binary named `tegola` in the current directory which is [ready to run.](#running-tegola-as-a-vector-tile-server).
+You will now have a binary named `tegola` in the current directory which is [ready to run](#running-tegola-as-a-vector-tile-server).
 
 **Build Flags**
 The following build flags can be used to turn off certain features of tegola:
@@ -313,10 +322,24 @@ Example of using the build flags to turn of the Redis cache back end, the GeoPac
 go build -tags 'noRedisCache noGpkgProvider noViewer'
 ```
 
+**Setting Version Information** The following flags can be used to set version information:
+
+```bash
+# first set some env to make it easier to read:
+BUILD_PKG=github.com/go-spatial/tegola/internal/build
+VERSION=1.15.x
+GIT_BRANCH=$(git branch --no-color --show-current)
+GIT_REVISION=$(git log HEAD --oneline | head -n 1 | cut -d ' ' -f 1)
+
+# build the go binary
+go build -ldflags "-w -X ${BUILD_PKG}.Version=${VERSION} -X ${BUILD_PKG}.GitRevision=${GIT_REVISION} -X ${BUILD_PKG}.GitBranch=${GIT_BRANCH}"
+```
+
 ## License
 
 See [license](LICENSE.md) file in the repo.
 
 ## Looking for a vector tile style editor?
 
-After Tegola is running you're likely going to want to work on your map's cartography. Give [fresco](https://github.com/go-spatial/fresco) a try!
+After Tegola is running you're likely going to want to work on your map's cartography. 
+Give [fresco](https://github.com/go-spatial/fresco) a try!

@@ -1,0 +1,55 @@
+name: upload artifact
+description: "upload generated artifacts including release"
+inputs:
+  artifact_name:
+    description: "name of the artifact"
+    default: "tegola"
+    required: false
+  upload_postfix:
+    description: "uploaded name of the artifact"
+    default: "linux_amd64"
+    required: false
+  github_token:
+    description: "github token"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - id: zip-path
+      uses: ./.github/actions/tegola_upload_path
+      with:
+        name: ${{ inputs.artifact_name }}
+
+    # workaround for archives losing permissions
+    # https://github.com/actions/upload-artifact/issues/38
+    - name: Zip (not windows)
+      run: |
+        cd ${{steps.zip-path.outputs.dir-path}}
+        zip -9 -D tegola.zip ${{inputs.artifact_name}}
+      shell: bash
+      if: ${{ runner.os != 'Windows' }}
+
+    - name: Zip (windows)
+      run: |
+          cd ${{steps.zip-path.outputs.dir-path}}
+          7z a tegola.zip ${{inputs.artifact_name}}.exe
+      shell: pwsh
+      if: ${{ runner.os == 'Windows' }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{inputs.artifact_name}}${{inputs.upload_postfix}}
+        path: ${{steps.zip-path.outputs.dir-path}}tegola.zip
+
+    - name: Upload release asset
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{steps.zip-path.outputs.dir-path}}tegola.zip
+        asset_name: ${{inputs.artifact_name}}${{inputs.upload_postfix}}.zip
+        asset_content_type: application/zip

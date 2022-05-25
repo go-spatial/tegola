@@ -19,4 +19,4 @@
 cd cmd/tegola_lambda
 
 # build the binary
-go build -mod vendor -ldflags "-w -X main.Version=$VERSION"
+go build -mod vendor -ldflags "-w -X ${BuildPkg}.Version=${VERSION} -X ${BuildPkg}.GitRevision=${GIT_REVISION} -X ${BuildPkg}.GitBranch=${GIT_BRANCH}"

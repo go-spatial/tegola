@@ -8,11 +8,12 @@ import (
 )
 
 var (
-	Version     = "Version not set"
-	GitRevision = "not set"
-	GitBranch   = "not set"
-	Tags        []string
-	Commands    = []string{"tegola"}
+	Version              = "Version not set"
+	GitRevision          = "not set"
+	GitBranch            = "not set"
+	uiVersionDefaultText = "Viewer not build"
+	Tags                 []string
+	Commands             = []string{"tegola"}
 )
 
 var ordered bool

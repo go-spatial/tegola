@@ -1,0 +1,27 @@
+name: tegola-upload-path
+description: "returns the correct upload path for os"
+inputs:
+  name:
+    description: "base dir name"
+    default: "tegola"
+    required: false
+
+outputs:
+  dir-path:
+    description: "dir path for tegola"
+    value: ${{ steps.compute-path.outputs.dir-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: set env (not Windows)
+      run: echo "TEGOLA_PATH=cmd/${{inputs.name}}/" >> $GITHUB_ENV
+      shell: bash
+      if: ${{ runner.os != 'Windows' }}
+    - name: set env (Windows)
+      run: echo "TEGOLA_PATH=cmd\\${{inputs.name}}\\" >> $GITHUB_ENV
+      shell: bash
+      if: ${{ runner.os == 'Windows' }}
+    - id: compute-path
+      run: echo "::set-output name=dir-path::${TEGOLA_PATH}"
+      shell: bash

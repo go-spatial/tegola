@@ -47,9 +47,9 @@ If you just need to play with the binary the easy way is to get the binary from 
 
 If however you want to build the latest release candidate you will have to build from source. The first thing to do is to clone the `go-spatial/tegola` repo to your `GOPATH`. The simplest way to do this is to use `go get -u github.com/go-spatial/tegola`, navigate to the repository root then: 
 
-* Checkout the current release candidate branch, (i.e. v0.7.0)
+* Checkout the current release candidate branch, (i.e. v0.15.0)
 	
-    (`git checkout v0.7.0`)
+    (`git checkout v0.15.0`)
 	
 * Create a new feature branch. 
 	

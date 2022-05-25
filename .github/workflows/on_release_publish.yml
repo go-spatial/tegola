@@ -15,7 +15,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    # on release we want to use release.tag_name for the version
+    # on release, we want to use release.tag_name for the version
     - name: Set tegola version (use release.tag_name)
       if: github.event_name == 'release'
       run: echo ${{ github.event.release.tag_name }} > ${{ github.workspace }}/version.txt
@@ -31,7 +31,7 @@ jobs:
         name: version
         path: ${{ github.workspace }}/version.txt
 
-    # when it's not a release but we want to perform an action on a new push/pr to default branch
+    # when it's not a release, but we want to perform an action on a new push/pr to default branch
     # we need the default branch ref, which in case of tegola changes with the version
     - name: Get tegola default branch ref
       run: |
@@ -45,27 +45,44 @@ jobs:
         name: default-branch-ref
         path: ${{ github.workspace }}/default-branch-ref.txt
 
-  build_linux:
-    name: Build for Linux and AWS Lambda
-    needs: gen_version
+  build_ui:
+    name: Build for embedded ui
     runs-on: ubuntu-20.04
 
     steps:
-    - name: Check out code
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Go 1.18
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: Build embedded UI
+        run: |
+          pushd ${GITHUB_WORKSPACE}/server
+          go generate ./...
+          popd
+
+      - name: Upload build artifact version
+        uses: actions/upload-artifact@v2
+        with:
+          name: ui
+          path: ${{ github.workspace }}/ui/dist
+
+  build_linux:
+    name: Build for Linux and AWS Lambda
+    needs: [gen_version,build_ui]
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Check out actions
       uses: actions/checkout@v2
 
-    - name: Download version artifact
-      uses: actions/download-artifact@v1
+    - name: Setup env
+      uses: ./.github/actions/tegola-setup-env
       with:
-        name: version
-
-    - name: Set tegola version
-      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
-
-    - name: Set up Go 1.18
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.18
+        ui: true
 
     - name: Build for Linux
       env:
@@ -73,134 +90,73 @@ jobs:
         GOOS: linux
       run: |
           cd cmd/tegola
-          go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=${VERSION}"
+          go build -mod vendor -ldflags "-w -X ${BUILD_PKG}.Version=${VERSION} -X ${BUILD_PKG}.GitRevision=${GIT_REVISION} -X ${BUILD_PKG}.GitBranch=${GIT_BRANCH}"
 
-    # workaround for archives losing permissions 
-    # https://github.com/actions/upload-artifact/issues/38
-    - name: Zip archive permissions workaround
-      run: |
-        cd cmd/tegola
-        zip -9 -D tegola.zip tegola
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
+    - name: Upload artifact
+      uses: ./.github/actions/upload-artifact
       with:
-        name: tegola_linux_amd64
-        path: cmd/tegola/tegola.zip
-
-    - name: Upload release asset
-      if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: cmd/tegola/tegola.zip
-        asset_name: tegola_linux_amd64.zip
-        asset_content_type: application/zip
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        artifact_name: "tegola"
+        upload_postfix: "_linux_amd64"
 
   build_tegola_lambda:
     name: Build tegola_lambda on Amazon Linux
-    needs: gen_version
+    needs: [gen_version]
     runs-on: ubuntu-20.04
 
     steps:
-    - name: Check out code
+    - name: Check out actions
       uses: actions/checkout@v2
 
-    - name: Download version artifact
-      uses: actions/download-artifact@v1
+    - name: Setup env
+      uses: ./.github/actions/tegola-setup-env
       with:
-        name: version
-
-    - name: Set tegola version
-      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
+        ui: false
+        go: false
 
     - name: Build tegola_lambda
       uses: ./.github/actions/amazon-linux-build-action
       with:
         args: '...'
 
-    # workaround for archives losing permissions 
-    # https://github.com/actions/upload-artifact/issues/38
-    - name: Zip archive permissions workaround
-      run: |
-        cd cmd/tegola_lambda
-        zip -9 -D tegola.zip tegola_lambda
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
+    - name: Upload artifact
+      uses: ./.github/actions/upload-artifact
       with:
-        name: tegola_lambda
-        path: cmd/tegola_lambda/tegola.zip
-
-    - name: Upload release asset
-      if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: cmd/tegola_lambda/tegola.zip
-        asset_name: tegola_lambda.zip
-        asset_content_type: application/zip
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        artifact_name: "tegola_lambda"
+        upload_postfix: ""
 
   build_macos:
     name: Build for MacOS
-    needs: gen_version
+    needs: [gen_version,build_ui]
     runs-on: macos-latest
 
     steps:
-    - name: Check out code
+    - name: Check out actions
       uses: actions/checkout@v2
 
-    - name: Download version artifact
-      uses: actions/download-artifact@v1
+    - name: Setup env
+      uses: ./.github/actions/tegola-setup-env
       with:
-        name: version
-
-    - name: Set Tegola version
-      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
-
-    - name: Set up Go 1.16
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
+        ui: true
 
     - name: Build for Darwin
       env:
         GOOS: darwin
       run: |
           cd cmd/tegola
-          go build -mod vendor -ldflags "-w -X github.com/go-spatial/tegola/internal/build.Version=${VERSION}"
+          go build -mod vendor -ldflags "-w -X ${BUILD_PKG}.Version=${VERSION} -X ${BUILD_PKG}.GitRevision=${GIT_REVISION} -X ${BUILD_PKG}.GitBranch=${GIT_BRANCH}"
 
-    # workaround for archives losing permissions
-    # https://github.com/actions/upload-artifact/issues/38
-    - name: Zip archive permissions workaround
-      run: |
-        cd cmd/tegola
-        zip -9 -D tegola.zip tegola
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
+    - name: Upload artifact
+      uses: ./.github/actions/upload-artifact
       with:
-        name: tegola_darwin_amd64
-        path: cmd/tegola/tegola.zip
-
-    - name: Upload release asset
-      if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: cmd/tegola/tegola.zip
-        asset_name: tegola_darwin_amd64.zip
-        asset_content_type: application/zip
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        artifact_name: "tegola"
+        upload_postfix: "_darwin_amd64"
 
   build_docker:
     name: Build Docker image and publish to Docker Hub
-    needs: gen_version
+    needs: [gen_version,build_ui]
     runs-on: ubuntu-20.04
     env:
       DOCKERHUB_ORG: gospatial
@@ -210,28 +166,18 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - name: Download version artifact
-      uses: actions/download-artifact@v1
+    - name: Setup env
+      uses: ./.github/actions/tegola-setup-env
       with:
-        name: version
-
-    - name: Download default-branch-ref artifact
-      uses: actions/download-artifact@v1
-      with:
-        name: default-branch-ref
-
-    - name: Set tegola version
-      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
-
-    - name: Set tegola default branch ref
-      run: echo "DEFAULT_BRANCH_REF=$(cat default-branch-ref/default-branch-ref.txt)" >> $GITHUB_ENV
+        ui: true
 
     - name: Build and tag Docker container
       run: |
-        docker build -t tegola --build-arg VERSION=${VERSION} .
+        docker build -t tegola --build-arg BUILDPKG=${BUILD_PKG} --build-arg VER=${VERSION} --build-arg BRANCH=${GIT_BRANCH} --build-arg REVISION=${GIT_REVISION} .
         docker tag tegola:latest ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION}
         docker tag tegola:latest ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:latest
         docker tag tegola:latest ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:edge
+        docker run --rm tegola version
 
     - name: Publish Docker edge container
       if: github.ref == env.DEFAULT_BRANCH_REF
@@ -254,53 +200,26 @@ jobs:
 
   build_windows:
     name: Build for Windows
-    needs: gen_version
+    needs: [gen_version,build_ui]
     runs-on: windows-latest
 
     steps:
-    - name: Check out code
+    - name: Check out actions
       uses: actions/checkout@v2
 
-    - name: Download version artifact
-      uses: actions/download-artifact@v1
+    - name: Setup env
+      uses: ./.github/actions/tegola-setup-env
       with:
-        name: version
-
-    - name: Set tegola version
-      run: echo "VERSION=$(cat version/version.txt)" >> $GITHUB_ENV
-
-    - name: Set up Go 1.16
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.16
+        ui: true
 
     - name: Build for Windows
       run: |
           cd cmd\tegola
-          go build -ldflags "-w -X github.com/go-spatial/tegola/cmd/tegola/cmd.Version=$Env:VERSION"
+          go build -ldflags "-w -X $Env:BUILD_PKG.Version=$Env:VERSION -X $Env:BUILD_PKG.GitRevision=$Env:GIT_REVISION -X $Env:BUILD_PKG.GitBranch=$Env:GIT_BRANCH"
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v1
+    - name: Upload artifact
+      uses: ./.github/actions/upload-artifact
       with:
-        name: tegola_windows_amd64
-        path: cmd\tegola\tegola.exe
-
-    - name: Compress release asset
-      if: github.event_name == 'release'
-      #env:
-        # necessary until Go modules have been adopted in this repo
-        #GOPATH: ${{ github.workspace }}\go
-      run: |
-          cd cmd\tegola
-          7z a tegola.zip tegola.exe
-
-    - name: Upload release asset
-      if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: cmd\tegola\tegola.zip
-        asset_name: tegola_windows_amd64.zip
-        asset_content_type: application/zip
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        artifact_name: "tegola"
+        upload_postfix: "_windows_amd64"
