@@ -3,7 +3,6 @@ package postgis
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,28 +19,23 @@ const TESTENV = "RUN_POSTGIS_TESTS"
 
 var defaultEnvConfig map[string]interface{}
 
-func GetTestPort() int {
-	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 32)
-	if err != nil {
-		// Since this is happening at init time, have a sane default
-		fmt.Fprintf(os.Stderr, "err parsing PGPORT: '%v' using default port: 5433", err)
-		return 5433
-	}
-	return int(port)
-}
-
 func getConfigFromEnv() map[string]interface{} {
-	port := GetTestPort()
+	port, err := strconv.Atoi(ttools.GetEnvDefault("PGPORT", "5432"))
+	if err != nil {
+		// if port is anything but int, fallback to default
+		port = 5432
+	}
+
 	return map[string]interface{}{
-		ConfigKeyHost:        os.Getenv("PGHOST"),
+		ConfigKeyHost:        ttools.GetEnvDefault("PGHOST", "localhost"),
 		ConfigKeyPort:        port,
-		ConfigKeyDB:          os.Getenv("PGDATABASE"),
-		ConfigKeyUser:        os.Getenv("PGUSER"),
-		ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-		ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
-		ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-		ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-		ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+		ConfigKeyDB:          ttools.GetEnvDefault("PGDATABASE", "tegola"),
+		ConfigKeyUser:        ttools.GetEnvDefault("PGUSER", "postgres"),
+		ConfigKeyPassword:    ttools.GetEnvDefault("PGPASSWORD", "postgres"),
+		ConfigKeySSLMode:     ttools.GetEnvDefault("PGSSLMODE", "disable"),
+		ConfigKeySSLKey:      ttools.GetEnvDefault("PGSSLKEY", ""),
+		ConfigKeySSLCert:     ttools.GetEnvDefault("PGSSLCERT", ""),
+		ConfigKeySSLRootCert: ttools.GetEnvDefault("PGSSLROOTCERT", ""),
 	}
 }
 
@@ -125,7 +119,7 @@ func TestMVTProviders(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"1": tcase{
+		"1": {
 			TCConfig: TCConfig{
 				LayerConfig: []map[string]interface{}{
 					{
@@ -254,7 +248,7 @@ func TestLayerGeomType(t *testing.T) {
 		"role no access to table": {
 			TCConfig: TCConfig{
 				ConfigOverride: map[string]interface{}{
-					ConfigKeyUser: os.Getenv("PGUSER_NO_ACCESS"),
+					ConfigKeyUser: ttools.GetEnvDefault("PGUSER_NO_ACCESS", "tegola_no_access"),
 				},
 				LayerConfig: []map[string]interface{}{
 					{
@@ -271,11 +265,11 @@ func TestLayerGeomType(t *testing.T) {
 			TCConfig: TCConfig{
 				ConfigOverride: map[string]interface{}{
 					ConfigKeyURI: fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
-						os.Getenv("PGUSER"),
-						os.Getenv("PGPASSWORD"),
-						os.Getenv("PGHOST"),
-						GetTestPort(),
-						os.Getenv("PGDATABASE"),
+						defaultEnvConfig["user"],
+						defaultEnvConfig["password"],
+						defaultEnvConfig["host"],
+						defaultEnvConfig["port"],
+						defaultEnvConfig["database"],
 					),
 					ConfigKeyHost: "",
 					ConfigKeyPort: "",

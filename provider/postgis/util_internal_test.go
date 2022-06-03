@@ -3,7 +3,7 @@ package postgis
 import (
 	"context"
 	"fmt"
-	"os"
+	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -124,11 +124,15 @@ func TestDecipherFields(t *testing.T) {
 		expectedTags     map[string]interface{}
 	}
 
-	host := os.Getenv("PGHOST")
-	port := os.Getenv("PGPORT")
-	db := os.Getenv("PGDATABASE")
-	user := os.Getenv("PGUSER")
-	password := os.Getenv("PGPASSWORD")
+	host := ttools.GetEnvDefault("PGHOST", "localhost")
+	port, err := strconv.Atoi(ttools.GetEnvDefault("PGPORT", "5432"))
+	// if port is anything but int, fallback to default
+	if err != nil {
+		port = 5432
+	}
+	db := ttools.GetEnvDefault("PGDATABASE", "tegola")
+	user := ttools.GetEnvDefault("PGUSER", "postgres")
+	password := ttools.GetEnvDefault("PGPASSWORD", "postgres")
 
 	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, db)
 	dbconfig, err := BuildDBConfig(cs)
