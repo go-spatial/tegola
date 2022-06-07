@@ -3,7 +3,6 @@ package postgis
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -176,53 +175,43 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 
 // replaceParams substitutes configured query parameter tokens for their values
 // within the provided SQL string
-func replaceParams(ctx context.Context, sql string) (string, error) {
-	if ctx.Value("params") == nil {
-		return sql, nil
+func replaceParams(params map[string]provider.QueryParameter, sql string, args *[]interface{}) string {
+	if params == nil {
+		return sql
 	}
 
-	params, ok := ctx.Value("params").(map[string]string)
-	if !ok {
-		return "", fmt.Errorf("param value is not a map: %v ",
-			ctx.Value("params"))
-	}
+	for _, token := range config.ParameterTokenRegexp.FindAllString(sql, -1) {
+		param := params[token]
 
-	replacerVals := make([]string, 0)
-
-	for token, val := range params {
-		if val != "" && !paramValRe.Match([]byte(val)) {
-			return "", fmt.Errorf("param value for token %s contains illegal characters: %s ",
-				token, val)
+		// Replace every ? in the param's SQL with a positional argument
+		paramSQL := ""
+		for _, c := range param.SQL {
+			if c == '?' {
+				*args = append(*args, param.Value)
+				paramSQL = paramSQL + "$" + fmt.Sprint(len(*args))
+			} else {
+				paramSQL += string(c)
+			}
 		}
 
-		replacerVals = append(replacerVals, token, val)
+		// Finally, replace current token with the prepared SQL
+		sql = strings.Replace(sql, token, paramSQL, 1)
 	}
 
-	// generate replacer from token/value pairs
-	replacer := strings.NewReplacer(replacerVals...)
-
-	uppercaseTokenSQL := uppercaseTokens(sql)
-
-	return replacer.Replace(uppercaseTokenSQL), nil
+	return sql
 }
 
 // stripParams will remove all parameter tokens from the query
 func stripParams(sql string) string {
-	return tokenRe.ReplaceAllStringFunc(sql, func(s string) string {
+	return config.ParameterTokenRegexp.ReplaceAllStringFunc(sql, func(s string) string {
 		return ""
 	})
 }
 
-// paramValRe restricts parameter values to a limited character set to prevent
-// SQL injection attacks. TODO This is very primitive and needs more thought.
-var paramValRe = regexp.MustCompile("[a-zA-Z0-9,._-]+")
-
-var tokenRe = regexp.MustCompile("![a-zA-Z0-9_-]+!")
-
 //	uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can
 //	contain alphanumerics, dash and underline chars.
 func uppercaseTokens(str string) string {
-	return tokenRe.ReplaceAllStringFunc(str, strings.ToUpper)
+	return config.ParameterTokenRegexp.ReplaceAllStringFunc(str, strings.ToUpper)
 }
 
 func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {

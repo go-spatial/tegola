@@ -80,6 +80,16 @@ func (e ErrParamInvalidDefault) Error() string {
 		e.MapName, e.Parameter.Name, e.Parameter.Type)
 }
 
+type ErrParamBadTokenName struct {
+	MapName   string
+	Parameter QueryParameter
+}
+
+func (e ErrParamBadTokenName) Error() string {
+	return fmt.Sprintf("config: map %s has parameter %s referencing token with an invalid name %s",
+		e.MapName, e.Parameter.Name, e.Parameter.Token)
+}
+
 type ErrInvalidProviderForMap struct {
 	MapName      string
 	ProviderName string
