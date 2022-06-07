@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -55,6 +56,9 @@ func IsReservedToken(token string) bool {
 	}
 	return false
 }
+
+// ParameterTokenRegexp to validate QueryParameters
+var ParameterTokenRegexp = regexp.MustCompile("![a-zA-Z0-9_-]+!")
 
 // ParamTypeDecoders is a collection of parsers for different types of user-defined parameters
 var ParamTypeDecoders = map[string]func(string) (interface{}, error){
@@ -153,6 +157,13 @@ func (m Map) ValidateParams() error {
 
 		if IsReservedToken(param.Token) {
 			return ErrParamTokenReserved{
+				MapName:   string(m.Name),
+				Parameter: param,
+			}
+		}
+
+		if !ParameterTokenRegexp.MatchString(param.Token) {
+			return ErrParamBadTokenName{
 				MapName:   string(m.Name),
 				Parameter: param,
 			}
