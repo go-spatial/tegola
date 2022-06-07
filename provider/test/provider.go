@@ -86,7 +86,7 @@ func (tp *TileProvider) Layers() ([]provider.LayerInfo, error) {
 }
 
 // TileFeatures always returns a feature with a polygon outlining the tile's Extent (not Buffered Extent)
-func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, fn func(f *provider.Feature) error) error {
+func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provider.Tile, queryParams map[string]provider.QueryParameter, fn func(f *provider.Feature) error) error {
 	// get tile bounding box
 	ext, srid := t.Extent()
 
@@ -103,7 +103,7 @@ func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provid
 }
 
 // MVTForLayers mocks out MVTForLayers by just returning the MVTTile bytes, this will never error
-func (tp *TileProvider) MVTForLayers(ctx context.Context, _ provider.Tile, _ []provider.Layer) ([]byte, error) {
+func (tp *TileProvider) MVTForLayers(ctx context.Context, _ provider.Tile, _ map[string]provider.QueryParameter, _ []provider.Layer) ([]byte, error) {
 	// TODO(gdey): fill this out.
 	if tp == nil {
 		return nil, nil

@@ -6,6 +6,7 @@ package debug
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola"
@@ -32,10 +33,21 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 // Provider provides the debug provider
 type Provider struct{}
 
-func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
+func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, queryParams map[string]provider.QueryParameter, fn func(f *provider.Feature) error) error {
 
 	// get tile bounding box
 	ext, srid := tile.Extent()
+
+	params := make([]string, len(queryParams))
+	i := 0
+	for _, param := range queryParams {
+		for k, v := range param.RawValues {
+			params[i] = fmt.Sprintf("%s=%s", k, v)
+			i++
+		}
+	}
+
+	paramsStr := strings.Join(params, " ")
 
 	switch layer {
 	case "debug-tile-outline":
@@ -44,7 +56,8 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			Geometry: ext.AsPolygon(),
 			SRID:     srid,
 			Tags: map[string]interface{}{
-				"type": "debug_buffer_outline",
+				"type":   "debug_buffer_outline",
+				"params": paramsStr,
 			},
 		}
 
@@ -67,8 +80,9 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 			},
 			SRID: srid,
 			Tags: map[string]interface{}{
-				"type": "debug_text",
-				"zxy":  fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
+				"type":   "debug_text",
+				"params": paramsStr,
+				"zxy":    fmt.Sprintf("Z:%v, X:%v, Y:%v", z, x, y),
 			},
 		}
 

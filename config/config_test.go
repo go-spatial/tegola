@@ -229,11 +229,10 @@ func TestParse(t *testing.T) {
 						},
 						Parameters: []config.QueryParameter{
 							{
-								Name:       "param1",
-								Token:      "!PARAM1!",
-								SQL:        "?",
-								Type:       "string",
-								IsRequired: true,
+								Name:  "param1",
+								Token: "!PARAM1!",
+								SQL:   "?",
+								Type:  "string",
 							},
 							{
 								Name:         "param2",
@@ -241,7 +240,6 @@ func TestParse(t *testing.T) {
 								Type:         "int",
 								SQL:          "AND ANSWER = ?",
 								DefaultValue: "42",
-								IsRequired:   false,
 							},
 							{
 								Name:       "param3",
@@ -249,7 +247,6 @@ func TestParse(t *testing.T) {
 								Type:       "float",
 								SQL:        "?",
 								DefaultSQL: "AND PI = 3.1415926",
-								IsRequired: false,
 							},
 						},
 					},

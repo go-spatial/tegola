@@ -796,7 +796,8 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 }
 
 // TileFeatures adheres to the provider.Tiler interface
-func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, fn func(f *provider.Feature) error) error {
+// TODO (bemyak): Make an actual use of QueryParams
+func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, queryParams map[string]provider.QueryParameter, fn func(f *provider.Feature) error) error {
 
 	var mapName string
 	{
@@ -932,7 +933,8 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	return rows.Err()
 }
 
-func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, layers []provider.Layer) ([]byte, error) {
+// TODO (bemyak): Make an actual use of QueryParams
+func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params map[string]provider.QueryParameter, layers []provider.Layer) ([]byte, error) {
 	var (
 		err     error
 		sqls    = make([]string, 0, len(layers))

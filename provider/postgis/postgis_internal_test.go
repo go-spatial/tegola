@@ -108,7 +108,7 @@ func TestMVTProviders(t *testing.T) {
 					MVTName: tc.layerNames[i],
 				}
 			}
-			mvtTile, err := prvd.MVTForLayers(context.Background(), tc.tile, layers)
+			mvtTile, err := prvd.MVTForLayers(context.Background(), tc.tile, nil, layers)
 			if err != nil {
 				t.Errorf("NewProvider unexpected error: %v", err)
 				return
@@ -133,7 +133,7 @@ func TestMVTProviders(t *testing.T) {
 				},
 			},
 			layerNames: []string{"land"},
-			mvtTile:    make([]byte, 174689),
+			mvtTile:    make([]byte, 208993),
 			tile:       provider.NewTile(0, 0, 0, 16, 4326),
 		},
 	}

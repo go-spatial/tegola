@@ -246,7 +246,6 @@ type QueryParameter struct {
 	// default_value can be specified
 	DefaultSQL   string `toml:"default_sql"`
 	DefaultValue string `toml:"default_value"`
-	IsRequired   bool
 }
 
 // Normalize will normalize param and set the default values
@@ -258,12 +257,6 @@ func (param *QueryParameter) Normalize() {
 		sql = param.SQL
 	}
 	param.SQL = sql
-
-	isRequired := true
-	if len(param.DefaultSQL) > 0 || len(param.DefaultValue) > 0 {
-		isRequired = false
-	}
-	param.IsRequired = isRequired
 }
 
 // Validate checks the config for issues

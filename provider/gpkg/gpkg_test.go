@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package gpkg_test
@@ -269,7 +270,7 @@ func TestTileFeatures(t *testing.T) {
 			}
 
 			var featureCount int
-			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, nil, func(f *provider.Feature) error {
 				featureCount++
 				return nil
 			})
@@ -416,7 +417,7 @@ func TestConfigs(t *testing.T) {
 				return
 			}
 
-			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, nil, func(f *provider.Feature) error {
 				// check if the feature is part of the test
 				if _, ok := tc.expectedTags[f.ID]; !ok {
 					return nil
