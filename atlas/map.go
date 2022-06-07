@@ -180,7 +180,7 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
-func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile, params map[string]provider.QueryParameter) ([]byte, error) {
 	// get the list of our layers
 	ptile := provider.NewTile(tile.Z, tile.X, tile.Y, uint(m.TileBuffer), uint(m.SRID))
 
@@ -191,13 +191,13 @@ func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile) ([]by
 			MVTName: m.Layers[i].MVTName(),
 		}
 	}
-	return m.mvtProvider.MVTForLayers(ctx, ptile, layers)
+	return m.mvtProvider.MVTForLayers(ctx, ptile, params, layers)
 
 }
 
 // encodeMVTTile will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
-func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params map[string]provider.QueryParameter) ([]byte, error) {
 
 	// tile container
 	var mvtTile mvt.Tile
@@ -226,7 +226,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 				uint(m.TileBuffer), uint(m.SRID))
 
 			// fetch layer from data provider
-			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, func(f *provider.Feature) error {
+			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, params, func(f *provider.Feature) error {
 				// skip row if geometry collection empty.
 				g, ok := f.Geometry.(geom.Collection)
 				if ok && len(g.Geometries()) == 0 {
@@ -377,15 +377,15 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 }
 
 // Encode will encode the given tile into mvt format
-func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+func (m Map) Encode(ctx context.Context, tile *slippy.Tile, params map[string]provider.QueryParameter) ([]byte, error) {
 	var (
 		tileBytes []byte
 		err       error
 	)
 	if m.HasMVTProvider() {
-		tileBytes, err = m.encodeMVTProviderTile(ctx, tile)
+		tileBytes, err = m.encodeMVTProviderTile(ctx, tile, params)
 	} else {
-		tileBytes, err = m.encodeMVTTile(ctx, tile)
+		tileBytes, err = m.encodeMVTTile(ctx, tile, params)
 	}
 	if err != nil {
 		return nil, err

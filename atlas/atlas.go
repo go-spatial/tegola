@@ -135,7 +135,8 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 	tile := slippy.NewTile(z, x, y)
 
 	// encode the tile
-	b, err := m.Encode(ctx, tile)
+	// TODO (bemyak): Make query parameters work with cache
+	b, err := m.Encode(ctx, tile, nil)
 	if err != nil {
 		return err
 	}

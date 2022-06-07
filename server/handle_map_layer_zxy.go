@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/observability"
+	"github.com/go-spatial/tegola/provider"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom/encoding/mvt"
@@ -95,13 +97,14 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	return nil
 }
 
-// URI scheme: /maps/:map_name/:layer_name/:z/:x/:y
+// URI scheme: /maps/:map_name/:layer_name/:z/:x/:y?param=value
 // map_name - map name in the config file
 // layer_name - name of the single map layer to render
 // z, x, y - tile coordinates as described in the Slippy Map Tilenames specification
 // 	z - zoom level
 // 	x - row
 // 	y - column
+// param - configurable query parameters and their values
 func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// parse our URI
 	if err := req.parseURI(r); err != nil {
@@ -158,36 +161,16 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m = m.AddDebugLayers()
 	}
 
-	encodeCtx := context.WithValue(r.Context(), observability.ObserveVarMapName, m.Name)
-	var params map[string]string
-
 	// check for query parameters and populate param map with their values
-	if req.Atlas.HasParams(req.mapName) {
-		params = make(map[string]string)
-		err = r.ParseForm()
-		if err == nil {
-			for _, param := range req.Atlas.GetParams(req.mapName) {
-				// Fetch parameter values
-				val := r.Form.Get(param.Name)
-				// Empty values are injected here to replace tokens with
-				// an empty string during sql query parameter replacement
-				// otherwise, the default value is used if configured.
-				if val == "" && param.DefaultValue != "" {
-					val = param.DefaultValue
-				}
-
-				// inject parameter value or default into params map
-				params[param.Token] = val
-			}
-
-			// update context passed to encoding if any params were parsed
-			if len(params) > 0 {
-				encodeCtx = context.WithValue(encodeCtx, "params", params)
-			}
-		}
+	params, err := req.extractParameters(r)
+	if err != nil {
+		log.Error(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	pbyte, err := m.Encode(encodeCtx, tile)
+	encodeCtx := context.WithValue(r.Context(), observability.ObserveVarMapName, m.Name)
+	pbyte, err := m.Encode(encodeCtx, tile, params)
 
 	if err != nil {
 		switch {
@@ -221,4 +204,48 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(pbyte) > MaxTileSize {
 		log.Infof("tile z:%v, x:%v, y:%v is rather large - %vKb", req.z, req.x, req.y, len(pbyte)/1024)
 	}
+}
+
+func (req *HandleMapLayerZXY) extractParameters(r *http.Request) (map[string]provider.QueryParameter, error) {
+	var params map[string]provider.QueryParameter
+	if req.Atlas.HasParams(req.mapName) {
+		params = make(map[string]provider.QueryParameter)
+		err := r.ParseForm()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, param := range req.Atlas.GetParams(req.mapName) {
+			if r.Form.Has(param.Name) {
+				val, err := config.ParamTypeDecoders[param.Type](r.Form.Get(param.Name))
+				if err != nil {
+					return nil, err
+				}
+				params[param.Token] = provider.QueryParameter{
+					Token: param.Type,
+					SQL:   param.SQL,
+					Value: val,
+				}
+			} else if len(param.DefaultValue) > 0 {
+				val, err := config.ParamTypeDecoders[param.Type](param.DefaultValue)
+				if err != nil {
+					return nil, err
+				}
+				params[param.Token] = provider.QueryParameter{
+					Token: param.Type,
+					SQL:   "?",
+					Value: val,
+				}
+			} else if len(param.DefaultSQL) > 0 {
+				params[param.Token] = provider.QueryParameter{
+					Token: param.Type,
+					SQL:   param.DefaultSQL,
+					Value: nil,
+				}
+			} else {
+				return nil, fmt.Errorf("the required parameter %s is not specified", param.Name)
+			}
+		}
+	}
+	return params, nil
 }

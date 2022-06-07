@@ -104,13 +104,23 @@ type Tile interface {
 	BufferedExtent() (extent *geom.Extent, srid uint64)
 }
 
+// Query parameter holds normalized parameter data ready to be inserted in the final query
+type QueryParameter struct {
+	// Token to replace e.g., !TOKEN!
+	Token string
+	// SQL expression to be inserted. Contains "?" that will be replaced with an ordinal argument e.g., "$1"
+	SQL string
+	// Value that will be passed to the final query
+	Value interface{}
+}
+
 // Tiler is a Layers that allows one to encode features in that layer
 type Tiler interface {
 	Layerer
 
 	// TileFeature will stream decoded features to the callback function fn
 	// if fn returns ErrCanceled, the TileFeatures method should stop processing
-	TileFeatures(ctx context.Context, layer string, t Tile, fn func(f *Feature) error) error
+	TileFeatures(ctx context.Context, layer string, t Tile, queryParams map[string]QueryParameter, fn func(f *Feature) error) error
 }
 
 // TilerUnion represents either a Std Tiler or and MVTTiler; only one should be not nil.

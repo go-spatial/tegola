@@ -202,7 +202,7 @@ func TestEncode(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			out, err := tc.grid.Encode(context.Background(), tc.tile)
+			out, err := tc.grid.Encode(context.Background(), tc.tile, nil)
 			if err != nil {
 				t.Errorf("err: %v", err)
 				return
