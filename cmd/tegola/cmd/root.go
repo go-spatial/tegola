@@ -77,7 +77,7 @@ var RootCmd = &cobra.Command{
 	Use:   "tegola",
 	Short: "tegola is a vector tile server",
 	Long: fmt.Sprintf(`tegola is a vector tile server
-		Version: %v`, build.Version),
+Version: %v`, build.Version),
 	PersistentPreRunE: rootCmdValidatePersistent,
 }
 

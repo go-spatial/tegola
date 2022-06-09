@@ -563,7 +563,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 
 		if sql != "" {
 			// convert !BOX! (MapServer) and !bbox! (Mapnik) to !BBOX! for compatibility
-			sql := strings.Replace(strings.Replace(sql, "!BOX!", "!BBOX!", -1), "!bbox!", "!BBOX!", -1)
+			sql := strings.Replace(strings.Replace(sql, "!BOX!", conf.BboxToken, -1), "!bbox!", conf.BboxToken, -1)
 			// make sure that the sql has a !BBOX! token
 			if !strings.Contains(sql, conf.BboxToken) {
 				return nil, fmt.Errorf("SQL for layer (%v) %v is missing required token: %v", i, lName, conf.BboxToken)
@@ -574,6 +574,13 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 				}
 				if !strings.Contains(sql, idfld) {
 					return nil, fmt.Errorf("SQL for layer (%v) %v does not contain the id field for the geometry: %v", i, lName, sql)
+				}
+			}
+
+			// check all tokens are valid
+			for _, token := range provider.ParameterTokenRegexp.FindAllString(sql, -1) {
+				if _, ok := conf.ReservedTokens[token]; !ok {
+					return nil, fmt.Errorf("SQL for layer (%v) %v references an unknown token %s: %v", i, lName, token, sql)
 				}
 			}
 

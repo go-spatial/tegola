@@ -172,6 +172,23 @@ func TestReplaceParams(t *testing.T) {
 			expectedSql:  "SELECT * FROM table ",
 			expectedArgs: []interface{}{},
 		},
+		"multiple params": {
+			params: map[string]provider.QueryParameter{
+				"!PARAM!": {
+					Token: "!PARAM!",
+					SQL:   "???",
+					Value: 1,
+				},
+				"!PARAM2!": {
+					Token: "!PARAM2!",
+					SQL:   "???",
+					Value: 2,
+				},
+			},
+			sql:          "!PARAM!!PARAM2!",
+			expectedSql:  "$1$1$1$2$2$2",
+			expectedArgs: []interface{}{1, 2},
+		},
 	}
 
 	for name, tc := range tests {

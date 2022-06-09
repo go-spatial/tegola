@@ -32,28 +32,18 @@ const (
 )
 
 // ReservedTokens for query injection
-var ReservedTokens = []string{
-	BboxToken,
-	ZoomToken,
-	XToken,
-	YToken,
-	ZToken,
-	ScaleDenominatorToken,
-	PixelWidthToken,
-	PixelHeightToken,
-	IdFieldToken,
-	GeomFieldToken,
-	GeomTypeToken,
-}
-
-// IsReservedToken returns true if the specified token is reserved
-func IsReservedToken(token string) bool {
-	for _, t := range ReservedTokens {
-		if token == t {
-			return true
-		}
-	}
-	return false
+var ReservedTokens = map[string]struct{}{
+	BboxToken:             {},
+	ZoomToken:             {},
+	XToken:                {},
+	YToken:                {},
+	ZToken:                {},
+	ScaleDenominatorToken: {},
+	PixelWidthToken:       {},
+	PixelHeightToken:      {},
+	IdFieldToken:          {},
+	GeomFieldToken:        {},
+	GeomTypeToken:         {},
 }
 
 // ParamTypeDecoders is a collection of parsers for different types of user-defined parameters
@@ -124,7 +114,8 @@ func (m Map) ValidateParams() error {
 		return nil
 	}
 
-	var usedNames, usedTokens []string
+	usedNames := make(map[string]struct{})
+	usedTokens := make(map[string]struct{})
 
 	for _, param := range m.Parameters {
 		if _, ok := ParamTypeDecoders[param.Type]; !ok {
@@ -151,7 +142,7 @@ func (m Map) ValidateParams() error {
 			}
 		}
 
-		if IsReservedToken(param.Token) {
+		if _, ok := ReservedTokens[param.Token]; ok {
 			return ErrParamTokenReserved{
 				MapName:   string(m.Name),
 				Parameter: param,
@@ -165,26 +156,27 @@ func (m Map) ValidateParams() error {
 			}
 		}
 
-		for _, name := range usedNames {
-			if name == param.Name {
-				return ErrParamNameDuplicate{
-					MapName:   string(m.Name),
-					Parameter: param,
-				}
+		if _, ok := usedNames[param.Name]; ok {
+			return ErrParamNameDuplicate{
+				MapName:   string(m.Name),
+				Parameter: param,
 			}
 		}
 
-		for _, token := range usedTokens {
-			if token == param.Token {
-				return ErrParamTokenDuplicate{
-					MapName:   string(m.Name),
-					Parameter: param,
-				}
+		if _, ok := usedTokens[param.Token]; ok {
+			return ErrParamTokenDuplicate{
+				MapName:   string(m.Name),
+				Parameter: param,
 			}
 		}
 
-		usedNames = append(usedNames, param.Name)
-		usedTokens = append(usedTokens, param.Token)
+		usedNames[param.Name] = struct{}{}
+		usedTokens[param.Token] = struct{}{}
+	}
+
+	// Mark all used tokens as reserved
+	for token := range usedTokens {
+		ReservedTokens[token] = struct{}{}
 	}
 
 	return nil
@@ -244,15 +236,13 @@ type QueryParameter struct {
 	DefaultValue string `toml:"default_value"`
 }
 
-// Normalize will normalize param and set the default values
+// Normalize normalizes param and sets default values
 func (param *QueryParameter) Normalize() {
 	param.Token = strings.ToUpper(param.Token)
 
-	sql := "?"
-	if len(param.SQL) > 0 {
-		sql = param.SQL
+	if len(param.SQL) == 0 {
+		param.SQL = "?"
 	}
-	param.SQL = sql
 }
 
 // Validate checks the config for issues

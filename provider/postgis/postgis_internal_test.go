@@ -17,7 +17,19 @@ import (
 // TESTENV is the environment variable that must be set to "yes" to run postgis tests.
 const TESTENV = "RUN_POSTGIS_TESTS"
 
-var defaultEnvConfig map[string]interface{}
+var DefaultEnvConfig map[string]interface{}
+
+var DefaultConfig map[string]interface{} = map[string]interface{}{
+	ConfigKeyHost:        "localhost",
+	ConfigKeyPort:        5432,
+	ConfigKeyDB:          "tegola",
+	ConfigKeyUser:        "postgres",
+	ConfigKeyPassword:    "postgres",
+	ConfigKeySSLMode:     "disable",
+	ConfigKeySSLKey:      "",
+	ConfigKeySSLCert:     "",
+	ConfigKeySSLRootCert: "",
+}
 
 func getConfigFromEnv() map[string]interface{} {
 	port, err := strconv.Atoi(ttools.GetEnvDefault("PGPORT", "5432"))
@@ -40,7 +52,7 @@ func getConfigFromEnv() map[string]interface{} {
 }
 
 func init() {
-	defaultEnvConfig = getConfigFromEnv()
+	DefaultEnvConfig = getConfigFromEnv()
 }
 
 type TCConfig struct {
@@ -49,9 +61,8 @@ type TCConfig struct {
 	LayerConfig    []map[string]interface{}
 }
 
-func (cfg TCConfig) Config() dict.Dict {
+func (cfg TCConfig) Config(mConfig map[string]interface{}) dict.Dict {
 	var config map[string]interface{}
-	mConfig := defaultEnvConfig
 	if cfg.BaseConfig != nil {
 		mConfig = cfg.BaseConfig
 	}
@@ -86,7 +97,7 @@ func TestMVTProviders(t *testing.T) {
 	}
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
+			config := tc.Config(DefaultEnvConfig)
 			prvd, err := NewMVTTileProvider(config)
 			// for now we will just check the length of the bytes.
 			if tc.err != "" {
@@ -133,7 +144,7 @@ func TestMVTProviders(t *testing.T) {
 				},
 			},
 			layerNames: []string{"land"},
-			mvtTile:    make([]byte, 208993),
+			mvtTile:    make([]byte, 174689),
 			tile:       provider.NewTile(0, 0, 0, 16, 4326),
 		},
 	}
@@ -156,7 +167,7 @@ func TestLayerGeomType(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
+			config := tc.Config(DefaultEnvConfig)
 			provider, err := NewTileProvider(config)
 			if tc.err != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.err) {
@@ -443,7 +454,7 @@ func TestBuildUri(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
+			config := tc.Config(DefaultConfig)
 			uri, _, err := BuildURI(config)
 
 			if tc.err != "" {
