@@ -164,7 +164,7 @@ func TestNewTileProvider(t *testing.T) {
 
 	fn := func(tc postgis.TCConfig) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
+			config := tc.Config(postgis.DefaultEnvConfig)
 			_, err := postgis.NewTileProvider(config)
 			if err != nil {
 				t.Errorf("unable to create a new provider. err: %v", err)
@@ -202,7 +202,7 @@ func TestTileFeatures(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
+			config := tc.Config(postgis.DefaultEnvConfig)
 			p, err := postgis.NewTileProvider(config)
 			if err != nil {
 				t.Errorf("unexpected error; unable to create a new provider, expected: nil Got %v", err)

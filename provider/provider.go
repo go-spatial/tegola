@@ -117,7 +117,7 @@ type QueryParameter struct {
 	// SQL expression to be inserted. Contains "?" that will be replaced with an
 	//  ordinal argument e.g., "$1"
 	SQL string
-	// Value that will be passed to the final query
+	// Value that will be passed to the final query in arguments list
 	Value interface{}
 	// Raw parameter values for debugging and monitoring
 	RawValues map[string]string

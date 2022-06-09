@@ -233,7 +233,7 @@ func (req *HandleMapLayerZXY) extractParameters(r *http.Request) (map[string]pro
 				}
 				params[param.Token] = provider.QueryParameter{
 					Token: param.Type,
-					SQL:   "?",
+					SQL:   param.SQL,
 					Value: val,
 				}
 			} else if len(param.DefaultSQL) > 0 {
