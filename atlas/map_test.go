@@ -81,6 +81,58 @@ func TestMapFilterLayersByZoom(t *testing.T) {
 				},
 			},
 		},
+		{
+			atlasMap: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:    "layer1",
+						MinZoom: 0,
+						MaxZoom: 0,
+					},
+					{
+						Name:    "layer2",
+						MinZoom: 1,
+						MaxZoom: 5,
+					},
+				},
+			},
+			zoom: 2,
+			expected: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:    "layer2",
+						MinZoom: 1,
+						MaxZoom: 5,
+					},
+				},
+			},
+		},
+		{
+			atlasMap: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:    "layer1",
+						MinZoom: 0,
+						MaxZoom: 0,
+					},
+					{
+						Name:    "layer2",
+						MinZoom: 1,
+						MaxZoom: 5,
+					},
+				},
+			},
+			zoom: 0,
+			expected: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:    "layer1",
+						MinZoom: 0,
+						MaxZoom: 0,
+					},
+				},
+			},
+		},
 	}
 
 	for i, tc := range testcases {

@@ -145,7 +145,7 @@ func (m Map) FilterLayersByZoom(zoom uint) Map {
 	var layers []Layer
 
 	for i := range m.Layers {
-		if (m.Layers[i].MinZoom <= zoom || m.Layers[i].MinZoom == 0) && (m.Layers[i].MaxZoom >= zoom || m.Layers[i].MaxZoom == 0) {
+		if m.Layers[i].MinZoom <= zoom && m.Layers[i].MaxZoom >= zoom {
 			layers = append(layers, m.Layers[i])
 			continue
 		}
