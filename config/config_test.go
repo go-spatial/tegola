@@ -455,6 +455,134 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestValidateMutateZoom(t *testing.T) {
+
+	type tcase struct {
+		config          *config.Config
+		layerName       string
+		expectedMinZoom int
+		expectedMaxZoom int
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+
+			err := tc.config.Validate()
+			if err != nil {
+				t.Errorf("an error occured: %v", err)
+				return
+			}
+
+			minzoom := int(*tc.config.Maps[0].Layers[0].MinZoom)
+			if minzoom != tc.expectedMinZoom {
+				t.Errorf("expected min zoom: %v, got: %v", tc.expectedMinZoom, minzoom)
+			}
+
+			maxzoom := int(*tc.config.Maps[0].Layers[0].MaxZoom)
+			if maxzoom != tc.expectedMaxZoom {
+				t.Errorf("expected min zoom: %v, got: %v", tc.expectedMaxZoom, maxzoom)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"1 - default max zoom": {
+			expectedMinZoom: 0,
+			expectedMaxZoom: 22,
+			config: &config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					Port: ":8080",
+				},
+				Providers: []env.Dict{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water",
+								MinZoom:       nil,
+								MaxZoom:       nil,
+							},
+						},
+					},
+				},
+			},
+		},
+		"2 - max zoom 0, default to 1": {
+			expectedMinZoom: 0,
+			expectedMaxZoom: 1,
+			config: &config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					Port: ":8080",
+				},
+				Providers: []env.Dict{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []config.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []config.MapLayer{
+							{
+								ProviderLayer: "provider1.water",
+								MinZoom:       env.UintPtr(0),
+								MaxZoom:       env.UintPtr(0),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+
+}
+
 func TestValidate(t *testing.T) {
 	type tcase struct {
 		config      config.Config

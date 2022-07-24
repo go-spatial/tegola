@@ -215,6 +215,15 @@ func (c *Config) Validate() error {
 				c.Maps[mapKey].Layers[layerKey].MinZoom = &ph
 			}
 
+			if int(*l.MaxZoom) == 0 {
+				log.Warn("max_zoom of 0 is not supported. adjusting to '1'")
+				ph := env.Uint(1)
+				// set in iterated value
+				l.MaxZoom = &ph
+				// set in underlying config struct
+				c.Maps[mapKey].Layers[layerKey].MaxZoom = &ph
+			}
+
 			// check if we already have this layer
 			if val, ok := mapLayers[string(m.Name)][name]; ok {
 				// we have a hit. check for zoom range overlap
