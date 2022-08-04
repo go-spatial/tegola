@@ -262,7 +262,7 @@ func geomNameToGeom(name string) (geom.Geometry, error) {
 	case "MULTIPOLYGON":
 		return geom.MultiPolygon{}, nil
 	case "GEOMETRY":
-		return geom.ErrUnknownGeometry{}, nil
+		return nil, nil
 	}
 
 	return nil, fmt.Errorf("unsupported geometry type: %v", name)
