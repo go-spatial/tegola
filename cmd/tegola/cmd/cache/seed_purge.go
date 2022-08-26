@@ -49,6 +49,8 @@ var (
 	cacheBounds string
 	// name of the map
 	cacheMap string
+	// while seeding, on log output for tiles that take longer than this (in milliseconds) to render
+	cacheLogThreshold int64
 )
 
 // variables that are not flags but set by the command.
@@ -71,6 +73,7 @@ func init() {
 	SeedPurgeCmd.PersistentFlags().StringVarP(&cacheMap, "map", "", "", "map name as defined in the config")
 	SeedPurgeCmd.PersistentFlags().IntVarP(&cacheConcurrency, "concurrency", "", runtime.NumCPU(), "the amount of concurrency to use. defaults to the number of CPUs on the machine")
 	SeedPurgeCmd.PersistentFlags().BoolVarP(&cacheOverwrite, "overwrite", "", false, "overwrite the cache if a tile already exists (default false)")
+	SeedPurgeCmd.PersistentFlags().Int64VarP(&cacheLogThreshold, "log-threshold", "", 0, "during seeding, only log tiles that take this number of milliseconds or longer to render (default all tiles)")
 
 	SeedPurgeCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lng/lat bounds to seed the cache with in the format: minx, miny, maxx, maxy")
 
@@ -128,7 +131,7 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 	case "purge":
 		seedPurgeWorker = purgeWorker
 	case "seed":
-		seedPurgeWorker = seedWorker(cacheOverwrite)
+		seedPurgeWorker = seedWorker(cacheOverwrite, cacheLogThreshold)
 	default:
 
 		return fmt.Errorf("expected purge/seed got (%v) for command name", cmdName)
