@@ -2,7 +2,6 @@ package config_test
 
 import (
 	"errors"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -30,33 +29,22 @@ const (
 	ENV_TEST_MAP_LAYER_DEFAULT_TAG   = "postgis"
 )
 
-func setEnv() {
+func setEnv(t *testing.T) {
 	x := strconv.FormatFloat(ENV_TEST_CENTER_X, 'f', -1, 64)
 	y := strconv.FormatFloat(ENV_TEST_CENTER_Y, 'f', -1, 64)
 	z := strconv.FormatFloat(ENV_TEST_CENTER_Z, 'f', -1, 64)
 
-	os.Setenv("ENV_TEST_PORT", ENV_TEST_PORT)
-	os.Setenv("ENV_TEST_CENTER_X", x)
-	os.Setenv("ENV_TEST_CENTER_Y", y)
-	os.Setenv("ENV_TEST_CENTER_Z", z)
-	os.Setenv("ENV_TEST_HOST_1", ENV_TEST_HOST_1)
-	os.Setenv("ENV_TEST_HOST_2", ENV_TEST_HOST_2)
-	os.Setenv("ENV_TEST_HOST_3", ENV_TEST_HOST_3)
-	os.Setenv("ENV_TEST_WEBSERVER_HEADER_STRING", ENV_TEST_WEBSERVER_HEADER_STRING)
-	os.Setenv("ENV_TEST_WEBSERVER_PORT", ENV_TEST_WEBSERVER_PORT)
-	os.Setenv("ENV_TEST_PROVIDER_LAYER", ENV_TEST_PROVIDER_LAYER)
-	os.Setenv("ENV_TEST_MAP_LAYER_DEFAULT_TAG", ENV_TEST_MAP_LAYER_DEFAULT_TAG)
-}
-
-func unsetEnv() {
-	os.Unsetenv("ENV_TEST_PORT")
-	os.Unsetenv("ENV_TEST_CENTER_X")
-	os.Unsetenv("ENV_TEST_CENTER_Y")
-	os.Unsetenv("ENV_TEST_CENTER_Z")
-	os.Unsetenv("ENV_TEST_WEBSERVER_HEADER_STRING")
-	os.Unsetenv("ENV_TEST_WEBSERVER_PORT")
-	os.Unsetenv("ENV_TEST_PROVIDER_LAYER")
-	os.Unsetenv("ENV_TEST_MAP_LAYER_DEFAULT_TAG")
+	t.Setenv("ENV_TEST_PORT", ENV_TEST_PORT)
+	t.Setenv("ENV_TEST_CENTER_X", x)
+	t.Setenv("ENV_TEST_CENTER_Y", y)
+	t.Setenv("ENV_TEST_CENTER_Z", z)
+	t.Setenv("ENV_TEST_HOST_1", ENV_TEST_HOST_1)
+	t.Setenv("ENV_TEST_HOST_2", ENV_TEST_HOST_2)
+	t.Setenv("ENV_TEST_HOST_3", ENV_TEST_HOST_3)
+	t.Setenv("ENV_TEST_WEBSERVER_HEADER_STRING", ENV_TEST_WEBSERVER_HEADER_STRING)
+	t.Setenv("ENV_TEST_WEBSERVER_PORT", ENV_TEST_WEBSERVER_PORT)
+	t.Setenv("ENV_TEST_PROVIDER_LAYER", ENV_TEST_PROVIDER_LAYER)
+	t.Setenv("ENV_TEST_MAP_LAYER_DEFAULT_TAG", ENV_TEST_MAP_LAYER_DEFAULT_TAG)
 }
 
 func TestParse(t *testing.T) {
@@ -66,8 +54,7 @@ func TestParse(t *testing.T) {
 		expectedErr error
 	}
 
-	setEnv()
-	defer unsetEnv()
+	setEnv(t)
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {

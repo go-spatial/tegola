@@ -1,7 +1,6 @@
 package env_test
 
 import (
-	"os"
 	"reflect"
 	"testing"
 
@@ -22,15 +21,8 @@ func TestDict(t *testing.T) {
 		return func(t *testing.T) {
 			// setup our env vars
 			for k, v := range tc.envVars {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-
-			// clean up env vars
-			defer (func() {
-				for k, _ := range tc.envVars {
-					os.Unsetenv(k)
-				}
-			})()
 
 			var val interface{}
 			var err error

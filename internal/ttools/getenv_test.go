@@ -1,7 +1,6 @@
 package ttools
 
 import (
-	"os"
 	"testing"
 )
 
@@ -10,14 +9,9 @@ const (
 	ENV_TEST_EMPTY_VARIABLE = ""
 )
 
-func setEnv() {
-	os.Setenv("ENV_TEST_VARIABLE", ENV_TEST_VARIABLE)
-	os.Setenv("ENV_TEST_EMPTY_VARIABLE", ENV_TEST_EMPTY_VARIABLE)
-}
-
-func unsetEnv() {
-	os.Unsetenv("ENV_TEST_VARIABLE")
-	os.Unsetenv("ENV_TEST_EMPTY_VARIABLE")
+func setEnv(t *testing.T) {
+	t.Setenv("ENV_TEST_VARIABLE", ENV_TEST_VARIABLE)
+	t.Setenv("ENV_TEST_EMPTY_VARIABLE", ENV_TEST_EMPTY_VARIABLE)
 }
 
 func TestGetEnvDefault(t *testing.T) {
@@ -27,8 +21,7 @@ func TestGetEnvDefault(t *testing.T) {
 		expected string
 	}
 
-	setEnv()
-	defer unsetEnv()
+	setEnv(t)
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
