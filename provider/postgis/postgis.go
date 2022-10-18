@@ -599,7 +599,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 			}
 		} else {
 			if err = p.inspectLayerGeomType(&l); err != nil {
-				return nil, fmt.Errorf("error fetching geometry type for layer (%v): %w", l.name, err)
+				return nil, fmt.Errorf("error fetching geometry type for layer (%v): %w\nif custom parameters are used, remember to set %s for the provider", l.name, err, ConfigKeyGeomType)
 			}
 		}
 
@@ -725,8 +725,9 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 		return err
 	}
 
-	// TODO (bemyak): Figure out what is this
 	// remove all parameter tokens for inspection
+	// crossing our fingers that the query is still valid 🤞
+	// if not, the user will have to specify `geometry_type` in the config
 	sql = stripParams(sql)
 
 	rows, err := p.pool.Query(context.Background(), sql)
@@ -820,7 +821,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 
 	// replace configured query parameters if any
 	args := make([]interface{}, 0)
-	sql = replaceParams(queryParams, sql, &args)
+	sql = provider.ReplaceParams(queryParams, sql, &args)
 	if err != nil {
 		return err
 	}
@@ -933,7 +934,6 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	return rows.Err()
 }
 
-// TODO (bemyak): Make an actual use of QueryParams
 func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params map[string]provider.QueryParameter, layers []provider.Layer) ([]byte, error) {
 	var (
 		err     error
@@ -970,7 +970,7 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params m
 		}
 
 		// replace configured query parameters if any
-		sql = replaceParams(params, sql, &args)
+		sql = provider.ReplaceParams(params, sql, &args)
 
 		// ref: https://postgis.net/docs/ST_AsMVT.html
 		// bytea ST_AsMVT(any_element row, text name, integer extent, text geom_name, text feature_id_name)
@@ -1003,7 +1003,6 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params m
 		err = p.pool.QueryRow(ctx, fsql, args...).Scan(&data)
 		if p.mvtProviderQueryHistogramSeconds != nil {
 			z, _, _ := tile.ZXY()
-			// TODO (bemyak): add params as labels to prometheus?
 			lbls := prometheus.Labels{
 				"z":        strconv.FormatUint(uint64(z), 10),
 				"map_name": mapName,
