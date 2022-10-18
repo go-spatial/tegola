@@ -14,6 +14,7 @@ import (
 func webMercatorMapFromConfigMap(cfg config.Map) (newMap atlas.Map) {
 	newMap = atlas.NewWebMercatorMap(string(cfg.Name))
 	newMap.Attribution = SanitizeAttribution(string(cfg.Attribution))
+	newMap.Params = cfg.Parameters
 
 	// convert from env package
 	for i, v := range cfg.Center {
@@ -154,10 +155,6 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 				return err
 			}
 			newMap.Layers = append(newMap.Layers, layer)
-		}
-
-		if len(m.Parameters) > 0 {
-			a.AddParams(string(m.Name), m.Parameters)
 		}
 
 		a.AddMap(newMap)

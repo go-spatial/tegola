@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/observability"
 
 	"github.com/golang/protobuf/proto"
@@ -54,6 +55,8 @@ type Map struct {
 	// WGS:84 values), the third value is the zoom level.
 	Center [3]float64
 	Layers []Layer
+	// Params holds configured query parameters
+	Params []config.QueryParameter
 
 	SRID uint64
 	// MVT output values
