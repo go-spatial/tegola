@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
@@ -104,14 +106,53 @@ type Tile interface {
 	BufferedExtent() (extent *geom.Extent, srid uint64)
 }
 
-// Query parameter holds normalized parameter data ready to be inserted in the final query
+// ParameterTokenRegexp to validate QueryParameters
+var ParameterTokenRegexp = regexp.MustCompile("![a-zA-Z0-9_-]+!")
+
+// Query parameter holds normalized parameter data ready to be inserted in the
+//  final query
 type QueryParameter struct {
 	// Token to replace e.g., !TOKEN!
 	Token string
-	// SQL expression to be inserted. Contains "?" that will be replaced with an ordinal argument e.g., "$1"
+	// SQL expression to be inserted. Contains "?" that will be replaced with an
+	//  ordinal argument e.g., "$1"
 	SQL string
 	// Value that will be passed to the final query
 	Value interface{}
+	// Raw parameter values for debugging and monitoring
+	RawValues map[string]string
+}
+
+// ReplaceParams substitutes configured query parameter tokens for their values
+//  within the provided SQL string
+func ReplaceParams(params map[string]QueryParameter, sql string, args *[]interface{}) string {
+	if params == nil {
+		return sql
+	}
+
+	for _, token := range ParameterTokenRegexp.FindAllString(sql, -1) {
+		param := params[token]
+
+		// Replace every ? in the param's SQL with a positional argument
+		paramSQL := ""
+		argFound := false
+		for _, c := range param.SQL {
+			if c == '?' {
+				if !argFound {
+					*args = append(*args, param.Value)
+					argFound = true
+				}
+				paramSQL += fmt.Sprintf("$%d", len(*args))
+			} else {
+				paramSQL += string(c)
+			}
+		}
+
+		// Finally, replace current token with the prepared SQL
+		sql = strings.Replace(sql, token, paramSQL, 1)
+	}
+
+	return sql
 }
 
 // Tiler is a Layers that allows one to encode features in that layer

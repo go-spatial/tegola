@@ -85,7 +85,7 @@ func TestReplaceParams(t *testing.T) {
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			args := make([]interface{}, 0)
-			out := replaceParams(tc.params, tc.sql, &args)
+			out := provider.ReplaceParams(tc.params, tc.sql, &args)
 
 			if out != tc.expectedSql {
 				t.Errorf("expected \n \t%v\n out \n \t%v", tc.expectedSql, out)

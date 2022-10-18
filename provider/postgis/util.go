@@ -173,45 +173,15 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 	return tokenReplacer.Replace(uppercaseTokenSQL), nil
 }
 
-// replaceParams substitutes configured query parameter tokens for their values
-// within the provided SQL string
-func replaceParams(params map[string]provider.QueryParameter, sql string, args *[]interface{}) string {
-	if params == nil {
-		return sql
-	}
-
-	for _, token := range config.ParameterTokenRegexp.FindAllString(sql, -1) {
-		param := params[token]
-
-		// Replace every ? in the param's SQL with a positional argument
-		paramSQL := ""
-		for _, c := range param.SQL {
-			if c == '?' {
-				*args = append(*args, param.Value)
-				paramSQL = paramSQL + "$" + fmt.Sprint(len(*args))
-			} else {
-				paramSQL += string(c)
-			}
-		}
-
-		// Finally, replace current token with the prepared SQL
-		sql = strings.Replace(sql, token, paramSQL, 1)
-	}
-
-	return sql
-}
-
 // stripParams will remove all parameter tokens from the query
 func stripParams(sql string) string {
-	return config.ParameterTokenRegexp.ReplaceAllStringFunc(sql, func(s string) string {
-		return ""
-	})
+	return provider.ParameterTokenRegexp.ReplaceAllString(sql, "")
 }
 
-//	uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can
-//	contain alphanumerics, dash and underline chars.
+// uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can
+// contain alphanumerics, dash and underline chars.
 func uppercaseTokens(str string) string {
-	return config.ParameterTokenRegexp.ReplaceAllStringFunc(str, strings.ToUpper)
+	return provider.ParameterTokenRegexp.ReplaceAllStringFunc(str, strings.ToUpper)
 }
 
 func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
