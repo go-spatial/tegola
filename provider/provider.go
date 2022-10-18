@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
@@ -109,59 +108,13 @@ type Tile interface {
 // ParameterTokenRegexp to validate QueryParameters
 var ParameterTokenRegexp = regexp.MustCompile("![a-zA-Z0-9_-]+!")
 
-// Query parameter holds normalized parameter data ready to be inserted in the
-//  final query
-type QueryParameter struct {
-	// Token to replace e.g., !TOKEN!
-	Token string
-	// SQL expression to be inserted. Contains "?" that will be replaced with an
-	//  ordinal argument e.g., "$1"
-	SQL string
-	// Value that will be passed to the final query in arguments list
-	Value interface{}
-	// Raw parameter values for debugging and monitoring
-	RawValues map[string]string
-}
-
-// ReplaceParams substitutes configured query parameter tokens for their values
-//  within the provided SQL string
-func ReplaceParams(params map[string]QueryParameter, sql string, args *[]interface{}) string {
-	if params == nil {
-		return sql
-	}
-
-	for _, token := range ParameterTokenRegexp.FindAllString(sql, -1) {
-		param := params[token]
-
-		// Replace every ? in the param's SQL with a positional argument
-		paramSQL := ""
-		argFound := false
-		for _, c := range param.SQL {
-			if c == '?' {
-				if !argFound {
-					*args = append(*args, param.Value)
-					argFound = true
-				}
-				paramSQL += fmt.Sprintf("$%d", len(*args))
-			} else {
-				paramSQL += string(c)
-			}
-		}
-
-		// Finally, replace current token with the prepared SQL
-		sql = strings.Replace(sql, token, paramSQL, 1)
-	}
-
-	return sql
-}
-
 // Tiler is a Layers that allows one to encode features in that layer
 type Tiler interface {
 	Layerer
 
 	// TileFeature will stream decoded features to the callback function fn
 	// if fn returns ErrCanceled, the TileFeatures method should stop processing
-	TileFeatures(ctx context.Context, layer string, t Tile, queryParams map[string]QueryParameter, fn func(f *Feature) error) error
+	TileFeatures(ctx context.Context, layer string, t Tile, params Params, fn func(f *Feature) error) error
 }
 
 // TilerUnion represents either a Std Tiler or and MVTTiler; only one should be not nil.
@@ -183,7 +136,7 @@ func (tu TilerUnion) Layers() ([]LayerInfo, error) {
 }
 
 // InitFunc initialize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
-type InitFunc func(dicter dict.Dicter) (Tiler, error)
+type InitFunc func(dicter dict.Dicter, maps []Map) (Tiler, error)
 
 // CleanupFunc is called to when the system is shutting down, this allows the provider to cleanup.
 type CleanupFunc func()
@@ -280,7 +233,7 @@ func Drivers(types ...providerType) (l []string) {
 // For function returns a configure provider of the given type; The provider may be a mvt provider or
 // a std provider. The correct entry in TilerUnion will not be nil. If there is an error both entries
 // will be nil.
-func For(name string, config dict.Dicter) (val TilerUnion, err error) {
+func For(name string, config dict.Dicter, maps []Map) (val TilerUnion, err error) {
 	var (
 		driversList = Drivers()
 	)
@@ -292,11 +245,11 @@ func For(name string, config dict.Dicter) (val TilerUnion, err error) {
 		return val, ErrUnknownProvider{KnownProviders: driversList, Name: name}
 	}
 	if p.init != nil {
-		val.Std, err = p.init(config)
+		val.Std, err = p.init(config, maps)
 		return val, err
 	}
 	if p.mvtInit != nil {
-		val.Mvt, err = p.mvtInit(config)
+		val.Mvt, err = p.mvtInit(config, maps)
 		return val, err
 	}
 	return val, ErrInvalidRegisteredProvider{Name: name}

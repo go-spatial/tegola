@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package gpkg
@@ -160,7 +161,6 @@ func extractColDefsFromSQL(sql string) []string {
 func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) {
 	// this query is used to read the metadata from the gpkg_contents, gpkg_geometry_columns, and
 	// sqlite_master tables for tables that store geographic features.
-	//goland:noinspection SqlResolve
 	qtext := `
 		SELECT
 			c.table_name, c.min_x, c.min_y, c.max_x, c.max_y, c.srs_id, gc.column_name, gc.geometry_type_name, sm.sql
@@ -221,7 +221,7 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 	return geomTableDetails, nil
 }
 
-func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
+func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, error) {
 
 	log.Debugf("config: %v", config)
 
@@ -320,7 +320,6 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			if !ok {
 				return nil, fmt.Errorf("table %q does not exist", tablename)
 			}
-
 
 			layer.tablename = tablename
 			layer.tagFieldnames = tagFieldnames

@@ -121,7 +121,7 @@ func initConfig(configFile string, cacheRequired bool, logLevel string, logger s
 		provArr[i] = conf.Providers[i]
 	}
 
-	providers, err := register.Providers(provArr)
+	providers, err := register.Providers(provArr, conf.Maps)
 	if err != nil {
 		return fmt.Errorf("could not register providers: %v", err)
 	}

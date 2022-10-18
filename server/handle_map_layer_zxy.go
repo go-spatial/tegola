@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
 
@@ -101,9 +100,11 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 // map_name - map name in the config file
 // layer_name - name of the single map layer to render
 // z, x, y - tile coordinates as described in the Slippy Map Tilenames specification
-// 	z - zoom level
-// 	x - row
-// 	y - column
+//
+//	z - zoom level
+//	x - row
+//	y - column
+//
 // param - configurable query parameters and their values
 func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// parse our URI
@@ -162,7 +163,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check for query parameters and populate param map with their values
-	params, err := req.extractParameters(r)
+	params, err := extractParameters(m, r)
 	if err != nil {
 		log.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -206,44 +207,28 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (req *HandleMapLayerZXY) extractParameters(r *http.Request) (map[string]provider.QueryParameter, error) {
-	var params map[string]provider.QueryParameter
-	if req.Atlas.HasParams(req.mapName) {
-		params = make(map[string]provider.QueryParameter)
+func extractParameters(m atlas.Map, r *http.Request) (provider.Params, error) {
+	var params provider.Params
+	if m.Params != nil && len(m.Params) > 0 {
+		params = make(provider.Params)
 		err := r.ParseForm()
 		if err != nil {
 			return nil, err
 		}
 
-		for _, param := range req.Atlas.GetParams(req.mapName) {
+		for _, param := range m.Params {
 			if r.Form.Has(param.Name) {
-				val, err := config.ParamTypeDecoders[param.Type](r.Form.Get(param.Name))
+				val, err := param.ToValue(r.Form.Get(param.Name))
 				if err != nil {
 					return nil, err
 				}
-				params[param.Token] = provider.QueryParameter{
-					Token: param.Type,
-					SQL:   param.SQL,
-					Value: val,
-				}
-			} else if len(param.DefaultValue) > 0 {
-				val, err := config.ParamTypeDecoders[param.Type](param.DefaultValue)
-				if err != nil {
-					return nil, err
-				}
-				params[param.Token] = provider.QueryParameter{
-					Token: param.Type,
-					SQL:   param.SQL,
-					Value: val,
-				}
-			} else if len(param.DefaultSQL) > 0 {
-				params[param.Token] = provider.QueryParameter{
-					Token: param.Type,
-					SQL:   param.DefaultSQL,
-					Value: nil,
-				}
+				params[param.Token] = val
 			} else {
-				return nil, fmt.Errorf("the required parameter %s is not specified", param.Name)
+				p, err := param.ToDefaultValue()
+				if err != nil {
+					return nil, err
+				}
+				params[param.Token] = p
 			}
 		}
 	}
