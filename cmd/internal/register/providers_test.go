@@ -23,7 +23,7 @@ func TestProviders(t *testing.T) {
 				provArr[i] = tc.config[i]
 			}
 
-			_, err = register.Providers(provArr)
+			_, err = register.Providers(provArr, nil)
 			if tc.expectedErr != nil {
 				if err.Error() != tc.expectedErr.Error() {
 					t.Errorf("invalid error. expected: %v, got %v", tc.expectedErr, err.Error())

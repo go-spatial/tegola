@@ -98,7 +98,8 @@ func TestMVTProviders(t *testing.T) {
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			config := tc.Config(DefaultEnvConfig)
-			prvd, err := NewMVTTileProvider(config)
+			config[ConfigKeyName] = "provider_name"
+			prvd, err := NewMVTTileProvider(config, nil)
 			// for now we will just check the length of the bytes.
 			if tc.err != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.err) {
@@ -168,7 +169,8 @@ func TestLayerGeomType(t *testing.T) {
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			config := tc.Config(DefaultEnvConfig)
-			provider, err := NewTileProvider(config)
+			config[ConfigKeyName] = "provider_name"
+			provider, err := NewTileProvider(config, nil)
 			if tc.err != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.err) {
 					t.Logf("error %#v", err)
@@ -276,11 +278,11 @@ func TestLayerGeomType(t *testing.T) {
 			TCConfig: TCConfig{
 				ConfigOverride: map[string]interface{}{
 					ConfigKeyURI: fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
-						defaultEnvConfig["user"],
-						defaultEnvConfig["password"],
-						defaultEnvConfig["host"],
-						defaultEnvConfig["port"],
-						defaultEnvConfig["database"],
+						DefaultEnvConfig["user"],
+						DefaultEnvConfig["password"],
+						DefaultEnvConfig["host"],
+						DefaultEnvConfig["port"],
+						DefaultEnvConfig["database"],
 					),
 					ConfigKeyHost: "",
 					ConfigKeyPort: "",

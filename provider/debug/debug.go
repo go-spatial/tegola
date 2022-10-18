@@ -26,25 +26,21 @@ func init() {
 }
 
 // NewProvider Setups a debug provider. there are not currently any config params supported
-func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
+func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, error) {
 	return &Provider{}, nil
 }
 
 // Provider provides the debug provider
 type Provider struct{}
 
-func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, queryParams map[string]provider.QueryParameter, fn func(f *provider.Feature) error) error {
+func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, queryParams provider.Params, fn func(f *provider.Feature) error) error {
 
 	// get tile bounding box
 	ext, srid := tile.Extent()
 
-	params := make([]string, len(queryParams))
-	i := 0
+	params := make([]string, 0, len(queryParams))
 	for _, param := range queryParams {
-		for k, v := range param.RawValues {
-			params[i] = fmt.Sprintf("%s=%s", k, v)
-			i++
-		}
+		params = append(params, fmt.Sprintf("%s=%s", param.RawParam, param.RawValue))
 	}
 
 	paramsStr := strings.Join(params, " ")

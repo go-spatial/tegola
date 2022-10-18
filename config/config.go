@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -46,22 +45,6 @@ var ReservedTokens = map[string]struct{}{
 	GeomTypeToken:         {},
 }
 
-// ParamTypeDecoders is a collection of parsers for different types of user-defined parameters
-var ParamTypeDecoders = map[string]func(string) (interface{}, error){
-	"int": func(s string) (interface{}, error) {
-		return strconv.Atoi(s)
-	},
-	"float": func(s string) (interface{}, error) {
-		return strconv.ParseFloat(s, 32)
-	},
-	"string": func(s string) (interface{}, error) {
-		return s, nil
-	},
-	"bool": func(s string) (interface{}, error) {
-		return strconv.ParseBool(s)
-	},
-}
-
 var blacklistHeaders = []string{"content-encoding", "content-length", "content-type"}
 
 // Config represents a tegola config file.
@@ -82,8 +65,8 @@ type Config struct {
 	// 2. type -- this is the name the provider modules register
 	// themselves under. (e.g. postgis, gpkg, mvt_postgis )
 	// Note: Use the type to figure out if the provider is a mvt or std provider
-	Providers []env.Dict `toml:"providers"`
-	Maps      []Map      `toml:"maps"`
+	Providers []env.Dict     `toml:"providers"`
+	Maps      []provider.Map `toml:"maps"`
 }
 
 // Webserver represents the config options for the webserver part of Tegola
@@ -96,47 +79,36 @@ type Webserver struct {
 	SSLKey    env.String `toml:"ssl_key"`
 }
 
-// A Map represents a map in the Tegola Config file.
-type Map struct {
-	Name        env.String       `toml:"name"`
-	Attribution env.String       `toml:"attribution"`
-	Bounds      []env.Float      `toml:"bounds"`
-	Center      [3]env.Float     `toml:"center"`
-	Layers      []MapLayer       `toml:"layers"`
-	Parameters  []QueryParameter `toml:"params"`
-	TileBuffer  *env.Int         `toml:"tile_buffer"`
-}
-
-// ValidateParams ensures configured params don't conflict with existing
+// ValidateAndRegisterParams ensures configured params don't conflict with existing
 // query tokens or have overlapping names
-func (m Map) ValidateParams() error {
-	if len(m.Parameters) == 0 {
+func ValidateAndRegisterParams(mapName string, params []provider.QueryParameter) error {
+	if len(params) == 0 {
 		return nil
 	}
 
 	usedNames := make(map[string]struct{})
 	usedTokens := make(map[string]struct{})
 
-	for _, param := range m.Parameters {
-		if _, ok := ParamTypeDecoders[param.Type]; !ok {
+	for _, param := range params {
+		if _, ok := provider.ParamTypeDecoders[param.Type]; !ok {
 			return ErrParamUnknownType{
-				MapName:   string(m.Name),
+				MapName:   string(mapName),
 				Parameter: param,
 			}
 		}
 
 		if len(param.DefaultSQL) > 0 && len(param.DefaultValue) > 0 {
 			return ErrParamTwoDefaults{
-				MapName:   string(m.Name),
+				MapName:   string(mapName),
 				Parameter: param,
 			}
 		}
 
 		if len(param.DefaultValue) > 0 {
-			decoderFn := ParamTypeDecoders[param.Type]
+			decoderFn := provider.ParamTypeDecoders[param.Type]
 			if _, err := decoderFn(param.DefaultValue); err != nil {
 				return ErrParamInvalidDefault{
-					MapName:   string(m.Name),
+					MapName:   string(mapName),
 					Parameter: param,
 				}
 			}
@@ -144,28 +116,28 @@ func (m Map) ValidateParams() error {
 
 		if _, ok := ReservedTokens[param.Token]; ok {
 			return ErrParamTokenReserved{
-				MapName:   string(m.Name),
+				MapName:   string(mapName),
 				Parameter: param,
 			}
 		}
 
 		if !provider.ParameterTokenRegexp.MatchString(param.Token) {
 			return ErrParamBadTokenName{
-				MapName:   string(m.Name),
+				MapName:   string(mapName),
 				Parameter: param,
 			}
 		}
 
 		if _, ok := usedNames[param.Name]; ok {
-			return ErrParamNameDuplicate{
-				MapName:   string(m.Name),
+			return ErrParamDuplicateName{
+				MapName:   string(mapName),
 				Parameter: param,
 			}
 		}
 
 		if _, ok := usedTokens[param.Token]; ok {
-			return ErrParamTokenDuplicate{
-				MapName:   string(m.Name),
+			return ErrParamDuplicateToken{
+				MapName:   string(mapName),
 				Parameter: param,
 			}
 		}
@@ -180,69 +152,6 @@ func (m Map) ValidateParams() error {
 	}
 
 	return nil
-}
-
-// MapLayer represents a the config for a layer in a map
-type MapLayer struct {
-	// Name is optional. If it's not defined the name of the ProviderLayer will be used.
-	// Name can also be used to group multiple ProviderLayers under the same namespace.
-	Name          env.String `toml:"name"`
-	ProviderLayer env.String `toml:"provider_layer"`
-	MinZoom       *env.Uint  `toml:"min_zoom"`
-	MaxZoom       *env.Uint  `toml:"max_zoom"`
-	DefaultTags   env.Dict   `toml:"default_tags"`
-	// DontSimplify indicates whether feature simplification should be applied.
-	// We use a negative in the name so the default is to simplify
-	DontSimplify env.Bool `toml:"dont_simplify"`
-	// DontClip indicates whether feature clipping should be applied.
-	// We use a negative in the name so the default is to clipping
-	DontClip env.Bool `toml:"dont_clip"`
-	// DontClip indicates whether feature cleaning (e.g. make valid) should be applied.
-	// We use a negative in the name so the default is to clean
-	DontClean env.Bool `toml:"dont_clean"`
-}
-
-// ProviderLayerName returns the names of the layer and provider or an error
-func (ml MapLayer) ProviderLayerName() (provider, layer string, err error) {
-	// split the provider layer (syntax is provider.layer)
-	plParts := strings.Split(string(ml.ProviderLayer), ".")
-	if len(plParts) != 2 {
-		return "", "", ErrInvalidProviderLayerName{ProviderLayerName: string(ml.ProviderLayer)}
-	}
-	return plParts[0], plParts[1], nil
-}
-
-// GetName will return the user-defined Layer name from the config,
-// or if the name is empty, return the name of the layer associated with
-// the provider
-func (ml MapLayer) GetName() (string, error) {
-	if ml.Name != "" {
-		return string(ml.Name), nil
-	}
-	_, name, err := ml.ProviderLayerName()
-	return name, err
-}
-
-// QueryParameter represents an HTTP query parameter specified for use with
-// a given map instance.
-type QueryParameter struct {
-	Name  string `toml:"name"`
-	Token string `toml:"token"`
-	Type  string `toml:"type"`
-	SQL   string `toml:"sql"`
-	// DefaultSQL replaces SQL if param wasn't passed. Either default_sql or
-	// default_value can be specified
-	DefaultSQL   string `toml:"default_sql"`
-	DefaultValue string `toml:"default_value"`
-}
-
-// Normalize normalizes param and sets default values
-func (param *QueryParameter) Normalize() {
-	param.Token = strings.ToUpper(param.Token)
-
-	if len(param.SQL) == 0 {
-		param.SQL = "?"
-	}
 }
 
 // Validate checks the config for issues
@@ -286,16 +195,16 @@ func (c *Config) Validate() error {
 	}
 	// check for map layer name / zoom collisions
 	// map of layers to providers
-	mapLayers := map[string]map[string]MapLayer{}
+	mapLayers := map[string]map[string]provider.MapLayer{}
 	for mapKey, m := range c.Maps {
 
 		// validate any declared query parameters
-		if err := m.ValidateParams(); err != nil {
+		if err := ValidateAndRegisterParams(string(m.Name), m.Parameters); err != nil {
 			return err
 		}
 
 		if _, ok := mapLayers[string(m.Name)]; !ok {
-			mapLayers[string(m.Name)] = map[string]MapLayer{}
+			mapLayers[string(m.Name)] = map[string]provider.MapLayer{}
 		}
 
 		// Set current provider to empty, for MVT providers

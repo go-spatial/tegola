@@ -76,7 +76,7 @@ func (p *Provider) Layers() ([]provider.LayerInfo, error) {
 	return ls, nil
 }
 
-func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, queryParams map[string]provider.QueryParameter, fn func(f *provider.Feature) error) error {
+func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, queryParams provider.Params, fn func(f *provider.Feature) error) error {
 	log.Debugf("fetching layer %v", layer)
 
 	pLayer := p.layers[layer]
@@ -122,7 +122,7 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 		// If layer was specified via "sql" in config, collect it
 		z, _, _ := tile.ZXY()
 		qtext = replaceTokens(pLayer.sql, z, tileBBox)
-		qtext = provider.ReplaceParams(queryParams, qtext, &args)
+		qtext = queryParams.ReplaceParams(qtext, &args)
 	}
 
 	log.Debugf("qtext: %v", qtext)

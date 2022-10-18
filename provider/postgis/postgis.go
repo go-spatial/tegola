@@ -171,6 +171,7 @@ const (
 )
 
 const (
+	ConfigKeyName            = "name"
 	ConfigKeyURI             = "uri"
 	ConfigKeyHost            = "host"
 	ConfigKeyPort            = "port"
@@ -406,26 +407,24 @@ func BuildDBConfig(uri string) (*pgxpool.Config, error) {
 // trying to create a driver. This Provider supports the following fields
 // in the provided map[string]interface{} map:
 //
-//	host (string): [Required] postgis database host
-//	port (int): [Required] postgis database port (required)
-//	database (string): [Required] postgis database name
-//	user (string): [Required] postgis database user
-//	password (string): [Required] postgis database password
-//	srid (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
-//	max_connections : [Optional] The max connections to maintain in the connection pool. Default is 100. 0 means no max.
-//	layers (map[string]struct{})  — This is map of layers keyed by the layer name. supports the following properties
+//	 name (string): [Required] name of the provider
+//		host (string): [Required] postgis database host
+//		port (int): [Required] postgis database port (required)
+//		database (string): [Required] postgis database name
+//		user (string): [Required] postgis database user
+//		password (string): [Required] postgis database password
+//		srid (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
+//		max_connections : [Optional] The max connections to maintain in the connection pool. Default is 100. 0 means no max.
+//		layers (map[string]struct{})  — This is map of layers keyed by the layer name. supports the following properties
 //
-//		name (string): [Required] the name of the layer. This is used to reference this layer from map layers.
-//		tablename (string): [*Required] the name of the database table to query against. Required if sql is not defined.
-//		geometry_fieldname (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to geom
-//		id_fieldname (string): [Optional] the name of the feature id field. defaults to gid
-//		fields ([]string): [Optional] a list of fields to include alongside the feature. Can be used if sql is not defined.
-//		srid (int): [Optional] the SRID of the layer. Supports 3857 (WebMercator) or 4326 (WGS84).
-//		sql (string): [*Required] custom SQL to use use. Required if tablename is not defined. Supports the following tokens:
-//
-//			!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
-//			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
-func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) {
+//			name (string): [Required] the name of the layer. This is used to reference this layer from map layers.
+//			tablename (string): [*Required] the name of the database table to query against. Required if sql is not defined.
+//			geometry_fieldname (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to geom
+//			id_fieldname (string): [Optional] the name of the feature id field. defaults to gid
+//			fields ([]string): [Optional] a list of fields to include alongside the feature. Can be used if sql is not defined.
+//			srid (int): [Optional] the SRID of the layer. Supports 3857 (WebMercator) or 4326 (WGS84).
+//			sql (string): [*Required] custom SQL to use use. Required if tablename is not defined. Supports the following tokens:
+func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string) (*Provider, error) {
 	uri, params, err := BuildURI(config)
 	if err != nil {
 		return nil, err
@@ -453,7 +452,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 
 	dbconfig, err := BuildDBConfig(uri.String())
 	if err != nil {
-		return nil, fmt.Errorf("failed while building db config: %v", err)
+		return nil, fmt.Errorf("failed while building db config: %w", err)
 	}
 
 	srid := DefaultSRID
@@ -472,7 +471,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 
 	pool, err := pgxpool.ConnectConfig(context.Background(), &p.config)
 	if err != nil {
-		return nil, fmt.Errorf("failed while creating connection pool: %v", err)
+		return nil, fmt.Errorf("failed while creating connection pool: %w", err)
 	}
 	p.pool = &connectionPoolCollector{Pool: pool}
 
@@ -488,7 +487,7 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 
 		lName, err := layer.String(ConfigKeyLayerName, nil)
 		if err != nil {
-			return nil, fmt.Errorf("for layer (%v) we got the following error trying to get the layer's name field: %v", i, err)
+			return nil, fmt.Errorf("for layer (%v) we got the following error trying to get the layer's name field: %w", i, err)
 		}
 
 		if j, ok := lyrsSeen[lName]; ok {
@@ -605,7 +604,12 @@ func CreateProvider(config dict.Dicter, providerType string) (*Provider, error) 
 				return nil, fmt.Errorf("error fetching geometry type for layer (%v): %w", l.name, err)
 			}
 		} else {
-			if err = p.inspectLayerGeomType(&l); err != nil {
+			pname, err := config.String(ConfigKeyName, nil)
+			if err != nil {
+				return nil, err
+			}
+
+			if err = p.inspectLayerGeomType(pname, &l, maps); err != nil {
 				return nil, fmt.Errorf("error fetching geometry type for layer (%v): %w\nif custom parameters are used, remember to set %s for the provider", l.name, err, ConfigKeyGeomType)
 			}
 		}
@@ -698,7 +702,7 @@ func (p Provider) setLayerGeomType(l *Layer, geomType string) error {
 
 // inspectLayerGeomType sets the geomType field on the layer by running the SQL
 // and reading the geom type in the result set
-func (p Provider) inspectLayerGeomType(l *Layer) error {
+func (p Provider) inspectLayerGeomType(pname string, l *Layer, maps []provider.Map) error {
 	var err error
 
 	// we want to know the geom type instead of returning the geom data so we modify the SQL
@@ -732,12 +736,20 @@ func (p Provider) inspectLayerGeomType(l *Layer) error {
 		return err
 	}
 
-	// remove all parameter tokens for inspection
-	// crossing our fingers that the query is still valid 🤞
-	// if not, the user will have to specify `geometry_type` in the config
-	sql = stripParams(sql)
+	// substitute default values to parameter
+	params := extractQueryParamValues(pname, maps, l)
 
-	rows, err := p.pool.Query(context.Background(), sql)
+	args := make([]interface{}, 0)
+	sql = params.ReplaceParams(sql, &args)
+
+	if provider.ParameterTokenRegexp.MatchString(sql) {
+		// remove all parameter tokens for inspection
+		// crossing our fingers that the query is still valid 🤞
+		// if not, the user will have to specify `geometry_type` in the config
+		sql = provider.ParameterTokenRegexp.ReplaceAllString(sql, "")
+	}
+
+	rows, err := p.pool.Query(context.Background(), sql, args...)
 	if err != nil {
 		return err
 	}
@@ -804,8 +816,7 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 }
 
 // TileFeatures adheres to the provider.Tiler interface
-// TODO (bemyak): Make an actual use of QueryParams
-func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, queryParams map[string]provider.QueryParameter, fn func(f *provider.Feature) error) error {
+func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, params provider.Params, fn func(f *provider.Feature) error) error {
 
 	var mapName string
 	{
@@ -828,7 +839,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 
 	// replace configured query parameters if any
 	args := make([]interface{}, 0)
-	sql = provider.ReplaceParams(queryParams, sql, &args)
+	sql = params.ReplaceParams(sql, &args)
 	if err != nil {
 		return err
 	}
@@ -941,7 +952,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	return rows.Err()
 }
 
-func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params map[string]provider.QueryParameter, layers []provider.Layer) ([]byte, error) {
+func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params provider.Params, layers []provider.Layer) ([]byte, error) {
 	var (
 		err     error
 		sqls    = make([]string, 0, len(layers))
@@ -977,7 +988,7 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params m
 		}
 
 		// replace configured query parameters if any
-		sql = provider.ReplaceParams(params, sql, &args)
+		sql = params.ReplaceParams(sql, &args)
 
 		// ref: https://postgis.net/docs/ST_AsMVT.html
 		// bytea ST_AsMVT(any_element row, text name, integer extent, text geom_name, text feature_id_name)

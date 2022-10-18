@@ -10,6 +10,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/jackc/pgproto3/v2"
@@ -173,9 +174,25 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 	return tokenReplacer.Replace(uppercaseTokenSQL), nil
 }
 
-// stripParams will remove all parameter tokens from the query
-func stripParams(sql string) string {
-	return provider.ParameterTokenRegexp.ReplaceAllString(sql, "")
+// extractQueryParamValues finds default values for SQL tokens and constructs query parameter values out of them
+func extractQueryParamValues(pname string, maps []provider.Map, layer *Layer) provider.Params {
+	result := make(provider.Params, 0)
+
+	expectedMapName := fmt.Sprintf("%s.%s", pname, layer.name)
+	for _, m := range maps {
+		for _, l := range m.Layers {
+			if l.ProviderLayer == env.String(expectedMapName) {
+				for _, p := range m.Parameters {
+					pv, err := p.ToDefaultValue()
+					if err == nil {
+						result[p.Token] = pv
+					}
+				}
+			}
+		}
+	}
+
+	return result
 }
 
 // uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can

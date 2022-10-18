@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/observability"
 
 	"github.com/golang/protobuf/proto"
@@ -56,7 +55,7 @@ type Map struct {
 	Center [3]float64
 	Layers []Layer
 	// Params holds configured query parameters
-	Params []config.QueryParameter
+	Params []provider.QueryParameter
 
 	SRID uint64
 	// MVT output values
@@ -120,7 +119,7 @@ func (m Map) AddDebugLayers() Map {
 	m.Layers = layers
 
 	// setup a debug provider
-	debugProvider, _ := debug.NewTileProvider(dict.Dict{})
+	debugProvider, _ := debug.NewTileProvider(dict.Dict{}, nil)
 
 	m.Layers = append(layers, []Layer{
 		{
@@ -183,7 +182,7 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
-func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile, params map[string]provider.QueryParameter) ([]byte, error) {
+func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
 	// get the list of our layers
 	ptile := provider.NewTile(tile.Z, tile.X, tile.Y, uint(m.TileBuffer), uint(m.SRID))
 
@@ -200,7 +199,7 @@ func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile, param
 
 // encodeMVTTile will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
-func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params map[string]provider.QueryParameter) ([]byte, error) {
+func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
 
 	// tile container
 	var mvtTile mvt.Tile
@@ -380,7 +379,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params map[st
 }
 
 // Encode will encode the given tile into mvt format
-func (m Map) Encode(ctx context.Context, tile *slippy.Tile, params map[string]provider.QueryParameter) ([]byte, error) {
+func (m Map) Encode(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
 	var (
 		tileBytes []byte
 		err       error
