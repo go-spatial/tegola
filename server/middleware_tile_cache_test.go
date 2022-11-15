@@ -79,3 +79,63 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 		t.Run(name, fn(tc))
 	}
 }
+
+func TestMiddlewareTileCacheHandlerIgnoreParams(t *testing.T) {
+	type tcase struct {
+		uri       string
+		uriPrefix string
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			var err error
+
+			if tc.uriPrefix != "" {
+				server.URIPrefix = tc.uriPrefix
+			} else {
+				server.URIPrefix = "/"
+			}
+
+			a := newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
+			cacher, _ := memory.New(nil)
+			a.SetCache(cacher)
+
+			w, router, err := doRequest(a, "GET", tc.uri, nil)
+			if err != nil {
+				t.Errorf("error making request, expected nil got %v", err)
+				return
+			}
+
+			// we expect the cache to not being used
+			if w.Header().Get("Tegola-Cache") != "" {
+				t.Errorf("no header Tegola-Cache is expected, got %v", w.Header().Get("Tegola-Cache"))
+				return
+			}
+
+			// play the request again
+			r, err := http.NewRequest("GET", tc.uri, nil)
+			if err != nil {
+				t.Errorf("error making request, expected nil got %v", err)
+				return
+			}
+
+			w = httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+
+			if w.Header().Get("Tegola-Cache") != "" {
+				t.Errorf("no header Tegola-Cache is expected, got %v", w.Header().Get("Tegola-Cache"))
+				return
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"map params": {
+			uri: "/maps/test-map/10/2/3.pbf?param=value",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}

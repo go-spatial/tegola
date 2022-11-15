@@ -28,6 +28,12 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 			return
 		}
 
+		// ignore requests with query parameters
+		if r.URL.RawQuery != "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// parse our URI into a cache key structure (remove any configured URIPrefix + "maps/" )
 		key, err := cache.ParseKey(strings.TrimPrefix(r.URL.Path, path.Join(URIPrefix, "maps")))
 		if err != nil {
