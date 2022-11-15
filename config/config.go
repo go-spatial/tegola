@@ -196,11 +196,17 @@ func (c *Config) Validate() error {
 	// check for map layer name / zoom collisions
 	// map of layers to providers
 	mapLayers := map[string]map[string]provider.MapLayer{}
+	// maps with configured parameters for logging
+	mapsWithCustomParams := []string{}
 	for mapKey, m := range c.Maps {
 
 		// validate any declared query parameters
 		if err := ValidateAndRegisterParams(string(m.Name), m.Parameters); err != nil {
 			return err
+		}
+
+		if len(m.Parameters) > 0 {
+			mapsWithCustomParams = append(mapsWithCustomParams, string(m.Name))
 		}
 
 		if _, ok := mapLayers[string(m.Name)]; !ok {
@@ -298,6 +304,13 @@ func (c *Config) Validate() error {
 			// add the MapLayer to our map
 			mapLayers[string(m.Name)][name] = l
 		}
+	}
+
+	if len(mapsWithCustomParams) > 0 {
+		log.Infof(
+			"Caching is disabled for these maps, since they have configured custom parameters: %s",
+			strings.Join(mapsWithCustomParams, ", "),
+		)
 	}
 
 	// check for blacklisted headers

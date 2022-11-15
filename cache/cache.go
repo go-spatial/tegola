@@ -38,6 +38,7 @@ func ParseKey(str string) (*Key, error) {
 
 	// remove the base-path and the first slash, then split the parts
 	keyParts := strings.Split(strings.TrimLeft(str, "/"), "/")
+
 	// we're expecting a z/x/y scheme
 	if len(keyParts) < 3 || len(keyParts) > 5 {
 		err = ErrInvalidFileKeyParts{
