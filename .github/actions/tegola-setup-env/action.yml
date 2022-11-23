@@ -28,10 +28,10 @@ runs:
         path: ${{ github.workspace }}/ui/dist
       if: ${{ inputs.ui == 'true' }}
 
-    - name: Set up Go 1.18
+    - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.18
+        go-version: 1.19
       if: ${{ inputs.go == 'true' }}
 
     - name: Set tegola version
