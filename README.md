@@ -134,6 +134,19 @@ name = "zoning"                           # used in the URL to reference this ma
   provider_layer = "my_postgis.landuse"   # must match a data provider layer
   min_zoom = 10                           # minimum zoom level to include this layer
   max_zoom = 16                           # maximum zoom level to include this layer
+
+  # configure addition URL parameters: /maps/:map_name/:layer_name/:z/:x/:y?param=value
+  # which will be passed to the database queries
+  [[maps.params]]
+  name          = "param"         # name used in the URL
+  token         = "!PARAM!"       # token to replace in providers.layers.sql query
+  type          = "string"        # one of: int, float, string, bool
+  sql           = "AND param = ?" # SQL to replace the token in the query. ? will be replaced with a parameter value. If omitted, defaults to "?"
+  # if neither default_value nor default_sql is specified, the URL parameter is required to be present in all queries
+  # either
+  default_value = "value"         # if parameter is not specified, this value will be passed to .sql parameter
+  # or
+  default_sql   = " "             # if parameter is not specified, this value will replace the .sql parameter. Useful for omitting query entirely
 ```
 
 * More information on PostgreSQL SSL modes can be found [here](https://www.postgresql.org/docs/current/libpq-ssl.html).
