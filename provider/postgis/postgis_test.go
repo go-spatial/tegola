@@ -164,8 +164,9 @@ func TestNewTileProvider(t *testing.T) {
 
 	fn := func(tc postgis.TCConfig) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
-			_, err := postgis.NewTileProvider(config)
+			config := tc.Config(postgis.DefaultEnvConfig)
+			config[postgis.ConfigKeyName] = "provider_name"
+			_, err := postgis.NewTileProvider(config, nil)
 			if err != nil {
 				t.Errorf("unable to create a new provider. err: %v", err)
 				return
@@ -202,8 +203,9 @@ func TestTileFeatures(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
-			p, err := postgis.NewTileProvider(config)
+			config := tc.Config(postgis.DefaultEnvConfig)
+			config[postgis.ConfigKeyName] = "provider_name"
+			p, err := postgis.NewTileProvider(config, nil)
 			if err != nil {
 				t.Errorf("unexpected error; unable to create a new provider, expected: nil Got %v", err)
 				return
@@ -212,7 +214,7 @@ func TestTileFeatures(t *testing.T) {
 			layerName := tc.LayerConfig[0][postgis.ConfigKeyLayerName].(string)
 
 			var featureCount int
-			err = p.TileFeatures(context.Background(), layerName, tc.tile, func(f *provider.Feature) error {
+			err = p.TileFeatures(context.Background(), layerName, tc.tile, nil, func(f *provider.Feature) error {
 				// only verify tags on first feature
 				if featureCount == 0 {
 					for _, tag := range tc.expectedTags {

@@ -11,9 +11,10 @@ import (
 	"github.com/go-spatial/tegola/provider"
 )
 
-func webMercatorMapFromConfigMap(cfg config.Map) (newMap atlas.Map) {
+func webMercatorMapFromConfigMap(cfg provider.Map) (newMap atlas.Map) {
 	newMap = atlas.NewWebMercatorMap(string(cfg.Name))
 	newMap.Attribution = SanitizeAttribution(string(cfg.Attribution))
+	newMap.Params = cfg.Parameters
 
 	// convert from env package
 	for i, v := range cfg.Center {
@@ -46,7 +47,7 @@ func layerInfosFindByName(infos []provider.LayerInfo, name string) provider.Laye
 	return nil
 }
 
-func atlasLayerFromConfigLayer(cfg *config.MapLayer, mapName string, layerProvider provider.Layerer) (layer atlas.Layer, err error) {
+func atlasLayerFromConfigLayer(cfg *provider.MapLayer, mapName string, layerProvider provider.Layerer) (layer atlas.Layer, err error) {
 	var (
 		// providerLayer is primary used for error reporting.
 		providerLayer = string(cfg.ProviderLayer)
@@ -123,7 +124,7 @@ func selectProvider(name string, mapName string, newMap *atlas.Map, providers ma
 }
 
 // Maps registers maps with with atlas
-func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.TilerUnion) error {
+func Maps(a *atlas.Atlas, maps []provider.Map, providers map[string]provider.TilerUnion) error {
 
 	var (
 		layerer provider.Layerer
@@ -155,6 +156,7 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			}
 			newMap.Layers = append(newMap.Layers, layer)
 		}
+
 		a.AddMap(newMap)
 	}
 	return nil

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-spatial/tegola/observability"
+	"github.com/go-spatial/tegola/provider"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom/encoding/mvt"
@@ -95,13 +96,16 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	return nil
 }
 
-// URI scheme: /maps/:map_name/:layer_name/:z/:x/:y
+// URI scheme: /maps/:map_name/:layer_name/:z/:x/:y?param=value
 // map_name - map name in the config file
 // layer_name - name of the single map layer to render
 // z, x, y - tile coordinates as described in the Slippy Map Tilenames specification
-// 	z - zoom level
-// 	x - row
-// 	y - column
+//
+//	z - zoom level
+//	x - row
+//	y - column
+//
+// param - configurable query parameters and their values
 func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// parse our URI
 	if err := req.parseURI(r); err != nil {
@@ -158,8 +162,16 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m = m.AddDebugLayers()
 	}
 
+	// check for query parameters and populate param map with their values
+	params, err := extractParameters(m, r)
+	if err != nil {
+		log.Error(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	encodeCtx := context.WithValue(r.Context(), observability.ObserveVarMapName, m.Name)
-	pbyte, err := m.Encode(encodeCtx, tile)
+	pbyte, err := m.Encode(encodeCtx, tile, params)
 
 	if err != nil {
 		switch {
@@ -183,10 +195,42 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", mvt.MimeType)
 	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(pbyte)))
 	w.WriteHeader(http.StatusOK)
-	w.Write(pbyte)
+
+	_, err = w.Write(pbyte)
+	if err != nil {
+		log.Errorf("error writing tile z:%v, x:%v, y:%v - %v", req.z, req.x, req.y, err)
+	}
 
 	// check for tile size warnings
 	if len(pbyte) > MaxTileSize {
 		log.Infof("tile z:%v, x:%v, y:%v is rather large - %vKb", req.z, req.x, req.y, len(pbyte)/1024)
 	}
+}
+
+func extractParameters(m atlas.Map, r *http.Request) (provider.Params, error) {
+	var params provider.Params
+	if m.Params != nil && len(m.Params) > 0 {
+		params = make(provider.Params)
+		err := r.ParseForm()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, param := range m.Params {
+			if r.Form.Has(param.Name) {
+				val, err := param.ToValue(r.Form.Get(param.Name))
+				if err != nil {
+					return nil, err
+				}
+				params[param.Token] = val
+			} else {
+				p, err := param.ToDefaultValue()
+				if err != nil {
+					return nil, err
+				}
+				params[param.Token] = p
+			}
+		}
+	}
+	return params, nil
 }

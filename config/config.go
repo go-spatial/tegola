@@ -16,6 +16,35 @@ import (
 	"github.com/go-spatial/tegola/provider"
 )
 
+const (
+	BboxToken             = "!BBOX!"
+	ZoomToken             = "!ZOOM!"
+	XToken                = "!X!"
+	YToken                = "!Y!"
+	ZToken                = "!Z!"
+	ScaleDenominatorToken = "!SCALE_DENOMINATOR!"
+	PixelWidthToken       = "!PIXEL_WIDTH!"
+	PixelHeightToken      = "!PIXEL_HEIGHT!"
+	IdFieldToken          = "!ID_FIELD!"
+	GeomFieldToken        = "!GEOM_FIELD!"
+	GeomTypeToken         = "!GEOM_TYPE!"
+)
+
+// ReservedTokens for query injection
+var ReservedTokens = map[string]struct{}{
+	BboxToken:             {},
+	ZoomToken:             {},
+	XToken:                {},
+	YToken:                {},
+	ZToken:                {},
+	ScaleDenominatorToken: {},
+	PixelWidthToken:       {},
+	PixelHeightToken:      {},
+	IdFieldToken:          {},
+	GeomFieldToken:        {},
+	GeomTypeToken:         {},
+}
+
 var blacklistHeaders = []string{"content-encoding", "content-length", "content-type"}
 
 // Config represents a tegola config file.
@@ -36,8 +65,8 @@ type Config struct {
 	// 2. type -- this is the name the provider modules register
 	// themselves under. (e.g. postgis, gpkg, mvt_postgis )
 	// Note: Use the type to figure out if the provider is a mvt or std provider
-	Providers []env.Dict `toml:"providers"`
-	Maps      []Map      `toml:"maps"`
+	Providers []env.Dict     `toml:"providers"`
+	Maps      []provider.Map `toml:"maps"`
 }
 
 // Webserver represents the config options for the webserver part of Tegola
@@ -50,55 +79,79 @@ type Webserver struct {
 	SSLKey    env.String `toml:"ssl_key"`
 }
 
-// A Map represents a map in the Tegola Config file.
-type Map struct {
-	Name        env.String   `toml:"name"`
-	Attribution env.String   `toml:"attribution"`
-	Bounds      []env.Float  `toml:"bounds"`
-	Center      [3]env.Float `toml:"center"`
-	Layers      []MapLayer   `toml:"layers"`
-	TileBuffer  *env.Int     `toml:"tile_buffer"`
-}
-
-// MapLayer represents a the config for a layer in a map
-type MapLayer struct {
-	// Name is optional. If it's not defined the name of the ProviderLayer will be used.
-	// Name can also be used to group multiple ProviderLayers under the same namespace.
-	Name          env.String `toml:"name"`
-	ProviderLayer env.String `toml:"provider_layer"`
-	MinZoom       *env.Uint  `toml:"min_zoom"`
-	MaxZoom       *env.Uint  `toml:"max_zoom"`
-	DefaultTags   env.Dict   `toml:"default_tags"`
-	// DontSimplify indicates whether feature simplification should be applied.
-	// We use a negative in the name so the default is to simplify
-	DontSimplify env.Bool `toml:"dont_simplify"`
-	// DontClip indicates whether feature clipping should be applied.
-	// We use a negative in the name so the default is to clipping
-	DontClip env.Bool `toml:"dont_clip"`
-	// DontClip indicates whether feature cleaning (e.g. make valid) should be applied.
-	// We use a negative in the name so the default is to clean
-	DontClean env.Bool `toml:"dont_clean"`
-}
-
-// ProviderLayerName returns the names of the layer and provider or an error
-func (ml MapLayer) ProviderLayerName() (provider, layer string, err error) {
-	// split the provider layer (syntax is provider.layer)
-	plParts := strings.Split(string(ml.ProviderLayer), ".")
-	if len(plParts) != 2 {
-		return "", "", ErrInvalidProviderLayerName{ProviderLayerName: string(ml.ProviderLayer)}
+// ValidateAndRegisterParams ensures configured params don't conflict with existing
+// query tokens or have overlapping names
+func ValidateAndRegisterParams(mapName string, params []provider.QueryParameter) error {
+	if len(params) == 0 {
+		return nil
 	}
-	return plParts[0], plParts[1], nil
-}
 
-// GetName will return the user-defined Layer name from the config,
-// or if the name is empty, return the name of the layer associated with
-// the provider
-func (ml MapLayer) GetName() (string, error) {
-	if ml.Name != "" {
-		return string(ml.Name), nil
+	usedNames := make(map[string]struct{})
+	usedTokens := make(map[string]struct{})
+
+	for _, param := range params {
+		if _, ok := provider.ParamTypeDecoders[param.Type]; !ok {
+			return ErrParamUnknownType{
+				MapName:   string(mapName),
+				Parameter: param,
+			}
+		}
+
+		if len(param.DefaultSQL) > 0 && len(param.DefaultValue) > 0 {
+			return ErrParamTwoDefaults{
+				MapName:   string(mapName),
+				Parameter: param,
+			}
+		}
+
+		if len(param.DefaultValue) > 0 {
+			decoderFn := provider.ParamTypeDecoders[param.Type]
+			if _, err := decoderFn(param.DefaultValue); err != nil {
+				return ErrParamInvalidDefault{
+					MapName:   string(mapName),
+					Parameter: param,
+				}
+			}
+		}
+
+		if _, ok := ReservedTokens[param.Token]; ok {
+			return ErrParamTokenReserved{
+				MapName:   string(mapName),
+				Parameter: param,
+			}
+		}
+
+		if !provider.ParameterTokenRegexp.MatchString(param.Token) {
+			return ErrParamBadTokenName{
+				MapName:   string(mapName),
+				Parameter: param,
+			}
+		}
+
+		if _, ok := usedNames[param.Name]; ok {
+			return ErrParamDuplicateName{
+				MapName:   string(mapName),
+				Parameter: param,
+			}
+		}
+
+		if _, ok := usedTokens[param.Token]; ok {
+			return ErrParamDuplicateToken{
+				MapName:   string(mapName),
+				Parameter: param,
+			}
+		}
+
+		usedNames[param.Name] = struct{}{}
+		usedTokens[param.Token] = struct{}{}
 	}
-	_, name, err := ml.ProviderLayerName()
-	return name, err
+
+	// Mark all used tokens as reserved
+	for token := range usedTokens {
+		ReservedTokens[token] = struct{}{}
+	}
+
+	return nil
 }
 
 // Validate checks the config for issues
@@ -142,17 +195,29 @@ func (c *Config) Validate() error {
 	}
 	// check for map layer name / zoom collisions
 	// map of layers to providers
-	mapLayers := map[string]map[string]MapLayer{}
+	mapLayers := map[string]map[string]provider.MapLayer{}
+	// maps with configured parameters for logging
+	mapsWithCustomParams := []string{}
 	for mapKey, m := range c.Maps {
+
+		// validate any declared query parameters
+		if err := ValidateAndRegisterParams(string(m.Name), m.Parameters); err != nil {
+			return err
+		}
+
+		if len(m.Parameters) > 0 {
+			mapsWithCustomParams = append(mapsWithCustomParams, string(m.Name))
+		}
+
 		if _, ok := mapLayers[string(m.Name)]; !ok {
-			mapLayers[string(m.Name)] = map[string]MapLayer{}
+			mapLayers[string(m.Name)] = map[string]provider.MapLayer{}
 		}
 
 		// Set current provider to empty, for MVT providers
 		// we can only have the same provider for all layers.
 		// This allow us to track what the first found provider
 		// is.
-		provider := ""
+		currentProvider := ""
 		isMVTProvider := false
 		for layerKey, l := range m.Layers {
 			pname, _, err := l.ProviderLayerName()
@@ -160,11 +225,11 @@ func (c *Config) Validate() error {
 				return err
 			}
 
-			if provider == "" {
+			if currentProvider == "" {
 				// This is the first provider we found.
 				// For MVTProviders all others need to be the same, so store it
 				// so we can check later
-				provider = pname
+				currentProvider = pname
 			}
 
 			isMvt, doesExists := mvtproviders[pname]
@@ -181,13 +246,13 @@ func (c *Config) Validate() error {
 			isMVTProvider = isMVTProvider || isMvt
 
 			// only need to do this check if we are dealing with MVTProviders
-			if isMVTProvider && pname != provider {
+			if isMVTProvider && pname != currentProvider {
 				// for mvt_providers we can only have the same provider
 				// for all layers
 				// check to see
 				if mvtproviders[pname] || isMVTProvider {
 					return ErrMVTDifferentProviders{
-						Original: provider,
+						Original: currentProvider,
 						Current:  pname,
 					}
 				}
@@ -241,6 +306,13 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	if len(mapsWithCustomParams) > 0 {
+		log.Infof(
+			"Caching is disabled for these maps, since they have configured custom parameters: %s",
+			strings.Join(mapsWithCustomParams, ", "),
+		)
+	}
+
 	// check for blacklisted headers
 	for k := range c.Webserver.Headers {
 		for _, v := range blacklistHeaders {
@@ -286,9 +358,16 @@ func (c *Config) ConfigureTileBuffers() {
 // Parse will parse the Tegola config file provided by the io.Reader.
 func Parse(reader io.Reader, location string) (conf Config, err error) {
 	// decode conf file, don't care about the meta data.
-	_, err = toml.DecodeReader(reader, &conf)
+	_, err = toml.NewDecoder(reader).Decode(&conf)
 	if err != nil {
 		return conf, err
+	}
+
+	for _, m := range conf.Maps {
+		for k, p := range m.Parameters {
+			p.Normalize()
+			m.Parameters[k] = p
+		}
 	}
 
 	conf.LocationName = location

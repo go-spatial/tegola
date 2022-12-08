@@ -1,3 +1,29 @@
+## 0.16.0 (2022-12-01)
+
+Features
+
+* Added option to use Zap logging to get JSON based logs (@iwpnd)
+
+Enhancements
+
+* Add ttools helper for easier local testing. (@iwpnd)
+* (UI) Upgraded eventsource from 1.1.0 to 1.1.1 (dependbot)
+* (UI) Upgraded shell-quote from 1.7.2 to 1.7.3 (dependbot)
+* (UI) Upgraded terser from 4.8.0 to 4.8.1 (dependbot)
+* Fix for #870 filter by zoom level for min/max zoom 0 (@iwpnd)
+* setting max_zoom to 0 will set it to 1 (@iwpnd)
+* seeding command now as a --log-threshold value to control logging of tiles that take longer than the given time. (@dwoznicki)
+* handle gpkg GEOMETRY as an unknown geometry and not break the capabilities if a layer contains such a geometry. (@roelarents)
+* [test: use T.Setenv to set env vars in tests](https://github.com/go-spatial/tegola/pull/882) (@Juneezee)
+
+Documentation
+
+* Updated README to focus on `mvt_postgis` provider instead of `postgis`
+
+Bugs
+
+* Minor code clean up (@dechristopher, @bemyak)
+
 ## 0.15.0 (2022-05-18)
 
 Features

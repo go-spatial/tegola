@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"strings"
+
+	"github.com/go-spatial/tegola/provider"
 )
 
 type ErrMapNotFound struct {
@@ -11,6 +13,81 @@ type ErrMapNotFound struct {
 
 func (e ErrMapNotFound) Error() string {
 	return fmt.Sprintf("config: map (%v) not found", e.MapName)
+}
+
+type ErrParamTokenReserved struct {
+	MapName   string
+	Parameter provider.QueryParameter
+}
+
+func (e ErrParamTokenReserved) Error() string {
+	return fmt.Sprintf("config: map %s parameter %s uses a reserved token name %s",
+		e.MapName, e.Parameter.Name, e.Parameter.Token)
+}
+
+type ErrParamDuplicateName struct {
+	MapName   string
+	Parameter provider.QueryParameter
+}
+
+func (e ErrParamDuplicateName) Error() string {
+	return fmt.Sprintf("config: map %s parameter %s has a name already used by another parameter",
+		e.MapName, e.Parameter.Name)
+}
+
+type ErrParamDuplicateToken struct {
+	MapName   string
+	Parameter provider.QueryParameter
+}
+
+func (e ErrParamDuplicateToken) Error() string {
+	return fmt.Sprintf("config: map %s parameter %s has a token name %s already used by another parameter",
+		e.MapName, e.Parameter.Token, e.Parameter.Name)
+}
+
+type ErrParamUnknownType struct {
+	MapName   string
+	Parameter provider.QueryParameter
+}
+
+func (e ErrParamUnknownType) Error() string {
+	validTypes := make([]string, 0, len(provider.ParamTypeDecoders))
+	for k := range provider.ParamTypeDecoders {
+		validTypes = append(validTypes, k)
+	}
+
+	return fmt.Sprintf("config: map %s parameter %s has an unknown type %s, must be one of: %s",
+		e.MapName, e.Parameter.Name, e.Parameter.Type, strings.Join(validTypes, ","))
+}
+
+type ErrParamTwoDefaults struct {
+	MapName   string
+	Parameter provider.QueryParameter
+}
+
+func (e ErrParamTwoDefaults) Error() string {
+	return fmt.Sprintf("config: map %s parameter %s has both default_value and default_sql",
+		e.MapName, e.Parameter.Name)
+}
+
+type ErrParamInvalidDefault struct {
+	MapName   string
+	Parameter provider.QueryParameter
+}
+
+func (e ErrParamInvalidDefault) Error() string {
+	return fmt.Sprintf("config: map %s parameter %s has a default value that is invalid for type %s",
+		e.MapName, e.Parameter.Name, e.Parameter.Type)
+}
+
+type ErrParamBadTokenName struct {
+	MapName   string
+	Parameter provider.QueryParameter
+}
+
+func (e ErrParamBadTokenName) Error() string {
+	return fmt.Sprintf("config: map %s parameter %s has an invalid token name %s",
+		e.MapName, e.Parameter.Name, e.Parameter.Token)
 }
 
 type ErrInvalidProviderForMap struct {

@@ -40,9 +40,9 @@ const (
 // 			!BBOX! - [Required] will be replaced with the bounding box of the tile before the query is sent to the database.
 // 			!ZOOM! - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
 //
-func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
-	return CreateProvider(config, ProviderType)
+func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, error) {
+	return CreateProvider(config, maps, ProviderType)
 }
-func NewMVTTileProvider(config dict.Dicter) (provider.MVTTiler, error) {
-	return CreateProvider(config, MVTProviderType)
+func NewMVTTileProvider(config dict.Dicter, maps []provider.Map) (provider.MVTTiler, error) {
+	return CreateProvider(config, maps, MVTProviderType)
 }

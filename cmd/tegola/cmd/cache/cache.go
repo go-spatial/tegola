@@ -159,11 +159,20 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 		}(i)
 	}
 
+	nonParamMaps := make([]atlas.Map, 0)
+
+	for _, m := range maps {
+		// we don't support caching for maps with custom parameters
+		if m.Params != nil || len(m.Params) > 0 {
+			log.Warnf("caching is disabled for map %s as it has custom parameters configures", m.Name)
+		}
+		nonParamMaps = append(nonParamMaps, m)
+	}
+
 	// run through the incoming tiles, and generate the mapTiles as needed.
 TileChannelLoop:
 	for tile := range tileChannel.Channel() {
-		for m := range maps {
-
+		for _, m := range nonParamMaps {
 			if ctx.Err() != nil {
 				cleanup = true
 				break
@@ -180,7 +189,7 @@ TileChannelLoop:
 			}
 
 			mapTile := MapTile{
-				MapName: maps[m].Name,
+				MapName: m.Name,
 				Tile:    tile,
 			}
 

@@ -17,7 +17,19 @@ import (
 // TESTENV is the environment variable that must be set to "yes" to run postgis tests.
 const TESTENV = "RUN_POSTGIS_TESTS"
 
-var defaultEnvConfig map[string]interface{}
+var DefaultEnvConfig map[string]interface{}
+
+var DefaultConfig map[string]interface{} = map[string]interface{}{
+	ConfigKeyHost:        "localhost",
+	ConfigKeyPort:        5432,
+	ConfigKeyDB:          "tegola",
+	ConfigKeyUser:        "postgres",
+	ConfigKeyPassword:    "postgres",
+	ConfigKeySSLMode:     "disable",
+	ConfigKeySSLKey:      "",
+	ConfigKeySSLCert:     "",
+	ConfigKeySSLRootCert: "",
+}
 
 func getConfigFromEnv() map[string]interface{} {
 	port, err := strconv.Atoi(ttools.GetEnvDefault("PGPORT", "5432"))
@@ -40,7 +52,7 @@ func getConfigFromEnv() map[string]interface{} {
 }
 
 func init() {
-	defaultEnvConfig = getConfigFromEnv()
+	DefaultEnvConfig = getConfigFromEnv()
 }
 
 type TCConfig struct {
@@ -49,9 +61,8 @@ type TCConfig struct {
 	LayerConfig    []map[string]interface{}
 }
 
-func (cfg TCConfig) Config() dict.Dict {
+func (cfg TCConfig) Config(mConfig map[string]interface{}) dict.Dict {
 	var config map[string]interface{}
-	mConfig := defaultEnvConfig
 	if cfg.BaseConfig != nil {
 		mConfig = cfg.BaseConfig
 	}
@@ -86,8 +97,9 @@ func TestMVTProviders(t *testing.T) {
 	}
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
-			prvd, err := NewMVTTileProvider(config)
+			config := tc.Config(DefaultEnvConfig)
+			config[ConfigKeyName] = "provider_name"
+			prvd, err := NewMVTTileProvider(config, nil)
 			// for now we will just check the length of the bytes.
 			if tc.err != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.err) {
@@ -108,7 +120,7 @@ func TestMVTProviders(t *testing.T) {
 					MVTName: tc.layerNames[i],
 				}
 			}
-			mvtTile, err := prvd.MVTForLayers(context.Background(), tc.tile, layers)
+			mvtTile, err := prvd.MVTForLayers(context.Background(), tc.tile, nil, layers)
 			if err != nil {
 				t.Errorf("NewProvider unexpected error: %v", err)
 				return
@@ -156,8 +168,9 @@ func TestLayerGeomType(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
-			provider, err := NewTileProvider(config)
+			config := tc.Config(DefaultEnvConfig)
+			config[ConfigKeyName] = "provider_name"
+			provider, err := NewTileProvider(config, nil)
 			if tc.err != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.err) {
 					t.Logf("error %#v", err)
@@ -265,11 +278,11 @@ func TestLayerGeomType(t *testing.T) {
 			TCConfig: TCConfig{
 				ConfigOverride: map[string]interface{}{
 					ConfigKeyURI: fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
-						defaultEnvConfig["user"],
-						defaultEnvConfig["password"],
-						defaultEnvConfig["host"],
-						defaultEnvConfig["port"],
-						defaultEnvConfig["database"],
+						DefaultEnvConfig["user"],
+						DefaultEnvConfig["password"],
+						DefaultEnvConfig["host"],
+						DefaultEnvConfig["port"],
+						DefaultEnvConfig["database"],
 					),
 					ConfigKeyHost: "",
 					ConfigKeyPort: "",
@@ -443,7 +456,7 @@ func TestBuildUri(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
+			config := tc.Config(DefaultConfig)
 			uri, _, err := BuildURI(config)
 
 			if tc.err != "" {

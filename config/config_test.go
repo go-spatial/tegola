@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/env"
+	"github.com/go-spatial/tegola/provider"
 	_ "github.com/go-spatial/tegola/provider/debug"
 	_ "github.com/go-spatial/tegola/provider/postgis"
 	_ "github.com/go-spatial/tegola/provider/test"
@@ -156,7 +157,26 @@ func TestParse(t *testing.T) {
 					max_zoom = 20
 					dont_simplify = true
 					dont_clip = true
-					dont_clean = true`,
+					dont_clean = true
+
+					[[maps.params]]
+					name = "param1"
+					token = "!param1!"
+					type = "string"
+					
+					[[maps.params]]
+					name = "param2"
+					token = "!PARAM2!"
+					type = "int"
+					sql = "AND answer = ?"
+					default_value = "42"
+					
+					[[maps.params]]
+					name = "param3"
+					token = "!PARAM3!"
+					type = "float"
+					default_sql = "AND pi = 3.1415926"
+					`,
 			expected: config.Config{
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
@@ -191,14 +211,14 @@ func TestParse(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						TileBuffer:  env.IntPtr(env.Int(12)),
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(10),
@@ -206,6 +226,28 @@ func TestParse(t *testing.T) {
 								DontSimplify:  true,
 								DontClip:      true,
 								DontClean:     true,
+							},
+						},
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param1",
+								Token: "!PARAM1!",
+								SQL:   "?",
+								Type:  "string",
+							},
+							{
+								Name:         "param2",
+								Token:        "!PARAM2!",
+								Type:         "int",
+								SQL:          "AND answer = ?",
+								DefaultValue: "42",
+							},
+							{
+								Name:       "param3",
+								Token:      "!PARAM3!",
+								Type:       "float",
+								SQL:        "?",
+								DefaultSQL: "AND pi = 3.1415926",
 							},
 						},
 					},
@@ -319,14 +361,14 @@ func TestParse(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{ENV_TEST_CENTER_X, ENV_TEST_CENTER_Y, ENV_TEST_CENTER_Z},
 						TileBuffer:  env.IntPtr(env.Int(64)),
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								Name:          "water",
 								ProviderLayer: ENV_TEST_PROVIDER_LAYER,
@@ -347,7 +389,7 @@ func TestParse(t *testing.T) {
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						TileBuffer:  env.IntPtr(env.Int(64)),
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
@@ -501,13 +543,13 @@ func TestValidateMutateZoom(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       nil,
@@ -545,13 +587,13 @@ func TestValidateMutateZoom(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(0),
@@ -631,13 +673,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(10),
@@ -695,13 +737,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
@@ -765,13 +807,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(10),
@@ -789,7 +831,7 @@ func TestValidate(t *testing.T) {
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(10),
@@ -848,13 +890,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 							},
@@ -865,7 +907,7 @@ func TestValidate(t *testing.T) {
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider2.water",
 							},
@@ -917,13 +959,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -1035,11 +1077,11 @@ func TestValidate(t *testing.T) {
 						"type": "mvt_test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "happy",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -1056,11 +1098,11 @@ func TestValidate(t *testing.T) {
 						"type": "mvt_test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "happy",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -1084,11 +1126,11 @@ func TestValidate(t *testing.T) {
 						"type": "test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "happy",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -1112,11 +1154,11 @@ func TestValidate(t *testing.T) {
 						"type": "mvt_test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "happy",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "bad.water_default_z",
 							},
@@ -1141,11 +1183,11 @@ func TestValidate(t *testing.T) {
 						"type": "test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "comingle",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -1173,11 +1215,11 @@ func TestValidate(t *testing.T) {
 						"type": "mvt_test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "comingle",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "stdprovider1.water_default_z",
 							},
@@ -1186,6 +1228,191 @@ func TestValidate(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+		"13 reserved token name": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "bad_param",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!BBOX!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTokenReserved{
+				MapName: "bad_param",
+				Parameter: provider.QueryParameter{
+					Name:  "param",
+					Token: "!BBOX!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 duplicate parameter name": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "dupe_param_name",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+							{
+								Name:  "param",
+								Token: "!PARAM2!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamDuplicateName{
+				MapName: "dupe_param_name",
+				Parameter: provider.QueryParameter{
+					Name:  "param",
+					Token: "!PARAM2!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 duplicate token name": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "dupe_param_token",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+							{
+								Name:  "param2",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamDuplicateToken{
+				MapName: "dupe_param_token",
+				Parameter: provider.QueryParameter{
+					Name:  "param2",
+					Token: "!PARAM!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 parameter unknown type": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "unknown_param_type",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!BBOX!",
+								Type:  "foo",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamUnknownType{
+				MapName: "unknown_param_type",
+				Parameter: provider.QueryParameter{
+					Name:  "param",
+					Token: "!BBOX!",
+					Type:  "foo",
+				},
+			},
+		},
+		"13 parameter two defaults": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "unknown_two_defaults",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:         "param",
+								Token:        "!BBOX!",
+								Type:         "string",
+								DefaultSQL:   "foo",
+								DefaultValue: "bar",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTwoDefaults{
+				MapName: "unknown_two_defaults",
+				Parameter: provider.QueryParameter{
+					Name:         "param",
+					Token:        "!BBOX!",
+					Type:         "string",
+					DefaultSQL:   "foo",
+					DefaultValue: "bar",
+				},
+			},
+		},
+		"13 parameter invalid default": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "parameter_invalid_default",
+
+						Parameters: []provider.QueryParameter{
+							{
+								Name:         "param",
+								Token:        "!BBOX!",
+								Type:         "int",
+								DefaultValue: "foo",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamInvalidDefault{
+				MapName: "parameter_invalid_default",
+				Parameter: provider.QueryParameter{
+					Name:         "param",
+					Token:        "!BBOX!",
+					Type:         "int",
+					DefaultValue: "foo",
+				},
+			},
+		},
+		"13 invalid token name": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "parameter_invalid_token",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!Token with spaces!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamBadTokenName{
+				MapName: "parameter_invalid_token",
+				Parameter: provider.QueryParameter{
+					Name:  "param",
+					Token: "!Token with spaces!",
+					Type:  "int",
 				},
 			},
 		},
@@ -1218,14 +1445,14 @@ func TestConfigureTileBuffers(t *testing.T) {
 	tests := map[string]tcase{
 		"1 tilebuffer is not set": {
 			config: config.Config{
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name: "osm",
 					},
 				},
 			},
 			expected: config.Config{
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(64)),
@@ -1236,7 +1463,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 		"2 tilebuffer is set in global section": {
 			config: config.Config{
 				TileBuffer: env.IntPtr(env.Int(32)),
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name: "osm",
 					},
@@ -1247,7 +1474,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 			},
 			expected: config.Config{
 				TileBuffer: env.IntPtr(env.Int(32)),
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(32)),
@@ -1261,7 +1488,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 		},
 		"3 tilebuffer is set in map section": {
 			config: config.Config{
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),
@@ -1273,7 +1500,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 				},
 			},
 			expected: config.Config{
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),
@@ -1288,7 +1515,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 		"4 tilebuffer is set in global and map sections": {
 			config: config.Config{
 				TileBuffer: env.IntPtr(env.Int(32)),
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),
@@ -1297,7 +1524,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 			},
 			expected: config.Config{
 				TileBuffer: env.IntPtr(env.Int(32)),
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),

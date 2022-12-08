@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package gpkg
@@ -1095,7 +1096,7 @@ func TestCleanup(t *testing.T) {
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-			_, err := NewTileProvider(tc.config)
+			_, err := NewTileProvider(tc.config, nil)
 			if err != nil {
 				t.Fatalf("err creating NewTileProvider: %v", err)
 				return

@@ -121,6 +121,10 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 		return defaultAtlas.SeedMapTile(ctx, m, z, x, y)
 	}
 
+	if len(m.Params) > 0 {
+		return nil
+	}
+
 	ctx = context.WithValue(ctx, observability.ObserveVarMapName, m.Name)
 	// confirm we have a cache backend
 	if a.cacher == nil {
@@ -130,7 +134,7 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 	tile := slippy.NewTile(z, x, y)
 
 	// encode the tile
-	b, err := m.Encode(ctx, tile)
+	b, err := m.Encode(ctx, tile, nil)
 	if err != nil {
 		return err
 	}
@@ -152,6 +156,10 @@ func (a *Atlas) PurgeMapTile(m Map, tile *tegola.Tile) error {
 		// Use the default Atlas if a, is nil. This way the empty value is
 		// still useful.
 		return defaultAtlas.PurgeMapTile(m, tile)
+	}
+
+	if len(m.Params) > 0 {
+		return nil
 	}
 
 	if a.cacher == nil {
