@@ -8,7 +8,7 @@ require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/ajstarks/svgo v0.0.0-20170507103333-2489f1e6d405
 	github.com/akrylysov/algnhsa v0.12.1
-	github.com/aws/aws-sdk-go v1.27.0
+	github.com/aws/aws-sdk-go v1.33.0
 	github.com/dimfeld/httptreemux v5.0.1+incompatible
 	github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
 	github.com/go-redis/redis v6.9.0+incompatible
@@ -51,7 +51,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/jackc/puddle v1.2.0 // indirect
-	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
+	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.15.0 // indirect
