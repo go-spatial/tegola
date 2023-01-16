@@ -3,6 +3,7 @@ package atlas
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -267,9 +268,25 @@ func (a *Atlas) SetObservability(o observability.Interface) {
 			a.cacher = o.InstrumentedCache(a.cacher)
 		}
 	}
-	for _, aMap := range a.maps {
 
-		collectors, err := aMap.Collectors("tegola", o.CollectorConfig)
+	// Note: some jumping through hoops to not break compatibility here
+	// if there's more than one mvtProvider tegola would panic with
+	// "panic: duplicate metrics collector registration attempted"
+	var mvtProviders = make(map[string]bool)
+	for _, aMap := range a.maps {
+		if !mvtProviders[aMap.mvtProviderName] {
+			mvtProviders[aMap.mvtProviderName] = true
+		}
+	}
+
+	prefixWithProvider := len(mvtProviders) > 1
+
+	for _, aMap := range a.maps {
+		var prefix = "tegola"
+		if prefixWithProvider {
+			prefix = fmt.Sprintf("tegola_%s", aMap.mvtProviderName)
+		}
+		collectors, err := aMap.Collectors(prefix, o.CollectorConfig)
 		if err != nil {
 			log.Errorf("failed to register collector for map: %v ignoring", aMap.Name)
 			continue
