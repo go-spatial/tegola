@@ -64,6 +64,13 @@ func newHttpHandler(registry prometheus.Registerer, prefix string, URLPrefix str
 		[]string{},
 	)
 
+	registry.MustRegister(
+		handler.inFlightGauge,
+		handler.counter,
+		handler.durationSeconds,
+		handler.responseSizeBytes,
+	)
+
 	return &handler
 }
 
