@@ -90,7 +90,7 @@ func (m Map) Collectors(prefix string, config func(configKey string) map[string]
 		if !ok {
 			return nil, nil
 		}
-		return collect.Collectors(prefix, config)
+		return collect.Collectors(prefix+"_"+m.mvtProviderName, config)
 	}
 	// not an mvtProvider, so need to ask each layer instead
 	var collection []observability.Collector
