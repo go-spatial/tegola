@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -26,6 +27,10 @@ import (
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
+
+func normalizeProviderName(s string) string {
+	return strings.ToLower(regexp.MustCompile(`[^a-zA-Z0-9 ]+`).ReplaceAllString(s, ""))
+}
 
 // NewWebMercatorMap creates a new map with the necessary default values
 func NewWebMercatorMap(name string) Map {
@@ -90,7 +95,7 @@ func (m Map) Collectors(prefix string, config func(configKey string) map[string]
 		if !ok {
 			return nil, nil
 		}
-		return collect.Collectors(prefix+"_"+m.mvtProviderName, config)
+		return collect.Collectors(prefix+"_"+normalizeProviderName(m.mvtProviderName), config)
 	}
 	// not an mvtProvider, so need to ask each layer instead
 	var collection []observability.Collector
