@@ -1,8 +1,8 @@
 <template>
-  <li v-on:click="toggleLayerVisibility(layer.name)">
+  <li @click="toggleLayerVisibility(layer.name)">
     <div
       class="layer-color"
-      v-bind:style="{
+      :style="{
         'background-color': getLayerColor(layer.name),
         visibility: visibility
       }"
@@ -22,15 +22,15 @@ export default {
   props: {
     layer: Object
   },
-  computed: {
-    zoomRange() {
-      return "z" + this.layer.minzoom + "-" + this.layer.maxzoom;
-    }
-  },
   data() {
     return {
       visibility: "visible"
     };
+  },
+  computed: {
+    zoomRange() {
+      return "z" + this.layer.minzoom + "-" + this.layer.maxzoom;
+    }
   },
   methods: {
     // toggleLayerVisibility will toggle a layers visibility between on and off

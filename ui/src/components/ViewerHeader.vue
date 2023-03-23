@@ -6,7 +6,7 @@
 
 <script>
 export default {
-  name: "Header",
+  name: "ViewerHeader",
   props: {
     capabilities: Object
   },
@@ -17,6 +17,7 @@ export default {
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
+
 <style scoped>
 #header {
   width: 100%;

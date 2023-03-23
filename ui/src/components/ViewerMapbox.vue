@@ -9,7 +9,7 @@ import ToggleTileBoundariesControl from "./MapboxControls";
 import mapboxgl from "mapbox-gl";
 
 export default {
-  name: "Mapbox",
+  name: "ViewerMapbox",
   mounted() {
     // build the style url
     let url = store.apiRoot + "maps/" + store.activeMap.name + "/style.json";
@@ -43,6 +43,7 @@ export default {
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
+
 <style scoped>
 #map {
   position: absolute;
