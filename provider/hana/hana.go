@@ -26,7 +26,12 @@ import (
 const Name = "hana"
 
 type connectionPoolCollector struct {
-	pool                     *sql.DB
+	pool *sql.DB
+
+	// providerName the pool is created for
+	// required to make metrics unique
+	providerName string
+
 	maxConnectionDesc        *prometheus.Desc
 	currentConnectionsDesc   *prometheus.Desc
 	availableConnectionsDesc *prometheus.Desc
@@ -106,28 +111,30 @@ func (c *connectionPoolCollector) Collectors(prefix string, _ func(configKey str
 		prefix+"hana_max_connections",
 		"Max number of hana connections in the pool",
 		nil,
-		nil,
+		prometheus.Labels{"provider_name": c.providerName},
 	)
 
 	c.currentConnectionsDesc = prometheus.NewDesc(
 		prefix+"hana_current_connections",
 		"Current number of hana connections in the pool",
 		nil,
-		nil,
+		prometheus.Labels{"provider_name": c.providerName},
 	)
 
 	c.availableConnectionsDesc = prometheus.NewDesc(
 		prefix+"hana_available_connections",
 		"Current number of available hana connections in the pool",
 		nil,
-		nil,
+		prometheus.Labels{"provider_name": c.providerName},
 	)
+
 	return []observability.Collector{c}, nil
 }
 
 // Provider provides the HANA data provider.
 type Provider struct {
 	dbVersion uint
+	name      string
 	pool      *connectionPoolCollector
 	// map of layer name and corresponding sql
 	layers     map[string]Layer
@@ -387,10 +394,16 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 		return nil, err
 	}
 
+	name, err := config.String(ConfigKeyName, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	p := Provider{
+		name:      name,
 		dbVersion: uint(majorVersion),
 		srid:      uint64(srid),
-		pool:      &connectionPoolCollector{pool: conn},
+		pool:      &connectionPoolCollector{pool: conn, providerName: name},
 	}
 
 	layers, err := config.MapSlice(ConfigKeyLayers)
@@ -405,7 +418,7 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 
 		lName, err := layer.String(ConfigKeyLayerName, nil)
 		if err != nil {
-			return nil, fmt.Errorf("For layer (%v) we got the following error trying to get the layer's name field: %w", i, err)
+			return nil, fmt.Errorf("for layer (%v) we got the following error trying to get the layer's name field: %w", i, err)
 		}
 
 		if j, ok := lyrsSeen[lName]; ok {
@@ -480,7 +493,7 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 
 		if isSrsRoundEarth(p.pool, uint64(lsrid)) {
 			if !hasSrsPlanarEquivalent(p.pool, uint64(lsrid)) {
-				return nil, fmt.Errorf("Unable to find a planar equivalent for srid %v in layer: %v", lsrid, lName)
+				return nil, fmt.Errorf("unable to find a planar equivalent for srid %v in layer: %v", lsrid, lName)
 			}
 			lsrid = int(toPlanarEquivalenSrid(uint64(lsrid)))
 		}
@@ -562,7 +575,7 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 				return nil, err
 			}
 
-			var clipGeom bool = true
+			var clipGeom = true
 			if clipGeom, err = layer.Bool(ConfigKeyClipGeometry, &clipGeom); err != nil {
 				return nil, err
 			}
@@ -665,6 +678,10 @@ func (p Provider) inspectLayerGeomType(pname string, l *Layer, maps []provider.M
 	}
 
 	fields, err := getFieldDescriptions(l.Name(), l.GeomFieldName(), l.IDFieldName(), columns, false)
+	if err != nil {
+		return err
+	}
+
 	rowValues := make([]interface{}, len(fields))
 
 	for rows.Next() {
@@ -681,7 +698,10 @@ func (p Provider) inspectLayerGeomType(pname string, l *Layer, maps []provider.M
 			}
 
 			value := *(rowValues[i].(*sql.NullString))
-			p.setLayerGeomType(l, strings.Trim(value.String, "ST_"))
+			err := p.setLayerGeomType(l, strings.Trim(value.String, "ST_"))
+			if err != nil {
+				return err
+			}
 
 			break
 		}

@@ -34,6 +34,11 @@ const Name = "postgis"
 
 type connectionPoolCollector struct {
 	*pgxpool.Pool
+
+	// providerName the pool is created for
+	// required to make metrics unique
+	providerName string
+
 	maxConnectionDesc        *prometheus.Desc
 	currentConnectionsDesc   *prometheus.Desc
 	availableConnectionsDesc *prometheus.Desc
@@ -47,7 +52,7 @@ func (c connectionPoolCollector) Collect(ch chan<- prometheus.Metric) {
 	if c.Pool == nil {
 		return
 	}
-	stat := c.Pool.Stat()
+	stat := c.Stat()
 	ch <- prometheus.MustNewConstMetric(
 		c.maxConnectionDesc,
 		prometheus.GaugeValue,
@@ -73,25 +78,28 @@ func (c *connectionPoolCollector) Collectors(prefix string, _ func(configKey str
 		prefix = prefix + "_"
 	}
 
+	// a constant label ensures that the metrics are unique
+	// this allows the registration of multiple providers in the same
+	// config.
 	c.maxConnectionDesc = prometheus.NewDesc(
 		prefix+"postgres_max_connections",
 		"Max number of postgres connections in the pool",
 		nil,
-		nil,
+		prometheus.Labels{"provider_name": c.providerName},
 	)
 
 	c.currentConnectionsDesc = prometheus.NewDesc(
 		prefix+"postgres_current_connections",
 		"Current number of postgres connections in the pool",
 		nil,
-		nil,
+		prometheus.Labels{"provider_name": c.providerName},
 	)
 
 	c.availableConnectionsDesc = prometheus.NewDesc(
 		prefix+"postgres_available_connections",
 		"Current number of available postgres connections in the pool",
 		nil,
-		nil,
+		prometheus.Labels{"provider_name": c.providerName},
 	)
 	return []observability.Collector{c}, nil
 }
@@ -99,7 +107,9 @@ func (c *connectionPoolCollector) Collectors(prefix string, _ func(configKey str
 // Provider provides the postgis data provider.
 type Provider struct {
 	config pgxpool.Config
+	name   string
 	pool   *connectionPoolCollector
+
 	// map of layer name and corresponding sql
 	layers     map[string]Layer
 	srid       uint64
@@ -122,31 +132,37 @@ func (p *Provider) Collectors(prefix string, cfgFn func(configKey string) map[st
 	}
 
 	buckets := []float64{.1, 1, 5, 20}
-	collectors, err := p.pool.Collectors(prefix, cfgFn)
+	c, err := p.pool.Collectors(prefix, cfgFn)
 	if err != nil {
 		return nil, err
 	}
 
+	// a constant label ensures that the metrics are unique
+	// this allows the registration of multiple providers in the same
+	// config.
+	// Additional label names will be appended to the constant labels.
 	p.mvtProviderQueryHistogramSeconds = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    prefix + "_mvt_provider_sql_query_seconds",
-			Help:    "A histogram of query time for sql for mvt providers",
-			Buckets: buckets,
+			Name:        prefix + "_mvt_provider_sql_query_seconds",
+			Help:        "A histogram of query time for sql for mvt providers",
+			Buckets:     buckets,
+			ConstLabels: prometheus.Labels{"provider_name": p.name},
 		},
 		[]string{"map_name", "z"},
 	)
 
 	p.queryHistogramSeconds = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    prefix + "_provider_sql_query_seconds",
-			Help:    "A histogram of query time for sql for providers",
-			Buckets: buckets,
+			Name:        prefix + "_provider_sql_query_seconds",
+			Help:        "A histogram of query time for sql for providers",
+			Buckets:     buckets,
+			ConstLabels: prometheus.Labels{"provider_name": p.name},
 		},
 		[]string{"map_name", "layer_name", "z"},
 	)
 
 	p.collectorsRegistered = true
-	return append(collectors, p.mvtProviderQueryHistogramSeconds, p.queryHistogramSeconds), nil
+	return append(c, p.mvtProviderQueryHistogramSeconds, p.queryHistogramSeconds), nil
 }
 
 const (
@@ -460,6 +476,11 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 		return nil, err
 	}
 
+	name, err := config.String(ConfigKeyName, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	if err = ConfigTLS(sslmode, sslkey, sslcert, sslrootcert, dbconfig); err != nil {
 		return nil, err
 	}
@@ -467,13 +488,14 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 	p := Provider{
 		srid:   uint64(srid),
 		config: *dbconfig,
+		name:   name,
 	}
 
 	pool, err := pgxpool.ConnectConfig(context.Background(), &p.config)
 	if err != nil {
 		return nil, fmt.Errorf("failed while creating connection pool: %w", err)
 	}
-	p.pool = &connectionPoolCollector{Pool: pool}
+	p.pool = &connectionPoolCollector{Pool: pool, providerName: name}
 
 	layers, err := config.MapSlice(ConfigKeyLayers)
 	if err != nil {

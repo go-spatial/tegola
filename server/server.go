@@ -3,10 +3,11 @@ package server
 
 import (
 	"fmt"
-	"github.com/go-spatial/tegola/internal/build"
 	"net/http"
 	"net/url"
 	"path"
+
+	"github.com/go-spatial/tegola/internal/build"
 
 	"github.com/go-spatial/tegola/observability"
 
@@ -25,7 +26,7 @@ const (
 var (
 	// Version is the version of the software, this should be set by the main program, before starting up.
 	// It is used by various Middleware to determine the version.
-	Version string = "Version Not Set"
+	Version string = "version not set"
 
 	// HostName is the name of the host to use for construction of URLS.
 	// configurable via the tegola config.toml file (set in main.go)
@@ -71,7 +72,7 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 		)
 		if h := o.Handler(metricsRoute); h != nil {
 			// Only set up the /metrics endpoint if we have a configured observer
-			log.Infof("Setting up observer: %v", o.Name())
+			log.Infof("setting up observer: %v", o.Name())
 			group.UsingContext().Handler(http.MethodGet, metricsRoute, h)
 		}
 	}
@@ -98,7 +99,7 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 func Start(a *atlas.Atlas, port string) *http.Server {
 
 	// notify the user the server is starting
-	log.Infof("starting tegola server(%v) on port %v", build.Version, port)
+	log.Infof("starting tegola server (%v) on port %v", build.Version, port)
 
 	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
 

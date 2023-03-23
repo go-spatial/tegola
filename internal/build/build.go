@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	Version              = "Version not set"
+	Version              = "version not set"
 	GitRevision          = "not set"
 	GitBranch            = "not set"
-	uiVersionDefaultText = "Viewer not build"
+	uiVersionDefaultText = "viewer not build"
 	Tags                 []string
 	Commands             = []string{"tegola"}
 )
