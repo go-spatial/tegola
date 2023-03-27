@@ -6,7 +6,7 @@
 [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/go-spatial/tegola)
 [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://github.com/go-spatial/tegola/blob/master/LICENSE.md)
 
-Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) with support for [PostGIS](https://postgis.net/) and [GeoPackage](https://www.geopackage.org/) data providers. User documentation can be found at [tegola.io](https://tegola.io)
+Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) with support for [PostGIS](https://postgis.net/), [GeoPackage](https://www.geopackage.org/) and [SAP HANA Spatial](https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html) data providers. User documentation can be found at [tegola.io](https://tegola.io)
 
 ## Features
 - Native geometry processing (simplification, clipping, make valid, intersection, contains, scaling, translation)
