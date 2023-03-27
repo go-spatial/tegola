@@ -56,7 +56,7 @@ jobs:
       with:
         go-version: '1.13'
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Install dependencies
       run: |
         go mod download
@@ -103,7 +103,7 @@ jobs:
         echo "::add-path::${{ github.workspace }}/bin"
 
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: src/example.com/owner/repo # add this
     - name: Run Unit tests

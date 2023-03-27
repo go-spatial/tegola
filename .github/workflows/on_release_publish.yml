@@ -9,11 +9,11 @@ jobs:
 
   gen_version:
     name: Generate software version
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     # on release, we want to use release.tag_name for the version
     - name: Set tegola version (use release.tag_name)
@@ -47,16 +47,16 @@ jobs:
 
   build_ui:
     name: Build for embedded ui
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v2
+      - name: Set up Go
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: 1.20.2
 
       - name: Build embedded UI
         run: |
@@ -73,11 +73,11 @@ jobs:
   build_linux:
     name: Build for Linux and AWS Lambda
     needs: [gen_version,build_ui]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -102,11 +102,11 @@ jobs:
   build_tegola_lambda:
     name: Build tegola_lambda on Amazon Linux
     needs: [gen_version]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -133,7 +133,7 @@ jobs:
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -157,14 +157,14 @@ jobs:
   build_docker:
     name: Build Docker image and publish to Docker Hub
     needs: [gen_version,build_ui]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       DOCKERHUB_ORG: gospatial
       DOCKERHUB_REPO: tegola
 
     steps:
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -205,7 +205,7 @@ jobs:
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
