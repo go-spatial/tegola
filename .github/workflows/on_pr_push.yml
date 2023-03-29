@@ -1,7 +1,6 @@
 name: On push
 on: [push, pull_request]
 jobs:
-
   test:
     name: Test on Ubuntu
     runs-on: ubuntu-22.04
@@ -15,7 +14,7 @@ jobs:
           # set the master password for the instance
           POSTGRES_PASSWORD: postgres
         ports:
-        - 5432:5432
+          - 5432:5432
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
@@ -26,86 +25,88 @@ jobs:
       redis:
         image: redis
         ports:
-        - 6379:6379
+          - 6379:6379
         options: --entrypoint redis-server
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.20.2
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.20.2
 
-    - name: Env Debug
-      run: |
-        go env
-        pwd
-        echo ${HOME}
-        echo ${GITHUB_WORKSPACE}
+      - name: Env Debug
+        run: |
+          go env
+          pwd
+          echo ${HOME}
+          echo ${GITHUB_WORKSPACE}
 
-    - name: Load Postgres test data
-      env:
-        TEST_DATA_URL: https://raw.githubusercontent.com/go-spatial/tegola-testdata/master/tegola.dump
-        TEST_DATA: tegola.backup
-        PGUSER: postgres
-        PGHOST: localhost
-        PGDATABASE: postgres
-        PGPASSWORD: postgres
-      run: |
-        curl ${TEST_DATA_URL} > ${TEST_DATA}
-        pg_restore -d postgres -C ${TEST_DATA}
-        psql -c "CREATE ROLE tegola_no_access LOGIN PASSWORD 'postgres'"
-        rm ${TEST_DATA}
+      - name: Load Postgres test data
+        env:
+          TEST_DATA_URL: https://raw.githubusercontent.com/go-spatial/tegola-testdata/master/tegola.dump
+          TEST_DATA: tegola.backup
+          PGUSER: postgres
+          PGHOST: localhost
+          PGDATABASE: postgres
+          PGPASSWORD: postgres
+        run: |
+          curl ${TEST_DATA_URL} > ${TEST_DATA}
+          pg_restore -d postgres -C ${TEST_DATA}
+          psql -c "CREATE ROLE tegola_no_access LOGIN PASSWORD 'postgres'"
+          rm ${TEST_DATA}
 
-    - name: Postgres Debug
-      env:
-        PGUSER: postgres
-        PGHOST: localhost
-        PGDATABASE: postgres
-        PGPASSWORD: postgres
-      run: |
-        psql -c "\l"
+      - name: Postgres Debug
+        env:
+          PGUSER: postgres
+          PGHOST: localhost
+          PGDATABASE: postgres
+          PGPASSWORD: postgres
+        run: |
+          psql -c "\l"
 
-    - name: Run tests
-      env:
-        # redis tests
-        RUN_REDIS_TESTS: yes
+      - name: Run tests
+        env:
+          # redis tests
+          RUN_REDIS_TESTS: yes
 
-        # AWS S3 tests
-        RUN_S3_TESTS: yes
-        AWS_TEST_BUCKET: tegola-ci
-        AWS_REGION: us-east-2
+          # AWS S3 tests
+          RUN_S3_TESTS: yes
+          AWS_TEST_BUCKET: tegola-ci
+          AWS_REGION: us-east-2
 
-        # PostGIS tests
-        RUN_POSTGIS_TESTS: yes
-        PGHOST: localhost
-        PGPORT: 5432
-        PGDATABASE: tegola
-        PGUSER: postgres
-        PGPASSWORD: postgres
-        PGUSER_NO_ACCESS: tegola_no_access
-        PGSSLMODE: disable
-        PGSSLKEY: ""
-        PGSSLCERT: ""
-        PGSSLROOTCERT: ""
+          # PostGIS tests
+          RUN_POSTGIS_TESTS: yes
+          PGHOST: localhost
+          PGPORT: 5432
+          PGDATABASE: tegola
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGUSER_NO_ACCESS: tegola_no_access
+          PGSSLMODE: disable
+          PGSSLKEY: ""
+          PGSSLCERT: ""
+          PGSSLROOTCERT: ""
 
-        # HANA tests
-        RUN_HANA_TESTS: yes
-        HANA_CONNECTION_STRING: "hdb://TEGOLACI:iZgd6$nOdhf@917df316-4e01-4a10-be54-eac1b6ab15fb.hana.prod-us10.hanacloud.ondemand.com:443?TLSInsecureSkipVerify&TLSServerName=host&timeout=1000&max_connections=10"
-      run: |
-        go test -mod vendor -covermode atomic -coverprofile=profile.cov ./...
+          # HANA tests
+          RUN_HANA_TESTS: yes
+          # The credentials were exposed on purpose
+          # more information see: https://github.com/go-spatial/tegola/pull/893#discussion_r1136602372
+          HANA_CONNECTION_STRING: "hdb://TEGOLACI:iZgd6$nOdhf@917df316-4e01-4a10-be54-eac1b6ab15fb.hana.prod-us10.hanacloud.ondemand.com:443?TLSInsecureSkipVerify&TLSServerName=host&timeout=1000&max_connections=10"
+        run: |
+          go test -mod vendor -covermode atomic -coverprofile=profile.cov ./...
 
-    - name: Send coverage report to Coveralls
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        go install -mod=vendor github.com/mattn/goveralls
-        $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
+      - name: Send coverage report to Coveralls
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          go install -mod=vendor github.com/mattn/goveralls
+          $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
 
-    - name: Build embedded UI
-      run: |
-        pushd ${GITHUB_WORKSPACE}/server
-        go generate ./...
-        popd
+      - name: Build embedded UI
+        run: |
+          pushd ${GITHUB_WORKSPACE}/server
+          go generate ./...
+          popd
