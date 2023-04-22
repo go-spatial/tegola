@@ -1,7 +1,6 @@
 package env
 
 import (
-	"os"
 	"testing"
 )
 
@@ -17,15 +16,8 @@ func TestReplaceEnvVar(t *testing.T) {
 		return func(t *testing.T) {
 			// setup our env vars
 			for k, v := range tc.envVars {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-
-			// clean up env vars
-			defer (func() {
-				for k, _ := range tc.envVars {
-					os.Unsetenv(k)
-				}
-			})()
 
 			out, err := replaceEnvVar(tc.in)
 			if tc.expectedErr != nil {

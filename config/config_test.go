@@ -2,7 +2,6 @@ package config_test
 
 import (
 	"errors"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -10,51 +9,53 @@ import (
 
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/env"
+	"github.com/go-spatial/tegola/provider"
 	_ "github.com/go-spatial/tegola/provider/debug"
 	_ "github.com/go-spatial/tegola/provider/postgis"
 	_ "github.com/go-spatial/tegola/provider/test"
 )
 
 const (
-	ENV_TEST_PORT        = ":8888"
-	ENV_TEST_CENTER_X    = -76.275329586789
-	ENV_TEST_CENTER_Y    = 39.153492567373
-	ENV_TEST_CENTER_Z    = 8.0
-	ENV_TEST_HOST_1      = "cdn"
-	ENV_TEST_HOST_2      = "tegola"
-	ENV_TEST_HOST_3      = "io"
-	ENV_TEST_HOST_CONCAT = ENV_TEST_HOST_1 + "." + ENV_TEST_HOST_2 + "." + ENV_TEST_HOST_3
+	ENV_TEST_PORT                    = ":8888"
+	ENV_TEST_CENTER_X                = -76.275329586789
+	ENV_TEST_CENTER_Y                = 39.153492567373
+	ENV_TEST_CENTER_Z                = 8.0
+	ENV_TEST_HOST_1                  = "cdn"
+	ENV_TEST_HOST_2                  = "tegola"
+	ENV_TEST_HOST_3                  = "io"
+	ENV_TEST_HOST_CONCAT             = ENV_TEST_HOST_1 + "." + ENV_TEST_HOST_2 + "." + ENV_TEST_HOST_3
+	ENV_TEST_WEBSERVER_HEADER_STRING = "s-maxage=10"
+	ENV_TEST_WEBSERVER_PORT          = "1234"
+	ENV_TEST_PROVIDER_LAYER          = "provider1.water_0_5"
+	ENV_TEST_MAP_LAYER_DEFAULT_TAG   = "postgis"
 )
 
-func setEnv() {
+func setEnv(t *testing.T) {
 	x := strconv.FormatFloat(ENV_TEST_CENTER_X, 'f', -1, 64)
 	y := strconv.FormatFloat(ENV_TEST_CENTER_Y, 'f', -1, 64)
 	z := strconv.FormatFloat(ENV_TEST_CENTER_Z, 'f', -1, 64)
 
-	os.Setenv("ENV_TEST_PORT", ENV_TEST_PORT)
-	os.Setenv("ENV_TEST_CENTER_X", x)
-	os.Setenv("ENV_TEST_CENTER_Y", y)
-	os.Setenv("ENV_TEST_CENTER_Z", z)
-	os.Setenv("ENV_TEST_HOST_1", ENV_TEST_HOST_1)
-	os.Setenv("ENV_TEST_HOST_2", ENV_TEST_HOST_2)
-	os.Setenv("ENV_TEST_HOST_3", ENV_TEST_HOST_3)
-}
-
-func unsetEnv() {
-	os.Unsetenv("ENV_TEST_PORT")
-	os.Unsetenv("ENV_TEST_CENTER_X")
-	os.Unsetenv("ENV_TEST_CENTER_Y")
-	os.Unsetenv("ENV_TEST_CENTER_Z")
+	t.Setenv("ENV_TEST_PORT", ENV_TEST_PORT)
+	t.Setenv("ENV_TEST_CENTER_X", x)
+	t.Setenv("ENV_TEST_CENTER_Y", y)
+	t.Setenv("ENV_TEST_CENTER_Z", z)
+	t.Setenv("ENV_TEST_HOST_1", ENV_TEST_HOST_1)
+	t.Setenv("ENV_TEST_HOST_2", ENV_TEST_HOST_2)
+	t.Setenv("ENV_TEST_HOST_3", ENV_TEST_HOST_3)
+	t.Setenv("ENV_TEST_WEBSERVER_HEADER_STRING", ENV_TEST_WEBSERVER_HEADER_STRING)
+	t.Setenv("ENV_TEST_WEBSERVER_PORT", ENV_TEST_WEBSERVER_PORT)
+	t.Setenv("ENV_TEST_PROVIDER_LAYER", ENV_TEST_PROVIDER_LAYER)
+	t.Setenv("ENV_TEST_MAP_LAYER_DEFAULT_TAG", ENV_TEST_MAP_LAYER_DEFAULT_TAG)
 }
 
 func TestParse(t *testing.T) {
 	type tcase struct {
-		config   string
-		expected config.Config
+		config      string
+		expected    config.Config
+		expectedErr error
 	}
 
-	setEnv()
-	defer unsetEnv()
+	setEnv(t)
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
@@ -62,6 +63,22 @@ func TestParse(t *testing.T) {
 			r := strings.NewReader(tc.config)
 
 			conf, err := config.Parse(r, "")
+
+			if tc.expectedErr != nil {
+				if err == nil {
+					t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
+					return
+				}
+
+				// compare error messages
+				if tc.expectedErr.Error() != err.Error() {
+					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+					return
+				}
+
+				return
+			}
+
 			if err != nil {
 				t.Error(err)
 				return
@@ -139,7 +156,27 @@ func TestParse(t *testing.T) {
 					min_zoom = 10
 					max_zoom = 20
 					dont_simplify = true
-					dont_clip = true`,
+					dont_clip = true
+					dont_clean = true
+
+					[[maps.params]]
+					name = "param1"
+					token = "!param1!"
+					type = "string"
+					
+					[[maps.params]]
+					name = "param2"
+					token = "!PARAM2!"
+					type = "int"
+					sql = "AND answer = ?"
+					default_value = "42"
+					
+					[[maps.params]]
+					name = "param3"
+					token = "!PARAM3!"
+					type = "float"
+					default_sql = "AND pi = 3.1415926"
+					`,
 			expected: config.Config{
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
@@ -174,20 +211,43 @@ func TestParse(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						TileBuffer:  env.IntPtr(env.Int(12)),
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(10),
 								MaxZoom:       env.UintPtr(20),
 								DontSimplify:  true,
 								DontClip:      true,
+								DontClean:     true,
+							},
+						},
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param1",
+								Token: "!PARAM1!",
+								SQL:   "?",
+								Type:  "string",
+							},
+							{
+								Name:         "param2",
+								Token:        "!PARAM2!",
+								Type:         "int",
+								SQL:          "AND answer = ?",
+								DefaultValue: "42",
+							},
+							{
+								Name:       "param3",
+								Token:      "!PARAM3!",
+								Type:       "float",
+								SQL:        "?",
+								DefaultSQL: "AND pi = 3.1415926",
 							},
 						},
 					},
@@ -198,7 +258,13 @@ func TestParse(t *testing.T) {
 			config: `
 				[webserver]
 				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
-				port = "${ENV_TEST_PORT}"
+				port = "${ENV_TEST_WEBSERVER_PORT}"
+                
+                [webserver.headers]
+                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
+				   Test = "Test"
+                   # impossible but to test ParseDict
+                   Impossible-Header = {"test" = "${ENV_TEST_WEBSERVER_HEADER_STRING}"}
 
 				[[providers]]
 				name = "provider1"
@@ -229,7 +295,7 @@ func TestParse(t *testing.T) {
 
 					[[maps.layers]]
 					name = "water"
-					provider_layer = "provider1.water_0_5"
+					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
 
 					[[maps.layers]]
 					name = "water"
@@ -249,6 +315,9 @@ func TestParse(t *testing.T) {
 					min_zoom = 0
 					max_zoom = 5
 
+                    [maps.layers.default_tags]
+                    provider = "${ENV_TEST_MAP_LAYER_DEFAULT_TAG}"
+
 					[[maps.layers]]
 					name = "water"
 					provider_layer = "provider1.water_6_10"
@@ -258,7 +327,14 @@ func TestParse(t *testing.T) {
 				LocationName: "",
 				Webserver: config.Webserver{
 					HostName: ENV_TEST_HOST_CONCAT,
-					Port:     ENV_TEST_PORT,
+					Port:     ENV_TEST_WEBSERVER_PORT,
+					Headers: env.Dict{
+						"Cache-Control": ENV_TEST_WEBSERVER_HEADER_STRING,
+						"Test":          "Test",
+						"Impossible-Header": env.Dict{
+							"test": ENV_TEST_WEBSERVER_HEADER_STRING,
+						},
+					},
 				},
 				Providers: []env.Dict{
 					{
@@ -285,17 +361,17 @@ func TestParse(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{ENV_TEST_CENTER_X, ENV_TEST_CENTER_Y, ENV_TEST_CENTER_Z},
 						TileBuffer:  env.IntPtr(env.Int(64)),
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								Name:          "water",
-								ProviderLayer: "provider1.water_0_5",
+								ProviderLayer: ENV_TEST_PROVIDER_LAYER,
 								MinZoom:       nil,
 								MaxZoom:       nil,
 							},
@@ -313,12 +389,15 @@ func TestParse(t *testing.T) {
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
 						TileBuffer:  env.IntPtr(env.Int(64)),
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
 								MinZoom:       env.UintPtr(0),
 								MaxZoom:       env.UintPtr(5),
+								DefaultTags: env.Dict{
+									"provider": ENV_TEST_MAP_LAYER_DEFAULT_TAG,
+								},
 							},
 							{
 								Name:          "water",
@@ -331,11 +410,206 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+		"3 missing env": {
+			config: `
+				[webserver]
+				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
+				port = "${ENV_TEST_WEBSERVER_PORT}"
+                
+                [webserver.headers]
+                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
+				   Test = "${I_AM_MISSING}"
+
+				[[providers]]
+				name = "provider1"
+				type = "postgis"
+				host = "localhost"
+				port = 5432
+				database = "osm_water" 
+				user = "admin"
+				password = ""
+
+					[[providers.layers]]
+					name = "water_0_5"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+					[[providers.layers]]
+					name = "water_6_10"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+				[[maps]]
+				name = "osm"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10
+
+				[[maps]]
+				name = "osm_2"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = [-76.275329586789, 39.153492567373, 8.0]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_0_5"
+					min_zoom = 0
+					max_zoom = 5
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10`,
+			expected:    config.Config{},
+			expectedErr: env.ErrEnvVar("I_AM_MISSING"),
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
 	}
+}
+
+func TestValidateMutateZoom(t *testing.T) {
+
+	type tcase struct {
+		config          *config.Config
+		layerName       string
+		expectedMinZoom int
+		expectedMaxZoom int
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+
+			err := tc.config.Validate()
+			if err != nil {
+				t.Errorf("an error occured: %v", err)
+				return
+			}
+
+			minzoom := int(*tc.config.Maps[0].Layers[0].MinZoom)
+			if minzoom != tc.expectedMinZoom {
+				t.Errorf("expected min zoom: %v, got: %v", tc.expectedMinZoom, minzoom)
+			}
+
+			maxzoom := int(*tc.config.Maps[0].Layers[0].MaxZoom)
+			if maxzoom != tc.expectedMaxZoom {
+				t.Errorf("expected min zoom: %v, got: %v", tc.expectedMaxZoom, maxzoom)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"1 - default max zoom": {
+			expectedMinZoom: 0,
+			expectedMaxZoom: 22,
+			config: &config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					Port: ":8080",
+				},
+				Providers: []env.Dict{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []provider.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []provider.MapLayer{
+							{
+								ProviderLayer: "provider1.water",
+								MinZoom:       nil,
+								MaxZoom:       nil,
+							},
+						},
+					},
+				},
+			},
+		},
+		"2 - max zoom 0, default to 1": {
+			expectedMinZoom: 0,
+			expectedMaxZoom: 1,
+			config: &config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					Port: ":8080",
+				},
+				Providers: []env.Dict{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]interface{}{
+							{
+								"name":               "water",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []provider.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						Layers: []provider.MapLayer{
+							{
+								ProviderLayer: "provider1.water",
+								MinZoom:       env.UintPtr(0),
+								MaxZoom:       env.UintPtr(0),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+
 }
 
 func TestValidate(t *testing.T) {
@@ -399,13 +673,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(10),
@@ -463,13 +737,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								Name:          "water",
 								ProviderLayer: "provider1.water_0_5",
@@ -533,13 +807,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(10),
@@ -557,7 +831,7 @@ func TestValidate(t *testing.T) {
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 								MinZoom:       env.UintPtr(10),
@@ -616,13 +890,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water",
 							},
@@ -633,7 +907,7 @@ func TestValidate(t *testing.T) {
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider2.water",
 							},
@@ -685,13 +959,13 @@ func TestValidate(t *testing.T) {
 						},
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "osm",
 						Attribution: "Test Attribution",
 						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
 						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -803,11 +1077,11 @@ func TestValidate(t *testing.T) {
 						"type": "mvt_test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "happy",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -824,11 +1098,11 @@ func TestValidate(t *testing.T) {
 						"type": "mvt_test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "happy",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -852,11 +1126,11 @@ func TestValidate(t *testing.T) {
 						"type": "test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "happy",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -880,11 +1154,11 @@ func TestValidate(t *testing.T) {
 						"type": "mvt_test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "happy",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "bad.water_default_z",
 							},
@@ -909,11 +1183,11 @@ func TestValidate(t *testing.T) {
 						"type": "test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "comingle",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "provider1.water_default_z",
 							},
@@ -941,11 +1215,11 @@ func TestValidate(t *testing.T) {
 						"type": "mvt_test",
 					},
 				},
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:        "comingle",
 						Attribution: "Test Attribution",
-						Layers: []config.MapLayer{
+						Layers: []provider.MapLayer{
 							{
 								ProviderLayer: "stdprovider1.water_default_z",
 							},
@@ -954,6 +1228,191 @@ func TestValidate(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+		"13 reserved token name": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "bad_param",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!BBOX!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTokenReserved{
+				MapName: "bad_param",
+				Parameter: provider.QueryParameter{
+					Name:  "param",
+					Token: "!BBOX!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 duplicate parameter name": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "dupe_param_name",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+							{
+								Name:  "param",
+								Token: "!PARAM2!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamDuplicateName{
+				MapName: "dupe_param_name",
+				Parameter: provider.QueryParameter{
+					Name:  "param",
+					Token: "!PARAM2!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 duplicate token name": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "dupe_param_token",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+							{
+								Name:  "param2",
+								Token: "!PARAM!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamDuplicateToken{
+				MapName: "dupe_param_token",
+				Parameter: provider.QueryParameter{
+					Name:  "param2",
+					Token: "!PARAM!",
+					Type:  "int",
+				},
+			},
+		},
+		"13 parameter unknown type": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "unknown_param_type",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!BBOX!",
+								Type:  "foo",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamUnknownType{
+				MapName: "unknown_param_type",
+				Parameter: provider.QueryParameter{
+					Name:  "param",
+					Token: "!BBOX!",
+					Type:  "foo",
+				},
+			},
+		},
+		"13 parameter two defaults": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "unknown_two_defaults",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:         "param",
+								Token:        "!BBOX!",
+								Type:         "string",
+								DefaultSQL:   "foo",
+								DefaultValue: "bar",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamTwoDefaults{
+				MapName: "unknown_two_defaults",
+				Parameter: provider.QueryParameter{
+					Name:         "param",
+					Token:        "!BBOX!",
+					Type:         "string",
+					DefaultSQL:   "foo",
+					DefaultValue: "bar",
+				},
+			},
+		},
+		"13 parameter invalid default": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "parameter_invalid_default",
+
+						Parameters: []provider.QueryParameter{
+							{
+								Name:         "param",
+								Token:        "!BBOX!",
+								Type:         "int",
+								DefaultValue: "foo",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamInvalidDefault{
+				MapName: "parameter_invalid_default",
+				Parameter: provider.QueryParameter{
+					Name:         "param",
+					Token:        "!BBOX!",
+					Type:         "int",
+					DefaultValue: "foo",
+				},
+			},
+		},
+		"13 invalid token name": {
+			config: config.Config{
+				Maps: []provider.Map{
+					{
+						Name: "parameter_invalid_token",
+						Parameters: []provider.QueryParameter{
+							{
+								Name:  "param",
+								Token: "!Token with spaces!",
+								Type:  "int",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: config.ErrParamBadTokenName{
+				MapName: "parameter_invalid_token",
+				Parameter: provider.QueryParameter{
+					Name:  "param",
+					Token: "!Token with spaces!",
+					Type:  "int",
 				},
 			},
 		},
@@ -986,14 +1445,14 @@ func TestConfigureTileBuffers(t *testing.T) {
 	tests := map[string]tcase{
 		"1 tilebuffer is not set": {
 			config: config.Config{
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name: "osm",
 					},
 				},
 			},
 			expected: config.Config{
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(64)),
@@ -1004,7 +1463,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 		"2 tilebuffer is set in global section": {
 			config: config.Config{
 				TileBuffer: env.IntPtr(env.Int(32)),
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name: "osm",
 					},
@@ -1015,7 +1474,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 			},
 			expected: config.Config{
 				TileBuffer: env.IntPtr(env.Int(32)),
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(32)),
@@ -1029,7 +1488,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 		},
 		"3 tilebuffer is set in map section": {
 			config: config.Config{
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),
@@ -1041,7 +1500,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 				},
 			},
 			expected: config.Config{
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),
@@ -1056,7 +1515,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 		"4 tilebuffer is set in global and map sections": {
 			config: config.Config{
 				TileBuffer: env.IntPtr(env.Int(32)),
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),
@@ -1065,7 +1524,7 @@ func TestConfigureTileBuffers(t *testing.T) {
 			},
 			expected: config.Config{
 				TileBuffer: env.IntPtr(env.Int(32)),
-				Maps: []config.Map{
+				Maps: []provider.Map{
 					{
 						Name:       "osm",
 						TileBuffer: env.IntPtr(env.Int(16)),

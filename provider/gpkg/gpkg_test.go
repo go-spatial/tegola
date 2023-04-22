@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package gpkg_test
@@ -183,7 +184,7 @@ func TestNewTileProvider(t *testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
 
-			p, err := gpkg.NewTileProvider(tc.config)
+			p, err := gpkg.NewTileProvider(tc.config, nil)
 			if err != nil {
 				if err.Error() != tc.expectedErr.Error() {
 					t.Errorf("expectedErr %v got %v", tc.expectedErr, err)
@@ -262,14 +263,14 @@ func TestTileFeatures(t *testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
 
-			p, err := gpkg.NewTileProvider(tc.config)
+			p, err := gpkg.NewTileProvider(tc.config, nil)
 			if err != nil {
 				t.Fatalf("new tile, expected nil got %v", err)
 				return
 			}
 
 			var featureCount int
-			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, nil, func(f *provider.Feature) error {
 				featureCount++
 				return nil
 			})
@@ -410,13 +411,13 @@ func TestConfigs(t *testing.T) {
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-			p, err := gpkg.NewTileProvider(tc.config)
+			p, err := gpkg.NewTileProvider(tc.config, nil)
 			if err != nil {
 				t.Fatalf("err creating NewTileProvider: %v", err)
 				return
 			}
 
-			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, func(f *provider.Feature) error {
+			err = p.TileFeatures(context.TODO(), tc.layerName, &tc.tile, nil, func(f *provider.Feature) error {
 				// check if the feature is part of the test
 				if _, ok := tc.expectedTags[f.ID]; !ok {
 					return nil
@@ -592,7 +593,7 @@ func TestOpenNonExistantFile(t *testing.T) {
 	os.Remove(NONEXISTANTFILE)
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-			_, err := gpkg.NewTileProvider(tc.config)
+			_, err := gpkg.NewTileProvider(tc.config, nil)
 			if reflect.TypeOf(err) != reflect.TypeOf(tc.err) {
 				t.Errorf("expected error, expected %v got %v", tc.err, err)
 			}
@@ -600,13 +601,13 @@ func TestOpenNonExistantFile(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"empty": tcase{
+		"empty": {
 			config: dict.Dict{
 				gpkg.ConfigKeyFilePath: "",
 			},
 			err: gpkg.ErrInvalidFilePath{FilePath: ""},
 		},
-		"nonexistance": tcase{
+		"nonexistance": {
 			// should not exists
 			config: dict.Dict{
 				gpkg.ConfigKeyFilePath: NONEXISTANTFILE,

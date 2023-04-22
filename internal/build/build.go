@@ -1,16 +1,19 @@
 package build
 
+//go:generate go run tags/tags.go -v -runCommand="internal/build/tags.go" -source=../..
+
 import (
 	"sort"
 	"strings"
 )
 
 var (
-	Version     = "Version not set"
-	GitRevision = "not set"
-	GitBranch   = "not set"
-	Tags        []string
-	Commands    = []string{"tegola"}
+	Version              = "version not set"
+	GitRevision          = "not set"
+	GitBranch            = "not set"
+	uiVersionDefaultText = "viewer not build"
+	Tags                 []string
+	Commands             = []string{"tegola"}
 )
 
 var ordered bool

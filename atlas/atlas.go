@@ -3,7 +3,6 @@ package atlas
 
 import (
 	"context"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/internal/observer"
 	"github.com/go-spatial/tegola/observability"
 )
@@ -29,7 +29,7 @@ func init() {
 	options := strings.ToLower(os.Getenv("TEGOLA_OPTIONS"))
 	if strings.Contains(options, "dontsimplifygeo") {
 		simplifyGeometries = false
-		log.Println("simplification is disable")
+		log.Debugf("simplification is disable")
 	}
 
 	if strings.Contains(options, "simplifymaxzoom=") {
@@ -45,13 +45,13 @@ func init() {
 
 		i, err := strconv.Atoi(options[idx:eidx])
 		if err != nil {
-			log.Printf("invalid value for SimplifyMaxZoom (%v). using default (%v).", options[idx:eidx], simplificationMaxZoom)
+			log.Errorf("invalid value for SimplifyMaxZoom (%v). using default (%v).", options[idx:eidx], simplificationMaxZoom)
 			return
 		}
 
 		simplificationMaxZoom = uint(i + 1)
 
-		log.Printf("SimplifyMaxZoom set to (%v)", simplificationMaxZoom)
+		log.Debugf("SimplifyMaxZoom set to (%v)", simplificationMaxZoom)
 	}
 }
 
@@ -121,6 +121,11 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 		return defaultAtlas.SeedMapTile(ctx, m, z, x, y)
 	}
 
+	if len(m.Params) > 0 {
+		return nil
+	}
+
+	ctx = context.WithValue(ctx, observability.ObserveVarMapName, m.Name)
 	// confirm we have a cache backend
 	if a.cacher == nil {
 		return ErrMissingCache
@@ -129,7 +134,7 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 	tile := slippy.NewTile(z, x, y)
 
 	// encode the tile
-	b, err := m.Encode(ctx, tile)
+	b, err := m.Encode(ctx, tile, nil)
 	if err != nil {
 		return err
 	}
@@ -151,6 +156,10 @@ func (a *Atlas) PurgeMapTile(m Map, tile *tegola.Tile) error {
 		// Use the default Atlas if a, is nil. This way the empty value is
 		// still useful.
 		return defaultAtlas.PurgeMapTile(m, tile)
+	}
+
+	if len(m.Params) > 0 {
+		return nil
 	}
 
 	if a.cacher == nil {
@@ -257,6 +266,15 @@ func (a *Atlas) SetObservability(o observability.Interface) {
 		} else {
 			a.cacher = o.InstrumentedCache(a.cacher)
 		}
+	}
+	for _, aMap := range a.maps {
+
+		collectors, err := aMap.Collectors("tegola", o.CollectorConfig)
+		if err != nil {
+			log.Errorf("failed to register collector for map: %v ignoring", aMap.Name)
+			continue
+		}
+		o.MustRegister(collectors...)
 	}
 }
 

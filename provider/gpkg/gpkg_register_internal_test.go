@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package gpkg
@@ -19,6 +20,7 @@ var (
 	GPKGAthensFilePath       = "testdata/athens-osm-20170921.gpkg"
 	GPKGNaturalEarthFilePath = "testdata/natural_earth_minimal.gpkg"
 	GPKGPuertoMontFilePath   = "testdata/puerto_mont-osm-20170922.gpkg"
+	GPKGApeldoornFilePath    = "testdata/apeldoorn.gpkg"
 )
 
 func TestExtractColsAndPKFromSQL(t *testing.T) {
@@ -1060,6 +1062,26 @@ func TestFeatureTableMetaData(t *testing.T) {
 				},
 			},
 		},
+		"apeldoorn": {
+			gpkgPath: GPKGApeldoornFilePath,
+			expectedFtd: map[string]featureTableDetails{
+				"plaats": {
+					idFieldname:   "fid",
+					geomFieldname: "geom",
+					geomType:      nil,
+					srid:          28992,
+					bbox: geom.NewExtent(
+						[2]float64{190942, 465141},
+						[2]float64{199718, 473822},
+					),
+					colNames: []string{
+						"fid",
+						"geom",
+						"naam",
+					},
+				},
+			},
+		},
 	}
 
 	for tname, tc := range tests {
@@ -1074,7 +1096,7 @@ func TestCleanup(t *testing.T) {
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-			_, err := NewTileProvider(tc.config)
+			_, err := NewTileProvider(tc.config, nil)
 			if err != nil {
 				t.Fatalf("err creating NewTileProvider: %v", err)
 				return

@@ -23,25 +23,11 @@ Access-Control-Allow-Origin = "*"
 
 ## Local development of the embedded viewer
 
-Tegola's built in viewer code is stored in the `ui/` directory. In order to embed the static files into the tegola binary the package [go-bindata](github.com/jteeuwen/go-bindata) is used. To insatll `go-bindata` run the following command from the repository root:
-
-```
-go install -mod=vendor github.com/jteeuwen/go-bindata/go-bindata
-```
-
-Once `go-bindata` is installed the following command can be run from the repository root to generate a .go file for inclusion in the tegola binary:
+Tegola's built in viewer code is stored in the `ui/` directory. To build the ui `npm` must be installed. Once `npm` is installed the following command can be run from the repository root to generate a .go file for inclusion in the tegola binary:
 
 ```
 go generate ./server
 ```
-
-go-bindata also supports a debug mode which is descried as "Do not embed the assets, but provide the embedding API. Contents will still be loaded from disk." This mode is ideal for development and can be configured using the following command:
-
-```
-go generate -tags bindataDebug ./server
-```
-
-**Important**: Once updates to the viewer are complete, `go generate ./server` should be run and the bindata output should be committed to the repository. 
 
 ## Disabling the viewer
 

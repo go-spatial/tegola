@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/mapbox/tilejson"
 )
 
@@ -45,7 +45,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	// lookup our Map
 	m, err := atlas.GetMap(req.mapName)
 	if err != nil {
-		log.Printf("map (%v) not configured. check your config file", req.mapName)
+		log.Errorf("map (%v) not configured. check your config file", req.mapName)
 		http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
 		return
 	}
@@ -159,6 +159,6 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	w.Header().Add("Expires", "0")
 
 	if err = json.NewEncoder(w).Encode(tileJSON); err != nil {
-		log.Printf("error encoding tileJSON for map (%v)", req.mapName)
+		log.Errorf("error encoding tileJSON for map (%v)", req.mapName)
 	}
 }

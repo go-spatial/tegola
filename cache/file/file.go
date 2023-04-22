@@ -82,6 +82,7 @@ func (fc *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 
 		return nil, false, err
 	}
+	defer f.Close()
 
 	val, err := ioutil.ReadAll(f)
 	if err != nil {

@@ -2,7 +2,6 @@ package prometheus
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -15,6 +14,7 @@ import (
 
 	tegolaCache "github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -120,7 +120,7 @@ func (obs *observer) init() {
 					return
 				case <-ticker.C:
 					if err := pusher.Add(); err != nil && !errorReported {
-						log.Printf("could not push to Pushgateway (%v): %v", obs.pushURL, err)
+						log.Errorf("could not push to Pushgateway (%v): %v", obs.pushURL, err)
 						errorReported = true
 					}
 				}
@@ -138,7 +138,7 @@ func (obs *observer) init() {
 			cancel()
 		}
 		if err := pusher.Add(); err != nil {
-			log.Printf("could not push to Pushgateway (%v): %v", obs.pushURL, err)
+			log.Errorf("could not push to Pushgateway (%v): %v", obs.pushURL, err)
 		}
 		wg.Wait()
 	})
@@ -154,6 +154,14 @@ func (obs *observer) Shutdown() {
 	cleanUpFunctions[obs.pushCleanupFuncIdx] = nil
 	obs.pushCleanupFuncIdx = -1
 	cleanUpFunctionsLck.Unlock()
+}
+
+func (obs *observer) MustRegister(collectors ...observability.Collector) {
+	obs.registry.MustRegister(collectors...)
+}
+
+func (_ *observer) CollectorConfig(_ string) map[string]interface{} {
+	return make(map[string]interface{})
 }
 
 func (obs *observer) PublishBuildInfo() { obs.publishedBuildInfo.Do(PublishBuildInfo) }
@@ -200,7 +208,10 @@ var (
 func cleanUp() {
 	cleanUpFunctionsLck.Lock()
 	for i := range cleanUpFunctions {
-		cleanUpFunctions[i]()
+		if cleanUpFunctions[i] != nil {
+			cleanUpFunctions[i]()
+			cleanUpFunctions[i] = nil
+		}
 	}
 	cleanUpFunctions = cleanUpFunctions[:0]
 	cleanUpFunctionsLck.Unlock()

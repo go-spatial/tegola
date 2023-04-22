@@ -6,9 +6,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
+
+	"github.com/go-spatial/tegola/observability"
 
 	"github.com/golang/protobuf/proto"
 
@@ -19,13 +20,14 @@ import (
 	"github.com/go-spatial/tegola/basic"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/convert"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths/simplify"
 	"github.com/go-spatial/tegola/maths/validate"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/debug"
 )
 
-// NewMap creates a new map with the necessary default values
+// NewWebMercatorMap creates a new map with the necessary default values
 func NewWebMercatorMap(name string) Map {
 	return Map{
 		Name: name,
@@ -38,6 +40,7 @@ func NewWebMercatorMap(name string) Map {
 	}
 }
 
+// Map defines a Web Mercator map
 type Map struct {
 	Name string
 	// Contains an attribution to be displayed when the map is shown to a user.
@@ -51,6 +54,8 @@ type Map struct {
 	// WGS:84 values), the third value is the zoom level.
 	Center [3]float64
 	Layers []Layer
+	// Params holds configured query parameters
+	Params []provider.QueryParameter
 
 	SRID uint64
 	// MVT output values
@@ -59,6 +64,8 @@ type Map struct {
 
 	mvtProviderName string
 	mvtProvider     provider.MVTTiler
+
+	observer observability.Interface
 }
 
 // HasMVTProvider indicates if map is a mvt provider based map
@@ -77,6 +84,28 @@ func (m *Map) SetMVTProvider(name string, p provider.MVTTiler) provider.MVTTiler
 	return p
 }
 
+func (m Map) Collectors(prefix string, config func(configKey string) map[string]interface{}) ([]observability.Collector, error) {
+	if m.mvtProviderName != "" {
+		collect, ok := m.mvtProvider.(observability.Observer)
+		if !ok {
+			return nil, nil
+		}
+		return collect.Collectors(prefix, config)
+	}
+	// not an mvtProvider, so need to ask each layer instead
+	var collection []observability.Collector
+	for i := range m.Layers {
+		aCollection, err := m.Layers[i].Collectors(prefix, config)
+		if err != nil {
+			return nil, err
+		}
+		if len(aCollection) != 0 {
+			collection = append(collection, aCollection...)
+		}
+	}
+	return collection, nil
+}
+
 // AddDebugLayers returns a copy of a Map with the debug layers appended to the layer list
 func (m Map) AddDebugLayers() Map {
 	// can not modify the layers of an mvt provider based map
@@ -90,7 +119,7 @@ func (m Map) AddDebugLayers() Map {
 	m.Layers = layers
 
 	// setup a debug provider
-	debugProvider, _ := debug.NewTileProvider(dict.Dict{})
+	debugProvider, _ := debug.NewTileProvider(dict.Dict{}, nil)
 
 	m.Layers = append(layers, []Layer{
 		{
@@ -119,7 +148,7 @@ func (m Map) FilterLayersByZoom(zoom uint) Map {
 	var layers []Layer
 
 	for i := range m.Layers {
-		if (m.Layers[i].MinZoom <= zoom || m.Layers[i].MinZoom == 0) && (m.Layers[i].MaxZoom >= zoom || m.Layers[i].MaxZoom == 0) {
+		if m.Layers[i].MinZoom <= zoom && m.Layers[i].MaxZoom >= zoom {
 			layers = append(layers, m.Layers[i])
 			continue
 		}
@@ -153,7 +182,7 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
-func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
 	// get the list of our layers
 	ptile := provider.NewTile(tile.Z, tile.X, tile.Y, uint(m.TileBuffer), uint(m.SRID))
 
@@ -164,13 +193,13 @@ func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile) ([]by
 			MVTName: m.Layers[i].MVTName(),
 		}
 	}
-	return m.mvtProvider.MVTForLayers(ctx, ptile, layers)
+	return m.mvtProvider.MVTForLayers(ctx, ptile, params, layers)
 
 }
 
 // encodeMVTTile will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
-func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
 
 	// tile container
 	var mvtTile mvt.Tile
@@ -199,7 +228,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 				uint(m.TileBuffer), uint(m.SRID))
 
 			// fetch layer from data provider
-			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, func(f *provider.Feature) error {
+			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, params, func(f *provider.Feature) error {
 				// skip row if geometry collection empty.
 				g, ok := f.Geometry.(geom.Collection)
 				if ok && len(g.Geometries()) == 0 {
@@ -274,9 +303,13 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 					return err
 				}
 
-				tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
-				if err != nil {
-					return fmt.Errorf("err making geometry valid: %w", err)
+				if !l.DontClean {
+					tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
+					if err != nil {
+						return fmt.Errorf("err making geometry valid: %w", err)
+					}
+				} else {
+					tegolaGeo = sg
 				}
 
 				geo, err = convert.ToGeom(tegolaGeo)
@@ -297,11 +330,19 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 				case errors.Is(err, context.Canceled):
 					// Do nothing if we were cancelled.
 
+				// the underlying net.Dial function is not properly reporting
+				// context.Canceled errors. Because of this, a string check on the error is performed.
+				// there's an open issue for this and it appears it will be fixed eventually
+				// but for now we have this check to avoid unnecessary logs
+				// https://github.com/golang/go/issues/36208
+				case strings.Contains(err.Error(), "operation was canceled"):
+					// Do nothing, context was canceled
+
 				default:
 					z, x, y := tile.ZXY()
 					// TODO (arolek): should we return an error to the response or just log the error?
 					// we can't just write to the response as the waitgroup is going to write to the response as well
-					log.Printf("err fetching tile (z: %v, x: %v, y: %v) features: %v", z, x, y, err)
+					log.Errorf("err fetching tile (z: %v, x: %v, y: %v) features: %v", z, x, y, err)
 				}
 				return
 			}
@@ -322,7 +363,10 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 	}
 
 	// add layers to our tile
-	mvtTile.AddLayers(mvtLayers...)
+	err := mvtTile.AddLayers(mvtLayers...)
+	if err != nil {
+		return nil, err
+	}
 
 	// generate the MVT tile
 	vtile, err := mvtTile.VTile(ctx)
@@ -335,15 +379,15 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile) ([]byte, erro
 }
 
 // Encode will encode the given tile into mvt format
-func (m Map) Encode(ctx context.Context, tile *slippy.Tile) ([]byte, error) {
+func (m Map) Encode(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
 	var (
 		tileBytes []byte
 		err       error
 	)
 	if m.HasMVTProvider() {
-		tileBytes, err = m.encodeMVTProviderTile(ctx, tile)
+		tileBytes, err = m.encodeMVTProviderTile(ctx, tile, params)
 	} else {
-		tileBytes, err = m.encodeMVTTile(ctx, tile)
+		tileBytes, err = m.encodeMVTTile(ctx, tile, params)
 	}
 	if err != nil {
 		return nil, err

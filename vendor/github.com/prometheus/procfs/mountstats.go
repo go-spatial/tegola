@@ -284,7 +284,8 @@ func parseMountStats(r io.Reader) ([]*Mount, error) {
 }
 
 // parseMount parses an entry in /proc/[pid]/mountstats in the format:
-//   device [device] mounted on [mount] with fstype [type]
+//
+//	device [device] mounted on [mount] with fstype [type]
 func parseMount(ss []string) (*Mount, error) {
 	if len(ss) < deviceEntryLen {
 		return nil, fmt.Errorf("invalid device entry: %v", ss)
@@ -338,12 +339,12 @@ func parseMountStatsNFS(s *bufio.Scanner, statVersion string) (*MountStatsNFS, e
 		if len(ss) == 0 {
 			break
 		}
-		if len(ss) < 2 {
-			return nil, fmt.Errorf("not enough information for NFS stats: %v", ss)
-		}
 
 		switch ss[0] {
 		case fieldOpts:
+			if len(ss) < 2 {
+				return nil, fmt.Errorf("not enough information for NFS stats: %v", ss)
+			}
 			if stats.Opts == nil {
 				stats.Opts = map[string]string{}
 			}
@@ -356,6 +357,9 @@ func parseMountStatsNFS(s *bufio.Scanner, statVersion string) (*MountStatsNFS, e
 				}
 			}
 		case fieldAge:
+			if len(ss) < 2 {
+				return nil, fmt.Errorf("not enough information for NFS stats: %v", ss)
+			}
 			// Age integer is in seconds
 			d, err := time.ParseDuration(ss[1] + "s")
 			if err != nil {
@@ -364,6 +368,9 @@ func parseMountStatsNFS(s *bufio.Scanner, statVersion string) (*MountStatsNFS, e
 
 			stats.Age = d
 		case fieldBytes:
+			if len(ss) < 2 {
+				return nil, fmt.Errorf("not enough information for NFS stats: %v", ss)
+			}
 			bstats, err := parseNFSBytesStats(ss[1:])
 			if err != nil {
 				return nil, err
@@ -371,6 +378,9 @@ func parseMountStatsNFS(s *bufio.Scanner, statVersion string) (*MountStatsNFS, e
 
 			stats.Bytes = *bstats
 		case fieldEvents:
+			if len(ss) < 2 {
+				return nil, fmt.Errorf("not enough information for NFS stats: %v", ss)
+			}
 			estats, err := parseNFSEventsStats(ss[1:])
 			if err != nil {
 				return nil, err

@@ -6,14 +6,15 @@ import (
 
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
-	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/env"
+	"github.com/go-spatial/tegola/provider"
 )
 
 func TestMaps(t *testing.T) {
 	type tcase struct {
 		atlas       atlas.Atlas
-		maps        []config.Map
+		maps        []provider.Map
 		providers   []dict.Dict
 		expectedErr error
 	}
@@ -28,7 +29,7 @@ func TestMaps(t *testing.T) {
 				provArr[i] = tc.providers[i]
 			}
 
-			providers, err := register.Providers(provArr)
+			providers, err := register.Providers(provArr, tc.maps)
 			if err != nil {
 				t.Errorf("unexpected err: %v", err)
 				return
@@ -44,10 +45,10 @@ func TestMaps(t *testing.T) {
 
 	tests := map[string]tcase{
 		"provider layer invalid": {
-			maps: []config.Map{
+			maps: []provider.Map{
 				{
 					Name: "foo",
-					Layers: []config.MapLayer{
+					Layers: []provider.MapLayer{
 						{
 							ProviderLayer: "bar",
 						},
@@ -66,10 +67,10 @@ func TestMaps(t *testing.T) {
 			},
 		},
 		"provider not found": {
-			maps: []config.Map{
+			maps: []provider.Map{
 				{
 					Name: "foo",
-					Layers: []config.MapLayer{
+					Layers: []provider.MapLayer{
 						{
 							ProviderLayer: "bar.baz",
 						},
@@ -81,10 +82,10 @@ func TestMaps(t *testing.T) {
 			},
 		},
 		"provider layer not registered with provider": {
-			maps: []config.Map{
+			maps: []provider.Map{
 				{
 					Name: "foo",
-					Layers: []config.MapLayer{
+					Layers: []provider.MapLayer{
 						{
 							ProviderLayer: "test.bar",
 						},
@@ -103,14 +104,16 @@ func TestMaps(t *testing.T) {
 				Provider:      "test",
 			},
 		},
-		"default tags invalid": {
-			maps: []config.Map{
+		"default tags": {
+			maps: []provider.Map{
 				{
 					Name: "foo",
-					Layers: []config.MapLayer{
+					Layers: []provider.MapLayer{
 						{
 							ProviderLayer: "test.debug-tile-outline",
-							DefaultTags:   false, // should be a map[string]interface{}
+							DefaultTags: env.Dict{
+								"test": "test",
+							},
 						},
 					},
 				},
@@ -121,18 +124,54 @@ func TestMaps(t *testing.T) {
 					"type": "debug",
 				},
 			},
-			expectedErr: register.ErrDefaultTagsInvalid{
-				ProviderLayer: "test.debug-tile-outline",
-			},
 		},
 		"success": {
-			maps: []config.Map{},
+			maps: []provider.Map{},
 			providers: []dict.Dict{
 				{
 					"name": "test",
 					"type": "debug",
 				},
 			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
+func TestSanitizeAttribution(t *testing.T) {
+	type tcase struct {
+		input    string
+		expected string
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			result := register.SanitizeAttribution(tc.input)
+			if result != tc.expected {
+				t.Errorf("expected %v got %v", tc.expected, result)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"plain text": {
+			input:    `foo`,
+			expected: `foo`,
+		},
+		"HTML must escaped": {
+			input:    `<script>true</script>`,
+			expected: `&lt;script&gt;true&lt;/script&gt;`,
+		},
+		"link must not escaped": {
+			input:    `<a href="http://example.com">foo</a>`,
+			expected: `<a href="http://example.com">foo</a>`,
+		},
+		"2 links": {
+			input:    `foo <a href="http://example.com">bar</a> - <a href="http://example.com" target="_blank">zoo</a>`,
+			expected: `foo <a href="http://example.com">bar</a> - <a href="http://example.com" target="_blank">zoo</a>`,
 		},
 	}
 

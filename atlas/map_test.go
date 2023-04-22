@@ -81,6 +81,58 @@ func TestMapFilterLayersByZoom(t *testing.T) {
 				},
 			},
 		},
+		{
+			atlasMap: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:    "layer1",
+						MinZoom: 0,
+						MaxZoom: 0,
+					},
+					{
+						Name:    "layer2",
+						MinZoom: 1,
+						MaxZoom: 5,
+					},
+				},
+			},
+			zoom: 2,
+			expected: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:    "layer2",
+						MinZoom: 1,
+						MaxZoom: 5,
+					},
+				},
+			},
+		},
+		{
+			atlasMap: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:    "layer1",
+						MinZoom: 0,
+						MaxZoom: 0,
+					},
+					{
+						Name:    "layer2",
+						MinZoom: 1,
+						MaxZoom: 5,
+					},
+				},
+			},
+			zoom: 0,
+			expected: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name:    "layer1",
+						MinZoom: 0,
+						MaxZoom: 0,
+					},
+				},
+			},
+		},
 	}
 
 	for i, tc := range testcases {
@@ -150,7 +202,7 @@ func TestEncode(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			out, err := tc.grid.Encode(context.Background(), tc.tile)
+			out, err := tc.grid.Encode(context.Background(), tc.tile, nil)
 			if err != nil {
 				t.Errorf("err: %v", err)
 				return

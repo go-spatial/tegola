@@ -2,6 +2,8 @@ package register
 
 import (
 	"html"
+	"regexp"
+	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
@@ -9,9 +11,10 @@ import (
 	"github.com/go-spatial/tegola/provider"
 )
 
-func webMercatorMapFromConfigMap(cfg config.Map) (newMap atlas.Map) {
+func webMercatorMapFromConfigMap(cfg provider.Map) (newMap atlas.Map) {
 	newMap = atlas.NewWebMercatorMap(string(cfg.Name))
-	newMap.Attribution = html.EscapeString(string(cfg.Attribution))
+	newMap.Attribution = SanitizeAttribution(string(cfg.Attribution))
+	newMap.Params = cfg.Parameters
 
 	// convert from env package
 	for i, v := range cfg.Center {
@@ -44,11 +47,10 @@ func layerInfosFindByName(infos []provider.LayerInfo, name string) provider.Laye
 	return nil
 }
 
-func atlasLayerFromConfigLayer(cfg *config.MapLayer, mapName string, layerProvider provider.Layerer) (layer atlas.Layer, err error) {
+func atlasLayerFromConfigLayer(cfg *provider.MapLayer, mapName string, layerProvider provider.Layerer) (layer atlas.Layer, err error) {
 	var (
 		// providerLayer is primary used for error reporting.
 		providerLayer = string(cfg.ProviderLayer)
-		ok            bool
 	)
 	// read the provider's layer names
 	// don't care about the error.
@@ -71,11 +73,7 @@ func atlasLayerFromConfigLayer(cfg *config.MapLayer, mapName string, layerProvid
 	layer.GeomType = layerInfo.GeomType()
 
 	if cfg.DefaultTags != nil {
-		if layer.DefaultTags, ok = cfg.DefaultTags.(map[string]interface{}); !ok {
-			return layer, ErrDefaultTagsInvalid{
-				ProviderLayer: providerLayer,
-			}
-		}
+		layer.DefaultTags = cfg.DefaultTags
 	}
 
 	// if layerProvider is not a provider.Tiler this will return nil, so
@@ -86,6 +84,7 @@ func atlasLayerFromConfigLayer(cfg *config.MapLayer, mapName string, layerProvid
 	layer.ProviderLayerName = layerName
 	layer.DontSimplify = bool(cfg.DontSimplify)
 	layer.DontClip = bool(cfg.DontClip)
+	layer.DontClean = bool(cfg.DontClean)
 
 	if cfg.MinZoom != nil {
 		layer.MinZoom = uint(*cfg.MinZoom)
@@ -125,7 +124,7 @@ func selectProvider(name string, mapName string, newMap *atlas.Map, providers ma
 }
 
 // Maps registers maps with with atlas
-func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.TilerUnion) error {
+func Maps(a *atlas.Atlas, maps []provider.Map, providers map[string]provider.TilerUnion) error {
 
 	var (
 		layerer provider.Layerer
@@ -157,7 +156,21 @@ func Maps(a *atlas.Atlas, maps []config.Map, providers map[string]provider.Tiler
 			}
 			newMap.Layers = append(newMap.Layers, layer)
 		}
+
 		a.AddMap(newMap)
 	}
 	return nil
+}
+
+// Find allow HTML tag
+var allowTags = regexp.MustCompile(`&lt;(a\s(.+?)|/a)&gt;`)
+
+// Escapes HTML special characters except allow tags
+func SanitizeAttribution(attribution string) string {
+	result := html.EscapeString(attribution)
+	tags := allowTags.FindAllString(result, -1)
+	for _, tag := range tags {
+		result = strings.Replace(result, tag, html.UnescapeString(tag), 1)
+	}
+	return result
 }

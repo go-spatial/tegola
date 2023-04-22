@@ -3,7 +3,6 @@ package postgis
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -18,46 +17,52 @@ import (
 // TESTENV is the environment variable that must be set to "yes" to run postgis tests.
 const TESTENV = "RUN_POSTGIS_TESTS"
 
-var defaultEnvConfig map[string]interface{}
+var DefaultEnvConfig map[string]interface{}
 
-func GetTestPort() int {
-	port, err := strconv.ParseInt(os.Getenv("PGPORT"), 10, 32)
-	if err != nil {
-		// Since this is happening at init time, have a sane default
-		fmt.Fprintf(os.Stderr, "err parsing PGPORT: '%v' using default port: 5433", err)
-		return 5433
-	}
-	return int(port)
+var DefaultConfig map[string]interface{} = map[string]interface{}{
+	ConfigKeyHost:        "localhost",
+	ConfigKeyPort:        5432,
+	ConfigKeyDB:          "tegola",
+	ConfigKeyUser:        "postgres",
+	ConfigKeyPassword:    "postgres",
+	ConfigKeySSLMode:     "disable",
+	ConfigKeySSLKey:      "",
+	ConfigKeySSLCert:     "",
+	ConfigKeySSLRootCert: "",
 }
 
 func getConfigFromEnv() map[string]interface{} {
-	port := GetTestPort()
+	port, err := strconv.Atoi(ttools.GetEnvDefault("PGPORT", "5432"))
+	if err != nil {
+		// if port is anything but int, fallback to default
+		port = 5432
+	}
+
 	return map[string]interface{}{
-		ConfigKeyHost:        os.Getenv("PGHOST"),
+		ConfigKeyHost:        ttools.GetEnvDefault("PGHOST", "localhost"),
 		ConfigKeyPort:        port,
-		ConfigKeyDB:          os.Getenv("PGDATABASE"),
-		ConfigKeyUser:        os.Getenv("PGUSER"),
-		ConfigKeyPassword:    os.Getenv("PGPASSWORD"),
-		ConfigKeySSLMode:     os.Getenv("PGSSLMODE"),
-		ConfigKeySSLKey:      os.Getenv("PGSSLKEY"),
-		ConfigKeySSLCert:     os.Getenv("PGSSLCERT"),
-		ConfigKeySSLRootCert: os.Getenv("PGSSLROOTCERT"),
+		ConfigKeyDB:          ttools.GetEnvDefault("PGDATABASE", "tegola"),
+		ConfigKeyUser:        ttools.GetEnvDefault("PGUSER", "postgres"),
+		ConfigKeyPassword:    ttools.GetEnvDefault("PGPASSWORD", "postgres"),
+		ConfigKeySSLMode:     ttools.GetEnvDefault("PGSSLMODE", "disable"),
+		ConfigKeySSLKey:      ttools.GetEnvDefault("PGSSLKEY", ""),
+		ConfigKeySSLCert:     ttools.GetEnvDefault("PGSSLCERT", ""),
+		ConfigKeySSLRootCert: ttools.GetEnvDefault("PGSSLROOTCERT", ""),
 	}
 }
 
 func init() {
-	defaultEnvConfig = getConfigFromEnv()
+	DefaultEnvConfig = getConfigFromEnv()
 }
 
 type TCConfig struct {
 	BaseConfig     map[string]interface{}
-	ConfigOverride map[string]string
+	ConfigOverride map[string]interface{}
 	LayerConfig    []map[string]interface{}
 }
 
-func (cfg TCConfig) Config() dict.Dict {
+func (cfg TCConfig) Config(mConfig map[string]interface{}) dict.Dict {
 	var config map[string]interface{}
-	mConfig := defaultEnvConfig
 	if cfg.BaseConfig != nil {
 		mConfig = cfg.BaseConfig
 	}
@@ -92,8 +97,9 @@ func TestMVTProviders(t *testing.T) {
 	}
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
-			prvd, err := NewMVTTileProvider(config)
+			config := tc.Config(DefaultEnvConfig)
+			config[ConfigKeyName] = "provider_name"
+			prvd, err := NewMVTTileProvider(config, nil)
 			// for now we will just check the length of the bytes.
 			if tc.err != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.err) {
@@ -114,7 +120,7 @@ func TestMVTProviders(t *testing.T) {
 					MVTName: tc.layerNames[i],
 				}
 			}
-			mvtTile, err := prvd.MVTForLayers(context.Background(), tc.tile, layers)
+			mvtTile, err := prvd.MVTForLayers(context.Background(), tc.tile, nil, layers)
 			if err != nil {
 				t.Errorf("NewProvider unexpected error: %v", err)
 				return
@@ -125,7 +131,7 @@ func TestMVTProviders(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"1": tcase{
+		"1": {
 			TCConfig: TCConfig{
 				LayerConfig: []map[string]interface{}{
 					{
@@ -162,8 +168,9 @@ func TestLayerGeomType(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			config := tc.Config()
-			provider, err := NewTileProvider(config)
+			config := tc.Config(DefaultEnvConfig)
+			config[ConfigKeyName] = "provider_name"
+			provider, err := NewTileProvider(config, nil)
 			if tc.err != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.err) {
 					t.Logf("error %#v", err)
@@ -253,8 +260,8 @@ func TestLayerGeomType(t *testing.T) {
 		},
 		"role no access to table": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]string{
-					ConfigKeyUser: os.Getenv("PGUSER_NO_ACCESS"),
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyUser: ttools.GetEnvDefault("PGUSER_NO_ACCESS", "tegola_no_access"),
 				},
 				LayerConfig: []map[string]interface{}{
 					{
@@ -267,6 +274,208 @@ func TestLayerGeomType(t *testing.T) {
 			geom:      geom.MultiPolygon{},
 			err:       "error fetching geometry type for layer (land): ERROR: permission denied for table ne_10m_land_scale_rank (SQLSTATE 42501)",
 		},
+		"configure from postgreql URI": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
+						DefaultEnvConfig["user"],
+						DefaultEnvConfig["password"],
+						DefaultEnvConfig["host"],
+						DefaultEnvConfig["port"],
+						DefaultEnvConfig["database"],
+					),
+					ConfigKeyHost: "",
+					ConfigKeyPort: "",
+				},
+				LayerConfig: []map[string]interface{}{
+					{
+						ConfigKeyLayerName: "land",
+						ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE geom && !BBOX!",
+					},
+				},
+			},
+			layerName: "land",
+			geom:      geom.MultiPolygon{},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
+func TestBuildUri(t *testing.T) {
+
+	type tcase struct {
+		TCConfig
+		expectedUri string
+		err         string
+	}
+
+	tests := map[string]tcase{
+		"valid default config": {
+			expectedUri: "postgres://postgres:postgres@localhost:5432/tegola?pool_max_conn_idle_time=30m&pool_max_conn_lifetime=1h&pool_max_conns=100&sslmode=disable",
+		},
+		"add sslmode to uri if missing": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432/tegola",
+				},
+			},
+			expectedUri: "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable",
+		},
+		"add sslmode of uri and dont overwrite with default": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432/tegola?sslmode=prefer",
+				},
+			},
+			expectedUri: "postgres://postgres:postgres@localhost:5432/tegola?sslmode=prefer",
+		},
+		"invalid host": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyHost: 0,
+				},
+			},
+			err: "config: value mapped to \"host\" is int not string",
+		},
+		"invalid port": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyPort: "fails",
+				},
+			},
+			err: "config: value mapped to \"port\" is string not int",
+		},
+		"invalid db": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyDB: false,
+				},
+			},
+			err: "config: value mapped to \"database\" is bool not string",
+		},
+		"invalid user": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyUser: false,
+				},
+			},
+			err: "config: value mapped to \"user\" is bool not string",
+		},
+		"invalid password": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyPassword: false,
+				},
+			},
+			err: "config: value mapped to \"password\" is bool not string",
+		},
+		"invalid maxcon": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyMaxConn: false,
+				},
+			},
+			err: "config: value mapped to \"max_connections\" is bool not int",
+		},
+		"invalid conn idle time": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyMaxConnIdleTime: false,
+				},
+			},
+			err: "config: value mapped to \"max_connection_idle_time\" is bool not string",
+		},
+		"invalid conn lifetime": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyMaxConnLifetime: false,
+				},
+			},
+			err: "config: value mapped to \"max_connection_lifetime\" is bool not string",
+		},
+		"invalid uri": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: false,
+				},
+			},
+			err: "config: value mapped to \"uri\" is bool not string",
+		},
+		"invalid uri scheme": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: "http://hi.de",
+				},
+			},
+			err: "postgis: invalid uri (invalid connection scheme (http))",
+		},
+		"invalid uri missing user": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: "postgres://hi.de",
+				},
+			},
+			err: "postgis: invalid uri (auth credentials missing)",
+		},
+		"invalid uri missing port": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: "postgres://postgres:postgres@localhost/bla",
+				},
+			},
+			err: "postgis: splitting host port error: address localhost: missing port in address",
+		},
+		"invalid uri missing host": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: "postgres://postgres:postgres@:5432/bla",
+				},
+			},
+			err: "postgis: invalid uri (address :5432: missing host in address)",
+		},
+		"invalid uri missing database": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432",
+				},
+			},
+			err: "postgis: invalid uri (missing database)",
+		},
+		"invalid sslmode": {
+			TCConfig: TCConfig{
+				ConfigOverride: map[string]interface{}{
+					ConfigKeySSLMode: false,
+				},
+			},
+			err: "config: value mapped to \"ssl_mode\" is bool not string",
+		},
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			config := tc.Config(DefaultConfig)
+			uri, _, err := BuildURI(config)
+
+			if tc.err != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.err) {
+					t.Logf("error %#v", err)
+					t.Errorf("expected error with %v in BuildURI, got: %v", tc.err, err)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if uri.String() != tc.expectedUri {
+				t.Errorf("expected: %v, got: %v", tc.expectedUri, uri)
+			}
+		}
 	}
 
 	for name, tc := range tests {

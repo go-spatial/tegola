@@ -20,30 +20,26 @@
       </svg>
     </div>
     <h2>
-      <span v-on:click="showAllMaps">Maps</span>
+      <span @click="showAllMaps">Maps</span>
       <span v-if="activeMap">/ {{ activeMap.name }}</span>
     </h2>
     <div class="container">
-      <ul id="maps-list" v-if="!activeMap">
-        <MapRow
-          v-for="map in capabilities.maps"
-          v-bind:key="map.name"
-          v-bind:map="map"
-        />
+      <ul v-if="!activeMap" id="maps-list">
+        <MapRow v-for="map in capabilities.maps" :key="map.name" :map="map" />
       </ul>
-      <ul id="map-layers-list" v-if="activeMap && mapIsReady">
+      <ul v-if="activeMap && mapIsReady" id="map-layers-list">
         <MapLayerRow
           v-for="layer in activeMap.layers"
-          v-bind:key="layer.name"
-          v-bind:layer="layer"
+          :key="layer.name"
+          :layer="layer"
         />
       </ul>
     </div>
-    <div id="left-nav-footer" v-if="activeMap">
+    <div v-if="activeMap" id="left-nav-footer">
       <div
         class="btn"
-        v-on:click="toggleFeatureInspector"
-        v-bind:class="{ active: inspectorIsActive }"
+        :class="{ active: inspectorIsActive }"
+        @click="toggleFeatureInspector"
       >
         <span class="dot"></span>Inspect Features
       </div>

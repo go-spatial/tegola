@@ -3,7 +3,7 @@
 The Prometheus Observability provider manages the collection of various
 metrics for Tegola's various subsystems.
 
-The connection between Tegola and Prometheus is configured in the Tegola config
+The connection between Tegola and Prometheus is configured in the config
 file (`tegola.toml`.) An example of minimum configuration :
 
 ```toml
@@ -18,7 +18,7 @@ The metrics will be exposed on the `/metrics` end point.
 ### Configuration Properties
 
 - `type` (string): [Required] the type of the observer, must be "`prometheus`".
-- `variables` (array of strings): [Optional] A set of tokens that should be replaced in the url for HTTP or additional labels for cache providers. Currently, supported tokenks are:
+- `variables` (array of strings): [Optional] A set of tokens that should be replaced in the url for HTTP or additional labels for cache providers. Currently, supported tokens are:
   * `:map_name` [Default]
   * `:layer_name` [Default]
   * `:z` [Default]
@@ -38,7 +38,7 @@ A gauge with build information from the running command
 
 ###### Labels
 
-* branch - the git branch this binary was built on if set
+* branch - if set, the git branch of this built binary
 * revision - the git short revision number
 * version - the set version number
 * command - the running command
@@ -142,7 +142,7 @@ A counter of the number of tile hits
 ###### labels
 
 * sub_command is the cache command which is one of "get","set", or "purge"
-* layer_name is an optional label, that is the layer_name ; this is only presetn if configured via `variables` config option.
+* layer_name is an optional label, that is the layer_name ; this is only present if configured via `variables` config option.
 * map_name is an optional label, that is the map_name; this is only present if configured via `variables` config option.
 * z is an optional label, that is the z coordinate; this is only present if configured via `variables` config option.
 * x is an optional label, that is the x coordinate; this is only present if configured via `variables` config option.
@@ -155,7 +155,7 @@ A counter of the number of tile hits
 ###### labels
 
 * sub_command is the cache command which is one of "get","set", or "purge"
-* layer_name is an optional label, that is the layer_name ; this is only presetn if configured via `variables` config option.
+* layer_name is an optional label, that is the layer_name ; this is only present if configured via `variables` config option.
 * map_name is an optional label, that is the map_name; this is only present if configured via `variables` config option.
 * z is an optional label, that is the z coordinate; this is only present if configured via `variables` config option.
 * x is an optional label, that is the x coordinate; this is only present if configured via `variables` config option.
@@ -172,7 +172,7 @@ As part of a histogram include the support tags:
 ###### labels
 
 * sub_command is the cache command which is one of "get","set", or "purge"
-* layer_name is an optional label, that is the layer_name ; this is only presetn if configured via `variables` config option.
+* layer_name is an optional label, that is the layer_name ; this is only present if configured via `variables` config option.
 * map_name is an optional label, that is the map_name; this is only present if configured via `variables` config option.
 * z is an optional label, that is the z coordinate; this is only present if configured via `variables` config option.
 * x is an optional label, that is the x coordinate; this is only present if configured via `variables` config option.
@@ -190,12 +190,43 @@ As part of a histogram include the support tags:
 ###### labels
 
 * sub_command is the cache command which is one of "get","set", or "purge"
-* layer_name is an optional label, that is the layer_name ; this is only presetn if configured via `variables` config option.
+* layer_name is an optional label, that is the layer_name ; this is only present if configured via `variables` config option.
 * map_name is an optional label, that is the map_name; this is only present if configured via `variables` config option.
 * z is an optional label, that is the z coordinate; this is only present if configured via `variables` config option.
 * x is an optional label, that is the x coordinate; this is only present if configured via `variables` config option.
 * y is an optional label, that is the y coordinate; this is only present if configured via `variables` config option.
 * le is the buckets in bytes
+
+
+#### tegola data provider postgres
+
+##### tegola_postgres_max_connections
+
+The max number of postgres connections in the connection pool.
+
+##### tegola_postgres_current_connections
+
+The current number of postgres connections in the connection pool.
+
+##### tegola_postgres_available_connections
+
+The current number of available postgres connections in the connection pool.
+
+##### tegola_mvt_provider_sql_query_seconds
+
+Labels: "map_name", and "z"
+Buckets: .1 second, 1 second, 5 seconds, and 20+ seconds
+
+A histogram of the query time for the SQLs for the mvt provider
+
+##### tegola_provider_sql_query_seconds
+
+Labels: "map_name", "layer_name", and "z"
+Buckets: .1 second, 1 second, 5 seconds, and 20+ seconds
+
+A histogram of the query time for the SQLs for the provider
+
+
 
 #### go runtime information
 
@@ -233,7 +264,7 @@ The fraction of this program's available CPU time used by the GC since the progr
 
 ##### go_memstats_gc_sys_bytes
 
-Number of bytes used for garbage collection system metadata.
+Number of bytes used for garbage-collection-system metadata.
 
 ##### go_memstats_heap_alloc_bytes
 

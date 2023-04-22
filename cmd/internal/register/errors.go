@@ -42,14 +42,3 @@ func (e ErrFetchingLayerInfo) Unwrap() error { return e.Err }
 func (e ErrFetchingLayerInfo) Error() string {
 	return fmt.Sprintf("error fetching layer info from provider (%v): %v", e.Provider, e.Err)
 }
-
-// ErrDefaultTagsInvalid should be returned when the type of defaultTags is not an acceptable type.
-type ErrDefaultTagsInvalid struct {
-	ProviderLayer string
-	Err           error
-}
-
-func (e ErrDefaultTagsInvalid) Unwrap() error { return e.Err }
-func (e ErrDefaultTagsInvalid) Error() string {
-	return fmt.Sprintf("'default_tags' for 'provider_layer' (%v) should be a TOML table", e.ProviderLayer)
-}

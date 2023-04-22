@@ -27,7 +27,7 @@ func (s seedPurgeWorkerTileError) Error() string {
 	return fmt.Sprintf("error %v tile (%+v): %v", cmd, s.Tile, s.Err)
 }
 
-func seedWorker(overwrite bool) func(ctx context.Context, mt MapTile) error {
+func seedWorker(overwrite bool, logThresholdMs int64) func(ctx context.Context, mt MapTile) error {
 	return func(ctx context.Context, mt MapTile) error {
 		// track how long the tile generation is taking
 		t := time.Now()
@@ -89,7 +89,10 @@ func seedWorker(overwrite bool) func(ctx context.Context, mt MapTile) error {
 		//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
 		runtime.GC()
 
-		log.Infof("seeding map (%v) tile (%v/%v/%v) took: %dms", mt.MapName, z, x, y, time.Now().Sub(t).Nanoseconds()/1000000)
+		durationMs := time.Now().Sub(t).Nanoseconds()/1000000
+		if durationMs >= logThresholdMs {
+			log.Infof("seeding map (%v) tile (%v/%v/%v) took: %dms", mt.MapName, z, x, y, durationMs)
+		}
 
 		return nil
 	}

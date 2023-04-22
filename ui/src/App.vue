@@ -1,36 +1,40 @@
 <template>
   <div id="app">
-    <Mapbox v-if="capabilities && activeMap" />
-    <Header v-if="capabilities" v-bind:capabilities="capabilities" />
-    <LeftNav v-if="capabilities" v-bind:capabilities="capabilities" />
+    <ViewerMapbox v-if="capabilities && activeMap" />
+
+    <ViewerHeader v-if="capabilities" :capabilities="capabilities" />
+
+    <LeftNav v-if="capabilities" :capabilities="capabilities" />
   </div>
 </template>
 
 <script>
+import "mapbox-gl/dist/mapbox-gl.css";
+import ViewerHeader from "./components/ViewerHeader.vue";
 // import "mapbox-gl/dist/mapbox-gl.css";
 import "maplibre-gl/dist/maplibre-gl.css";
-import Header from "./components/Header.vue";
 import LeftNav from "./components/LeftNav/LeftNav.vue";
-import Mapbox from "./components/Mapbox.vue";
+import ViewerMapbox from "./components/ViewerMapbox.vue";
 import { store, mutations } from "./globals/store";
-import axios from "axios";
 
-// const axios = require("axios");
+const axios = require("axios");
 
 // for production the apiRoot is empty so relative URLs are used
 let apiRoot = "";
 if (process.env.NODE_ENV != "production") {
   // for development it's easier to use a remote capabilities endpoint
-  // apiRoot = "https://osm-lambda.tegola.io/v1/";
   apiRoot = "https://tegola-osm-demo.go-spatial.org/v1/";
 }
 
 export default {
-  name: "Tegola Viewer",
+  name: "TegolaViewer",
   components: {
-    Header,
+    ViewerHeader,
     LeftNav,
-    Mapbox
+    ViewerMapbox
+  },
+  data: function () {
+    return {};
   },
   computed: {
     activeMap() {
@@ -38,23 +42,6 @@ export default {
     },
     capabilities() {
       return store.capabilities;
-    }
-  },
-  methods: {
-    // compareMaps compares two map objects for the sake of sorting alphabetically
-    compareMaps(a, b) {
-      // ignore character casing
-      const mapA = a.name.toLowerCase();
-      const mapB = b.name.toLowerCase();
-
-      let comparison = 0;
-      if (mapA > mapB) {
-        comparison = 1;
-      } else if (mapA < mapB) {
-        comparison = -1;
-      }
-
-      return comparison;
     }
   },
   created: function () {
@@ -85,8 +72,22 @@ export default {
         console.log(error);
       });
   },
-  data: function () {
-    return {};
+  methods: {
+    // compareMaps compares two map objects for the sake of sorting alphabetically
+    compareMaps(a, b) {
+      // ignore character casing
+      const mapA = a.name.toLowerCase();
+      const mapB = b.name.toLowerCase();
+
+      let comparison = 0;
+      if (mapA > mapB) {
+        comparison = 1;
+      } else if (mapA < mapB) {
+        comparison = -1;
+      }
+
+      return comparison;
+    }
   }
 };
 </script>

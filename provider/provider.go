@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
@@ -104,13 +105,16 @@ type Tile interface {
 	BufferedExtent() (extent *geom.Extent, srid uint64)
 }
 
+// ParameterTokenRegexp to validate QueryParameters
+var ParameterTokenRegexp = regexp.MustCompile("![a-zA-Z0-9_-]+!")
+
 // Tiler is a Layers that allows one to encode features in that layer
 type Tiler interface {
 	Layerer
 
 	// TileFeature will stream decoded features to the callback function fn
 	// if fn returns ErrCanceled, the TileFeatures method should stop processing
-	TileFeatures(ctx context.Context, layer string, t Tile, fn func(f *Feature) error) error
+	TileFeatures(ctx context.Context, layer string, t Tile, params Params, fn func(f *Feature) error) error
 }
 
 // TilerUnion represents either a Std Tiler or and MVTTiler; only one should be not nil.
@@ -132,7 +136,7 @@ func (tu TilerUnion) Layers() ([]LayerInfo, error) {
 }
 
 // InitFunc initialize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
-type InitFunc func(dicter dict.Dicter) (Tiler, error)
+type InitFunc func(dicter dict.Dicter, maps []Map) (Tiler, error)
 
 // CleanupFunc is called to when the system is shutting down, this allows the provider to cleanup.
 type CleanupFunc func()
@@ -229,7 +233,7 @@ func Drivers(types ...providerType) (l []string) {
 // For function returns a configure provider of the given type; The provider may be a mvt provider or
 // a std provider. The correct entry in TilerUnion will not be nil. If there is an error both entries
 // will be nil.
-func For(name string, config dict.Dicter) (val TilerUnion, err error) {
+func For(name string, config dict.Dicter, maps []Map) (val TilerUnion, err error) {
 	var (
 		driversList = Drivers()
 	)
@@ -241,11 +245,11 @@ func For(name string, config dict.Dicter) (val TilerUnion, err error) {
 		return val, ErrUnknownProvider{KnownProviders: driversList, Name: name}
 	}
 	if p.init != nil {
-		val.Std, err = p.init(config)
+		val.Std, err = p.init(config, maps)
 		return val, err
 	}
 	if p.mvtInit != nil {
-		val.Mvt, err = p.mvtInit(config)
+		val.Mvt, err = p.mvtInit(config, maps)
 		return val, err
 	}
 	return val, ErrInvalidRegisteredProvider{Name: name}

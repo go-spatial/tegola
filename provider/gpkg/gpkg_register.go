@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package gpkg
@@ -12,6 +13,7 @@ import (
 	"sort"
 	"strings"
 
+	conf "github.com/go-spatial/tegola/config"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/go-spatial/geom"
@@ -219,7 +221,7 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 	return geomTableDetails, nil
 }
 
-func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
+func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, error) {
 
 	log.Debugf("config: %v", config)
 
@@ -314,13 +316,18 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 				return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
 			}
 
+			d, ok := geomTableDetails[tablename]
+			if !ok {
+				return nil, fmt.Errorf("table %q does not exist", tablename)
+			}
+
 			layer.tablename = tablename
 			layer.tagFieldnames = tagFieldnames
-			layer.geomFieldname = geomTableDetails[tablename].geomFieldname
-			layer.geomType = geomTableDetails[tablename].geomType
+			layer.geomFieldname = d.geomFieldname
+			layer.geomType = d.geomType
 			layer.idFieldname = idFieldname
-			layer.srid = geomTableDetails[tablename].srid
-			layer.bbox = *geomTableDetails[tablename].bbox
+			layer.srid = d.srid
+			layer.bbox = *d.bbox
 
 		} else { // layerConf[ConfigKeySQL] exists
 			var customSQL string
@@ -335,22 +342,22 @@ func NewTileProvider(config dict.Dicter) (provider.Tiler, error) {
 			// solution without using an SQL parser on custom SQL statements
 			allZoomsSQL := "IN (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)"
 			tokenReplacer := strings.NewReplacer(
-				">= "+zoomToken, allZoomsSQL,
-				">="+zoomToken, allZoomsSQL,
-				"=> "+zoomToken, allZoomsSQL,
-				"=>"+zoomToken, allZoomsSQL,
-				"=< "+zoomToken, allZoomsSQL,
-				"=<"+zoomToken, allZoomsSQL,
-				"<= "+zoomToken, allZoomsSQL,
-				"<="+zoomToken, allZoomsSQL,
-				"!= "+zoomToken, allZoomsSQL,
-				"!="+zoomToken, allZoomsSQL,
-				"= "+zoomToken, allZoomsSQL,
-				"="+zoomToken, allZoomsSQL,
-				"> "+zoomToken, allZoomsSQL,
-				">"+zoomToken, allZoomsSQL,
-				"< "+zoomToken, allZoomsSQL,
-				"<"+zoomToken, allZoomsSQL,
+				">= "+conf.ZoomToken, allZoomsSQL,
+				">="+conf.ZoomToken, allZoomsSQL,
+				"=> "+conf.ZoomToken, allZoomsSQL,
+				"=>"+conf.ZoomToken, allZoomsSQL,
+				"=< "+conf.ZoomToken, allZoomsSQL,
+				"=<"+conf.ZoomToken, allZoomsSQL,
+				"<= "+conf.ZoomToken, allZoomsSQL,
+				"<="+conf.ZoomToken, allZoomsSQL,
+				"!= "+conf.ZoomToken, allZoomsSQL,
+				"!="+conf.ZoomToken, allZoomsSQL,
+				"= "+conf.ZoomToken, allZoomsSQL,
+				"="+conf.ZoomToken, allZoomsSQL,
+				"> "+conf.ZoomToken, allZoomsSQL,
+				">"+conf.ZoomToken, allZoomsSQL,
+				"< "+conf.ZoomToken, allZoomsSQL,
+				"<"+conf.ZoomToken, allZoomsSQL,
 			)
 
 			customSQL = tokenReplacer.Replace(customSQL)

@@ -237,3 +237,38 @@ func ParseFloatSlice(val string) ([]float64, error) {
 
 	return floats, nil
 }
+
+func ParseDict(v interface{}) (*Dict, error) {
+	if v == nil {
+		return nil, nil
+	}
+
+	var d = make(Dict)
+
+	switch val := v.(type) {
+	case map[string]interface{}:
+		for k, v := range val {
+			switch v.(type) {
+			case string:
+				s, err := ParseString(v)
+				if err != nil {
+					return nil, err
+				}
+
+				d[k] = *s
+			case map[string]interface{}:
+				i, err := ParseDict(v)
+				if err != nil {
+					return nil, err
+				}
+				d[k] = *i
+			default:
+				d[k] = v
+			}
+		}
+	default:
+		return nil, ErrType{v}
+	}
+
+	return &d, nil
+}

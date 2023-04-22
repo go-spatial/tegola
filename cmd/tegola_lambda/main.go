@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/build"
+	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/server"
 )
 
@@ -66,7 +66,7 @@ func init() {
 	}
 
 	// register the providers
-	providers, err := register.Providers(provArr)
+	providers, err := register.Providers(provArr, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

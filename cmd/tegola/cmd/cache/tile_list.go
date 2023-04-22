@@ -118,7 +118,7 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 			txt := scanner.Text()
 			tile, err = format.ParseTile(txt)
 			if err != nil {
-				tce.setError(fmt.Errorf("failed to parse line [%v]: %v", lineNumber, err))
+				tce.setError(fmt.Errorf("failed to parse tile (%v) from line [%v]: %w", txt, lineNumber, err))
 				return
 			}
 

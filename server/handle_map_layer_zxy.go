@@ -2,10 +2,14 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/go-spatial/tegola/observability"
+	"github.com/go-spatial/tegola/provider"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom/encoding/mvt"
@@ -92,19 +96,16 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	return nil
 }
 
-func logAndError(w http.ResponseWriter, code int, format string, vals ...interface{}) {
-	msg := fmt.Sprintf(format, vals...)
-	log.Info(msg)
-	http.Error(w, msg, code)
-}
-
-// URI scheme: /maps/:map_name/:layer_name/:z/:x/:y
+// URI scheme: /maps/:map_name/:layer_name/:z/:x/:y?param=value
 // map_name - map name in the config file
 // layer_name - name of the single map layer to render
 // z, x, y - tile coordinates as described in the Slippy Map Tilenames specification
-// 	z - zoom level
-// 	x - row
-// 	y - column
+//
+//	z - zoom level
+//	x - row
+//	y - column
+//
+// param - configurable query parameters and their values
 func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// parse our URI
 	if err := req.parseURI(r); err != nil {
@@ -124,15 +125,20 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// filter down the layers we need for this zoom
 	m = m.FilterLayersByZoom(req.z)
 	if len(m.Layers) == 0 {
-		logAndError(w, http.StatusNotFound, "map (%v) has no layers, at zoom %v", req.mapName, req.z)
+		msg := fmt.Sprintf("map (%v) has no layers, at zoom %v", req.mapName, req.z)
+		log.Debug(msg)
+		http.Error(w, msg, http.StatusNotFound)
 		return
 	}
 
 	if req.layerName != "" {
 		m = m.FilterLayersByName(req.layerName)
 		if len(m.Layers) == 0 {
-			logAndError(w, http.StatusNotFound, "map (%v) has no layers, for LayerName %v at zoom %v", req.mapName, req.layerName, req.z)
+			msg := fmt.Sprintf("map (%v) has no layers, for LayerName %v at zoom %v", req.mapName, req.layerName, req.z)
+			log.Debug(msg)
+			http.Error(w, msg, http.StatusNotFound)
 			return
+
 		}
 	}
 
@@ -144,7 +150,9 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// make a new extent
 		textent := tile.Extent4326()
 		if _, intersect := m.Bounds.Intersect(textent); !intersect {
-			logAndError(w, http.StatusNotFound, "map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
+			msg := fmt.Sprintf("map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
+			log.Debug(msg)
+			http.Error(w, msg, http.StatusNotFound)
 			return
 		}
 	}
@@ -154,11 +162,25 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m = m.AddDebugLayers()
 	}
 
-	pbyte, err := m.Encode(r.Context(), tile)
+	// check for query parameters and populate param map with their values
+	params, err := extractParameters(m, r)
 	if err != nil {
-		switch err {
-		case context.Canceled:
+		log.Error(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	encodeCtx := context.WithValue(r.Context(), observability.ObserveVarMapName, m.Name)
+	pbyte, err := m.Encode(encodeCtx, tile, params)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, context.Canceled):
 			// TODO: add debug logs
+			// do nothing
+			return
+		case strings.Contains(err.Error(), "operation was canceled"):
+			// do nothing
 			return
 		default:
 			errMsg := fmt.Sprintf("error marshalling tile: %v", err)
@@ -173,10 +195,42 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", mvt.MimeType)
 	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(pbyte)))
 	w.WriteHeader(http.StatusOK)
-	w.Write(pbyte)
+
+	_, err = w.Write(pbyte)
+	if err != nil {
+		log.Errorf("error writing tile z:%v, x:%v, y:%v - %v", req.z, req.x, req.y, err)
+	}
 
 	// check for tile size warnings
 	if len(pbyte) > MaxTileSize {
 		log.Infof("tile z:%v, x:%v, y:%v is rather large - %vKb", req.z, req.x, req.y, len(pbyte)/1024)
 	}
+}
+
+func extractParameters(m atlas.Map, r *http.Request) (provider.Params, error) {
+	var params provider.Params
+	if m.Params != nil && len(m.Params) > 0 {
+		params = make(provider.Params)
+		err := r.ParseForm()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, param := range m.Params {
+			if r.Form.Has(param.Name) {
+				val, err := param.ToValue(r.Form.Get(param.Name))
+				if err != nil {
+					return nil, err
+				}
+				params[param.Token] = val
+			} else {
+				p, err := param.ToDefaultValue()
+				if err != nil {
+					return nil, err
+				}
+				params[param.Token] = p
+			}
+		}
+	}
+	return params, nil
 }

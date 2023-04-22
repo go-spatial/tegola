@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -29,12 +30,16 @@ func printOutput(out []byte) {
 	}
 }
 
-func run(cmdName string, parts ...string) {
-
+func runCmd(cmdName string, parts ...string) ([]byte, error) {
 	cmdLine := strings.Join(append([]string{cmdName}, parts...), " ")
 	fmt.Printf("Running: %v\n", cmdLine)
 	cmd := exec.Command(cmdName, parts...)
-	out, err := cmd.CombinedOutput()
+	return cmd.CombinedOutput()
+}
+
+func run(cmdName string, parts ...string) {
+	cmdLine := strings.Join(append([]string{cmdName}, parts...), " ")
+	out, err := runCmd(cmdName, parts...)
 	if err != nil {
 		printOutput(out)
 		fmt.Printf("PATH: %s\n", os.Getenv(`PATH`))
@@ -61,16 +66,25 @@ func main() {
 		os.Exit(3)
 	}
 	fmt.Printf("Changed to directory: %v\n", fileDir())
+	// Check to see if npm is installed.
+	if _, err := runCmd("npm", "version"); err != nil {
+		fmt.Printf("Did not find npm, not running...")
+		os.Exit(0)
+	}
 
-	// install npm dependences
+	run("npx", "browserslist@latest", "--update-db")
+
+	// install npm dependencies
 	run("npm", "install")
 	// build app
 	run("npm", "run", "build")
-	// build bindata
-	if bindataDebug {
-		run("go-bindata", "-debug", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
+
+	// make sure .keep file remains in the dist directory
+	f, err := os.OpenFile("dist/.keep", os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		fmt.Printf("failed to create dist/.keep file")
 	} else {
-		run("go-bindata", "-pkg=bindata", "-o=../server/bindata/bindata.go", "-ignore=.DS_Store", "dist/...")
+		f.Close()
 	}
 
 	fmt.Printf("success\n")

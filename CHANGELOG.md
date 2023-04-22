@@ -1,3 +1,91 @@
+## 0.16.0 (2022-12-01)
+
+Features
+
+* Added option to use Zap logging to get JSON based logs (@iwpnd)
+
+Enhancements
+
+* Add ttools helper for easier local testing. (@iwpnd)
+* (UI) Upgraded eventsource from 1.1.0 to 1.1.1 (dependbot)
+* (UI) Upgraded shell-quote from 1.7.2 to 1.7.3 (dependbot)
+* (UI) Upgraded terser from 4.8.0 to 4.8.1 (dependbot)
+* Fix for #870 filter by zoom level for min/max zoom 0 (@iwpnd)
+* setting max_zoom to 0 will set it to 1 (@iwpnd)
+* seeding command now as a --log-threshold value to control logging of tiles that take longer than the given time. (@dwoznicki)
+* handle gpkg GEOMETRY as an unknown geometry and not break the capabilities if a layer contains such a geometry. (@roelarents)
+* [test: use T.Setenv to set env vars in tests](https://github.com/go-spatial/tegola/pull/882) (@Juneezee)
+
+Documentation
+
+* Updated README to focus on `mvt_postgis` provider instead of `postgis`
+
+Bugs
+
+* Minor code clean up (@dechristopher, @bemyak)
+
+## 0.15.0 (2022-05-18)
+
+Features
+
+* Redis SSL connection via redis.ParseURL (#815 @iwpnd) 
+* Updated providers/postgis to use pgx4. This enables use of Postgres versions 12+ (@iwpnd #820)
+* providers/postgis: allow connection URI and add additional config parameters (@iwpnd #841)
+* expose SetLogLevel in cli (@iwpnd part of #831)
+* Add a dont_clean option (@roelarents  #847)
+
+Enhancements
+
+* ci: publish edge image on push or pr to default_branch_ref (@iwpnd) 
+* chore: switch to internal/log (@iwpnd #837)
+* chore: remove logAndError (@iwpnd #839)
+* chore: add docker-compose local dev env (@iwpnd #840)
+* removed go-bindata for embedding the internal viewer in favor of the native go embed (@ARolek #843)
+* fix: replace environment variables in webserver headers (@iwpnd #597, #844)
+
+Documentation
+
+* Update S3 cache properties documentation around `force_path_style` (@flowrean #835)
+
+## 0.14.0 (2021-11-05)
+
+Features:
+
+* Added Observability to postgis data provider (@gdey #780)
+* Added observability to tile cache (@gdey #766)
+* Allow link in attribution (@underspica #798)
+
+Bugs:
+
+* Fixed file cache: `Error: error reading from cache: too many open files` (@ARolek #586)
+
+Maintenance: 
+
+* Refactor tegola_lambda CI to use Amazon Linux for building (@arolek #790)
+* Upgrade mattn/go-sqlite3 (@gdey)
+* Split out httpAPI and httpViewer instrumentation  (@gdey)
+* Refactored BuildInfo into a package (@gdey)
+* Update TOML package (@ear7h #799)
+
+## 0.13.0 (2021-03-23)
+**Features**
+
+* cache/s3: Allow forcing path style for s3 compatible API requests (#745 @johngian)
+* observability: [experimental] Initial implementation of observability support for Prometheus. Provides go runtime metrics and a "/metrics". (# #714 @gdey )
+
+**Bug Fixes**
+
+* Fixed MacOS release builds don't include support for GeoPackage providers (#736 @flother )
+* ci: Fixed GH Action env syntax (@ARolek)
+* docker: Version bumps in Dockerfile (@ARolek)
+* dataprovider/postgis/mvt: Fix SQL parsing for MVT provider (#744 @johngian)
+
+**Maintenance**
+
+* cache/s3: updated deprecated function (@alrs)
+* dataprovider/postgis: Updated mvt_postgis README regarding 4326 projection (@ARolek)
+* ui: Bumps elliptic from 6.5.3 to 6.5.4. dependency (#749 @dependabot)
+
 ## 0.12.1 (2020-09-04)
 **Bug Fixes**
 * fixed the internal viewer not using the most recent version (@ARolek)

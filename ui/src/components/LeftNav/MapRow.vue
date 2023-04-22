@@ -1,5 +1,5 @@
 <template>
-  <li v-on:click.self="setActiveMap(map)">
+  <li @click.self="setActiveMap(map)">
     {{ map.name }}<img class="arrow" src="@/assets/svg/arrow.svg" />
   </li>
 </template>

@@ -37,3 +37,24 @@ type ErrGeomFieldNotFound struct {
 func (e ErrGeomFieldNotFound) Error() string {
 	return fmt.Sprintf("postgis: geom fieldname (%v) not found for layer (%v)", e.GeomFieldName, e.LayerName)
 }
+
+type ErrInvalidURI struct {
+	Err error
+	Msg string
+}
+
+func (e ErrInvalidURI) Error() string {
+	if e.Msg == "" {
+		if e.Err != nil {
+			return fmt.Sprintf("postgis: %v", e.Err.Error())
+		} else {
+			return "postgis: invalid uri"
+		}
+	}
+
+	return fmt.Sprintf("postgis: invalid uri (%v)", e.Msg)
+}
+
+func (e ErrInvalidURI) Unwrap() error {
+	return e.Err
+}

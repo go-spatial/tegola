@@ -17,7 +17,7 @@ const (
 
 var UnknownConversionError = fmt.Errorf("do not know how to convert value to requested value")
 
-//Tile slippy map tilenames
+// Tile slippy map tilenames
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 type Tile struct {
 	Z         uint
@@ -198,7 +198,7 @@ func (t *Tile) ZLevel() uint {
 	return t.Z
 }
 
-//ZRes takes a web mercator zoom level and returns the pixel resolution for that
+// ZRes takes a web mercator zoom level and returns the pixel resolution for that
 // scale, assuming t.Extent x t.Extent pixel tiles. Non-integer zoom levels are accepted.
 // ported from: https://raw.githubusercontent.com/mapbox/postgis-vt-util/master/postgis-vt-util.sql
 // 40075016.6855785 is the equator in meters for WGS84 at z=0

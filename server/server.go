@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"path"
 
+	"github.com/go-spatial/tegola/internal/build"
+
 	"github.com/go-spatial/tegola/observability"
 
 	"github.com/dimfeld/httptreemux"
@@ -16,7 +18,7 @@ import (
 )
 
 const (
-	// MaxTileSize is 500k. Currently just throws a warning when tile
+	// MaxTileSize is 500k. Currently, just throws a warning when tile
 	// is larger than MaxTileSize
 	MaxTileSize = 500000
 )
@@ -24,7 +26,7 @@ const (
 var (
 	// Version is the version of the software, this should be set by the main program, before starting up.
 	// It is used by various Middleware to determine the version.
-	Version string = "Version Not Set"
+	Version string = "version not set"
 
 	// HostName is the name of the host to use for construction of URLS.
 	// configurable via the tegola config.toml file (set in main.go)
@@ -55,7 +57,7 @@ var (
 	}
 )
 
-// NewRouter set's up the our routes.
+// NewRouter set's up our routes.
 func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	o := a.Observer()
 	r := httptreemux.New()
@@ -69,8 +71,8 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 			metricsRoute = "/metrics"
 		)
 		if h := o.Handler(metricsRoute); h != nil {
-			// Only setup the /metrics endpoint if we have a configured observer
-			log.Infof("Setting up observer: %v", o.Name())
+			// Only set up the /metrics endpoint if we have a configured observer
+			log.Infof("setting up observer: %v", o.Name())
 			group.UsingContext().Handler(http.MethodGet, metricsRoute, h)
 		}
 	}
@@ -97,7 +99,7 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 func Start(a *atlas.Atlas, port string) *http.Server {
 
 	// notify the user the server is starting
-	log.Infof("starting tegola server on port %v", port)
+	log.Infof("starting tegola server (%v) on port %v", build.Version, port)
 
 	srv := &http.Server{Addr: port, Handler: NewRouter(a)}
 
@@ -181,7 +183,7 @@ func buildCapabilitiesURL(r *http.Request, uriParts []string, query url.Values) 
 }
 
 // corsHandler is used to respond to all OPTIONS requests for registered routes
-func corsHandler(w http.ResponseWriter, r *http.Request, params map[string]string) {
+func corsHandler(w http.ResponseWriter, _ *http.Request, _ map[string]string) {
 	setHeaders(w)
 	return
 }
