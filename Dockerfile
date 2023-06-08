@@ -27,7 +27,7 @@
 #  $ docker run -v /path/to/docker-config:/opt/tegola_config -p 8080 tegola serve
 
 # Intermediary container for building
-FROM golang:1.20.2-alpine3.16 AS build
+FROM golang:1.20.5-alpine3.18 AS build
 
 ARG BUILDPKG="github.com/go-spatial/tegola/internal/build"
 ARG VER="Version Not Set"
@@ -42,13 +42,11 @@ ENV BUILD_PKG="${BUILDPKG}"
 # incurs approximately 1:30 extra build time (1:54 vs 0:27) to install packages.  Doesn't impact
 # development as these layers are drawn from cache after the first build.
 RUN apk update \
-	&& apk add musl-dev=1.2.3-r2 \
-	&& apk add gcc=11.2.1_git20220219-r2
+	&& apk add build-base
 
 # Set up source for compilation
 RUN mkdir -p /go/src/github.com/go-spatial/tegola
 COPY . /go/src/github.com/go-spatial/tegola
-
 
 RUN env
 
