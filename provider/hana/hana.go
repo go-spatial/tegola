@@ -330,6 +330,9 @@ func OpenDB(uri string) (*sql.DB, error) {
 		return nil, err
 	}
 
+	sv := driver.SessionVariables{"APPLICATION": "Tegola"}
+	connector.SetSessionVariables(sv)
+
 	db := sql.OpenDB(connector)
 	db.SetMaxOpenConns(max_conn)
 	db.SetConnMaxIdleTime(max_conn_idle_time)
