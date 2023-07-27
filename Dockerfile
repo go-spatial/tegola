@@ -59,7 +59,7 @@ RUN cd /go/src/github.com/go-spatial/tegola/cmd/tegola \
 	&& chmod a+x /opt/tegola
 
 # Create minimal deployment image, just alpine & the binary
-FROM alpine:3.12
+FROM alpine:3.18
 
 RUN apk update \
 	&& apk add ca-certificates \
