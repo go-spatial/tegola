@@ -47,13 +47,21 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 
 	gcsCache.Basepath, err = config.String(ConfigKeyBasepath, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	defaultMaxZoom := uint(tegola.MaxZ)
+
 	gcsCache.MaxZoom, err = config.Uint(ConfigKeyMaxZoom, &defaultMaxZoom)
+	if err != nil {
+		return nil, err
+	}
 
 	gcsCache.Ctx = context.Background()
 	client, err := storage.NewClient(gcsCache.Ctx)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	gcsCache.Client = client
 	gcsCache.Bucket = client.Bucket(gcsCache.BucketName)
