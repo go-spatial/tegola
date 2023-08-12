@@ -188,7 +188,12 @@ jobs:
       with:
         ui: true
 
-    - name: Build and export to Docker
+    # Buildx can only output single-platform result image to docker
+    # so for testing purposes we are building only for linux/amd64
+    # Later when we publish the image we build for linux/amd64 and linux/arm64
+    # Note that linux/amd64 is cached, so when we build images for publishing
+    # we are not rebuilding linux/amd64
+    - name: Build docker image for testing
       uses: docker/build-push-action@v4
       with:
         context: .
@@ -197,7 +202,7 @@ jobs:
         build-args: ${{ env.BUILD_ARGS }}
         tags: ${{ env.DOCKERHUB_ORG }}/${{ env.DOCKERHUB_REPO }}:${{ env.VERSION }}
 
-    - name: Test Image Build
+    - name: Test image build
       run: |
         docker run --rm ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION} version
 
