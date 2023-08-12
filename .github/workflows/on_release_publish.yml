@@ -197,7 +197,7 @@ jobs:
         build-args: ${{ env.BUILD_ARGS }}
         tags: ${{ env.DOCKERHUB_ORG }}/${{ env.DOCKERHUB_REPO }}:${{ env.VERSION }}
 
-    - name: Test
+    - name: Test Image Build
       run: |
         docker run --rm ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION} version
 
