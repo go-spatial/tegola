@@ -3,6 +3,7 @@ package algnhsa
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 
@@ -21,10 +22,16 @@ func (handler lambdaHandler) Invoke(ctx context.Context, payload []byte) ([]byte
 	if err != nil {
 		return nil, err
 	}
+	if handler.opts.DebugLog {
+		fmt.Printf("Response: %+v", resp)
+	}
 	return json.Marshal(resp)
 }
 
 func (handler lambdaHandler) handleEvent(ctx context.Context, payload []byte) (lambdaResponse, error) {
+	if handler.opts.DebugLog {
+		fmt.Printf("Request: %s", payload)
+	}
 	eventReq, err := newLambdaRequest(ctx, payload, handler.opts)
 	if err != nil {
 		return lambdaResponse{}, err
@@ -35,7 +42,7 @@ func (handler lambdaHandler) handleEvent(ctx context.Context, payload []byte) (l
 	}
 	w := httptest.NewRecorder()
 	handler.httpHandler.ServeHTTP(w, r)
-	return newLambdaResponse(w, handler.opts.binaryContentTypeMap)
+	return newLambdaResponse(w, handler.opts.binaryContentTypeMap, eventReq.requestType)
 }
 
 // ListenAndServe starts the AWS Lambda runtime (aws-lambda-go lambda.Start) with a given handler.

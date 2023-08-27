@@ -8,7 +8,7 @@ require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/SAP/go-hdb v0.111.9
 	github.com/ajstarks/svgo v0.0.0-20170507103333-2489f1e6d405
-	github.com/akrylysov/algnhsa v0.12.1
+	github.com/akrylysov/algnhsa v1.0.0
 	github.com/aws/aws-sdk-go v1.27.0
 	github.com/dimfeld/httptreemux v5.0.1+incompatible
 	github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
@@ -36,7 +36,7 @@ require (
 	cloud.google.com/go/iam v0.5.0 // indirect
 	github.com/Azure/azure-pipeline-go v0.0.0-20180607212504-7571e8eb0876 // indirect
 	github.com/arolek/p v0.0.0-20191103215535-df3c295ed582 // indirect
-	github.com/aws/aws-lambda-go v1.13.3 // indirect
+	github.com/aws/aws-lambda-go v1.41.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect

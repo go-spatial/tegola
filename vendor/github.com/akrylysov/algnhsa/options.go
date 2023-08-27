@@ -4,14 +4,15 @@ type RequestType int
 
 const (
 	RequestTypeAuto RequestType = iota
-	RequestTypeAPIGateway
+	RequestTypeAPIGatewayV1
+	RequestTypeAPIGatewayV2
 	RequestTypeALB
 )
 
 // Options holds the optional parameters.
 type Options struct {
 	// RequestType sets the expected request type.
-	// By default algnhsa deduces the request type from the lambda function payload.
+	// By default, algnhsa deduces the request type from the lambda function payload.
 	RequestType RequestType
 
 	// BinaryContentTypes sets content types that should be treated as binary types.
@@ -19,9 +20,12 @@ type Options struct {
 	BinaryContentTypes   []string
 	binaryContentTypeMap map[string]bool
 
-	// Use API Gateway PathParameters["proxy"] when constructing the request url.
+	// Use API Gateway V1 PathParameters["proxy"] when constructing the request url.
 	// Strips the base path mapping when using a custom domain with API Gateway.
 	UseProxyPath bool
+
+	// DebugLog enables printing request and response objects to stdout.
+	DebugLog bool
 }
 
 func (opts *Options) setBinaryContentTypeMap() {

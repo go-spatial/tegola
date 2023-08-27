@@ -15,10 +15,6 @@ import (
     "github.com/akrylysov/algnhsa"
 )
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-    w.Write([]byte("index"))
-}
-
 func addHandler(w http.ResponseWriter, r *http.Request) {
     f, _ := strconv.Atoi(r.FormValue("first"))
     s, _ := strconv.Atoi(r.FormValue("second"))
@@ -27,14 +23,13 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func contextHandler(w http.ResponseWriter, r *http.Request) {
-    proxyReq, ok := algnhsa.ProxyRequestFromContext(r.Context())
+    lambdaEvent, ok := algnhsa.APIGatewayV2RequestFromContext(r.Context())
     if ok {
-        fmt.Fprint(w, proxyReq.RequestContext.AccountID)
+        fmt.Fprint(w, lambdaEvent.RequestContext.AccountID)
     }
 }
 
 func main() {
-    http.HandleFunc("/", indexHandler)
     http.HandleFunc("/add", addHandler)
     http.HandleFunc("/context", contextHandler)
     algnhsa.ListenAndServe(http.DefaultServeMux, nil)
@@ -56,26 +51,48 @@ import (
 func main() {
     r := chi.NewRouter()
     r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-        w.Write([]byte("index"))
+        w.Write([]byte("hi"))
     })
     algnhsa.ListenAndServe(r, nil)
 }
 ```
 
-## Setting up API Gateway 
+## Deployment
+
+First, build your Go application for Linux and zip it:
+
+```bash
+GOOS=linux GOARCH=amd64 go build -o handler
+zip handler.zip handler
+```
+
+AWS provides plenty of ways to expose a Lambda function to the internet.
+
+### Lambda Function URL
+
+This is the easier way to deploy your Lambda function as an HTTP endpoint.
+It only requires going to the "Function URL" section of the Lambda function configuration and clicking "Configure Function URL".
+
+### API Gateway
+
+#### HTTP API
+
+1. Create a new HTTP API.
+
+2. Configure a catch-all `$default` route.
+
+#### REST API
 
 1. Create a new REST API.
 
 2. In the "Resources" section create a new `ANY` method to handle requests to `/` (check "Use Lambda Proxy Integration").
 
-    ![API Gateway index](https://akrylysov.github.io/algnhsa/apigateway-index.png)
-
 3. Add a catch-all `{proxy+}` resource to handle requests to every other path (check "Configure as proxy resource").
 
-    ![API Gateway catch-all](https://akrylysov.github.io/algnhsa/apigateway-catchall.png)
-
-## Setting up ALB
+### ALB
 
 1. Create a new ALB and point it to your Lambda function.
 
-2. In the target group settings enable "Multi value headers".
+2. In the target group settings in the "Attributes" section enable "Multi value headers".
+
+[AWS Documentation](https://docs.aws.amazon.com/lambda/latest/dg/services-alb.html)

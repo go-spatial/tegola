@@ -4,13 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 )
 
+/*
+AWS Documentation:
+
+- https://docs.aws.amazon.com/lambda/latest/dg/services-alb.html
+*/
+
 var (
-	errALBUnexpectedRequest         = errors.New("expected ALBTargetGroupRequest")
+	errALBUnexpectedRequest         = errors.New("expected ALBTargetGroupRequest event")
 	errALBExpectedMultiValueHeaders = errors.New("expected multi value headers; enable Multi value headers in target group settings")
 )
 
@@ -36,18 +44,44 @@ func newALBRequest(ctx context.Context, payload []byte, opts *Options) (lambdaRe
 		return lambdaRequest{}, errALBExpectedMultiValueHeaders
 	}
 
+	for _, vals := range event.MultiValueQueryStringParameters {
+		for i, v := range vals {
+			unescaped, err := url.QueryUnescape(v)
+			if err != nil {
+				return lambdaRequest{}, err
+			}
+			vals[i] = unescaped
+		}
+	}
+
 	req := lambdaRequest{
 		HTTPMethod:                      event.HTTPMethod,
 		Path:                            event.Path,
-		QueryStringParameters:           event.QueryStringParameters,
 		MultiValueQueryStringParameters: event.MultiValueQueryStringParameters,
-		Headers:                         event.Headers,
 		MultiValueHeaders:               event.MultiValueHeaders,
 		Body:                            event.Body,
 		IsBase64Encoded:                 event.IsBase64Encoded,
 		SourceIP:                        getALBSourceIP(event),
-		Context:                         newTargetGroupRequestContext(ctx, event),
+		Context:                         context.WithValue(ctx, RequestTypeALB, event),
+		requestType:                     RequestTypeALB,
 	}
 
 	return req, nil
+}
+
+func newALBResponse(r *http.Response) (lambdaResponse, error) {
+	resp := lambdaResponse{
+		MultiValueHeaders: r.Header,
+	}
+	return resp, nil
+}
+
+// ALBRequestFromContext extracts the ALBTargetGroupRequest event from ctx.
+func ALBRequestFromContext(ctx context.Context) (events.ALBTargetGroupRequest, bool) {
+	val := ctx.Value(RequestTypeALB)
+	if val == nil {
+		return events.ALBTargetGroupRequest{}, false
+	}
+	event, ok := val.(events.ALBTargetGroupRequest)
+	return event, ok
 }
