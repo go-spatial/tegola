@@ -135,7 +135,7 @@ func URLRoot(r *http.Request) *url.URL {
 	}
 
 	// read the request context to pull out the lambda "stage" so it can be prepended to the URL Path
-	if ctx, ok := algnhsa.ProxyRequestFromContext(r.Context()); ok {
+	if ctx, ok := algnhsa.APIGatewayV1RequestFromContext(r.Context()); ok {
 		u.Path = ctx.RequestContext.Stage
 	}
 

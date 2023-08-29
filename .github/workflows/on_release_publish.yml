@@ -26,7 +26,7 @@ jobs:
       run: echo ${{ github.sha }} | cut -c1-7 > ${{ github.workspace }}/version.txt
 
     - name: Upload build artifact version
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: version
         path: ${{ github.workspace }}/version.txt
@@ -40,7 +40,7 @@ jobs:
         echo "refs/heads/$DEFAULT_BRANCH" > ${{ github.workspace }}/default-branch-ref.txt
 
     - name: Upload build artifacts default branch ref
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: default-branch-ref
         path: ${{ github.workspace }}/default-branch-ref.txt
@@ -56,7 +56,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.20.5
+          go-version: 1.21.0
 
       - name: Build embedded UI
         run: |
@@ -65,13 +65,13 @@ jobs:
           popd
 
       - name: Upload build artifact version
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ui
           path: ${{ github.workspace }}/ui/dist
 
-  build_linux:
-    name: Build for Linux and AWS Lambda
+  build_linux_amd64:
+    name: Build for Linux (amd64)
     needs: [gen_version,build_ui]
     runs-on: ubuntu-22.04
 
@@ -99,7 +99,36 @@ jobs:
         artifact_name: "tegola"
         upload_postfix: "_linux_amd64"
 
-  build_tegola_lambda:
+  build_linux_arm:
+    name: Build for Linux (arm64)
+    needs: [gen_version,build_ui]
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Check out actions
+      uses: actions/checkout@v3
+
+    - name: Setup env
+      uses: ./.github/actions/tegola-setup-env
+      with:
+        ui: true
+
+    - name: Build for Linux
+      env:
+        # build architecture
+        GOOS: linux
+      run: |
+          cd cmd/tegola
+          GOARCH=arm64 go build -mod vendor -ldflags "-w -X ${BUILD_PKG}.Version=${VERSION} -X ${BUILD_PKG}.GitRevision=${GIT_REVISION} -X ${BUILD_PKG}.GitBranch=${GIT_BRANCH}"
+
+    - name: Upload artifact
+      uses: ./.github/actions/upload-artifact
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        artifact_name: "tegola"
+        upload_postfix: "_linux_arm64"
+
+  build_tegola_lambda_amd64:
     name: Build tegola_lambda on Amazon Linux
     needs: [gen_version]
     runs-on: ubuntu-22.04
@@ -123,8 +152,38 @@ jobs:
       uses: ./.github/actions/upload-artifact
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        artifact_name: "tegola_lambda"
+        artifact_name: "tegola_lambda_amd64"
         upload_postfix: ""
+
+  build_tegola_lambda_arm64:
+    name: Build tegola_lambda on Amazon Linux
+    needs: [gen_version]
+    runs-on: ubuntu-22.04
+    env:
+      GOARCH: arm64
+
+    steps:
+    - name: Check out actions
+      uses: actions/checkout@v3
+
+    - name: Setup env
+      uses: ./.github/actions/tegola-setup-env
+      with:
+        ui: false
+        go: false
+
+    - name: Build tegola_lambda
+      uses: ./.github/actions/amazon-linux-build-action
+      with:
+        args: '...'
+
+    - name: Upload artifact
+      uses: ./.github/actions/upload-artifact
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        artifact_name: "tegola_lambda_arm64"
+        upload_postfix: ""
+
 
   build_macos:
     name: Build for MacOS

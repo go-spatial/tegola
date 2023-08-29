@@ -38,7 +38,7 @@ runs:
       if: ${{ runner.os == 'Windows' }}
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ${{inputs.artifact_name}}${{inputs.upload_postfix}}
         path: ${{steps.zip-path.outputs.dir-path}}tegola.zip
