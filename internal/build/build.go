@@ -11,7 +11,7 @@ var (
 	Version              = "version not set"
 	GitRevision          = "not set"
 	GitBranch            = "not set"
-	uiVersionDefaultText = "viewer not build"
+	uiVersionDefaultText = "viewer not built"
 	Tags                 []string
 	Commands             = []string{"tegola"}
 )
