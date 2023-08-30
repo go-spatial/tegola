@@ -210,6 +210,7 @@ jobs:
       if: github.ref == env.DEFAULT_BRANCH_REF
       uses: docker/build-push-action@v4
       with:
+        context: .
         push: true
         tags: ${{ env.DOCKERHUB_ORG }}/${{ env.DOCKERHUB_REPO }}:edge
         platforms: linux/amd64,linux/arm64
@@ -219,6 +220,7 @@ jobs:
       if: github.event_name == 'release'
       uses: docker/build-push-action@v4
       with:
+        context: .
         push: true
         tags: ${{ env.DOCKERHUB_ORG }}/${{ env.DOCKERHUB_REPO }}:${{ env.VERSION }},${{ env.DOCKERHUB_ORG }}/${{ env.DOCKERHUB_REPO }}:latest
         platforms: linux/amd64,linux/arm64
