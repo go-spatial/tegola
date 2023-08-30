@@ -25,5 +25,5 @@ runs:
       shell: bash
 
     - id: compute-path
-      run: echo "::set-output name=dir-path::${TEGOLA_PATH}"
+      run: echo "dir-path=${TEGOLA_PATH}" >> $GITHUB_OUTPUT
       shell: bash

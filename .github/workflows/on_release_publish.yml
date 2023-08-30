@@ -97,7 +97,7 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         artifact_name: "tegola"
-        upload_postfix: "_linux_amd64"
+        release_archive_name: "tegola_linux_amd64"
 
   build_linux_arm:
     name: Build for Linux (arm64)
@@ -127,11 +127,11 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         artifact_name: "tegola"
-        upload_postfix: "_linux_arm64"
+        release_archive_name: "tegola_linux_arm64"
 
   build_tegola_lambda_amd64:
-    name: Build tegola_lambda on Amazon Linux
-    needs: [gen_version]
+    name: Build tegola_lambda on Amazon Linux (amd64)
+    needs: [gen_version,build_ui]
     runs-on: ubuntu-22.04
 
     steps:
@@ -156,11 +156,12 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         artifact_name: "bootstrap"
-        upload_postfix: "_amd64"
+        cmd_subdir: "tegola_lambda"
+        release_archive_name: "tegola_lambda_amd64"
 
   build_tegola_lambda_arm64:
-    name: Build tegola_lambda on Amazon Linux
-    needs: [gen_version]
+    name: Build tegola_lambda on Amazon Linux (arm64)
+    needs: [gen_version,build_ui]
     runs-on: ubuntu-22.04
 
     steps:
@@ -185,7 +186,8 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         artifact_name: "bootstrap"
-        upload_postfix: "_arm64"
+        cmd_subdir: "tegola_lambda"
+        release_archive_name: "tegola_lambda_arm64"
 
   build_macos:
     name: Build for MacOS
@@ -213,7 +215,7 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         artifact_name: "tegola"
-        upload_postfix: "_darwin_amd64"
+        release_archive_name: "tegola_darwin_amd64"
 
   build_docker:
     name: Build Docker image and publish to Docker Hub
@@ -311,4 +313,4 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         artifact_name: "tegola"
-        upload_postfix: "_windows_amd64"
+        release_archive_name: "tegola_windows_amd64"

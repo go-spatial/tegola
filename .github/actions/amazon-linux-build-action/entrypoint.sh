@@ -19,7 +19,7 @@
 cd cmd/tegola_lambda
 
 # build the binary
-go build \
+GOARCH=${GOARCH} go build \
 	-mod vendor \
 	-tags lambda.norpc \
 	-ldflags "-w -X ${BuildPkg}.Version=${VERSION} -X ${BuildPkg}.GitRevision=${GIT_REVISION} -X ${BuildPkg}.GitBranch=${GIT_BRANCH}" \
