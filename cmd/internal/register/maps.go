@@ -131,6 +131,7 @@ func Maps(a *atlas.Atlas, maps []provider.Map, providers map[string]provider.Til
 	)
 
 	// iterate our maps
+	newMaps := make([]atlas.Map, 0, len(maps))
 	for _, m := range maps {
 		newMap := webMercatorMapFromConfigMap(m)
 
@@ -157,9 +158,15 @@ func Maps(a *atlas.Atlas, maps []provider.Map, providers map[string]provider.Til
 			newMap.Layers = append(newMap.Layers, layer)
 		}
 
-		a.AddMap(newMap)
+		newMaps = append(newMaps, newMap)
 	}
-	return nil
+
+	// Register all or nothing.
+	return a.AddMaps(newMaps)
+}
+
+func UnloadMaps(a *atlas.Atlas, names []string) {
+	a.RemoveMaps(names)
 }
 
 // Find allow HTML tag

@@ -3,6 +3,7 @@ package atlas
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -219,6 +220,52 @@ func (a *Atlas) AddMap(m Map) {
 	}
 
 	a.maps[m.Name] = m
+}
+
+// AddMaps registers maps by name, all or nothing. If a map already exists an error will be returned.
+func (a *Atlas) AddMaps(maps []Map) error {
+	if a == nil {
+		// Use the default Atlas if a, is nil. This way the empty value is
+		// still useful.
+		return defaultAtlas.AddMaps(maps)
+	}
+	a.Lock()
+	defer a.Unlock()
+
+	if a.maps == nil {
+		a.maps = map[string]Map{}
+	}
+
+	// Check all the names for conflicts before we add any map, so that we can add all or none.
+	for _, m := range maps {
+		if _, exists := a.maps[m.Name]; exists {
+			return fmt.Errorf("Map with name \"%s\" already exists.", m.Name)
+		}
+	}
+
+	// Now add all the maps.
+	for _, m := range maps {
+		a.maps[m.Name] = m
+	}
+
+	return nil
+}
+
+func (a *Atlas) RemoveMaps(names []string) {
+	if a == nil {
+		// Use the default Atlas if a, is nil. This way the empty value is
+		// still useful.
+		defaultAtlas.RemoveMaps(names)
+		return
+	}
+	a.Lock()
+	defer a.Unlock()
+
+	for _, name := range names {
+		if _, exists := a.maps[name]; exists {
+			delete(a.maps, name)
+		}
+	}
 }
 
 // GetCache returns the registered cache if one is registered, otherwise nil

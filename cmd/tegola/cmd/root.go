@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-spatial/cobra"
@@ -8,9 +9,12 @@ import (
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	cachecmd "github.com/go-spatial/tegola/cmd/tegola/cmd/cache"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/config/source"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/build"
+	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/provider"
 )
 
 var (
@@ -114,22 +118,22 @@ func initConfig(configFile string, cacheRequired bool, logLevel string, logger s
 		return err
 	}
 
-	// init our providers
-	// but first convert []env.Map -> []dict.Dicter
-	provArr := make([]dict.Dicter, len(conf.Providers))
-	for i := range provArr {
-		provArr[i] = conf.Providers[i]
-	}
-
-	providers, err := register.Providers(provArr, conf.Maps)
+	// Init providers from the primary config file.
+	providers, err := initProviders(conf.Providers, conf.Maps)
 	if err != nil {
-		return fmt.Errorf("could not register providers: %v", err)
+		return err
 	}
 
-	// init our maps
-	if err = register.Maps(nil, conf.Maps, providers); err != nil {
-		return fmt.Errorf("could not register maps: %v", err)
+	// Init maps from the primary config file.
+	if err = initMaps(conf.Maps, providers); err != nil {
+		return err
 	}
+
+	// Setup the app config source.
+	if err = initAppConfigSource(conf); err != nil {
+		return err
+	}
+
 	if len(conf.Cache) == 0 && cacheRequired {
 		return fmt.Errorf("no cache defined in config, please check your config (%v)", configFile)
 	}
@@ -151,4 +155,125 @@ func initConfig(configFile string, cacheRequired bool, logLevel string, logger s
 	}
 	atlas.SetObservability(observer)
 	return nil
+}
+
+// initProviders translate provider config from a TOML file into usable Provider objects.
+func initProviders(providersConfig []env.Dict, maps []provider.Map) (map[string]provider.TilerUnion, error) {
+	// first convert []env.Map -> []dict.Dicter
+	provArr := make([]dict.Dicter, len(providersConfig))
+	for i := range provArr {
+		provArr[i] = providersConfig[i]
+	}
+
+	providers, err := register.Providers(provArr, conf.Maps)
+	if err != nil {
+		return nil, fmt.Errorf("could not register providers: %v", err)
+	}
+
+	return providers, nil
+}
+
+// initMaps registers maps with Atlas to be ready for service.
+func initMaps(maps []provider.Map, providers map[string]provider.TilerUnion) error {
+	if err := register.Maps(nil, maps, providers); err != nil {
+		return fmt.Errorf("could not register maps: %v", err)
+	}
+
+	return nil
+}
+
+// initAppConfigSource sets up an additional configuration source for "apps" (groups of providers and maps) to be loaded and unloaded on-the-fly.
+func initAppConfigSource(conf config.Config) error {
+	// Get the config source type. If none, return.
+	val, err := conf.AppConfigSource.String("type", nil)
+	if err != nil || val == "" {
+		return nil
+	}
+
+	// Initialize the source.
+	ctx := context.Background() // Not doing anything with context now, but could use it for stopping this goroutine.
+	src, err := source.InitSource(val, conf.AppConfigSource, conf.BaseDir)
+	if err != nil {
+		return err
+	}
+
+	// Load and start watching for new apps.
+	watcher, err := src.LoadAndWatch(ctx)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		// Keep a record of what we've loaded so that we can unload when needed.
+		apps := make(map[string]source.App)
+
+		for {
+			select {
+			case app, ok := <-watcher.Updates:
+				if !ok {
+					return
+				}
+
+				// Check for validity first.
+				if err := config.ValidateApp(&app); err != nil {
+					log.Errorf("Failed validating app %s. %s", app.Key, err)
+					continue
+				}
+
+				// If the new app is named the same as an existing app, first unload the existing one.
+				if old, exists := apps[app.Key]; exists {
+					log.Infof("Unloading app %s...", old.Key)
+					// We need only unload maps, since the providers don't live outside of maps.
+					register.UnloadMaps(nil, getMapNames(old))
+					delete(apps, app.Key)
+				}
+
+				log.Infof("Loading app %s...", app.Key)
+
+				// Init new providers
+				providers, err := initProviders(app.Providers, app.Maps)
+				if err != nil {
+					log.Errorf("Failed initializing providers from %s: %s", app.Key, err)
+					continue
+				}
+
+				// Init new maps
+				if err = initMaps(app.Maps, providers); err != nil {
+					log.Errorf("Failed initializing maps from %s: %s", app.Key, err)
+					continue
+				}
+
+				// Record that we've loaded this app.
+				apps[app.Key] = app
+
+			case deleted, ok := <-watcher.Deletions:
+				if !ok {
+					return
+				}
+
+				// Unload an app's maps if it was previously loaded.
+				if app, exists := apps[deleted]; exists {
+					log.Infof("Unloading app %s...", app.Key)
+					register.UnloadMaps(nil, getMapNames(app))
+					delete(apps, app.Key)
+				} else {
+					log.Infof("Received an unload event for app %s, but couldn't find it.", deleted)
+				}
+
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return nil
+}
+
+func getMapNames(app source.App) []string {
+	names := make([]string, 0, len(app.Maps))
+	for _, m := range app.Maps {
+		names = append(names, string(m.Name))
+	}
+
+	return names
 }
