@@ -117,9 +117,10 @@ jobs:
       env:
         # build architecture
         GOOS: linux
+        GOARCH: arm64
       run: |
           cd cmd/tegola
-          GOARCH=arm64 go build -mod vendor -ldflags "-w -X ${BUILD_PKG}.Version=${VERSION} -X ${BUILD_PKG}.GitRevision=${GIT_REVISION} -X ${BUILD_PKG}.GitBranch=${GIT_BRANCH}"
+          go build -mod vendor -ldflags "-w -X ${BUILD_PKG}.Version=${VERSION} -X ${BUILD_PKG}.GitRevision=${GIT_REVISION} -X ${BUILD_PKG}.GitBranch=${GIT_BRANCH}"
 
     - name: Upload artifact
       uses: ./.github/actions/upload-artifact
@@ -140,11 +141,13 @@ jobs:
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
       with:
-        ui: false
+        ui: true
         go: false
 
     - name: Build tegola_lambda
       uses: ./.github/actions/amazon-linux-build-action
+      env:
+        GOARCH: amd64 # set the target build architecture
       with:
         args: '...'
 
@@ -152,15 +155,13 @@ jobs:
       uses: ./.github/actions/upload-artifact
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        artifact_name: "tegola_lambda_amd64"
-        upload_postfix: ""
+        artifact_name: "bootstrap"
+        upload_postfix: "_amd64"
 
   build_tegola_lambda_arm64:
     name: Build tegola_lambda on Amazon Linux
     needs: [gen_version]
     runs-on: ubuntu-22.04
-    env:
-      GOARCH: arm64
 
     steps:
     - name: Check out actions
@@ -169,11 +170,13 @@ jobs:
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
       with:
-        ui: false
+        ui: true
         go: false
 
     - name: Build tegola_lambda
       uses: ./.github/actions/amazon-linux-build-action
+      env:
+        GOARCH: arm64 # set the target build architecture
       with:
         args: '...'
 
@@ -181,9 +184,8 @@ jobs:
       uses: ./.github/actions/upload-artifact
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        artifact_name: "tegola_lambda_arm64"
-        upload_postfix: ""
-
+        artifact_name: "bootstrap"
+        upload_postfix: "_arm64"
 
   build_macos:
     name: Build for MacOS

@@ -15,13 +15,15 @@ runs:
   using: "composite"
   steps:
     - name: set env (not Windows)
+      if: ${{ runner.os != 'Windows' }}
       run: echo "TEGOLA_PATH=cmd/${{inputs.name}}/" >> $GITHUB_ENV
       shell: bash
-      if: ${{ runner.os != 'Windows' }}
+
     - name: set env (Windows)
+      if: ${{ runner.os == 'Windows' }}
       run: echo "TEGOLA_PATH=cmd\\${{inputs.name}}\\" >> $GITHUB_ENV
       shell: bash
-      if: ${{ runner.os == 'Windows' }}
+
     - id: compute-path
       run: echo "::set-output name=dir-path::${TEGOLA_PATH}"
       shell: bash

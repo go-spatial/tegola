@@ -17,7 +17,7 @@ runs:
   using: "composite"
   steps:
     - id: zip-path
-      uses: ./.github/actions/tegola_upload_path
+      uses: ./.github/actions/tegola-upload-path
       with:
         name: ${{ inputs.artifact_name }}
 
