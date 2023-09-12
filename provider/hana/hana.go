@@ -597,9 +597,6 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 	}
 	p.layers = lyrs
 
-	// track the provider so we can clean it up later
-	providers = append(providers, p)
-
 	return &p, nil
 }
 
@@ -956,21 +953,11 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params p
 	return mvtBytes.Bytes(), nil
 }
 
+// Cleanup calls Close()
+func (p *Provider) Cleanup() error {
+	p.Close()
+	return nil
+}
+
 // Close will close the Provider's database connectio
 func (p *Provider) Close() { p.pool.Close() }
-
-// reference to all instantiated providers
-var providers []Provider
-
-// Cleanup will close all database connections and destroy all previously instantiated Provider instances
-func Cleanup() {
-	if len(providers) > 0 {
-		log.Infof("cleaning up HANA providers")
-	}
-
-	for i := range providers {
-		providers[i].Close()
-	}
-
-	providers = make([]Provider, 0)
-}

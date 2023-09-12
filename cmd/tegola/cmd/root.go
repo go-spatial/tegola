@@ -119,7 +119,7 @@ func initConfig(configFile string, cacheRequired bool, logLevel string, logger s
 	}
 
 	// Init providers from the primary config file.
-	providers, err := initProviders(conf.Providers, conf.Maps)
+	providers, err := initProviders(conf.Providers, conf.Maps, "default")
 	if err != nil {
 		return err
 	}
@@ -159,14 +159,14 @@ func initConfig(configFile string, cacheRequired bool, logLevel string, logger s
 }
 
 // initProviders translate provider config from a TOML file into usable Provider objects.
-func initProviders(providersConfig []env.Dict, maps []provider.Map) (map[string]provider.TilerUnion, error) {
+func initProviders(providersConfig []env.Dict, maps []provider.Map, namespace string) (map[string]provider.TilerUnion, error) {
 	// first convert []env.Map -> []dict.Dicter
 	provArr := make([]dict.Dicter, len(providersConfig))
 	for i := range provArr {
 		provArr[i] = providersConfig[i]
 	}
 
-	providers, err := register.Providers(provArr, conf.Maps)
+	providers, err := register.Providers(provArr, conf.Maps, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("could not register providers: %v", err)
 	}
@@ -229,15 +229,15 @@ func watchAppUpdates(ctx context.Context, watcher source.ConfigWatcher) {
 			// If the new app is named the same as an existing app, first unload the existing one.
 			if old, exists := apps[app.Key]; exists {
 				log.Infof("Unloading app %s...", old.Key)
-				// We need only unload maps, since the providers don't live outside of maps.
 				register.UnloadMaps(nil, getMapNames(old))
-				delete(apps, app.Key)
+				register.UnloadProviders(getProviderNames(old), old.Key)
+				delete(apps, old.Key)
 			}
 
 			log.Infof("Loading app %s...", app.Key)
 
 			// Init new providers
-			providers, err := initProviders(app.Providers, app.Maps)
+			providers, err := initProviders(app.Providers, app.Maps, app.Key)
 			if err != nil {
 				log.Errorf("Failed initializing providers from %s: %s", app.Key, err)
 				continue
@@ -261,6 +261,7 @@ func watchAppUpdates(ctx context.Context, watcher source.ConfigWatcher) {
 			if app, exists := apps[deleted]; exists {
 				log.Infof("Unloading app %s...", app.Key)
 				register.UnloadMaps(nil, getMapNames(app))
+				register.UnloadProviders(getProviderNames(app), app.Key)
 				delete(apps, app.Key)
 			} else {
 				log.Infof("Received an unload event for app %s, but couldn't find it.", deleted)
@@ -276,6 +277,20 @@ func getMapNames(app source.App) []string {
 	names := make([]string, 0, len(app.Maps))
 	for _, m := range app.Maps {
 		names = append(names, string(m.Name))
+	}
+
+	return names
+}
+
+func getProviderNames(app source.App) []string {
+	names := make([]string, 0, len(app.Providers))
+	for _, p := range app.Providers {
+		name, err := p.String("name", nil)
+		if err != nil {
+			log.Warnf("Encountered a provider in app %s with an empty name.", app.Key)
+			continue
+		}
+		names = append(names, name)
 	}
 
 	return names

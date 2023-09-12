@@ -33,7 +33,7 @@ func (e ErrProviderTypeInvalid) Error() string {
 }
 
 // Providers registers data provider backends
-func Providers(providers []dict.Dicter, maps []provider.Map) (map[string]provider.TilerUnion, error) {
+func Providers(providers []dict.Dicter, maps []provider.Map, namespace string) (map[string]provider.TilerUnion, error) {
 	// holder for registered providers
 	registeredProviders := map[string]provider.TilerUnion{}
 
@@ -72,7 +72,7 @@ func Providers(providers []dict.Dicter, maps []provider.Map) (map[string]provide
 		}
 
 		// register the provider
-		prov, err := provider.For(ptype, p, maps)
+		prov, err := provider.For(ptype, p, maps, namespace)
 		if err != nil {
 			return registeredProviders, err
 		}
@@ -83,4 +83,13 @@ func Providers(providers []dict.Dicter, maps []provider.Map) (map[string]provide
 	}
 
 	return registeredProviders, nil
+}
+
+func UnloadProviders(names []string, namespace string) {
+	for _, name := range names {
+		err := provider.Remove(name, namespace)
+		if err != nil {
+			log.Errorf("Error unloading provider instance %s: %s", name, err)
+		}
+	}
 }

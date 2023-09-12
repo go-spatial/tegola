@@ -15,7 +15,7 @@ const Name = "emptycollection"
 var Count int
 
 func init() {
-	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider)
 }
 
 // NewProvider setups a test provider. there are not currently any config params supported
@@ -23,9 +23,6 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 	Count++
 	return &TileProvider{}, nil
 }
-
-// Cleanup cleans up all the test providers.
-func Cleanup() { Count = 0 }
 
 type TileProvider struct{}
 
@@ -51,4 +48,10 @@ func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provid
 	}
 
 	return fn(&debugTileOutline)
+}
+
+// Cleanup cleans up the test provider.
+func (tp *TileProvider) Cleanup() error {
+	Count--
+	return nil
 }

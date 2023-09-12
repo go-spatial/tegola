@@ -26,7 +26,7 @@ import (
 var colFinder *regexp.Regexp
 
 func init() {
-	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider)
 	colFinder = regexp.MustCompile(`^(([a-zA-Z_][a-zA-Z0-9_]*)|"([^"]+)")\s`)
 }
 
@@ -41,7 +41,8 @@ type featureTableDetails struct {
 }
 
 // Creates a config instance of the type NewTileProvider() requires including all available feature
-//    tables in the gpkg at 'gpkgPath'.
+//
+//	tables in the gpkg at 'gpkgPath'.
 func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
 	// Get all feature tables
 	db, err := sql.Open("sqlite3", gpkgPath)
@@ -394,26 +395,5 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 		p.layers[layer.name] = layer
 	}
 
-	// track the provider so we can clean it up later
-	providers = append(providers, p)
-
 	return &p, err
-}
-
-// reference to all instantiated providers
-var providers []Provider
-
-// Cleanup will close all database connections and destroy all previously instantiated Provider instances
-func Cleanup() {
-	if len(providers) > 0 {
-		log.Infof("cleaning up gpkg providers")
-	}
-
-	for i := range providers {
-		if err := providers[i].Close(); err != nil {
-			log.Errorf("err closing connection: %v", err)
-		}
-	}
-
-	providers = make([]Provider, 0)
 }

@@ -235,6 +235,11 @@ func (p *Provider) Close() error {
 	return p.db.Close()
 }
 
+// Cleanup calls Close()
+func (p *Provider) Cleanup() error {
+	return p.Close()
+}
+
 type GeomTableDetails struct {
 	geomFieldname string
 	geomType      geom.Geometry

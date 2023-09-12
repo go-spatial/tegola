@@ -22,7 +22,7 @@ const (
 )
 
 func init() {
-	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, nil)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider)
 }
 
 // NewProvider Setups a debug provider. there are not currently any config params supported
@@ -112,4 +112,9 @@ func (p *Provider) Layers() ([]provider.LayerInfo, error) {
 	}
 
 	return ls, nil
+}
+
+// Cleanup is a no-op for the debug provider.
+func (p *Provider) Cleanup() error {
+	return nil
 }
