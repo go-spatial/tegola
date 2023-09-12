@@ -79,7 +79,7 @@ func TestReplaceTokens(t *testing.T) {
 			sql:       "SELECT id, !pixel_width! as width, !pixel_height! as height, !scale_denominator! as scale_denom FROM foo WHERE !BBOX!",
 			layer:     Layer{srid: tegola.WebMercator, geomField: "geom"},
 			tile:      provider.NewTile(11, 1070, 676, 64, tegola.WebMercator),
-			expected:  `SELECT id, 76.43702827453671 as width, 76.43702827453671 as height, 272989.38669477403 as scale_denom FROM foo WHERE "geom".ST_IntersectsRectPlanar(NEW ST_POINT($1, $3), NEW ST_POINT($2, $3)) = 1`,
+			expected:  `SELECT id, 76.43702827 as width, 76.43702827 as height, 272989.38669477 as scale_denom FROM foo WHERE "geom".ST_IntersectsRectPlanar(NEW ST_POINT($1, $3), NEW ST_POINT($2, $3)) = 1`,
 		},
 	}
 
