@@ -130,7 +130,8 @@ func initConfig(configFile string, cacheRequired bool, logLevel string, logger s
 	}
 
 	// Setup the app config source.
-	if err = initAppConfigSource(conf); err != nil {
+	ctx := context.Background()
+	if err = initAppConfigSource(ctx, conf); err != nil {
 		return err
 	}
 
@@ -183,7 +184,7 @@ func initMaps(maps []provider.Map, providers map[string]provider.TilerUnion) err
 }
 
 // initAppConfigSource sets up an additional configuration source for "apps" (groups of providers and maps) to be loaded and unloaded on-the-fly.
-func initAppConfigSource(conf config.Config) error {
+func initAppConfigSource(ctx context.Context, conf config.Config) error {
 	// Get the config source type. If none, return.
 	val, err := conf.AppConfigSource.String("type", nil)
 	if err != nil || val == "" {
@@ -191,7 +192,6 @@ func initAppConfigSource(conf config.Config) error {
 	}
 
 	// Initialize the source.
-	ctx := context.Background() // Not doing anything with context now, but could use it for stopping this goroutine.
 	src, err := source.InitSource(val, conf.AppConfigSource, conf.BaseDir)
 	if err != nil {
 		return err
@@ -203,70 +203,73 @@ func initAppConfigSource(conf config.Config) error {
 		return err
 	}
 
-	go func() {
-		// Keep a record of what we've loaded so that we can unload when needed.
-		apps := make(map[string]source.App)
-
-		for {
-			select {
-			case app, ok := <-watcher.Updates:
-				if !ok {
-					return
-				}
-
-				// Check for validity first.
-				if err := config.ValidateApp(&app); err != nil {
-					log.Errorf("Failed validating app %s. %s", app.Key, err)
-					continue
-				}
-
-				// If the new app is named the same as an existing app, first unload the existing one.
-				if old, exists := apps[app.Key]; exists {
-					log.Infof("Unloading app %s...", old.Key)
-					// We need only unload maps, since the providers don't live outside of maps.
-					register.UnloadMaps(nil, getMapNames(old))
-					delete(apps, app.Key)
-				}
-
-				log.Infof("Loading app %s...", app.Key)
-
-				// Init new providers
-				providers, err := initProviders(app.Providers, app.Maps)
-				if err != nil {
-					log.Errorf("Failed initializing providers from %s: %s", app.Key, err)
-					continue
-				}
-
-				// Init new maps
-				if err = initMaps(app.Maps, providers); err != nil {
-					log.Errorf("Failed initializing maps from %s: %s", app.Key, err)
-					continue
-				}
-
-				// Record that we've loaded this app.
-				apps[app.Key] = app
-
-			case deleted, ok := <-watcher.Deletions:
-				if !ok {
-					return
-				}
-
-				// Unload an app's maps if it was previously loaded.
-				if app, exists := apps[deleted]; exists {
-					log.Infof("Unloading app %s...", app.Key)
-					register.UnloadMaps(nil, getMapNames(app))
-					delete(apps, app.Key)
-				} else {
-					log.Infof("Received an unload event for app %s, but couldn't find it.", deleted)
-				}
-
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
+	go watchAppUpdates(ctx, watcher)
 
 	return nil
+}
+
+// watchAppUpdates will pull from the channels supplied by the given watcher to process new app config.
+func watchAppUpdates(ctx context.Context, watcher source.ConfigWatcher) {
+	// Keep a record of what we've loaded so that we can unload when needed.
+	apps := make(map[string]source.App)
+
+	for {
+		select {
+		case app, ok := <-watcher.Updates:
+			if !ok {
+				return
+			}
+
+			// Check for validity first.
+			if err := config.ValidateApp(&app); err != nil {
+				log.Errorf("Failed validating app %s. %s", app.Key, err)
+				continue
+			}
+
+			// If the new app is named the same as an existing app, first unload the existing one.
+			if old, exists := apps[app.Key]; exists {
+				log.Infof("Unloading app %s...", old.Key)
+				// We need only unload maps, since the providers don't live outside of maps.
+				register.UnloadMaps(nil, getMapNames(old))
+				delete(apps, app.Key)
+			}
+
+			log.Infof("Loading app %s...", app.Key)
+
+			// Init new providers
+			providers, err := initProviders(app.Providers, app.Maps)
+			if err != nil {
+				log.Errorf("Failed initializing providers from %s: %s", app.Key, err)
+				continue
+			}
+
+			// Init new maps
+			if err = initMaps(app.Maps, providers); err != nil {
+				log.Errorf("Failed initializing maps from %s: %s", app.Key, err)
+				continue
+			}
+
+			// Record that we've loaded this app.
+			apps[app.Key] = app
+
+		case deleted, ok := <-watcher.Deletions:
+			if !ok {
+				return
+			}
+
+			// Unload an app's maps if it was previously loaded.
+			if app, exists := apps[deleted]; exists {
+				log.Infof("Unloading app %s...", app.Key)
+				register.UnloadMaps(nil, getMapNames(app))
+				delete(apps, app.Key)
+			} else {
+				log.Infof("Received an unload event for app %s, but couldn't find it.", deleted)
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func getMapNames(app source.App) []string {

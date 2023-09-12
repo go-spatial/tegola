@@ -232,8 +232,13 @@ func (a *Atlas) AddMaps(maps []Map) error {
 	a.Lock()
 	defer a.Unlock()
 
+	// If Atlas is empty, add all the maps, no checks required.
 	if a.maps == nil {
-		a.maps = map[string]Map{}
+		a.maps = make(map[string]Map, len(maps))
+		for _, m := range maps {
+			a.maps[m.Name] = m
+		}
+		return nil
 	}
 
 	// Check all the names for conflicts before we add any map, so that we can add all or none.
