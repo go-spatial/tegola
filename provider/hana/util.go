@@ -336,9 +336,9 @@ func replaceTokens(dbVersion uint, sql string, idFieldName string, geomFieldName
 		idFieldToken, idFieldName,
 		geomFieldToken, geomFieldName,
 		geomTypeToken, geoType,
-		scaleDenominatorToken, strconv.FormatFloat(scaleDenominator, 'f', -1, 64),
-		pixelWidthToken, strconv.FormatFloat(pixelWidth, 'f', -1, 64),
-		pixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', -1, 64),
+		scaleDenominatorToken, strconv.FormatFloat(scaleDenominator, 'f', 8, 64),
+		pixelWidthToken, strconv.FormatFloat(pixelWidth, 'f', 8, 64),
+		pixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', 8, 64),
 	)
 
 	uppercaseTokenSQL := uppercaseTokens(sql)
@@ -733,8 +733,8 @@ func extractQueryParamValues(pname string, maps []provider.Map, layer *Layer) pr
 
 var tokenRe = regexp.MustCompile("![a-zA-Z0-9_-]+!")
 
-//	uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can
-//	contain alphanumerics, dash and underline chars.
+// uppercaseTokens converts all !tokens! to uppercase !TOKENS!. Tokens can
+// contain alphanumerics, dash and underline chars.
 func uppercaseTokens(str string) string {
 	return tokenRe.ReplaceAllStringFunc(str, strings.ToUpper)
 }

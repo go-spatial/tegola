@@ -141,7 +141,7 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 
 	minPt, maxPt := minGeo.(geom.Point), maxGeo.(geom.Point)
 
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%g,%g,%g,%g,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
+	bbox := fmt.Sprintf("ST_MakeEnvelope(%.8f,%.8f,%.8f,%.8f,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
 
 	extent, _ = tile.Extent()
 	// TODO: Always convert to meter if we support different projections
@@ -161,9 +161,9 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 		config.ZToken, strconv.FormatUint(uint64(z), 10),
 		config.XToken, strconv.FormatUint(uint64(x), 10),
 		config.YToken, strconv.FormatUint(uint64(y), 10),
-		config.ScaleDenominatorToken, strconv.FormatFloat(scaleDenominator, 'f', -1, 64),
-		config.PixelWidthToken, strconv.FormatFloat(pixelWidth, 'f', -1, 64),
-		config.PixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', -1, 64),
+		config.ScaleDenominatorToken, strconv.FormatFloat(scaleDenominator, 'f', 8, 64),
+		config.PixelWidthToken, strconv.FormatFloat(pixelWidth, 'f', 8, 64),
+		config.PixelHeightToken, strconv.FormatFloat(pixelHeight, 'f', 8, 64),
 		config.IdFieldToken, lyr.IDFieldName(),
 		config.GeomFieldToken, lyr.GeomFieldName(),
 		config.GeomTypeToken, geoType,
