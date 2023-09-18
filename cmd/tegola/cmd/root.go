@@ -118,14 +118,16 @@ func initConfig(configFile string, cacheRequired bool, logLevel string, logger s
 		return err
 	}
 
+	loader := appInitializer{}
+
 	// Init providers from the primary config file.
-	providers, err := initProviders(conf.Providers, conf.Maps, "default")
+	providers, err := loader.initProviders(conf.Providers, conf.Maps, "default")
 	if err != nil {
 		return err
 	}
 
 	// Init maps from the primary config file.
-	if err = initMaps(conf.Maps, providers); err != nil {
+	if err = loader.initMaps(conf.Maps, providers); err != nil {
 		return err
 	}
 
@@ -158,8 +160,16 @@ func initConfig(configFile string, cacheRequired bool, logLevel string, logger s
 	return nil
 }
 
+type initializer interface {
+	initProviders(providersConfig []env.Dict, maps []provider.Map, namespace string) (map[string]provider.TilerUnion, error)
+	initMaps(maps []provider.Map, providers map[string]provider.TilerUnion) error
+	unload(app source.App)
+}
+
+type appInitializer struct{}
+
 // initProviders translate provider config from a TOML file into usable Provider objects.
-func initProviders(providersConfig []env.Dict, maps []provider.Map, namespace string) (map[string]provider.TilerUnion, error) {
+func (l appInitializer) initProviders(providersConfig []env.Dict, maps []provider.Map, namespace string) (map[string]provider.TilerUnion, error) {
 	// first convert []env.Map -> []dict.Dicter
 	provArr := make([]dict.Dicter, len(providersConfig))
 	for i := range provArr {
@@ -175,12 +185,18 @@ func initProviders(providersConfig []env.Dict, maps []provider.Map, namespace st
 }
 
 // initMaps registers maps with Atlas to be ready for service.
-func initMaps(maps []provider.Map, providers map[string]provider.TilerUnion) error {
+func (l appInitializer) initMaps(maps []provider.Map, providers map[string]provider.TilerUnion) error {
 	if err := register.Maps(nil, maps, providers); err != nil {
 		return fmt.Errorf("could not register maps: %v", err)
 	}
 
 	return nil
+}
+
+// unload deregisters the maps and providers of an app.
+func (l appInitializer) unload(app source.App) {
+	register.UnloadMaps(nil, getMapNames(app))
+	register.UnloadProviders(getProviderNames(app), app.Key)
 }
 
 // initAppConfigSource sets up an additional configuration source for "apps" (groups of providers and maps) to be loaded and unloaded on-the-fly.
@@ -203,13 +219,13 @@ func initAppConfigSource(ctx context.Context, conf config.Config) error {
 		return err
 	}
 
-	go watchAppUpdates(ctx, watcher)
+	go watchAppUpdates(ctx, watcher, appInitializer{})
 
 	return nil
 }
 
 // watchAppUpdates will pull from the channels supplied by the given watcher to process new app config.
-func watchAppUpdates(ctx context.Context, watcher source.ConfigWatcher) {
+func watchAppUpdates(ctx context.Context, watcher source.ConfigWatcher, init initializer) {
 	// Keep a record of what we've loaded so that we can unload when needed.
 	apps := make(map[string]source.App)
 
@@ -229,22 +245,21 @@ func watchAppUpdates(ctx context.Context, watcher source.ConfigWatcher) {
 			// If the new app is named the same as an existing app, first unload the existing one.
 			if old, exists := apps[app.Key]; exists {
 				log.Infof("Unloading app %s...", old.Key)
-				register.UnloadMaps(nil, getMapNames(old))
-				register.UnloadProviders(getProviderNames(old), old.Key)
+				init.unload(old)
 				delete(apps, old.Key)
 			}
 
 			log.Infof("Loading app %s...", app.Key)
 
 			// Init new providers
-			providers, err := initProviders(app.Providers, app.Maps, app.Key)
+			providers, err := init.initProviders(app.Providers, app.Maps, app.Key)
 			if err != nil {
 				log.Errorf("Failed initializing providers from %s: %s", app.Key, err)
 				continue
 			}
 
 			// Init new maps
-			if err = initMaps(app.Maps, providers); err != nil {
+			if err = init.initMaps(app.Maps, providers); err != nil {
 				log.Errorf("Failed initializing maps from %s: %s", app.Key, err)
 				continue
 			}
@@ -260,8 +275,7 @@ func watchAppUpdates(ctx context.Context, watcher source.ConfigWatcher) {
 			// Unload an app's maps if it was previously loaded.
 			if app, exists := apps[deleted]; exists {
 				log.Infof("Unloading app %s...", app.Key)
-				register.UnloadMaps(nil, getMapNames(app))
-				register.UnloadProviders(getProviderNames(app), app.Key)
+				init.unload(app)
 				delete(apps, app.Key)
 			} else {
 				log.Infof("Received an unload event for app %s, but couldn't find it.", deleted)

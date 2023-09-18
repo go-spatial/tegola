@@ -17,11 +17,7 @@ type FileConfigSource struct {
 	dir string
 }
 
-func (s *FileConfigSource) Type() string {
-	return "file"
-}
-
-func (s *FileConfigSource) Init(options env.Dict, baseDir string) error {
+func (s *FileConfigSource) init(options env.Dict, baseDir string) error {
 	var err error
 	dir, err := options.String("dir", nil)
 	if err != nil {
@@ -35,6 +31,10 @@ func (s *FileConfigSource) Init(options env.Dict, baseDir string) error {
 
 	s.dir = dir
 	return nil
+}
+
+func (s *FileConfigSource) Type() string {
+	return "file"
 }
 
 // LoadAndWatch will read all the files in the configured directory and then keep watching the directory for changes.
@@ -109,6 +109,7 @@ func (s *FileConfigSource) LoadAndWatch(ctx context.Context) (ConfigWatcher, err
 
 			case <-ctx.Done():
 				log.Info("Exiting watcher...")
+				appWatcher.Close()
 				return
 			}
 		}

@@ -22,16 +22,22 @@ type ConfigSource interface {
 	LoadAndWatch(ctx context.Context) (ConfigWatcher, error)
 }
 
+// ConfigWatcher allows watching for App updates (new and changes) and deletions.
 type ConfigWatcher struct {
 	Updates   chan App
 	Deletions chan string
+}
+
+func (c ConfigWatcher) Close() {
+	close(c.Updates)
+	close(c.Deletions)
 }
 
 func InitSource(sourceType string, options env.Dict, baseDir string) (ConfigSource, error) {
 	switch sourceType {
 	case "file":
 		src := FileConfigSource{}
-		err := src.Init(options, baseDir)
+		err := src.init(options, baseDir)
 		return &src, err
 
 	default:
