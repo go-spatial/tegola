@@ -243,17 +243,19 @@ func Drivers(types ...providerType) (l []string) {
 // For function returns a configure provider of the given type; The provider may be a mvt provider or
 // a std provider. The correct entry in TilerUnion will not be nil. If there is an error both entries
 // will be nil.
-func For(name string, config dict.Dicter, maps []Map, namespace string) (val TilerUnion, err error) {
+func For(ptype string, config dict.Dicter, maps []Map, namespace string) (val TilerUnion, err error) {
 	var (
 		driversList = Drivers()
 	)
 	if providers == nil {
 		return val, ErrUnknownProvider{KnownProviders: driversList}
 	}
-	p, ok := providers[name]
+	p, ok := providers[ptype]
 	if !ok {
-		return val, ErrUnknownProvider{KnownProviders: driversList, Name: name}
+		return val, ErrUnknownProvider{KnownProviders: driversList, Name: ptype}
 	}
+
+	name, _ := config.String("name", nil)
 	if p.init != nil {
 		val.Std, err = p.init(config, maps)
 		recordInstance(name, namespace, val)
