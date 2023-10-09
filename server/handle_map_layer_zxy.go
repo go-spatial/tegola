@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/proj"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
 
@@ -19,6 +21,18 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
 )
+
+var (
+	webmercatorGrid slippy.Grid
+)
+
+func init() {
+	var err error
+	webmercatorGrid, err = slippy.NewGrid(3857)
+	if err != nil {
+		log.Fatal("Could not create Web Mercator grid (3857): ", err)
+	}
+}
 
 type HandleMapLayerZXY struct {
 	// required
@@ -148,9 +162,26 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Check to see that the zxy is within the bounds of the map.
 		// TODO(@ear7h): use a more efficient version of Intersect that doesn't
 		// make a new extent
-		textent := tile.Extent4326()
-		if _, intersect := m.Bounds.Intersect(textent); !intersect {
-			msg := fmt.Sprintf("map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, textent)
+		ext3857, ok := slippy.Extent(webmercatorGrid, tile)
+		if !ok {
+			msg := fmt.Sprintf("map (%v -- %v) does not contains tile at %v/%v/%v. Unable to generate extent.", req.mapName, m.Bounds, req.z, req.x, req.y)
+			log.Debug(msg)
+			http.Error(w, msg, http.StatusNotFound)
+			return
+		}
+
+		points4326, err := proj.Inverse(proj.WebMercator, ext3857[:])
+		if err != nil {
+			msg := fmt.Sprintf("Unable to convert 3857 to 4326 for map (%v -- %v) and tile %v/%v/%v -- %v.", req.mapName, m.Bounds, req.z, req.x, req.y, ext3857)
+			log.Error(msg)
+			http.Error(w, msg, http.StatusNotFound)
+			return
+		}
+
+		ext4326 := &geom.Extent{}
+		copy(ext4326[:], points4326)
+		if _, intersect := m.Bounds.Intersect(ext4326); !intersect || !ok {
+			msg := fmt.Sprintf("map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, ext4326)
 			log.Debug(msg)
 			http.Error(w, msg, http.StatusNotFound)
 			return

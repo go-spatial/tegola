@@ -134,11 +134,7 @@ func TestGenerateTilesForBounds(t *testing.T) {
 			zooms:  []uint{1},
 			bounds: [4]float64{180.0, 90.0, 0.0, 0.0},
 			tiles: sTiles{
-				/*
-				 * Note that the test case for this from the original had the tile being
-				 * produced as 1/1/0 and not 1/1/1 but the code is identical, so not sure
-				 * what the difference is.
-				 */
+				slippy.NewTile(1, 1, 0),
 				slippy.NewTile(1, 1, 1),
 			},
 		},

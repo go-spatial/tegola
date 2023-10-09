@@ -345,7 +345,7 @@ func TestEncode(t *testing.T) {
 					},
 				},
 			},
-			tile: slippy.NewTile(2, 3, 4),
+			tile: slippy.NewTile(2, 3, 3),
 			expected: vectorTile.Tile{
 				Layers: []*vectorTile.Tile_Layer{
 					{
@@ -403,7 +403,7 @@ func TestEncode(t *testing.T) {
 					},
 				},
 			},
-			tile: slippy.NewTile(2, 3, 4),
+			tile: slippy.NewTile(2, 3, 3),
 			expected: vectorTile.Tile{
 				Layers: []*vectorTile.Tile_Layer{
 					{
