@@ -134,7 +134,7 @@ func (en *Encoder) Geometry(g geom.Geometry) {
 	case geom.MultiPointer:
 		en.MultiPoint(geo.Points())
 	case geom.LineStringer:
-		en.LineString(geo.Verticies())
+		en.LineString(geo.Vertices())
 	case geom.MultiLineStringer:
 		en.MultiLineString(geo.LineStrings())
 	case geom.Polygoner:

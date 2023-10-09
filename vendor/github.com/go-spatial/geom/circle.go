@@ -5,10 +5,6 @@ import (
 	"math"
 )
 
-func round(x, unit float64) float64 {
-	return math.Round(x/unit) * unit
-}
-
 // ErrPointsAreCoLinear is thrown when points are colinear but that is unexpected
 var ErrPointsAreCoLinear = errors.New("given points are colinear")
 
@@ -91,8 +87,32 @@ func CircleFromPoints(a, b, c [2]float64) (Circle, error) {
 	r := math.Sqrt((vA * vA) + (vB * vB))
 	return Circle{
 		Center: [2]float64{x, y},
-		Radius: round(r, 0.0001),
+		Radius: r,
+		//Radius: RoundToPrec(r, 4),
 	}, nil
+}
+
+func cmpFloat(f1, f2 float64) bool {
+	bitTolerance := int64(math.Float64bits(1.0+tolerance) - math.Float64bits(1.0))
+	// handle infinity
+	if math.IsInf(f1, 0) || math.IsInf(f2, 0) {
+		return math.IsInf(f1, -1) == math.IsInf(f2, -1) &&
+			math.IsInf(f1, 1) == math.IsInf(f2, 1)
+	}
+
+	// -0.0 exist but -0.0 == 0.0 is true
+	if f1 == 0 || f2 == 0 {
+		return math.Abs(f2-f1) < tolerance
+	}
+
+	i1 := int64(math.Float64bits(f1))
+	i2 := int64(math.Float64bits(f2))
+	d := i2 - i1
+
+	if d < 0 {
+		return d > -bitTolerance
+	}
+	return d < bitTolerance
 }
 
 // ContainsPoint will check to see if the point is in the circle.
@@ -101,7 +121,8 @@ func (c Circle) ContainsPoint(pt [2]float64) bool {
 	// of the circle.
 	v1, v2 := c.Center[0]-pt[0], c.Center[1]-pt[1]
 	d := math.Sqrt((v1 * v1) + (v2 * v2))
-	return c.Radius >= d
+	//d = RoundToPrec(d, 3)
+	return cmpFloat(c.Radius, d) || c.Radius > d
 }
 
 func (c Circle) AsPoints(k uint) []Point {

@@ -14,7 +14,8 @@ require (
 	github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
 	github.com/go-redis/redis v6.9.0+incompatible
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
-	github.com/go-spatial/geom v0.0.0-20190821234737-802ab2533ab4
+	github.com/go-spatial/geom v0.0.0-20220918193402-3cd2f5a9a082
+	github.com/go-spatial/proj v0.2.0
 	github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
 	github.com/golang/protobuf v1.5.2
 	github.com/jackc/pgproto3/v2 v2.2.0

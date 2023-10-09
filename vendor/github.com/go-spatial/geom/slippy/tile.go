@@ -1,9 +1,8 @@
 package slippy
 
 import (
-	"math"
-
 	"errors"
+	"fmt"
 
 	"github.com/go-spatial/geom"
 )
@@ -33,102 +32,100 @@ type Tile struct {
 // NewTileMinMaxer returns the smallest tile which fits the
 // geom.MinMaxer. Note: it assumes the values of ext are
 // EPSG:4326 (lng/lat)
-func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
-	upperLeft := NewTileLatLon(MaxZoom, ext.MaxY(), ext.MinX())
-	point := &geom.Point{ext.MaxX(), ext.MinY()}
+func NewTileMinMaxer(g Grid, ext geom.MinMaxer) (*Tile, bool) {
+	tile, ok := g.FromNative(MaxZoom, geom.Point{
+		ext.MinX(),
+		ext.MinY(),
+	})
+
+	if !ok {
+		return nil, false
+	}
+
 
 	var ret *Tile
 
 	for z := uint(MaxZoom); int(z) >= 0 && ret == nil; z-- {
-		upperLeft.RangeFamilyAt(z, func(tile *Tile) error {
-			if tile.Extent4326().Contains(point) {
+		RangeFamilyAt(g, tile, z, func(tile *Tile) error {
+			if ext, ok := Extent(g, tile); ok && ext.Contains(geom.Point(ext.Max())) {
 				ret = tile
 				return errors.New("stop iter")
 			}
 
 			return nil
 		})
-
 	}
-	return ret
-}
 
-// NewTileLatLon instantiates a tile containing the coordinate with the specified zoom
-func NewTileLatLon(z uint, lat, lon float64) *Tile {
-	x := Lon2Tile(z, lon)
-	y := Lat2Tile(z, lat)
-
-	return &Tile{
-		Z: z,
-		X: x,
-		Y: y,
-	}
-}
-
-func minmax(a, b uint) (uint, uint) {
-	if a > b {
-		return b, a
-	}
-	return a, b
+	return ret, true
 }
 
 // FromBounds returns a list of tiles that make up the bound given. The bounds should be defined as the following lng/lat points [4]float64{west,south,east,north}
-func FromBounds(bounds *geom.Extent, z uint) []Tile {
+func FromBounds(g Grid, bounds *geom.Extent, z uint) []Tile {
 	if bounds == nil {
 		return nil
 	}
 
-	minx, maxx := minmax(Lon2Tile(z, bounds[0]), Lon2Tile(z, bounds[2]))
-	miny, maxy := minmax(Lat2Tile(z, bounds[1]), Lat2Tile(z, bounds[3]))
-	// tiles := make([]Tile, (maxx-minx)*(maxy-miny))
-	var tiles []Tile
+	p1, ok := g.FromNative(z, bounds.Min())
+	if !ok {
+		return nil
+	}
+
+	p2, ok := g.FromNative(z, bounds.Max())
+	if !ok {
+		return nil
+	}
+
+	minx, maxx := p1.X, p2.X
+	if minx > maxx {
+		minx, maxx = maxx, minx
+	}
+
+	miny, maxy := p1.Y, p2.Y
+	if miny > maxy {
+		miny, maxy = maxy, miny
+	}
+
+	ret := make([]Tile, 0, (maxx-minx+1)*(maxy-miny+1))
+
 	for x := minx; x <= maxx; x++ {
 		for y := miny; y <= maxy; y++ {
-			tiles = append(tiles, Tile{Z: z, X: x, Y: y})
+			ret = append(ret, Tile{z, x, y})
 		}
 	}
-	return tiles
 
+	return ret
 }
 
 // ZXY returns back the z,x,y of the tile
 func (t Tile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
-// Extent3857 returns the tile's extent in EPSG:3857 (aka Web Mercator) projection
-func (t Tile) Extent3857() *geom.Extent {
-	return geom.NewExtent(
-		[2]float64{Tile2WebX(t.Z, t.X), Tile2WebY(t.Z, t.Y+1)},
-		[2]float64{Tile2WebX(t.Z, t.X+1), Tile2WebY(t.Z, t.Y)},
-	)
-}
-
-// Extent4326 returns the tile's extent in EPSG:4326 (aka lat/long)
-func (t Tile) Extent4326() *geom.Extent {
-	return geom.NewExtent(
-		[2]float64{Tile2Lon(t.Z, t.X), Tile2Lat(t.Z, t.Y+1)},
-		[2]float64{Tile2Lon(t.Z, t.X+1), Tile2Lat(t.Z, t.Y)},
-	)
-}
+type Iterator func(*Tile) error
 
 // RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
 // TODO (ear7h): sibling support
-func (t Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
-	// handle ancestors and self
-	if zoom <= t.Z {
-		mag := t.Z - zoom
-		arg := NewTile(zoom, t.X>>mag, t.Y>>mag)
-		return f(arg)
+func RangeFamilyAt(g Grid, t *Tile, zoom uint, f Iterator) error {
+	tl, ok := g.ToNative(t)
+	if !ok {
+		return fmt.Errorf("tile %v not valid for grid", t)
 	}
 
-	// handle descendants
-	mag := zoom - t.Z
-	delta := uint(math.Exp2(float64(mag)))
+	br, ok := g.ToNative(NewTile(t.Z, t.X+1, t.Y+1))
+	if !ok {
+		return fmt.Errorf("tile %v not valid for grid", t)
+	}
 
-	leastX := t.X << mag
-	leastY := t.Y << mag
+	tlt, ok := g.FromNative(zoom, tl)
+	if !ok {
+		return fmt.Errorf("tile %v not valid for grid", t)
+	}
 
-	for x := leastX; x < leastX+delta; x++ {
-		for y := leastY; y < leastY+delta; y++ {
+	brt, ok := g.FromNative(zoom, br)
+	if !ok {
+		return fmt.Errorf("tile %v not valid for grid", t)
+	}
+
+	for x := tlt.X; x < brt.X; x++ {
+		for y := tlt.Y; y < brt.Y; y++ {
 			err := f(NewTile(zoom, x, y))
 			if err != nil {
 				return err

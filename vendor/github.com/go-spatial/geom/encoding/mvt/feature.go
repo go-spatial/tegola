@@ -6,8 +6,9 @@ import (
 	"log"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding/wkt"
 	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
+	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/winding"
 )
 
 var (
@@ -31,11 +32,10 @@ type Feature struct {
 }
 
 func (f Feature) String() string {
-	g, err := wkt.Encode(f.Geometry)
+	g, err := wkt.EncodeString(f.Geometry)
 	if err != nil {
 		return fmt.Sprintf("encoding error for geom geom, %v", err)
 	}
-
 
 	if f.ID != nil {
 		return fmt.Sprintf("{Feature: %v, GEO: %v, Tags: %+v}", *f.ID, g, f.Tags)
@@ -148,20 +148,29 @@ func NewCursor() *cursor {
 	return &cursor{}
 }
 
-// GetDeltaPointAndUpdate assumes the Point is in WebMercator.
+// GetDeltaPointAndUpdate returns the delta of for the given point from the current
+// cursor position
 func (c *cursor) GetDeltaPointAndUpdate(p geom.Point) (dx, dy int64) {
-	var ix, iy int64
-	var tx, ty = p.X(), p.Y()
+	delta := c.moveCursorPoints([2]int64{int64(p.X()), int64(p.Y())})
+	return delta[0][0], delta[0][1]
+}
 
-	ix, iy = int64(tx), int64(ty)
-	// compute our point delta
-	dx = ix - int64(c.x)
-	dy = iy - int64(c.y)
+func (c *cursor) moveCursorPoints(pts ...[2]int64) (deltas [][2]int64) {
+	deltas = make([][2]int64, len(pts))
+	for i := range pts {
+		deltas[i][0] = pts[i][0] - c.x
+		deltas[i][1] = pts[i][1] - c.y
+		c.x, c.y = pts[i][0], pts[i][1]
+	}
+	return deltas
+}
 
-	// update our cursor
-	c.x = ix
-	c.y = iy
-	return dx, dy
+func (c *cursor) encodeZigZagPt(pts [][2]int64) []uint32 {
+	g := make([]uint32, 0, (2 * len(pts)))
+	for _, dp := range pts {
+		g = append(g, encodeZigZag(dp[0]), encodeZigZag(dp[1]))
+	}
+	return g
 }
 
 func (c *cursor) encodeCmd(cmd uint32, points [][2]float64) []uint32 {
@@ -180,6 +189,92 @@ func (c *cursor) encodeCmd(cmd uint32, points [][2]float64) []uint32 {
 		g = append(g, encodeZigZag(dx), encodeZigZag(dy))
 	}
 
+	return g
+}
+
+func (c *cursor) encodeLinearRing(order winding.Order, wo winding.Winding, ring [][2]float64) []uint32 {
+
+	iring := make([][2]int64, len(ring))
+	for i := range iring {
+		// the process of truncating the float can cause the winding order to flip!
+		iring[i][0], iring[i][1] = int64(ring[i][0]), int64(ring[i][1])
+	}
+	ringWinding := order.OfInt64Points(iring...)
+
+	if ringWinding.IsColinear() {
+		return []uint32{}
+	}
+
+	if ringWinding != wo {
+		if debug {
+			log.Printf("(0) RING WKT:\n%v", wkt.MustEncode(geom.LineString(ring)))
+			log.Printf("(1) winding order: \n\tpts: %v\n\two : %v", ringWinding, wo)
+		}
+		// need to reverse the points in the ring
+		for i := len(iring)/2 - 1; i >= 0; i-- {
+			opp := len(iring) - 1 - i
+			iring[i], iring[opp] = iring[opp], iring[i]
+		}
+		if debug {
+			log.Printf("(2) RING WKT:\n%v", wkt.MustEncode(geom.LineString(ring)))
+			log.Printf("(2) winding order: \n\tpts: %v\n\two : %v", ringWinding, wo)
+		}
+	}
+
+	deltas := c.moveCursorPoints(iring...)
+
+	// 3 is for the three commands that it takes to describe a ring: move to, line to, and close
+	g := make([]uint32, 0, (2*len(iring))+3)
+
+	// move to first point
+	g = append(g,
+		uint32(NewCommand(cmdMoveTo, 1)),
+		encodeZigZag(deltas[0][0]),
+		encodeZigZag(deltas[0][1]),
+	)
+
+	// line to each of the other points
+	g = append(g, uint32(NewCommand(cmdLineTo, len(deltas)-1)))
+	g = append(g, c.encodeZigZagPt(deltas[1:])...)
+
+	// Close path
+	g = append(g, uint32(NewCommand(cmdClosePath, 1)))
+
+	return g
+}
+
+func (c *cursor) encodePolygon(geo geom.Polygon) []uint32 {
+	g := []uint32{}
+
+	lines := geo.LinearRings()
+	for i := range lines {
+		// bail if number of points is less than two
+		if len(lines[i]) < 2 {
+			if i != 0 {
+				continue
+			}
+			return g
+		}
+
+		// https://github.com/mapbox/vector-tile-spec/tree/master/2.1#4344-polygon-geometry-type
+		// An exterior ring is DEFINED as a linear ring having a positive area
+		// as calculated by applying the surveyor's formula to the vertices of
+		// the polygon in tile coordinates. In the tile coordinate system (with
+		// the Y axis positive down and X axis positive to the right) this makes
+		// the exterior ring's winding order appear clockwise.
+		//
+		// An interior ring is DEFINED as a linear ring having a negative area as
+		// calculated by applying the surveyor's formula to the vertices of the
+		// polygon in tile coordinates. In the tile coordinate system (with the
+		// Y axis positive down and X axis positive to the right) this makes the
+		// interior ring's winding order appear counterclockwise.
+		order := winding.Order{YPositiveDown: true}
+		wo := winding.CounterClockwise
+		if i == 0 {
+			wo = winding.Clockwise
+		}
+		g = append(g, c.encodeLinearRing(order, wo, lines[i])...)
+	}
 	return g
 }
 
@@ -217,7 +312,7 @@ func encodeGeometry(ctx context.Context, geometry geom.Geometry) (g []uint32, vt
 		return g, vectorTile.Tile_POINT, nil
 
 	case geom.LineString:
-		points := t.Verticies()
+		points := t.Vertices()
 		g = append(g, c.MoveTo(points[0])...)
 		g = append(g, c.LineTo(points[1:]...)...)
 		return g, vectorTile.Tile_LINESTRING, nil
@@ -225,33 +320,31 @@ func encodeGeometry(ctx context.Context, geometry geom.Geometry) (g []uint32, vt
 	case geom.MultiLineString:
 		lines := t.LineStrings()
 		for _, l := range lines {
-			points := geom.LineString(l).Verticies()
+			points := geom.LineString(l).Vertices()
 			g = append(g, c.MoveTo(points[0])...)
 			g = append(g, c.LineTo(points[1:]...)...)
 		}
 		return g, vectorTile.Tile_LINESTRING, nil
 
 	case geom.Polygon:
-		// TODO: Right now c.ScaleGeo() never returns a Polygon, so this is dead code.
-		lines := t.LinearRings()
-		for _, l := range lines {
-			points := geom.LineString(l).Verticies()
-			g = append(g, c.MoveTo(points[0])...)
-			g = append(g, c.LineTo(points[1:]...)...)
-			g = append(g, c.ClosePath())
-		}
+		g = append(g, c.encodePolygon(t)...)
 		return g, vectorTile.Tile_POLYGON, nil
 
 	case geom.MultiPolygon:
 		polygons := t.Polygons()
 		for _, p := range polygons {
-			lines := geom.Polygon(p).LinearRings()
-			for _, l := range lines {
-				points := geom.LineString(l).Verticies()
-				g = append(g, c.MoveTo(points[0])...)
-				g = append(g, c.LineTo(points[1:]...)...)
-				g = append(g, c.ClosePath())
-			}
+			g = append(g, c.encodePolygon(p)...)
+		}
+		return g, vectorTile.Tile_POLYGON, nil
+
+	case *geom.MultiPolygon:
+		if t == nil {
+			return g, vectorTile.Tile_POLYGON, nil
+		}
+
+		polygons := t.Polygons()
+		for _, p := range polygons {
+			g = append(g, c.encodePolygon(p)...)
 		}
 		return g, vectorTile.Tile_POLYGON, nil
 
