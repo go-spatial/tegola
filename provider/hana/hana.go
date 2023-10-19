@@ -349,6 +349,9 @@ func CreateConnection(config dict.Dicter) (*sql.DB, error) {
 	}
 
 	db, err := OpenDB(uri)
+	if err != nil {
+		return db, err
+	}
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("Failed while establishing connection: %v", err)
 	}
