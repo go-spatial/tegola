@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
-	"github.com/go-spatial/tegola/dict"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -1086,50 +1085,5 @@ func TestFeatureTableMetaData(t *testing.T) {
 
 	for tname, tc := range tests {
 		t.Run(tname, fn(tc))
-	}
-}
-
-func TestCleanup(t *testing.T) {
-	type tcase struct {
-		config dict.Dict
-	}
-
-	fn := func(tc tcase) func(*testing.T) {
-		return func(t *testing.T) {
-			_, err := NewTileProvider(tc.config, nil)
-			if err != nil {
-				t.Fatalf("err creating NewTileProvider: %v", err)
-				return
-			}
-
-			if len(providers) != 1 {
-				t.Errorf("expecting 1 providers, got %v", len(providers))
-				return
-			}
-
-			Cleanup()
-
-			if len(providers) != 0 {
-				t.Errorf("expecting 0 providers, got %v", len(providers))
-				return
-			}
-		}
-	}
-
-	tests := map[string]tcase{
-		"cleanup": {
-			config: map[string]interface{}{
-				"filepath": GPKGAthensFilePath,
-				"layers": []map[string]interface{}{
-					{"name": "a_points", "tablename": "amenities_points", "id_fieldname": "fid", "fields": []string{"amenity", "religion", "tourism", "shop"}},
-					{"name": "r_lines", "tablename": "rail_lines", "id_fieldname": "fid", "fields": []string{"railway", "bridge", "tunnel"}},
-					{"name": "rd_lines", "tablename": "roads_lines"},
-				},
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, fn(tc))
 	}
 }

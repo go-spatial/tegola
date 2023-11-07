@@ -11,6 +11,7 @@ require (
 	github.com/akrylysov/algnhsa v1.0.0
 	github.com/aws/aws-sdk-go v1.27.0
 	github.com/dimfeld/httptreemux v5.0.1+incompatible
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
 	github.com/go-redis/redis v6.9.0+incompatible
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6

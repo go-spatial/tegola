@@ -23,8 +23,8 @@ var (
 )
 
 func init() {
-	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
-	provider.MVTRegister(provider.TypeMvt.Prefix()+Name, NewMVTTileProvider, Cleanup)
+	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider)
+	provider.MVTRegister(provider.TypeMvt.Prefix()+Name, NewMVTTileProvider)
 }
 
 // NewTileProvider setups a test provider. there are not currently any config params supported
@@ -41,7 +41,7 @@ func NewMVTTileProvider(config dict.Dicter, maps []provider.Map) (provider.MVTTi
 	lock.Lock()
 	MVTCount++
 	lock.Unlock()
-	var mvtTile []byte
+	mvtTile := []byte{}
 	if config != nil {
 		path, err := config.String("test_file", nil)
 		if err != nil {
@@ -59,14 +59,6 @@ func NewMVTTileProvider(config dict.Dicter, maps []provider.Map) (provider.MVTTi
 	return &TileProvider{
 		MVTTile: mvtTile,
 	}, nil
-}
-
-// Cleanup cleans up all the test providers.
-func Cleanup() {
-	lock.Lock()
-	Count = 0
-	MVTCount = 0
-	lock.Unlock()
 }
 
 // TileProvider mocks out a tile provider
@@ -109,4 +101,16 @@ func (tp *TileProvider) MVTForLayers(ctx context.Context, _ provider.Tile, _ pro
 		return nil, nil
 	}
 	return tp.MVTTile, nil
+}
+
+// Cleanup cleans up the test provider.
+func (tp *TileProvider) Cleanup() error {
+	lock.Lock()
+	if tp.MVTTile == nil {
+		Count--
+	} else {
+		MVTCount--
+	}
+	lock.Unlock()
+	return nil
 }
