@@ -29,11 +29,11 @@ func (ls LineString) IsRing() bool {
 	return false
 }
 
-// Verticies returns a slice of XY values
-func (ls LineString) Verticies() [][2]float64 { return ls }
+// Vertices returns a slice of XY values
+func (ls LineString) Vertices() [][2]float64 { return ls }
 
-// SetVerticies modifies the array of 2D coordinates
-func (ls *LineString) SetVerticies(input [][2]float64) (err error) {
+// SetVertices modifies the array of 2D coordinates
+func (ls *LineString) SetVertices(input [][2]float64) (err error) {
 	if ls == nil {
 		return ErrNilLineString
 	}

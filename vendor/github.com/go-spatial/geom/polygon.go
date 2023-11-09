@@ -16,7 +16,7 @@ var ErrInvalidPolygon = errors.New("geom: invalid Polygon")
 // Polygon is a geometry consisting of multiple closed LineStrings.
 // There must be only one exterior LineString with a clockwise winding order.
 // There may be one or more interior LineStrings with a counterclockwise winding orders.
-// The last point in the polygon will not match the first point.
+// The last point in the linear ring will not match the first point.
 type Polygon [][][2]float64
 
 // LinearRings returns the coordinates of the linear rings

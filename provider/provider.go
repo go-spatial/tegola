@@ -29,6 +29,18 @@ const (
 	TypeAll = TypeStd & TypeMvt
 )
 
+var (
+	webmercatorGrid slippy.Grid
+)
+
+func init() {
+	var err error
+	webmercatorGrid, err = slippy.NewGrid(3857)
+	if err != nil {
+		log.Fatal("Could not create Web Mercator grid (3857): ", err)
+	}
+}
+
 func (pt providerType) Prefix() string {
 	if pt == TypeMvt {
 		return "mvt_"
@@ -67,6 +79,9 @@ func (pf providerFilter) Is(ps ...providerType) bool {
 // the geom port is mostly done as part of issue #499 (removing the
 // Tile interface in this package)
 // TODO(@ear7h) remove this atrocity from the code base
+// NOTE(@jchamberlain) leaving said atrocity for now because several places
+// in the code require extent+srid, (which said atrocity supplies),
+// not just extent.
 type tile_t struct {
 	slippy.Tile
 	buffer uint
@@ -86,12 +101,22 @@ func NewTile(z, x, y, buf, srid uint) Tile {
 
 // Extent returns the extent of the tile
 func (tile *tile_t) Extent() (ext *geom.Extent, srid uint64) {
-	return tile.Extent3857(), 3857
+	if ext, ok := slippy.Extent(webmercatorGrid, &tile.Tile); ok {
+		return ext, 3857
+	}
+
+	log.Error("Could not generate valid extent for tile.", tile)
+	return &geom.Extent{}, 3857
 }
 
 // BufferedExtent returns a the extent of the tile, with the define buffer
 func (tile *tile_t) BufferedExtent() (ext *geom.Extent, srid uint64) {
-	return tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, tile.buffer)), 3857
+	ext, _ = tile.Extent()
+	// WARNING: slippy.PixelsToNative() is misnamed. It doesn't convert the given number of pixels into
+	// anything--the pixels arguments isn't even used (hence set to 0 here). Instead, slippy.PixelsToNative()
+	// return the ratio of pixels to projected units at the given zoom. We multiply its return value by
+	// the pixel count in tile.buffer to get the expected conversion.
+	return ext.ExpandBy(slippy.PixelsToNative(webmercatorGrid, tile.Z, 0) * float64(tile.buffer)), 3857
 }
 
 // Tile is an interface used by Tiler, it is an unnecessary abstraction and is
@@ -153,7 +178,9 @@ type pfns struct {
 var providers map[string]pfns
 
 // Register the provider with the system. This call is generally made in the init functions of the provider.
-// 	the clean up function will be called during shutdown of the provider to allow the provider to do any cleanup.
+//
+//	the clean up function will be called during shutdown of the provider to allow the provider to do any cleanup.
+//
 // The init function can not be nil, the cleanup function may be nil
 func Register(name string, init InitFunc, cleanup CleanupFunc) error {
 	if init == nil {
@@ -176,7 +203,9 @@ func Register(name string, init InitFunc, cleanup CleanupFunc) error {
 }
 
 // MVTRegister the provider with the system. This call is generally made in the init functions of the provider.
-// 	the clean up function will be called during shutdown of the provider to allow the provider to do any cleanup.
+//
+//	the clean up function will be called during shutdown of the provider to allow the provider to do any cleanup.
+//
 // The init function can not be nil, the cleanup function may be nil
 func MVTRegister(name string, init MVTInitFunc, cleanup CleanupFunc) error {
 	if init == nil {

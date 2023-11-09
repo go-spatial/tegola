@@ -123,8 +123,8 @@ github.com/go-redis/redis/internal/singleflight
 # github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 ## explicit
 github.com/go-spatial/cobra
-# github.com/go-spatial/geom v0.0.0-20190821234737-802ab2533ab4
-## explicit
+# github.com/go-spatial/geom v0.0.0-20220918193402-3cd2f5a9a082
+## explicit; go 1.13
 github.com/go-spatial/geom
 github.com/go-spatial/geom/cmp
 github.com/go-spatial/geom/encoding/mvt
@@ -135,6 +135,15 @@ github.com/go-spatial/geom/encoding/wkb/internal/decode
 github.com/go-spatial/geom/encoding/wkb/internal/encode
 github.com/go-spatial/geom/encoding/wkt
 github.com/go-spatial/geom/slippy
+github.com/go-spatial/geom/winding
+# github.com/go-spatial/proj v0.2.0
+## explicit
+github.com/go-spatial/proj
+github.com/go-spatial/proj/core
+github.com/go-spatial/proj/merror
+github.com/go-spatial/proj/mlog
+github.com/go-spatial/proj/operations
+github.com/go-spatial/proj/support
 # github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
 ## explicit
 github.com/go-test/deep

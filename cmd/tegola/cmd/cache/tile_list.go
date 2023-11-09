@@ -102,6 +102,7 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 	tce := &TileChannel{
 		channel: make(chan *slippy.Tile),
 	}
+
 	go func() {
 		defer tce.Close()
 
@@ -134,7 +135,7 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 
 			for _, zoom := range zooms {
 				// range will include the original tile.
-				err = tile.RangeFamilyAt(zoom, func(tile *slippy.Tile) error {
+				err = rangeFamilyAt(tile, zoom, func(tile *slippy.Tile) error {
 					select {
 					case tce.channel <- tile:
 					case <-ctx.Done():

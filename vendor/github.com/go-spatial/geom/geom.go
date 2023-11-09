@@ -1,7 +1,10 @@
 // Package geom describes geometry interfaces.
 package geom
 
-const TOLERANCE = 0.000001
+import (
+	"math"
+	"reflect"
+)
 
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
@@ -13,22 +16,238 @@ type Pointer interface {
 	XY() [2]float64
 }
 
+// PointZer is a 3D point.
+type PointZer interface {
+	Geometry
+	XYZ() [3]float64
+}
+
+// PointMer is a 2D+1D point.
+type PointMer interface {
+	Geometry
+	XYM() [3]float64
+}
+
+// PointZMer is a 3D+1D point.
+type PointZMer interface {
+	Geometry
+	XYZM() [4]float64
+}
+
+// PointSer is a 2D point + SRID
+type PointSer interface {
+	Geometry
+	XYS() struct {
+		Srid uint32
+		Xy   Point
+	}
+}
+
+// PointZSer is a 3D point + SRID
+type PointZSer interface {
+	Geometry
+	XYZS() struct {
+		Srid uint32
+		Xyz  PointZ
+	}
+}
+
+// PointMSer is a 2D+1D point + SRID
+type PointMSer interface {
+	Geometry
+	XYMS() struct {
+		Srid uint32
+		Xym  PointM
+	}
+}
+
+// PointZMSer is a 3D+1D point + SRID
+type PointZMSer interface {
+	Geometry
+	XYZMS() struct {
+		Srid uint32
+		Xyzm PointZM
+	}
+}
+
 // MultiPointer is a geometry with multiple points.
 type MultiPointer interface {
 	Geometry
 	Points() [][2]float64
 }
 
+// MultiPointZer is a geometry with multiple 3D points.
+type MultiPointZer interface {
+	Geometry
+	Points() [][3]float64
+}
+
+// MultiPointMer is a geometry with multiple 2+1D points.
+type MultiPointMer interface {
+	Geometry
+	Points() [][3]float64
+}
+
+// MultiPointZMer is a geometry with multiple 3+1D points.
+type MultiPointZMer interface {
+	Geometry
+	Points() [][4]float64
+}
+
+// MultiPointSer is a MultiPoint + SRID.
+type MultiPointSer interface {
+	Geometry
+	Points() struct {
+		Srid uint32
+		Mp   MultiPoint
+	}
+}
+
+// MultiPointZSer is a MultiPointZ + SRID.
+type MultiPointZSer interface {
+	Geometry
+	Points() struct {
+		Srid uint32
+		Mpz  MultiPointZ
+	}
+}
+
+// MultiPointMSer is a MultiPointM + SRID.
+type MultiPointMSer interface {
+	Geometry
+	Points() struct {
+		Srid uint32
+		Mpm  MultiPointM
+	}
+}
+
+// MultiPointZMSer is a MultiPointZM + SRID.
+type MultiPointZMSer interface {
+	Geometry
+	Points() struct {
+		Srid uint32
+		Mpzm MultiPointZM
+	}
+}
+
 // LineStringer is a line of two or more points.
 type LineStringer interface {
 	Geometry
-	Verticies() [][2]float64
+	Vertices() [][2]float64
+}
+
+// LineStringMer is a line of two or more M points.
+type LineStringMer interface {
+	Geometry
+	Vertices() [][3]float64
+}
+
+// LineStringZer is a line of two or more Z points.
+type LineStringZer interface {
+	Geometry
+	Vertices() [][3]float64
+}
+
+// LineStringZMer is a line of two or more ZM points.
+type LineStringZMer interface {
+	Geometry
+	Vertices() [][4]float64
+}
+
+// LineStringSer is a line of two or more points + SRID.
+type LineStringSer interface {
+	Geometry
+	Vertices() struct {
+		Srid uint32
+		Ls   LineString
+	}
+}
+
+// LineStringMSer is a line of two or more M points + SRID.
+type LineStringMSer interface {
+	Geometry
+	Vertices() struct {
+		Srid uint32
+		Lsm  LineStringM
+	}
+}
+
+// LineStringZSer is a line of two or more Z points + SRID.
+type LineStringZSer interface {
+	Geometry
+	Vertices() struct {
+		Srid uint32
+		Lsz  LineStringZ
+	}
+}
+
+// LineStringZMSer is a line of two or more ZM points + SRID.
+type LineStringZMSer interface {
+	Geometry
+	Vertices() struct {
+		Srid uint32
+		Lszm LineStringZM
+	}
 }
 
 // MultiLineStringer is a geometry with multiple LineStrings.
 type MultiLineStringer interface {
 	Geometry
 	LineStrings() [][][2]float64
+}
+
+// MultiLineZStringer is a geometry with multiple LineZStrings.
+type MultiLineStringZer interface {
+	Geometry
+	LineStringZs() [][][3]float64
+}
+
+// MultiLineMStringer is a geometry with multiple LineMStrings.
+type MultiLineStringMer interface {
+	Geometry
+	LineStringMs() [][][3]float64
+}
+
+// MultiLineZMStringer is a geometry with multiple LineZMStrings.
+type MultiLineStringZMer interface {
+	Geometry
+	LineStringZMs() [][][4]float64
+}
+
+// MultiLineSStringer is a geometry with multiple LineSStrings.
+type MultiLineStringSer interface {
+	Geometry
+	MultiLineStrings() struct {
+		Srid uint32
+		Mls  MultiLineString
+	}
+}
+
+// MultiLineZSStringer is a geometry with multiple LineZSStrings.
+type MultiLineStringZSer interface {
+	Geometry
+	MultiLineStringZs() struct {
+		Srid uint32
+		Mlsz MultiLineStringZ
+	}
+}
+
+// MultiLineMSStringer is a geometry with multiple LineMSStrings.
+type MultiLineStringMSer interface {
+	Geometry
+	MultiLineStringMs() struct {
+		Srid uint32
+		Mlsm MultiLineStringM
+	}
+}
+
+// MultiLineZMSStringer is a geometry with multiple LineZMSStrings.
+type MultiLineStringZMSer interface {
+	Geometry
+	MultiLineStringZMs() struct {
+		Srid  uint32
+		Mlszm MultiLineStringZM
+	}
 }
 
 // Polygoner is a geometry consisting of multiple Linear Rings.
@@ -38,6 +257,53 @@ type MultiLineStringer interface {
 type Polygoner interface {
 	Geometry
 	LinearRings() [][][2]float64
+}
+
+type PolygonZer interface {
+	Geometry
+	LinearRings() [][][3]float64
+}
+
+type PolygonMer interface {
+	Geometry
+	LinearRings() [][][3]float64
+}
+
+type PolygonZMer interface {
+	Geometry
+	LinearRings() [][][4]float64
+}
+
+type PolygonSer interface {
+	Geometry
+	LinearRings() struct {
+		Srid uint32
+		Pol  Polygon
+	}
+}
+
+type PolygonZSer interface {
+	Geometry
+	LinearRings() struct {
+		Srid uint32
+		Polz PolygonZ
+	}
+}
+
+type PolygonMSer interface {
+	Geometry
+	LinearRings() struct {
+		Srid uint32
+		Polm PolygonM
+	}
+}
+
+type PolygonZMSer interface {
+	Geometry
+	LinearRings() struct {
+		Srid  uint32
+		Polzm PolygonZM
+	}
 }
 
 // MultiPolygoner is a geometry of multiple polygons.
@@ -76,7 +342,7 @@ func getCoordinates(g Geometry, pts *[]Point) error {
 
 	case LineStringer:
 
-		mpts := gg.Verticies()
+		mpts := gg.Vertices()
 		for i := range mpts {
 			*pts = append(*pts, Point(mpts[i]))
 		}
@@ -149,7 +415,7 @@ func getExtent(g Geometry, e *Extent) error {
 		return nil
 
 	case LineStringer:
-		e.AddPoints(gg.Verticies()...)
+		e.AddPoints(gg.Vertices()...)
 		return nil
 
 	case MultiLineStringer:
@@ -210,7 +476,7 @@ func extractLines(g Geometry, lines *[]Line) error {
 
 	case LineStringer:
 
-		v := gg.Verticies()
+		v := gg.Vertices()
 		for i := 0; i < len(v)-1; i++ {
 			*lines = append(*lines, Line{v[i], v[i+1]})
 		}
@@ -232,7 +498,7 @@ func extractLines(g Geometry, lines *[]Line) error {
 			if err := extractLines(lr, lines); err != nil {
 				return err
 			}
-			v := lr.Verticies()
+			v := lr.Vertices()
 			if len(v) > 2 && lr.IsRing() == false {
 				// create a connection from last -> first if it doesn't exist
 				*lines = append(*lines, Line{v[len(v)-1], v[0]})
@@ -271,42 +537,22 @@ func ExtractLines(g Geometry) (lines []Line, err error) {
 	return lines, err
 }
 
-// IsEmpty returns if the geometry represents an empty geometry
-func IsEmpty(geo Geometry) bool {
-	if geo == nil {
-		return true
+// IsNil is a helper function to check it the given interface is nil, or the
+// value store in it is nil
+func IsNil(a interface{}) bool {
+	defer func() { recover() }()
+	return a == nil || reflect.ValueOf(a).IsNil()
+}
+
+// RoundToPrec will round the given value to the precision value.
+// The precision value should be a power of 10.
+func RoundToPrec(v float64, prec int) float64 {
+	if v == -0.0 {
+		return 0.0
 	}
-	switch g := geo.(type) {
-	case Point:
-		return g[0] == nan && g[1] == nan
-	case Pointer:
-		xy := g.XY()
-		return xy[0] == nan && xy[1] == nan
-	case LineString:
-		return len(g) == 0
-	case LineStringer:
-		return len(g.Verticies()) == 0
-	case Polygon:
-		return len(g) == 0
-	case Polygoner:
-		return len(g.LinearRings()) == 0
-	case MultiPoint:
-		return len(g) == 0
-	case MultiPointer:
-		return len(g.Points()) == 0
-	case MultiLineString:
-		return len(g) == 0
-	case MultiLineStringer:
-		return len(g.LineStrings()) == 0
-	case MultiPolygon:
-		return len(g) == 0
-	case MultiPolygoner:
-		return len(g.Polygons()) == 0
-	case Collection:
-		return len(g) == 0
-	case Collectioner:
-		return len(g.Geometries()) == 0
-	default:
-		return true
+	if prec == 0 {
+		return math.Round(v)
 	}
+	RoundingFactor := math.Pow10(prec)
+	return math.Round(v*RoundingFactor) / RoundingFactor
 }

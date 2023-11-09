@@ -55,11 +55,11 @@ func (c connectionPoolCollector) QueryContextWithBBox(ctx context.Context, query
 		return nil, err
 	}
 
-	strLL, _ := wkt.Encode(ll)
+	strLL, _ := wkt.EncodeString(ll)
 	lobLL := new(driver.Lob)
 	lobLL.SetReader(strings.NewReader(strLL))
 
-	strUR, _ := wkt.Encode(ur)
+	strUR, _ := wkt.EncodeString(ur)
 	lobUR := new(driver.Lob)
 	lobUR.SetReader(strings.NewReader(strUR))
 
@@ -349,6 +349,9 @@ func CreateConnection(config dict.Dicter) (*sql.DB, error) {
 	}
 
 	db, err := OpenDB(uri)
+	if err != nil {
+		return db, err
+	}
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("Failed while establishing connection: %v", err)
 	}

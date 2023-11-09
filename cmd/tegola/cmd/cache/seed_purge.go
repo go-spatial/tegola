@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/go-spatial/cobra"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/build"
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
 	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
 )
@@ -203,46 +203,30 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 		channel: make(chan *slippy.Tile),
 	}
 
+	webmercatorGrid, err := slippy.NewGrid(3857)
+	if err != nil {
+		tce.setError(fmt.Errorf("Could not create Web Mercator grid (3857): %s", err))
+		tce.Close()
+		return tce
+	}
+
 	go func() {
 		defer tce.Close()
+
+		var extent geom.Extent = bounds
 		for _, z := range zooms {
-			// get the tiles at the corners given the bounds and zoom
-			corner1 := slippy.NewTileLatLon(z, bounds[1], bounds[0])
-			corner2 := slippy.NewTileLatLon(z, bounds[3], bounds[2])
 
-			// x,y initials and finals
-			_, xi, yi := corner1.ZXY()
-			_, xf, yf := corner2.ZXY()
-
-			maxXYatZ := uint(maths.Exp2(uint64(z))) - 1
-
-			// ensure the initials are smaller than finals
-			// this breaks at the anti meridian: https://github.com/go-spatial/tegola/issues/500
-			if xi > xf {
-				xi, xf = xf, xi
-			}
-			if yi > yf {
-				yi, yf = yf, yi
-			}
-
-			// prevent seeding out of bounds
-			xf = maths.Min(xf, maxXYatZ)
-			yf = maths.Min(yf, maxXYatZ)
-
-		MainLoop:
-			for x := xi; x <= xf; x++ {
-				// loop columns
-				for y := yi; y <= yf; y++ {
-					select {
-					case tce.channel <- slippy.NewTile(z, x, y):
-					case <-ctx.Done():
-						// we have been cancelled
-						break MainLoop
-					}
+			tiles := slippy.FromBounds(webmercatorGrid, &extent, z)
+			for _, tile := range tiles {
+				t := tile
+				select {
+				case tce.channel <- &t:
+				case <-ctx.Done():
+					// we have been cancelled
+					return
 				}
 			}
 		}
-		tce.Close()
 	}()
 	return tce
 }
