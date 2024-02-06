@@ -60,6 +60,10 @@ var serverCmd = &cobra.Command{
 			server.URIPrefix = string(conf.Webserver.URIPrefix)
 		}
 
+		if conf.Webserver.ProxyProtocol != "" {
+			server.ProxyProtocol = string(conf.Webserver.ProxyProtocol)
+		}
+
 		if conf.Webserver.SSLCert+conf.Webserver.SSLKey != "" {
 			if conf.Webserver.SSLCert == "" {
 				// error

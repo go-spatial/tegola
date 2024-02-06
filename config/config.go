@@ -71,12 +71,13 @@ type Config struct {
 
 // Webserver represents the config options for the webserver part of Tegola
 type Webserver struct {
-	HostName  env.String `toml:"hostname"`
-	Port      env.String `toml:"port"`
-	URIPrefix env.String `toml:"uri_prefix"`
-	Headers   env.Dict   `toml:"headers"`
-	SSLCert   env.String `toml:"ssl_cert"`
-	SSLKey    env.String `toml:"ssl_key"`
+	HostName      env.String `toml:"hostname"`
+	Port          env.String `toml:"port"`
+	URIPrefix     env.String `toml:"uri_prefix"`
+	Headers       env.Dict   `toml:"headers"`
+	SSLCert       env.String `toml:"ssl_cert"`
+	SSLKey        env.String `toml:"ssl_key"`
+	ProxyProtocol env.String `toml:"proxy_protocol"`
 }
 
 // ValidateAndRegisterParams ensures configured params don't conflict with existing
