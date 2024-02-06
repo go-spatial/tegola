@@ -121,6 +121,7 @@ func TestParse(t *testing.T) {
 				hostname = "cdn.tegola.io"
 				port = ":8080"
 				cors_allowed_origin = "tegola.io"
+        proxy_protocol = "https"
 
 					[webserver.headers]
 					Access-Control-Allow-Origin = "*"
@@ -181,8 +182,9 @@ func TestParse(t *testing.T) {
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName: "cdn.tegola.io",
-					Port:     ":8080",
+					HostName:      "cdn.tegola.io",
+					Port:          ":8080",
+					ProxyProtocol: "https",
 					Headers: env.Dict{
 						"Access-Control-Allow-Origin":  "*",
 						"Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -201,7 +203,7 @@ func TestParse(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -259,6 +261,230 @@ func TestParse(t *testing.T) {
 				[webserver]
 				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
 				port = "${ENV_TEST_WEBSERVER_PORT}"
+                
+                [webserver.headers]
+                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
+				   Test = "Test"
+                   # impossible but to test ParseDict
+                   Impossible-Header = {"test" = "${ENV_TEST_WEBSERVER_HEADER_STRING}"}
+
+				[[providers]]
+				name = "provider1"
+				type = "postgis"
+				host = "localhost"
+				port = 5432
+				database = "osm_water" 
+				user = "admin"
+				password = ""
+
+					[[providers.layers]]
+					name = "water_0_5"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+					[[providers.layers]]
+					name = "water_6_10"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+				[[maps]]
+				name = "osm"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10
+
+				[[maps]]
+				name = "osm_2"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = [-76.275329586789, 39.153492567373, 8.0]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_0_5"
+					min_zoom = 0
+					max_zoom = 5
+
+                    [maps.layers.default_tags]
+                    provider = "${ENV_TEST_MAP_LAYER_DEFAULT_TAG}"
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10`,
+			expected: config.Config{
+				LocationName: "",
+				Webserver: config.Webserver{
+					HostName: ENV_TEST_HOST_CONCAT,
+					Port:     ENV_TEST_WEBSERVER_PORT,
+					Headers: env.Dict{
+						"Cache-Control": ENV_TEST_WEBSERVER_HEADER_STRING,
+						"Test":          "Test",
+						"Impossible-Header": env.Dict{
+							"test": ENV_TEST_WEBSERVER_HEADER_STRING,
+						},
+					},
+				},
+				Providers: []env.Dict{
+					{
+						"name":     "provider1",
+						"type":     "postgis",
+						"host":     "localhost",
+						"port":     int64(5432),
+						"database": "osm_water",
+						"user":     "admin",
+						"password": "",
+						"layers": []map[string]any{
+							{
+								"name":               "water_0_5",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+							{
+								"name":               "water_6_10",
+								"geometry_fieldname": "geom",
+								"id_fieldname":       "gid",
+								"sql":                "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!",
+							},
+						},
+					},
+				},
+				Maps: []provider.Map{
+					{
+						Name:        "osm",
+						Attribution: "Test Attribution",
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{ENV_TEST_CENTER_X, ENV_TEST_CENTER_Y, ENV_TEST_CENTER_Z},
+						TileBuffer:  env.IntPtr(env.Int(64)),
+						Layers: []provider.MapLayer{
+							{
+								Name:          "water",
+								ProviderLayer: ENV_TEST_PROVIDER_LAYER,
+								MinZoom:       nil,
+								MaxZoom:       nil,
+							},
+							{
+								Name:          "water",
+								ProviderLayer: "provider1.water_6_10",
+								MinZoom:       env.UintPtr(6),
+								MaxZoom:       env.UintPtr(10),
+							},
+						},
+					},
+					{
+						Name:        "osm_2",
+						Attribution: "Test Attribution",
+						Bounds:      []env.Float{-180, -85.05112877980659, 180, 85.0511287798066},
+						Center:      [3]env.Float{-76.275329586789, 39.153492567373, 8.0},
+						TileBuffer:  env.IntPtr(env.Int(64)),
+						Layers: []provider.MapLayer{
+							{
+								Name:          "water",
+								ProviderLayer: "provider1.water_0_5",
+								MinZoom:       env.UintPtr(0),
+								MaxZoom:       env.UintPtr(5),
+								DefaultTags: env.Dict{
+									"provider": ENV_TEST_MAP_LAYER_DEFAULT_TAG,
+								},
+							},
+							{
+								Name:          "water",
+								ProviderLayer: "provider1.water_6_10",
+								MinZoom:       env.UintPtr(6),
+								MaxZoom:       env.UintPtr(10),
+							},
+						},
+					},
+				},
+			},
+		},
+		"3 missing env": {
+			config: `
+				[webserver]
+				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
+				port = "${ENV_TEST_WEBSERVER_PORT}"
+                
+                [webserver.headers]
+                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
+				   Test = "${I_AM_MISSING}"
+
+				[[providers]]
+				name = "provider1"
+				type = "postgis"
+				host = "localhost"
+				port = 5432
+				database = "osm_water" 
+				user = "admin"
+				password = ""
+
+					[[providers.layers]]
+					name = "water_0_5"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+					[[providers.layers]]
+					name = "water_6_10"
+					geometry_fieldname = "geom"
+					id_fieldname = "gid"
+					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+				[[maps]]
+				name = "osm"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10
+
+				[[maps]]
+				name = "osm_2"
+				attribution = "Test Attribution"
+				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+				center = [-76.275329586789, 39.153492567373, 8.0]
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_0_5"
+					min_zoom = 0
+					max_zoom = 5
+
+					[[maps.layers]]
+					name = "water"
+					provider_layer = "provider1.water_6_10"
+					min_zoom = 6
+					max_zoom = 10`,
+			expected:    config.Config{},
+			expectedErr: env.ErrEnvVar("I_AM_MISSING"),
+		},
+		"4 test empty proxy_protocol": {
+			config: `
+				[webserver]
+				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
+				port = "${ENV_TEST_WEBSERVER_PORT}"
+        proxy_protocol = ""
                 
                 [webserver.headers]
                    Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
@@ -410,73 +636,6 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-		"3 missing env": {
-			config: `
-				[webserver]
-				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
-				port = "${ENV_TEST_WEBSERVER_PORT}"
-                
-                [webserver.headers]
-                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
-				   Test = "${I_AM_MISSING}"
-
-				[[providers]]
-				name = "provider1"
-				type = "postgis"
-				host = "localhost"
-				port = 5432
-				database = "osm_water" 
-				user = "admin"
-				password = ""
-
-					[[providers.layers]]
-					name = "water_0_5"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-					[[providers.layers]]
-					name = "water_6_10"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-				[[maps]]
-				name = "osm"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_6_10"
-					min_zoom = 6
-					max_zoom = 10
-
-				[[maps]]
-				name = "osm_2"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = [-76.275329586789, 39.153492567373, 8.0]
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_0_5"
-					min_zoom = 0
-					max_zoom = 5
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_6_10"
-					min_zoom = 6
-					max_zoom = 10`,
-			expected:    config.Config{},
-			expectedErr: env.ErrEnvVar("I_AM_MISSING"),
-		},
 	}
 
 	for name, tc := range tests {
@@ -533,7 +692,7 @@ func TestValidateMutateZoom(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -577,7 +736,7 @@ func TestValidateMutateZoom(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -646,7 +805,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -663,7 +822,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -710,7 +869,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water_0_5",
 								"geometry_fieldname": "geom",
@@ -727,7 +886,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water_5_10",
 								"geometry_fieldname": "geom",
@@ -780,7 +939,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -797,7 +956,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -863,7 +1022,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -880,7 +1039,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -932,7 +1091,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",
@@ -949,7 +1108,7 @@ func TestValidate(t *testing.T) {
 						"database": "osm_water",
 						"user":     "admin",
 						"password": "",
-						"layers": []map[string]interface{}{
+						"layers": []map[string]any{
 							{
 								"name":               "water",
 								"geometry_fieldname": "geom",

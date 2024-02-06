@@ -50,6 +50,12 @@ var (
 	// when the server sits behind a reverse proxy with a prefix (i.e. /tegola)
 	URIPrefix = "/"
 
+	// ProxyProtocol is a custom protocol that will be used to generate the URLs
+	// included in the capabilities endpoint responses. This is useful when he
+	// server sits behind a reverse proxy
+	// (See https://github.com/go-spatial/tegola/pull/967)
+	ProxyProtocol string
+
 	// DefaultCORSHeaders define the default CORS response headers added to all requests
 	DefaultCORSHeaders = map[string]string{
 		"Access-Control-Allow-Origin":  "*",
@@ -143,6 +149,9 @@ func hostName(r *http.Request) string {
 // various checks to determine if the request is http or https. the scheme is needed for the TileURLs
 // r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
 func scheme(r *http.Request) string {
+	if ProxyProtocol != "" {
+		return ProxyProtocol
+	}
 	if r.Header.Get("X-Forwarded-Proto") != "" {
 		return r.Header.Get("X-Forwarded-Proto")
 	} else if r.TLS != nil {
