@@ -2,6 +2,7 @@ package postgis_test
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"context"
@@ -12,6 +13,79 @@ import (
 	"github.com/go-spatial/tegola/provider/postgis"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
+
+func TestDBConfig(t *testing.T) {
+	host := ttools.GetEnvDefault("PGHOST", "localhost")
+	port, err := strconv.Atoi(ttools.GetEnvDefault("PGPORT", "5432"))
+	// if port is anything but int, fallback to default
+	if err != nil {
+		port = 5432
+	}
+	database := ttools.GetEnvDefault("PGDATABASE", "tegola")
+	user := ttools.GetEnvDefault("PGUSER", "postgres")
+	password := ttools.GetEnvDefault("PGPASSWORD", "postgres")
+
+	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, database)
+
+	type tcase struct {
+		opts                          *postgis.DBConfigOptions
+		expApplicationName            string
+		expDefaultTransactionReadOnly string
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			dbconfig, err := postgis.BuildDBConfig(
+				tc.opts)
+			if err != nil {
+				t.Errorf("unable to build config: %v", err)
+			}
+
+			applicationName := dbconfig.ConnConfig.RuntimeParams["application_name"]
+			if applicationName != tc.expApplicationName {
+				t.Errorf("expected application name: %s, got: %s", tc.expApplicationName, applicationName)
+			}
+
+			defaultTransactionReadOnly := dbconfig.ConnConfig.RuntimeParams["default_transaction_read_only"]
+			if defaultTransactionReadOnly != tc.expDefaultTransactionReadOnly {
+				t.Errorf("expected transaction read only: %s, got: %s", tc.expDefaultTransactionReadOnly, defaultTransactionReadOnly)
+			}
+		}
+	}
+	tests := map[string]tcase{
+		"1": {
+			opts: &postgis.DBConfigOptions{
+				Uri:                        cs,
+				ApplicationName:            "tegola",
+				DefaultTransactionReadOnly: "TRUE",
+			},
+			expApplicationName:            "tegola",
+			expDefaultTransactionReadOnly: "TRUE",
+		},
+		"2": {
+			opts: &postgis.DBConfigOptions{
+				Uri:                        cs,
+				ApplicationName:            "aloget",
+				DefaultTransactionReadOnly: "OFF",
+			},
+			expApplicationName:            "aloget",
+			expDefaultTransactionReadOnly: "",
+		},
+		"3": {
+			opts: &postgis.DBConfigOptions{
+				Uri:                        cs,
+				ApplicationName:            "tegola",
+				DefaultTransactionReadOnly: "FALSE",
+			},
+			expApplicationName:            "tegola",
+			expDefaultTransactionReadOnly: "FALSE",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
 
 func TestTLSConfig(t *testing.T) {
 
@@ -24,7 +98,12 @@ func TestTLSConfig(t *testing.T) {
 	)
 
 	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, database)
-	testConnConfig, err := postgis.BuildDBConfig(cs)
+	testConnConfig, err := postgis.BuildDBConfig(
+		&postgis.DBConfigOptions{
+			Uri:                        cs,
+			DefaultTransactionReadOnly: "TRUE",
+			ApplicationName:            "tegola",
+		})
 
 	if err != nil {
 		t.Fatalf("unable to build db config: %v", err)

@@ -175,41 +175,45 @@ const (
 )
 
 const (
-	DefaultURI             = ""
-	DefaultPort            = 5432
-	DefaultSRID            = tegola.WebMercator
-	DefaultMaxConn         = 100
-	DefaultMaxConnIdleTime = "30m"
-	DefaultMaxConnLifetime = "1h"
-	DefaultSSLMode         = "prefer"
-	DefaultSSLKey          = ""
-	DefaultSSLCert         = ""
+	DefaultURI                        = ""
+	DefaultPort                       = 5432
+	DefaultSRID                       = tegola.WebMercator
+	DefaultMaxConn                    = 100
+	DefaultMaxConnIdleTime            = "30m"
+	DefaultMaxConnLifetime            = "1h"
+	DefaultSSLMode                    = "prefer"
+	DefaultSSLKey                     = ""
+	DefaultSSLCert                    = ""
+	DefaultApplicationName            = "tegola"
+	DefaultDefaultTransactionReadOnly = "TRUE"
 )
 
 const (
-	ConfigKeyName            = "name"
-	ConfigKeyURI             = "uri"
-	ConfigKeyHost            = "host"
-	ConfigKeyPort            = "port"
-	ConfigKeyDB              = "database"
-	ConfigKeyUser            = "user"
-	ConfigKeyPassword        = "password"
-	ConfigKeySSLMode         = "ssl_mode"
-	ConfigKeySSLKey          = "ssl_key"
-	ConfigKeySSLCert         = "ssl_cert"
-	ConfigKeySSLRootCert     = "ssl_root_cert"
-	ConfigKeyMaxConn         = "max_connections"
-	ConfigKeyMaxConnIdleTime = "max_connection_idle_time"
-	ConfigKeyMaxConnLifetime = "max_connection_lifetime"
-	ConfigKeySRID            = "srid"
-	ConfigKeyLayers          = "layers"
-	ConfigKeyLayerName       = "name"
-	ConfigKeyTablename       = "tablename"
-	ConfigKeySQL             = "sql"
-	ConfigKeyFields          = "fields"
-	ConfigKeyGeomField       = "geometry_fieldname"
-	ConfigKeyGeomIDField     = "id_fieldname"
-	ConfigKeyGeomType        = "geometry_type"
+	ConfigKeyName                       = "name"
+	ConfigKeyURI                        = "uri"
+	ConfigKeyHost                       = "host"
+	ConfigKeyPort                       = "port"
+	ConfigKeyDB                         = "database"
+	ConfigKeyUser                       = "user"
+	ConfigKeyPassword                   = "password"
+	ConfigKeySSLMode                    = "ssl_mode"
+	ConfigKeySSLKey                     = "ssl_key"
+	ConfigKeySSLCert                    = "ssl_cert"
+	ConfigKeySSLRootCert                = "ssl_root_cert"
+	ConfigKeyMaxConn                    = "max_connections"
+	ConfigKeyMaxConnIdleTime            = "max_connection_idle_time"
+	ConfigKeyMaxConnLifetime            = "max_connection_lifetime"
+	ConfigKeySRID                       = "srid"
+	ConfigKeyLayers                     = "layers"
+	ConfigKeyLayerName                  = "name"
+	ConfigKeyTablename                  = "tablename"
+	ConfigKeySQL                        = "sql"
+	ConfigKeyFields                     = "fields"
+	ConfigKeyGeomField                  = "geometry_fieldname"
+	ConfigKeyGeomIDField                = "id_fieldname"
+	ConfigKeyGeomType                   = "geometry_type"
+	ConfigKeyApplicationName            = "application_name"
+	ConfigKeyDefaultTransactionReadOnly = "default_transaction_read_only"
 )
 
 // isSelectQuery is a regexp to check if a query starts with `SELECT`,
@@ -361,19 +365,36 @@ func BuildURI(config dict.Dicter) (*url.URL, *url.Values, error) {
 	return u, params, nil
 }
 
+type DBConfigOptions struct {
+	Uri                        string
+	DefaultTransactionReadOnly string
+	ApplicationName            string
+}
+
+func (opts *DBConfigOptions) GetRuntimeParams() map[string]string {
+	pr := map[string]string{
+		ConfigKeyApplicationName: opts.ApplicationName,
+	}
+
+	// as per https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY
+	// default_transaction_read_only accepts boolean, and is not set by default
+	// hence if OFF, we do not add it to RuntimeParams
+	if opts.DefaultTransactionReadOnly != "" && strings.ToUpper(opts.DefaultTransactionReadOnly) != "OFF" {
+		pr[ConfigKeyDefaultTransactionReadOnly] = strings.ToUpper(opts.DefaultTransactionReadOnly)
+	}
+
+	return pr
+}
+
 // BuildDBConfig build db config with defaults
-func BuildDBConfig(uri string) (*pgxpool.Config, error) {
-	dbconfig, err := pgxpool.ParseConfig(uri)
+func BuildDBConfig(opts *DBConfigOptions) (*pgxpool.Config, error) {
+	dbconfig, err := pgxpool.ParseConfig(opts.Uri)
 	if err != nil {
 		return nil, err
 	}
 
 	dbconfig.ConnConfig.LogLevel = pgx.LogLevelWarn
-	dbconfig.ConnConfig.RuntimeParams = map[string]string{
-		"default_transaction_read_only": "TRUE",
-		"application_name":              "tegola",
-	}
-
+	dbconfig.ConnConfig.RuntimeParams = opts.GetRuntimeParams()
 	var hstore hstoreOID
 
 	dbconfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
@@ -466,7 +487,24 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 		return nil, err
 	}
 
-	dbconfig, err := BuildDBConfig(uri.String())
+	default_transaction_read_only := DefaultDefaultTransactionReadOnly
+	default_transaction_read_only, err = config.String(ConfigKeyDefaultTransactionReadOnly, &default_transaction_read_only)
+	if err != nil {
+		return nil, err
+	}
+
+	application_name := DefaultApplicationName
+	application_name, err = config.String(ConfigKeyApplicationName, &application_name)
+	if err != nil {
+		return nil, err
+	}
+
+	dbconfig, err := BuildDBConfig(
+		&DBConfigOptions{
+			Uri:                        uri.String(),
+			DefaultTransactionReadOnly: default_transaction_read_only,
+			ApplicationName:            application_name,
+		})
 	if err != nil {
 		return nil, fmt.Errorf("failed while building db config: %w", err)
 	}

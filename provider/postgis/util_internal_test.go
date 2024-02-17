@@ -135,7 +135,12 @@ func TestDecipherFields(t *testing.T) {
 	password := ttools.GetEnvDefault("PGPASSWORD", "postgres")
 
 	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, db)
-	dbconfig, err := BuildDBConfig(cs)
+	dbconfig, err := BuildDBConfig(
+		&DBConfigOptions{
+			Uri:                        cs,
+			DefaultTransactionReadOnly: "TRUE",
+			ApplicationName:            "tegola",
+		})
 
 	if err != nil {
 		t.Fatalf("unable to build db config: %v", err)
