@@ -30,12 +30,12 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.21.3
+          go-version-file: 'go.mod'
 
       - name: Env Debug
         run: |
@@ -110,3 +110,20 @@ jobs:
           pushd ${GITHUB_WORKSPACE}/server
           go generate ./...
           popd
+
+  govulncheck:
+    name: Run govulncheck
+    runs-on: ubuntu-22.04 
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Install and run go vulncheck
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
