@@ -14,37 +14,37 @@ runs:
   using: "composite"
   steps:
     - name: Check out code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Download version artifact
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: version
 
     - name: Download ui artifact
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: ui
         path: ${{ github.workspace }}/ui/dist
       if: ${{ inputs.ui == 'true' }}
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.21.3
+        go-version-file: 'go.mod'
       if: ${{ inputs.go == 'true' }}
 
     - name: Set tegola version
-      run: go run ci/cat_version_envs.go -version_file version/version.txt | tee $GITHUB_ENV
+      run: go run ci/cat_version_envs.go -version_file version.txt | tee $GITHUB_ENV
       shell: bash
 
     - name: Download default-branch-ref artifact
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: default-branch-ref
 
     - name: Set tegola default branch ref
-      run: echo "DEFAULT_BRANCH_REF=$(cat default-branch-ref/default-branch-ref.txt)" >> $GITHUB_ENV
+      run: echo "DEFAULT_BRANCH_REF=$(cat default-branch-ref.txt)" >> $GITHUB_ENV
       shell: bash
 
     - name: Say goodbye

@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Check out code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # on release, we want to use release.tag_name for the version
     - name: Set tegola version (use release.tag_name)
@@ -26,7 +26,7 @@ jobs:
       run: echo ${{ github.sha }} | cut -c1-7 > ${{ github.workspace }}/version.txt
 
     - name: Upload build artifact version
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: version
         path: ${{ github.workspace }}/version.txt
@@ -40,7 +40,7 @@ jobs:
         echo "refs/heads/$DEFAULT_BRANCH" > ${{ github.workspace }}/default-branch-ref.txt
 
     - name: Upload build artifacts default branch ref
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: default-branch-ref
         path: ${{ github.workspace }}/default-branch-ref.txt
@@ -51,12 +51,12 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.21.3
+          go-version-file: 'go.mod'
 
       - name: Build embedded UI
         run: |
@@ -65,7 +65,7 @@ jobs:
           popd
 
       - name: Upload build artifact version
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ui
           path: ${{ github.workspace }}/ui/dist
@@ -77,7 +77,7 @@ jobs:
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -106,7 +106,7 @@ jobs:
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -136,7 +136,7 @@ jobs:
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -166,7 +166,7 @@ jobs:
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -196,7 +196,7 @@ jobs:
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env
@@ -232,13 +232,13 @@ jobs:
 
     steps:
     - name: Check out code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
 
     - name: Login to Docker Hub
       uses: docker/login-action@v3
@@ -257,7 +257,7 @@ jobs:
     # Note that linux/amd64 is cached, so when we build images for publishing
     # we are not rebuilding linux/amd64
     - name: Build docker image for testing
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v5
       with:
         context: .
         load: true
@@ -271,7 +271,7 @@ jobs:
 
     - name: Publish Docker edge container
       if: github.ref == env.DEFAULT_BRANCH_REF
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v5
       with:
         context: .
         push: true
@@ -281,7 +281,7 @@ jobs:
 
     - name: Publish Docker container
       if: github.event_name == 'release'
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v5
       with:
         context: .
         push: true
@@ -296,7 +296,7 @@ jobs:
 
     steps:
     - name: Check out actions
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup env
       uses: ./.github/actions/tegola-setup-env

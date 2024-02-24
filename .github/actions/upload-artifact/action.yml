@@ -42,7 +42,7 @@ runs:
       shell: pwsh
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.release_archive_name }}
         path: ${{ steps.zip-path.outputs.dir-path }}tegola.zip
