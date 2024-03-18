@@ -1,5 +1,5 @@
 [![](https://godoc.org/github.com/jackc/puddle?status.svg)](https://godoc.org/github.com/jackc/puddle)
-[![Build Status](https://travis-ci.org/jackc/puddle.svg)](https://travis-ci.org/jackc/puddle)
+![Build Status](https://github.com/jackc/puddle/actions/workflows/ci.yml/badge.svg)
 
 # Puddle
 
@@ -48,6 +48,14 @@ if err != nil {
 res.Release()
 
 ```
+
+## Status
+
+Puddle v1 is complete. No changes are planned.
+
+* Bug reports and fixes are welcome.
+* New features will not be accepted if they can be feasibly implemented in a wrapper.
+* Performance optimizations will not be accepted unless the performance issue rises to the level of a bug.
 
 ## License
 

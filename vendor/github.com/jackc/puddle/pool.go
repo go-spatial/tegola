@@ -262,19 +262,6 @@ func (p *Pool) Stat() *Stat {
 // maximum capacity it will block until a resource is available. ctx can be used
 // to cancel the Acquire.
 func (p *Pool) Acquire(ctx context.Context) (*Resource, error) {
-	return p.doAcquire(ctx, true)
-}
-
-// TryAcquire gets a resource from the pool. TryAcquire is the same as Acquire except
-// it returns ErrNotAvailable if the pool is at maximum capacity and no resources are available.
-func (p *Pool) TryAcquire(ctx context.Context) (*Resource, error) {
-	return p.doAcquire(ctx, false)
-}
-
-// doAcquire implements shared logic behind Acquire and TryAcquire. If block is true
-// doAcquire will block until a resource becomes available. If block is false, doAcquire
-// will return ErrNotAvailable if no resource is available.
-func (p *Pool) doAcquire(ctx context.Context, block bool) (*Resource, error) {
 	startNano := nanotime()
 	if doneChan := ctx.Done(); doneChan != nil {
 		select {
@@ -321,36 +308,64 @@ func (p *Pool) doAcquire(ctx context.Context, block bool) (*Resource, error) {
 			p.destructWG.Add(1)
 			p.cond.L.Unlock()
 
-			value, err := p.constructResourceValue(ctx)
-			p.cond.L.Lock()
-			if err != nil {
-				p.allResources = removeResource(p.allResources, res)
-				p.destructWG.Done()
+			// we create the resource in the background because the constructor might
+			// outlive the context and we want to continue constructing it as long as
+			// necessary but the acquire should be cancelled when the context is cancelled
+			// see: https://github.com/jackc/pgx/issues/1287 and https://github.com/jackc/pgx/issues/1259
+			constructErrCh := make(chan error)
+			go func() {
+				value, err := p.constructResourceValue(ctx)
+				p.cond.L.Lock()
+				if err != nil {
+					p.allResources = removeResource(p.allResources, res)
+					p.destructWG.Done()
 
-				select {
-				case <-ctx.Done():
-					if err == ctx.Err() {
+					// we can't use default here in case we get here before the caller is
+					// in the select
+					select {
+					case constructErrCh <- err:
+					case <-ctx.Done():
 						p.canceledAcquireCount += 1
 					}
-				default:
+					p.cond.L.Unlock()
+					p.cond.Signal()
+					return
 				}
+				res.value = value
 
-				p.cond.L.Unlock()
-				p.cond.Signal()
-				return nil, err
+				// assume that we will acquire it
+				res.status = resourceStatusAcquired
+				// we can't use default here in case we get here before the caller is
+				// in the select
+				select {
+				case constructErrCh <- nil:
+					p.emptyAcquireCount += 1
+					p.acquireCount += 1
+					p.acquireDuration += time.Duration(nanotime() - startNano)
+					p.cond.L.Unlock()
+					// we don't call Signal here we didn't change any of the resource pools
+				case <-ctx.Done():
+					p.canceledAcquireCount += 1
+					p.cond.L.Unlock()
+					// we don't call Signal here we didn't change any of the resopurce pools
+					// since we couldn't send the constructed resource to the acquire
+					// function that means the caller has stopped waiting and we should
+					// just put this resource back in the pool
+					p.releaseAcquiredResource(res, res.lastUsedNano)
+				}
+			}()
+
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case err := <-constructErrCh:
+				if err != nil {
+					return nil, err
+				}
+				// we don't call signal here because we didn't change the resource pools
+				// at all so waking anything else up won't help
+				return res, nil
 			}
-
-			res.value = value
-			res.status = resourceStatusAcquired
-			p.emptyAcquireCount += 1
-			p.acquireCount += 1
-			p.acquireDuration += time.Duration(nanotime() - startNano)
-			p.cond.L.Unlock()
-			return res, nil
-		} else if !block {
-			// If the pool is at maximum capacity and we're not blocking
-			p.cond.L.Unlock()
-			return nil, ErrNotAvailable
 		}
 
 		if ctx.Done() == nil {
@@ -369,8 +384,8 @@ func (p *Pool) doAcquire(ctx context.Context, block bool) (*Resource, error) {
 				// do anything with it. Another goroutine might be waiting.
 				go func() {
 					<-waitChan
-					p.cond.Signal()
 					p.cond.L.Unlock()
+					p.cond.Signal()
 				}()
 
 				p.cond.L.Lock()
@@ -381,6 +396,53 @@ func (p *Pool) doAcquire(ctx context.Context, block bool) (*Resource, error) {
 			}
 		}
 	}
+}
+
+// TryAcquire gets a resource from the pool if one is immediately available. If not, it returns ErrNotAvailable. If no
+// resources are available but the pool has room to grow, a resource will be created in the background. ctx is only
+// used to cancel the background creation.
+func (p *Pool) TryAcquire(ctx context.Context) (*Resource, error) {
+	p.cond.L.Lock()
+	defer p.cond.L.Unlock()
+
+	if p.closed {
+		return nil, ErrClosedPool
+	}
+
+	// If a resource is available now
+	if len(p.idleResources) > 0 {
+		res := p.idleResources[len(p.idleResources)-1]
+		p.idleResources[len(p.idleResources)-1] = nil // Avoid memory leak
+		p.idleResources = p.idleResources[:len(p.idleResources)-1]
+		p.acquireCount += 1
+		res.status = resourceStatusAcquired
+		return res, nil
+	}
+
+	if len(p.allResources) < int(p.maxSize) {
+		res := &Resource{pool: p, creationTime: time.Now(), lastUsedNano: nanotime(), status: resourceStatusConstructing}
+		p.allResources = append(p.allResources, res)
+		p.destructWG.Add(1)
+
+		go func() {
+			value, err := p.constructResourceValue(ctx)
+			defer p.cond.Signal()
+			p.cond.L.Lock()
+			defer p.cond.L.Unlock()
+
+			if err != nil {
+				p.allResources = removeResource(p.allResources, res)
+				p.destructWG.Done()
+				return
+			}
+
+			res.value = value
+			res.status = resourceStatusIdle
+			p.idleResources = append(p.idleResources, res)
+		}()
+	}
+
+	return nil, ErrNotAvailable
 }
 
 // AcquireAllIdle atomically acquires all currently idle resources. Its intended

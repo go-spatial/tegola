@@ -2,7 +2,7 @@ package pgxpool
 
 import (
 	"context"
-	"time"
+	"sync/atomic"
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
@@ -26,9 +26,23 @@ func (c *Conn) Release() {
 	res := c.res
 	c.res = nil
 
-	now := time.Now()
-	if conn.IsClosed() || conn.PgConn().IsBusy() || conn.PgConn().TxStatus() != 'I' || (now.Sub(res.CreationTime()) > c.p.maxConnLifetime) {
+	if conn.IsClosed() || conn.PgConn().IsBusy() || conn.PgConn().TxStatus() != 'I' {
 		res.Destroy()
+		// Signal to the health check to run since we just destroyed a connections
+		// and we might be below minConns now
+		c.p.triggerHealthCheck()
+		return
+	}
+
+	// If the pool is consistently being used, we might never get to check the
+	// lifetime of a connection since we only check idle connections in checkConnsHealth
+	// so we also check the lifetime here and force a health check
+	if c.p.isExpired(res) {
+		atomic.AddInt64(&c.p.lifetimeDestroyCount, 1)
+		res.Destroy()
+		// Signal to the health check to run since we just destroyed a connections
+		// and we might be below minConns now
+		c.p.triggerHealthCheck()
 		return
 	}
 
@@ -42,8 +56,27 @@ func (c *Conn) Release() {
 			res.Release()
 		} else {
 			res.Destroy()
+			// Signal to the health check to run since we just destroyed a connections
+			// and we might be below minConns now
+			c.p.triggerHealthCheck()
 		}
 	}()
+}
+
+// Hijack assumes ownership of the connection from the pool. Caller is responsible for closing the connection. Hijack
+// will panic if called on an already released or hijacked connection.
+func (c *Conn) Hijack() *pgx.Conn {
+	if c.res == nil {
+		panic("cannot hijack already released or hijacked connection")
+	}
+
+	conn := c.Conn()
+	res := c.res
+	c.res = nil
+
+	res.Hijack()
+
+	return conn
 }
 
 func (c *Conn) Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error) {
