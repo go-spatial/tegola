@@ -2,6 +2,7 @@ package pgproto3
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -30,11 +31,10 @@ type Backend struct {
 	sync           Sync
 	terminate      Terminate
 
-	bodyLen      int
-	msgType      byte
-	partialMsg   bool
-	authType     uint32
-	
+	bodyLen    int
+	msgType    byte
+	partialMsg bool
+	authType   uint32
 }
 
 const (
@@ -49,7 +49,12 @@ func NewBackend(cr ChunkReader, w io.Writer) *Backend {
 
 // Send sends a message to the frontend.
 func (b *Backend) Send(msg BackendMessage) error {
-	_, err := b.w.Write(msg.Encode(nil))
+	buf, err := msg.Encode(nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = b.w.Write(buf)
 	return err
 }
 
@@ -115,6 +120,9 @@ func (b *Backend) Receive() (FrontendMessage, error) {
 		b.msgType = header[0]
 		b.bodyLen = int(binary.BigEndian.Uint32(header[1:])) - 4
 		b.partialMsg = true
+		if b.bodyLen < 0 {
+			return nil, errors.New("invalid message with negative body length received")
+		}
 	}
 
 	var msg FrontendMessage
@@ -147,6 +155,8 @@ func (b *Backend) Receive() (FrontendMessage, error) {
 			msg = &SASLResponse{}
 		case AuthTypeSASLFinal:
 			msg = &SASLResponse{}
+		case AuthTypeGSS, AuthTypeGSSCont:
+			msg = &GSSResponse{}
 		case AuthTypeCleartextPassword, AuthTypeMD5Password:
 			fallthrough
 		default:
@@ -179,11 +189,11 @@ func (b *Backend) Receive() (FrontendMessage, error) {
 // contextual identification of FrontendMessages. For example, in the
 // PG message flow documentation for PasswordMessage:
 //
-// 		Byte1('p')
+//			Byte1('p')
 //
-//      Identifies the message as a password response. Note that this is also used for
-//		GSSAPI, SSPI and SASL response messages. The exact message type can be deduced from
-//		the context.
+//	     Identifies the message as a password response. Note that this is also used for
+//			GSSAPI, SSPI and SASL response messages. The exact message type can be deduced from
+//			the context.
 //
 // Since the Frontend does not know about the state of a backend, it is important
 // to call SetAuthType() after an authentication request is received by the Frontend.
