@@ -1,8 +1,6 @@
 package postgis_test
 
 import (
-	"fmt"
-	"strconv"
 	"testing"
 
 	"context"
@@ -15,17 +13,7 @@ import (
 )
 
 func TestDBConfig(t *testing.T) {
-	host := ttools.GetEnvDefault("PGHOST", "localhost")
-	port, err := strconv.Atoi(ttools.GetEnvDefault("PGPORT", "5432"))
-	// if port is anything but int, fallback to default
-	if err != nil {
-		port = 5432
-	}
-	database := ttools.GetEnvDefault("PGDATABASE", "tegola")
-	user := ttools.GetEnvDefault("PGUSER", "postgres")
-	password := ttools.GetEnvDefault("PGPASSWORD", "postgres")
-
-	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, database)
+	uri := ttools.GetEnvDefault("PGURI", "postgres://postgres:postgres@localhost:5432/tegola")
 
 	type tcase struct {
 		opts                          *postgis.DBConfigOptions
@@ -55,7 +43,7 @@ func TestDBConfig(t *testing.T) {
 	tests := map[string]tcase{
 		"1": {
 			opts: &postgis.DBConfigOptions{
-				Uri:                        cs,
+				Uri:                        uri,
 				ApplicationName:            "tegola",
 				DefaultTransactionReadOnly: "TRUE",
 			},
@@ -64,7 +52,7 @@ func TestDBConfig(t *testing.T) {
 		},
 		"2": {
 			opts: &postgis.DBConfigOptions{
-				Uri:                        cs,
+				Uri:                        uri,
 				ApplicationName:            "aloget",
 				DefaultTransactionReadOnly: "OFF",
 			},
@@ -73,7 +61,7 @@ func TestDBConfig(t *testing.T) {
 		},
 		"3": {
 			opts: &postgis.DBConfigOptions{
-				Uri:                        cs,
+				Uri:                        uri,
 				ApplicationName:            "tegola",
 				DefaultTransactionReadOnly: "FALSE",
 			},
@@ -88,19 +76,11 @@ func TestDBConfig(t *testing.T) {
 }
 
 func TestTLSConfig(t *testing.T) {
+	uri := "postgres://testuser:testpassword@testhost:5432/testdb"
 
-	var (
-		host     = "testhost"
-		port     = 8080
-		database = "testdb"
-		user     = "testuser"
-		password = "testpassword"
-	)
-
-	cs := fmt.Sprintf("postgres://%v:%v@%v:%v/%v", user, password, host, port, database)
 	testConnConfig, err := postgis.BuildDBConfig(
 		&postgis.DBConfigOptions{
-			Uri:                        cs,
+			Uri:                        uri,
 			DefaultTransactionReadOnly: "TRUE",
 			ApplicationName:            "tegola",
 		})

@@ -175,12 +175,7 @@ const (
 )
 
 const (
-	DefaultURI                        = ""
-	DefaultPort                       = 5432
 	DefaultSRID                       = tegola.WebMercator
-	DefaultMaxConn                    = 100
-	DefaultMaxConnIdleTime            = "30m"
-	DefaultMaxConnLifetime            = "1h"
 	DefaultSSLMode                    = "prefer"
 	DefaultSSLKey                     = ""
 	DefaultSSLCert                    = ""
@@ -191,18 +186,10 @@ const (
 const (
 	ConfigKeyName                       = "name"
 	ConfigKeyURI                        = "uri"
-	ConfigKeyHost                       = "host"
-	ConfigKeyPort                       = "port"
-	ConfigKeyDB                         = "database"
-	ConfigKeyUser                       = "user"
-	ConfigKeyPassword                   = "password"
 	ConfigKeySSLMode                    = "ssl_mode"
 	ConfigKeySSLKey                     = "ssl_key"
 	ConfigKeySSLCert                    = "ssl_cert"
 	ConfigKeySSLRootCert                = "ssl_root_cert"
-	ConfigKeyMaxConn                    = "max_connections"
-	ConfigKeyMaxConnIdleTime            = "max_connection_idle_time"
-	ConfigKeyMaxConnLifetime            = "max_connection_lifetime"
 	ConfigKeySRID                       = "srid"
 	ConfigKeyLayers                     = "layers"
 	ConfigKeyLayerName                  = "name"
@@ -262,7 +249,6 @@ func validateURI(u string) error {
 	return nil
 }
 
-// TODO: (iwpnd) to be removed/refactored in v0.17.0
 // BuildURI creates a database URI from config
 func BuildURI(config dict.Dicter) (*url.URL, *url.Values, error) {
 
@@ -272,97 +258,33 @@ func BuildURI(config dict.Dicter) (*url.URL, *url.Values, error) {
 		return nil, nil, err
 	}
 
-	uri := DefaultURI
-	uri, err = config.String(ConfigKeyURI, &uri)
+	uri, err := config.String(ConfigKeyURI, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// if uri is set in the config, we add sslmode and return early
-	if uri != "" {
-		if err := validateURI(uri); err != nil {
-			return nil, nil, err
-		}
-
-		parsedUri, err := url.Parse(uri)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// parse query to make sure sslmode is attached
-		parsedQuery, err := url.ParseQuery(parsedUri.RawQuery)
-		if err != nil {
-			return &url.URL{}, nil, err
-		}
-
-		if ok := parsedQuery.Get("sslmode"); ok == "" {
-			parsedQuery.Add("sslmode", sslmode)
-		}
-
-		parsedUri.RawQuery = parsedQuery.Encode()
-
-		return parsedUri, &parsedQuery, nil
+	if err := validateURI(uri); err != nil {
+		return nil, nil, err
 	}
 
-	host, err := config.String(ConfigKeyHost, nil)
+	parsedUri, err := url.Parse(uri)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	port := DefaultPort
-	if port, err = config.Int(ConfigKeyPort, &port); err != nil {
-		return nil, nil, err
-	}
-
-	db, err := config.String(ConfigKeyDB, nil)
+	// parse query to make sure sslmode is attached
+	parsedQuery, err := url.ParseQuery(parsedUri.RawQuery)
 	if err != nil {
-		return nil, nil, err
+		return &url.URL{}, nil, err
 	}
 
-	user, err := config.String(ConfigKeyUser, nil)
-	if err != nil {
-		return nil, nil, err
+	if ok := parsedQuery.Get("sslmode"); ok == "" {
+		parsedQuery.Add("sslmode", sslmode)
 	}
 
-	password, err := config.String(ConfigKeyPassword, nil)
-	if err != nil {
-		return nil, nil, err
-	}
+	parsedUri.RawQuery = parsedQuery.Encode()
 
-	maxcon := DefaultMaxConn
-	if maxcon, err = config.Int(ConfigKeyMaxConn, &maxcon); err != nil {
-		return nil, nil, err
-	}
-
-	idletime := DefaultMaxConnIdleTime
-	if idletime, err = config.String(ConfigKeyMaxConnIdleTime, &idletime); err != nil {
-		return nil, nil, err
-	}
-
-	lifetime := DefaultMaxConnLifetime
-	if lifetime, err = config.String(ConfigKeyMaxConnLifetime, &lifetime); err != nil {
-		return nil, nil, err
-	}
-
-	params := &url.Values{}
-	params.Add("sslmode", sslmode)
-	params.Add("pool_max_conns", fmt.Sprintf("%v", maxcon))
-	params.Add("pool_max_conn_lifetime", lifetime)
-	params.Add("pool_max_conn_idle_time", idletime)
-
-	if uri == "" {
-		log.Warn("Connecting to PostGIS with connection parameters is deprecated. Use 'uri' instead.")
-	}
-
-	u := &url.URL{
-		Scheme:   "postgres",
-		Host:     fmt.Sprintf("%v:%v", host, port),
-		User:     url.UserPassword(user, password),
-		Path:     db,
-		RawQuery: params.Encode(),
-	}
-
-	return u, params, nil
+	return parsedUri, &parsedQuery, nil
 }
 
 type DBConfigOptions struct {

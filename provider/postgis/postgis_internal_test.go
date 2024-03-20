@@ -2,9 +2,7 @@ package postgis
 
 import (
 	"context"
-	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -20,11 +18,7 @@ const TESTENV = "RUN_POSTGIS_TESTS"
 var DefaultEnvConfig map[string]interface{}
 
 var DefaultConfig map[string]interface{} = map[string]interface{}{
-	ConfigKeyHost:        "localhost",
-	ConfigKeyPort:        5432,
-	ConfigKeyDB:          "tegola",
-	ConfigKeyUser:        "postgres",
-	ConfigKeyPassword:    "postgres",
+	ConfigKeyURI:         "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable",
 	ConfigKeySSLMode:     "disable",
 	ConfigKeySSLKey:      "",
 	ConfigKeySSLCert:     "",
@@ -32,18 +26,8 @@ var DefaultConfig map[string]interface{} = map[string]interface{}{
 }
 
 func getConfigFromEnv() map[string]interface{} {
-	port, err := strconv.Atoi(ttools.GetEnvDefault("PGPORT", "5432"))
-	if err != nil {
-		// if port is anything but int, fallback to default
-		port = 5432
-	}
-
 	return map[string]interface{}{
-		ConfigKeyHost:        ttools.GetEnvDefault("PGHOST", "localhost"),
-		ConfigKeyPort:        port,
-		ConfigKeyDB:          ttools.GetEnvDefault("PGDATABASE", "tegola"),
-		ConfigKeyUser:        ttools.GetEnvDefault("PGUSER", "postgres"),
-		ConfigKeyPassword:    ttools.GetEnvDefault("PGPASSWORD", "postgres"),
+		ConfigKeyURI:         ttools.GetEnvDefault("PGURI", "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable"),
 		ConfigKeySSLMode:     ttools.GetEnvDefault("PGSSLMODE", "disable"),
 		ConfigKeySSLKey:      ttools.GetEnvDefault("PGSSLKEY", ""),
 		ConfigKeySSLCert:     ttools.GetEnvDefault("PGSSLCERT", ""),
@@ -261,7 +245,7 @@ func TestLayerGeomType(t *testing.T) {
 		"role no access to table": {
 			TCConfig: TCConfig{
 				ConfigOverride: map[string]interface{}{
-					ConfigKeyUser: ttools.GetEnvDefault("PGUSER_NO_ACCESS", "tegola_no_access"),
+					ConfigKeyURI: ttools.GetEnvDefault("PGURI_NO_ACCESS", "postgres://tegola_no_access:postgres@localhost:5432/tegola"),
 				},
 				LayerConfig: []map[string]interface{}{
 					{
@@ -277,15 +261,7 @@ func TestLayerGeomType(t *testing.T) {
 		"configure from postgreql URI": {
 			TCConfig: TCConfig{
 				ConfigOverride: map[string]interface{}{
-					ConfigKeyURI: fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
-						DefaultEnvConfig["user"],
-						DefaultEnvConfig["password"],
-						DefaultEnvConfig["host"],
-						DefaultEnvConfig["port"],
-						DefaultEnvConfig["database"],
-					),
-					ConfigKeyHost: "",
-					ConfigKeyPort: "",
+					ConfigKeyURI: DefaultEnvConfig["uri"],
 				},
 				LayerConfig: []map[string]interface{}{
 					{
@@ -313,9 +289,6 @@ func TestBuildUri(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"valid default config": {
-			expectedUri: "postgres://postgres:postgres@localhost:5432/tegola?pool_max_conn_idle_time=30m&pool_max_conn_lifetime=1h&pool_max_conns=100&sslmode=disable",
-		},
 		"add sslmode to uri if missing": {
 			TCConfig: TCConfig{
 				ConfigOverride: map[string]interface{}{
@@ -331,70 +304,6 @@ func TestBuildUri(t *testing.T) {
 				},
 			},
 			expectedUri: "postgres://postgres:postgres@localhost:5432/tegola?sslmode=prefer",
-		},
-		"invalid host": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyHost: 0,
-				},
-			},
-			err: "config: value mapped to \"host\" is int not string",
-		},
-		"invalid port": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyPort: "fails",
-				},
-			},
-			err: "config: value mapped to \"port\" is string not int",
-		},
-		"invalid db": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyDB: false,
-				},
-			},
-			err: "config: value mapped to \"database\" is bool not string",
-		},
-		"invalid user": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyUser: false,
-				},
-			},
-			err: "config: value mapped to \"user\" is bool not string",
-		},
-		"invalid password": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyPassword: false,
-				},
-			},
-			err: "config: value mapped to \"password\" is bool not string",
-		},
-		"invalid maxcon": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyMaxConn: false,
-				},
-			},
-			err: "config: value mapped to \"max_connections\" is bool not int",
-		},
-		"invalid conn idle time": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyMaxConnIdleTime: false,
-				},
-			},
-			err: "config: value mapped to \"max_connection_idle_time\" is bool not string",
-		},
-		"invalid conn lifetime": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyMaxConnLifetime: false,
-				},
-			},
-			err: "config: value mapped to \"max_connection_lifetime\" is bool not string",
 		},
 		"invalid uri": {
 			TCConfig: TCConfig{

@@ -79,12 +79,8 @@ jobs:
 
           # PostGIS tests
           RUN_POSTGIS_TESTS: yes
-          PGHOST: localhost
-          PGPORT: 5432
-          PGDATABASE: tegola
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          PGUSER_NO_ACCESS: tegola_no_access
+          PGURI: postgres://postgres:postgres@localhost:5432/tegola
+          PGURI_NO_ACCESS: postgres://tegola_no_access:postgres@localhost:5432/tegola
           PGSSLMODE: disable
           PGSSLKEY: ""
           PGSSLCERT: ""
