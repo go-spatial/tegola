@@ -1,32 +1,48 @@
 # PostGIS MVT Provider
 
-The PostGIS MVT provider manages querying for tile requests against a Postgres database (version 12+) with the [PostGIS](http://postgis.net/)(version 3.0+) extension installed and leverages [ST_AsMVT](https://postgis.net/docs/ST_AsMVT.html) to handle the MVT encoding at the database. 
+The PostGIS MVT provider manages querying for tile requests against a Postgres database (version 12+) with the [PostGIS](http://postgis.net/)(version 3.0+) extension installed and leverages [ST_AsMVT](https://postgis.net/docs/ST_AsMVT.html) to handle the MVT encoding at the database.
 
 The connection between tegola and PostGIS is configured in a `tegola.toml` file. An example minimum connection config:
-
 
 ```toml
 [[providers]]
 name = "test_postgis"       # provider name is referenced from map layers (required)
 type = "mvt_postgis"        # the type of data provider must be "mvt_postgis" for this data provider (required)
-host = "localhost"          # PostGIS database host (required)
-port = 5432                 # PostGIS database port (required)
-database = "tegola"         # PostGIS database name (required)
-user = "tegola"             # PostGIS database user (required)
-password = ""               # PostGIS database password (required)
+uri = "postgres://postgres:postgres@localhost:5432/tegola"          # PostGIS database uri (required)
 ```
 
-### Connection Properties
+## Connection Properties
 
-- `name` (string): [Required] provider name is referenced from map layers.
-- `type` (string): [Required] the type of data provider. must be "postgis" to use this data provider
-- `host` (string): [Required] PostGIS database host
-- `port` (int): [Required] PostGIS database port (required)
-- `database` (string): [Required] PostGIS database name
-- `user` (string): [Required] PostGIS database user
-- `password` (string): [Required] PostGIS database password
-- `max_connections` (int): [Optional] The max connections to maintain in the connection pool. Defaults to 100. 0 means no max.
-- `srid` (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
+Establishing a connection via connection string (`uri`) will become the default
+connection method as of v0.16.0. Connecting via host/port/database is deprecated.
+
+-   `name` (string): [Required] provider name is referenced from map layers.
+-   `type` (string): [Required] the type of data provider. must be "postgis" to use this data provider
+-   `uri` (string): [Required] PostGIS database uri (postgres://user:password@host:port/database)
+-   `srid` (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
+
+### Connection string properties
+
+#### Example
+
+```
+# {protocol}://{user}:{password}@{host}:{port}/{database}?{options}=
+postgres://tegola:supersecret@localhost:5432/tegola?sslmode=prefer&pool_max_conns=10
+```
+
+#### Options
+
+Tegola uses [pgx](https://github.com/jackc/pgx/blob/master/pgxpool/pool.go#L111) to manage
+PostgresSQL connections that allows the following configurations to be passed
+as parameters.
+
+-   `sslmode`: [Optional] PostGIS SSL mode. Default: "prefer"
+-   `pool_min_conns`: [Optional] The min connections to maintain in the connection pool. Defaults to 100. 0 means no max.
+-   `pool_max_conns`: [Optional] The max connections to maintain in the connection pool. Defaults to 100. 0 means no max.
+-   `pool_max_conn_idle_time`: [Optional] The maximum time an idle connection is kept alive. Defaults to "30m".
+-   `pool_max_connection_lifetime` [Optional] The maximum time a connection lives before it is terminated and recreated. Defaults to "1h".
+-   `pool_max_conn_lifetime_jitter` [Optional] Duration after `max_conn_lifetime` to randomly decide to close a connection.
+-   `pool_health_check_period` [Optional] Is the duration between checks of the health of idle connections. Defaults to 1m
 
 ## Provider Layers
 
@@ -37,29 +53,29 @@ In addition to the connection configuration above, Provider Layers need to be co
 name = "landuse"
 # MVT data provider must use SQL statements
 # this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
-# Wrapping the geom with ST_AsMVTGeom is required. 
+# Wrapping the geom with ST_AsMVTGeom is required.
 sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
 ```
 
 ### Provider Layers Properties
 
-- `name` (string): [Required] the name of the layer. This is used to reference this layer from map layers.
-- `geometry_fieldname` (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to `geom`.
-- `id_fieldname` (string): [Optional] the name of the feature id field. defaults to `gid`.
-- `geometry_type` (string): [Optional] the layer geometry type. If not set, the table will be inspected at startup to try and infer the gemetry type. Valid values are: `Point`, `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`.
-- `srid` (int): [Optional] the SRID of the layer. Supports `3857` (WebMercator) or `4326` (WGS84).
-- `sql` (string): [Required] custom SQL to use use. Supports the following tokens:
-  - `!BBOX!` - [Required] will be replaced with the bounding box of the tile before the query is sent to the database. `!bbox!` and`!BOX!` are supported as well for compatibilitiy with queries from Mapnik and MapServer styles.
-  - `!X!` - [Optional] will replaced with the "X" value of the requested tile.
-  - `!Y!` - [Optional] will replaced with the "Y" value of the requested tile.
-  - `!Z!` - [Optional] will replaced with the "Z" value of the requested tile.
-  - `!ZOOM!` - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
-  - `!SCALE_DENOMINATOR!` - [Optional] scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
-  - `!PIXEL_WIDTH!` - [Optional] the pixel width in meters, assuming 256x256 tiles
-  - `!PIXEL_HEIGHT!` - [Optional] the pixel height in meters, assuming 256x256 tiles
-  - `!ID_FIELD!` - [Optional] the id field name
-  - `!GEOM_FIELD!` - [Optional] the geom field name
-  - `!GEOM_TYPE!` - [Optional] the geom type if defined otherwise ""
+-   `name` (string): [Required] the name of the layer. This is used to reference this layer from map layers.
+-   `geometry_fieldname` (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to `geom`.
+-   `id_fieldname` (string): [Optional] the name of the feature id field. defaults to `gid`.
+-   `geometry_type` (string): [Optional] the layer geometry type. If not set, the table will be inspected at startup to try and infer the gemetry type. Valid values are: `Point`, `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`.
+-   `srid` (int): [Optional] the SRID of the layer. Supports `3857` (WebMercator) or `4326` (WGS84).
+-   `sql` (string): [Required] custom SQL to use use. Supports the following tokens:
+    -   `!BBOX!` - [Required] will be replaced with the bounding box of the tile before the query is sent to the database. `!bbox!` and`!BOX!` are supported as well for compatibilitiy with queries from Mapnik and MapServer styles.
+    -   `!X!` - [Optional] will replaced with the "X" value of the requested tile.
+    -   `!Y!` - [Optional] will replaced with the "Y" value of the requested tile.
+    -   `!Z!` - [Optional] will replaced with the "Z" value of the requested tile.
+    -   `!ZOOM!` - [Optional] will be replaced with the "Z" (zoom) value of the requested tile.
+    -   `!SCALE_DENOMINATOR!` - [Optional] scale denominator, assuming 90.7 DPI (i.e. 0.28mm pixel size)
+    -   `!PIXEL_WIDTH!` - [Optional] the pixel width in meters, assuming 256x256 tiles
+    -   `!PIXEL_HEIGHT!` - [Optional] the pixel height in meters, assuming 256x256 tiles
+    -   `!ID_FIELD!` - [Optional] the id field name
+    -   `!GEOM_FIELD!` - [Optional] the geom field name
+    -   `!GEOM_TYPE!` - [Optional] the geom type if defined otherwise ""
 
 ## Example mvt_postgis and map config
 
@@ -67,11 +83,7 @@ sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom
 [[providers]]
 name = "test_postgis"
 type = "mvt_postgis"
-host = "localhost"
-port = 5432
-database = "tegola"
-user = "tegola"
-password = ""
+uri = "postgres://postgres:postgres@localhost:5432/tegola"
 
   [[providers.layers]]
   name = "landuse"
@@ -96,11 +108,7 @@ When using a 4326 projection with ST_AsMVT the SQL statement needs to be modifie
 [[providers]]
 name = "test_postgis"
 type = "mvt_postgis"
-host = "localhost"
-port = 5432
-database = "tegola"
-user = "tegola"
-password = ""
+uri = "postgres://postgres:postgres@localhost:5432/tegola"
 srid = 4326 # setting the srid on the provider to 4326 will cause the !BBOX! value to use the 4326 projection.
 
   [[providers.layers]]
@@ -127,11 +135,8 @@ Testing is designed to work against a live PostGIS database. To see how to set u
 
 ```bash
 $ export RUN_POSTGIS_TESTS=yes
-$ export PGHOST="localhost"
-$ export PGPORT=5432
-$ export PGDATABASE="tegola"
-$ export PGUSER="postgres"
-$ export PGUSER_NO_ACCESS="tegola_no_access" # used for testing errors when user does not have read permissions on a table
+$ export PGURI="postgres://postgres:postgres@localhost:5432/tegola"
+$ export PGURI_NO_ACCESS="postgres://tegola_no_access:postgres@localhost:5432/tegola" # used for testing errors when user does not have read permissions on a table
 $ export PGPASSWORD=""
 $ export PGSSLMODE="disable"
 ```

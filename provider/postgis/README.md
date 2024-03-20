@@ -28,22 +28,12 @@ application_name = "tegola"
 # The default is OFF (read/write).
 # (optional)
 default_transaction_read_only = "off"
-
-host = "localhost"                # PostGIS database host (deprecated)
-port = 5432                       # PostGIS database port (deprecated)
-database = "tegola"               # PostGIS database name (deprecated)
-user = "tegola"                   # PostGIS database user (deprecated)
-password = "supersecret"          # PostGIS database password (deprecated)
-max_connections = 10              # PostGIS max connections (deprecated)
-max_connection_idle_time = "30m"  # PostGIS max connection idle time (deprecated)
-max_connection_lifetime = "1h"    # PostGIS max connection life time (deprecated)
 ```
 
 ## Connection Properties
 
 Establishing a connection via connection string (`uri`) will become the default
-connection method as of v0.16.0. Connecting via host/port/database is flagged
-for deprecation as of v0.15.0 but will be possible until v0.16.0 still.
+connection method as of v0.16.0. Connecting via host/port/database is deprecated.
 
 -   `uri` (string): [Required] PostGIS connection string
 -   `name` (string): [Required] provider name is referenced from map layers
@@ -61,26 +51,17 @@ postgres://tegola:supersecret@localhost:5432/tegola?sslmode=prefer&pool_max_conn
 
 #### Options
 
+Tegola uses [pgx](https://github.com/jackc/pgx/blob/master/pgxpool/pool.go#L111) to manage
+PostgresSQL connections that allows the following configurations to be passed
+as parameters.
+
 -   `sslmode`: [Optional] PostGIS SSL mode. Default: "prefer"
+-   `pool_min_conns`: [Optional] The min connections to maintain in the connection pool. Defaults to 100. 0 means no max.
 -   `pool_max_conns`: [Optional] The max connections to maintain in the connection pool. Defaults to 100. 0 means no max.
 -   `pool_max_conn_idle_time`: [Optional] The maximum time an idle connection is kept alive. Defaults to "30m".
--   `max_connection_lifetime` [Optional] The maximum time a connection lives before it is terminated and recreated. Defaults to "1h".
-
-### [DEPRECATED] Connection Properties
-
--   `uri` (string): [Required] PostGIS connection string
--   `name` (string): [Required] provider name is referenced from map layers
--   `type` (string): [Required] the type of data provider. must be "postgis" to use this data provider
--   `host` (string): [deprecated] PostGIS database host
--   `port` (int): [deprecated] PostGIS database port (required)
--   `database` (string): [deprecated] PostGIS database name
--   `user` (string): [deprecated] PostGIS database user
--   `password` (string): [deprecated] PostGIS database password
--   `srid` (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
--   `ssl_mode`: (string): [Optional]. PostGIS SSL mode. Default is "prefer".
--   `max_connections` (int): [deprecated] The max connections to maintain in the connection pool. Defaults to 100. 0 means no max.
--   `max_connection_idle_time` (duration string): [deprecated] The maximum time an idle connection is kept alive.
--   `max_connection_lifetime` (duration string): [deprecated] The maximum time a connection lives before it is terminated and recreated.
+-   `pool_max_connection_lifetime` [Optional] The maximum time a connection lives before it is terminated and recreated. Defaults to "1h".
+-   `pool_max_conn_lifetime_jitter` [Optional] Duration after `max_conn_lifetime` to randomly decide to close a connection.
+-   `pool_health_check_period` [Optional] Is the duration between checks of the health of idle connections. Defaults to 1m
 
 ## Provider Layers
 
@@ -151,11 +132,8 @@ To run the PostGIS tests, the following environment variables need to be set:
 
 ```bash
 $ export RUN_POSTGIS_TESTS=yes
-$ export PGHOST="localhost"
-$ export PGPORT=5432
-$ export PGDATABASE="tegola"
-$ export PGUSER="postgres"
-$ export PGUSER_NO_ACCESS="tegola_no_access" # used for testing errors when user does not have read permissions on a table
+$ export PGURI="postgres://postgres:postgres@localhost:5432/tegola"
+$ export PGURI_NO_ACCESS="postgres://tegola_no_access:@localhost:5432/tegola" # used for testing errors when user does not have read permissions on a table
 $ export PGPASSWORD=""
 $ export PGSSLMODE="disable"
 ```
