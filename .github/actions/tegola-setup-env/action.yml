@@ -32,6 +32,7 @@ runs:
       uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
+        check-latest: true
       if: ${{ inputs.go == 'true' }}
 
     - name: Set tegola version
