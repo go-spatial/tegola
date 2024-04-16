@@ -9,6 +9,7 @@
 Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) with support for [PostGIS](https://postgis.net/), [GeoPackage](https://www.geopackage.org/) and [SAP HANA Spatial](https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html) data providers. User documentation can be found at [tegola.io](https://tegola.io)
 
 ## Features
+
 - Native geometry processing (simplification, clipping, make valid, intersection, contains, scaling, translation)
 - [Mapbox Vector Tile v2 specification](https://github.com/mapbox/vector-tile-spec) compliant.
 - An embedded viewer with an automatically generated style for quick data visualization and inspection.
@@ -23,6 +24,7 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 - Support for [Prometheus](observability/prometheus/README.md) observability.
 
 ## Usage
+
 ```
 tegola is a vector tile server
 Version: v0.17.0
@@ -44,6 +46,7 @@ Use "tegola [command] --help" for more information about a command.
 ```
 
 ## Running tegola as a vector tile server
+
 1. Download the appropriate binary of tegola for your platform via the [release page](https://github.com/go-spatial/tegola/releases).
 2. Set up your config file and run. By default, Tegola looks for a `config.toml` in the same directory as the binary. You can set a different location for the `config.toml` using a command flag:
 
@@ -61,7 +64,6 @@ The server root will display the built-in viewer with an automatically generated
 
 ![tegola built in viewer](https://raw.githubusercontent.com/go-spatial/tegola/v0.4.0/docs/screenshots/built-in-viewer.png "tegola built in viewer")
 
-
 ```
 /maps/:map_name/:z/:x/:y
 ```
@@ -73,7 +75,6 @@ Return vector tiles for a map. The URI supports the following variables:
 - `:x` is the row of the tile at the zoom level.
 - `:y` is the column of the tile at the zoom level.
 
-
 ```
 /maps/:map_name/:layer_name/:z/:x/:y
 ```
@@ -81,7 +82,6 @@ Return vector tiles for a map. The URI supports the following variables:
 Return vector tiles for a map layer. The URI supports the same variables as the map URI with the additional variable:
 
 - `:layer_name` is the name of the map layer as defined in the `config.toml` file.
-
 
 ```
 /capabilities
@@ -105,7 +105,7 @@ Return an auto generated [Mapbox GL Style](https://www.mapbox.com/mapbox-gl-js/s
 
 The tegola config file uses the [TOML](https://github.com/toml-lang/toml) format. The following example shows how to configure a `mvt_postgis` data provider. The `mvt_postgis` provider will leverage PostGIS's `ST_AsMVT()` function for the encoding of the vector tile.
 
-Under the `maps` section, map layers are associated with data provider layers and their `min_zoom` and `max_zoom` values are defined. 
+Under the `maps` section, map layers are associated with data provider layers and their `min_zoom` and `max_zoom` values are defined.
 
 ### Example config using Postgres 12+ / PostGIS 3.0 ST_AsMVT():
 
@@ -114,7 +114,7 @@ Under the `maps` section, map layers are associated with data provider layers an
 # note mvt data providers can not be conflated with any other providers of any type in a map
 # thus a map may only contain a single mvt provider.
 [[providers]]
-name = "my_postgis"         # provider name is referenced from map layers (required). 
+name = "my_postgis"         # provider name is referenced from map layers (required).
 type = "mvt_postgis"        # the type of data provider must be "mvt_postgis" for this data provider (required)
 uri = "postgresql://tegola:<password>@localhost:5432/tegola?ssl_mode=prefer" # database connection string
 
@@ -122,8 +122,10 @@ uri = "postgresql://tegola:<password>@localhost:5432/tegola?ssl_mode=prefer" # d
   name = "landuse"
   # MVT data provider must use SQL statements
   # this table uses "geom" for the geometry_fieldname and "gid" for the id_fieldname so they don't need to be configured
-  # Wrapping the geom with ST_AsMVTGeom is required. 
+  # Wrapping the geom with ST_AsMVTGeom is required.
   sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX!"
+  # If you want to use the configurable parameters defined in maps.params make sure to include the token in the SQL statement
+  sql = "SELECT ST_AsMVTGeom(geom,!BBOX!) AS geom, gid FROM gis.landuse WHERE geom && !BBOX! !PARAM!"
 
 # maps are made up of layers
 [[maps]]
@@ -149,8 +151,8 @@ name = "zoning"                           # used in the URL to reference this ma
   default_sql   = " "             # if parameter is not specified, this value will replace the .sql parameter. Useful for omitting query entirely
 ```
 
-* More information on PostgreSQL SSL modes can be found [here](https://www.postgresql.org/docs/current/libpq-ssl.html).
-* More information on the `mvt_postgis` provider can be found [here](mvtprovider/postgis)
+- More information on PostgreSQL SSL modes can be found [here](https://www.postgresql.org/docs/current/libpq-ssl.html).
+- More information on the `mvt_postgis` provider can be found [here](mvtprovider/postgis)
 
 ## Environment Variables
 
@@ -184,6 +186,7 @@ The following environment variables can be used for debugging:
 ```bash
 $ TEGOLA_SQL_DEBUG=LAYER_SQL tegola serve --config=/path/to/conf.toml
 ```
+
 The following environment variables can be used to control various runtime options on dataproviders that are **NOT** `mvt_postgis`:
 
 `TEGOLA_OPTIONS` specify a set of options comma or space delimited. Supports the following options
@@ -199,17 +202,17 @@ When debugging client side, it's often helpful to see an outline of a tile along
 http://localhost:8080/maps/mymap/{z}/{x}/{y}.vector.pbf?debug=true
 ```
 
-The requested tile will be encoded with a layer that has the `name` value set to `debug` and includes the three following features. 
+The requested tile will be encoded with a layer that has the `name` value set to `debug` and includes the three following features.
 
- - `debug_outline` is a line feature that traces the border of the tile
- - `debug_text` is a point feature in the middle of the tile with the following tags:
- - `zxy` is a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
+- `debug_outline` is a line feature that traces the border of the tile
+- `debug_text` is a point feature in the middle of the tile with the following tags:
+- `zxy` is a string with the `Z`, `X` and `Y` values formatted as: `Z:0, X:0, Y:0`
 
 ## Building from source
 
-Tegola is written in [Go](https://golang.org/) and requires [Go 1.21](https://go.dev/dl/) or higher to compile from the source. 
-(We support the two newest versions of Go.) 
-To build tegola from the source, make sure you have Go installed and have cloned the repository. 
+Tegola is written in [Go](https://golang.org/) and requires [Go 1.21](https://go.dev/dl/) or higher to compile from the source.
+(We support the two newest versions of Go.)
+To build tegola from the source, make sure you have Go installed and have cloned the repository.
 Navigate to the repository then run the following command:
 
 ```bash
@@ -255,5 +258,5 @@ See [license](LICENSE.md) file in the repo.
 
 ## Looking for a vector tile style editor?
 
-After Tegola is running you're likely going to want to work on your map's cartography. 
+After Tegola is running you're likely going to want to work on your map's cartography.
 Give [fresco](https://github.com/go-spatial/fresco) a try!
