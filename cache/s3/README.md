@@ -22,7 +22,7 @@ The s3cache config supports the following properties:
 - `cache_control` (string): [Optional] the HTTP cache control header to set on the file when putting the file. defaults to ''.
 - `content_type` (string): [Optional] the http MIME-type set on the file when putting the file. defaults to 'application/vnd.mapbox-vector-tile'.
 - `force_path_style` (bool): [Optional] use path-style addressing instead of virtual hosted-style addressing (i.e. http://s3.amazonaws.com/BUCKET/KEY instead of http://BUCKET.s3.amazonaws.com/KEY)
-
+- `req_signing_host` (string): [Optional] force AWS request signing to use a different Host value, useful when `endpoint` is set to a a local proxy/sidecar.
 
 ## Credential chain
 If the `aws_access_key_id` and `aws_secret_access_key` are not set, then the [credential provider chain](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html) will be used. The provider chain supports multiple methods for passing credentials, one of which is setting environment variables. For example:
@@ -43,3 +43,12 @@ $ export AWS_REGION=TEST_BUCKET_REGION
 $ export AWS_ACCESS_KEY_ID=YOUR_AKID
 $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
 ```
+
+## Use a local proxy or sidecar (in k8s)
+If `endpoint` is set to a local reverse proxy (like `http://localhost:1234`), then AWS request signing will not work: the real S3 endpoint will return a HTTP 403 error saying:
+
+```
+SignatureDoesNotMatch: The request signature we calculated does not match the signature you provided. Check your key and signing method.
+```
+
+To make it work, the `req_signing_host` is a special parameter that forces Tegola to use a different HTTP Host header value when the AWS sdk signs the request to be sent to the real S3 endpoint. It needs to be set to the Host header (so no http:// prefixes etc..) of the real S3 endpoint (behind the reverse proxy for example).
