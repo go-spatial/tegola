@@ -1,12 +1,13 @@
 name: On release publish
 on: 
-  push:
   pull_request:
+  push:
+    branches:
+      - master
   release:
     types: [published]
 
 jobs:
-
   gen_version:
     name: Generate software version
     runs-on: ubuntu-22.04
@@ -243,6 +244,7 @@ jobs:
 
     - name: Login to Docker Hub
       uses: docker/login-action@v3
+      if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -259,6 +261,7 @@ jobs:
     # we are not rebuilding linux/amd64
     - name: Build docker image for testing
       uses: docker/build-push-action@v5
+      if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
       with:
         context: .
         load: true
@@ -267,6 +270,7 @@ jobs:
         tags: ${{ env.DOCKERHUB_ORG }}/${{ env.DOCKERHUB_REPO }}:${{ env.VERSION }}
 
     - name: Test image build
+      if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
       run: |
         docker run --rm ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION} version
 
