@@ -176,6 +176,26 @@ func TestMapFilterLayersByName(t *testing.T) {
 				},
 			},
 		},
+		{
+			grid: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name: "layer1",
+					},
+					{
+						Name: "layer1roads",
+					},
+				},
+			},
+			name: "layer1roads",
+			expected: atlas.Map{
+				Layers: []atlas.Layer{
+					{
+						Name: "layer1roads",
+					},
+				},
+			},
+		},
 	}
 
 	for i, tc := range testcases {

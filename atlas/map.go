@@ -167,7 +167,7 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	nameStr := strings.Join(names, ",")
 	for i := range m.Layers {
 		// if we have a name set, use it for the lookup
-		if m.Layers[i].Name != "" && strings.Contains(nameStr, m.Layers[i].Name) {
+		if m.Layers[i].Name != "" && nameStr == m.Layers[i].Name {
 			layers = append(layers, m.Layers[i])
 			continue
 		} else if m.Layers[i].ProviderLayerName != "" && strings.Contains(nameStr, m.Layers[i].ProviderLayerName) { // default to using the ProviderLayerName for the lookup
