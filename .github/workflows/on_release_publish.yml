@@ -224,8 +224,8 @@ jobs:
     needs: [gen_version,build_ui]
     runs-on: ubuntu-22.04
     env:
-      DOCKERHUB_USERNAME: {{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: {{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_ORG: gospatial
       DOCKERHUB_REPO: tegola
       BUILD_ARGS: |
