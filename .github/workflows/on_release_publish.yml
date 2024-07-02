@@ -224,6 +224,8 @@ jobs:
     needs: [gen_version,build_ui]
     runs-on: ubuntu-22.04
     env:
+      DOCKERHUB_USERNAME: {{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: {{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_ORG: gospatial
       DOCKERHUB_REPO: tegola
       BUILD_ARGS: |
@@ -244,7 +246,7 @@ jobs:
 
     - name: Login to Docker Hub
       uses: docker/login-action@v3
-      if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
+      if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -261,7 +263,7 @@ jobs:
     # we are not rebuilding linux/amd64
     - name: Build docker image for testing
       uses: docker/build-push-action@v5
-      if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
+      if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
       with:
         context: .
         load: true
@@ -270,7 +272,7 @@ jobs:
         tags: ${{ env.DOCKERHUB_ORG }}/${{ env.DOCKERHUB_REPO }}:${{ env.VERSION }}
 
     - name: Test image build
-      if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
+      if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
       run: |
         docker run --rm ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION} version
 
