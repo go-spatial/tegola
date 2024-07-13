@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -329,6 +330,17 @@ func (c *Config) Validate() error {
 		uriPrefix := string(c.Webserver.URIPrefix)
 		if string(uriPrefix[0]) != "/" {
 			return ErrInvalidURIPrefix(uriPrefix)
+		}
+	}
+
+	// if HostName is set, validate it
+	if string(c.Webserver.HostName) != "" {
+		_, err := url.Parse(string(c.Webserver.HostName))
+		if err != nil {
+			return ErrInvalidHostName{
+				HostName: string(c.Webserver.HostName),
+				Err:      err,
+			}
 		}
 	}
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,7 +13,7 @@ type ErrMapNotFound struct {
 }
 
 func (e ErrMapNotFound) Error() string {
-	return fmt.Sprintf("config: map (%v) not found", e.MapName)
+	return fmt.Sprintf("config: map (%s) not found", e.MapName)
 }
 
 type ErrParamTokenReserved struct {
@@ -104,7 +105,7 @@ type ErrInvalidProviderLayerName struct {
 }
 
 func (e ErrInvalidProviderLayerName) Error() string {
-	return fmt.Sprintf("config: invalid provider layer name (%v)", e.ProviderLayerName)
+	return fmt.Sprintf("config: invalid provider layer name (%s)", e.ProviderLayerName)
 }
 
 type ErrOverlappingLayerZooms struct {
@@ -113,7 +114,7 @@ type ErrOverlappingLayerZooms struct {
 }
 
 func (e ErrOverlappingLayerZooms) Error() string {
-	return fmt.Sprintf("config: overlapping zooms for layer (%v) and layer (%v)", e.ProviderLayer1, e.ProviderLayer2)
+	return fmt.Sprintf("config: overlapping zooms for layer (%s) and layer (%s)", e.ProviderLayer1, e.ProviderLayer2)
 }
 
 type ErrInvalidLayerZoom struct {
@@ -129,7 +130,7 @@ func (e ErrInvalidLayerZoom) Error() string {
 		n, d = "MinZoom", "below"
 	}
 	return fmt.Sprintf(
-		"config: for provider layer %v %v(%v) is %v allowed level of %v",
+		"config: for provider layer %s %s(%d) is %s allowed level of %d",
 		e.ProviderLayer, n, e.Zoom, d, e.ZoomLimit,
 	)
 }
@@ -155,7 +156,7 @@ type ErrMixedProviders struct {
 }
 
 func (e ErrMixedProviders) Error() string {
-	return fmt.Sprintf("config: can not mix MVT providers with normal providers for map %v", e.Map)
+	return fmt.Sprintf("config: can not mix MVT providers with normal providers for map %s", e.Map)
 }
 
 // ErrMissingEnvVar represents an environmental variable the system was unable to find in the environment
@@ -164,7 +165,7 @@ type ErrMissingEnvVar struct {
 }
 
 func (e ErrMissingEnvVar) Error() string {
-	return fmt.Sprintf("config: config file is referencing an environment variable that is not set (%v)", e.EnvVar)
+	return fmt.Sprintf("config: config file is referencing an environment variable that is not set (%s)", e.EnvVar)
 }
 
 type ErrInvalidHeader struct {
@@ -172,13 +173,35 @@ type ErrInvalidHeader struct {
 }
 
 func (e ErrInvalidHeader) Error() string {
-	return fmt.Sprintf("config: header (%v) blacklisted", e.Header)
+	return fmt.Sprintf("config: header (%s) blacklisted", e.Header)
 }
 
 type ErrInvalidURIPrefix string
 
 func (e ErrInvalidURIPrefix) Error() string {
-	return fmt.Sprintf("config: invalid uri_prefix (%v). uri_prefix must start with a forward slash '/' ", string(e))
+	return fmt.Sprintf("config: invalid uri_prefix (%s). uri_prefix must start with a forward slash '/' ", string(e))
+}
+
+type ErrInvalidHostName struct {
+	HostName string
+	Err      error
+}
+
+func (e ErrInvalidHostName) Error() string {
+	return fmt.Sprintf("config: invalid hostname (%s) - %s", string(e.HostName), e.Err)
+}
+
+func (e ErrInvalidHostName) Unwrap() error {
+	return e.Err
+}
+
+func (e ErrInvalidHostName) Is(target error) bool {
+
+	if _, ok := target.(ErrInvalidHostName); ok {
+		return true
+	}
+
+	return errors.Is(e.Err, target)
 }
 
 // ErrUnknownProviderType is returned when the config contains a provider type that has not been registered
@@ -207,7 +230,7 @@ type ErrProviderNameRequired struct {
 }
 
 func (e ErrProviderNameRequired) Error() string {
-	return fmt.Sprintf("config: name field required for provider at position %v", e.Pos)
+	return fmt.Sprintf("config: name field required for provider at position %d", e.Pos)
 }
 
 // ErrProviderNameDuplicate is returned when the name of a provider is duplicated in the provider list
@@ -216,7 +239,7 @@ type ErrProviderNameDuplicate struct {
 }
 
 func (e ErrProviderNameDuplicate) Error() string {
-	return fmt.Sprintf("config: name for provider at position %v is a duplicate", e.Pos)
+	return fmt.Sprintf("config: name for provider at position %d is a duplicate", e.Pos)
 }
 
 // ErrProviderTypeRequired is returned when the type of a provider is missing from the provider list
@@ -225,5 +248,5 @@ type ErrProviderTypeRequired struct {
 }
 
 func (e ErrProviderTypeRequired) Error() string {
-	return fmt.Sprintf("config: type field required for provider at position %v", e.Pos)
+	return fmt.Sprintf("config: type field required for provider at position %d", e.Pos)
 }

@@ -121,7 +121,7 @@ func TestParse(t *testing.T) {
 				hostname = "cdn.tegola.io"
 				port = ":8080"
 				cors_allowed_origin = "tegola.io"
-        proxy_protocol = "https"
+        		proxy_protocol = "https"
 
 					[webserver.headers]
 					Access-Control-Allow-Origin = "*"
@@ -484,7 +484,7 @@ func TestParse(t *testing.T) {
 				[webserver]
 				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
 				port = "${ENV_TEST_WEBSERVER_PORT}"
-        proxy_protocol = ""
+        		proxy_protocol = ""
                 
                 [webserver.headers]
                    Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
@@ -783,7 +783,7 @@ func TestValidate(t *testing.T) {
 
 			err := tc.config.Validate()
 			if !errors.Is(err, tc.expectedErr) {
-				t.Errorf("expected err: %v got %v", tc.expectedErr, err)
+				t.Errorf("expected err: %s got %s", tc.expectedErr, err)
 				return
 			}
 		}
@@ -1358,7 +1358,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"12 mvt_provider comingle; flip": {
+		"13 mvt_provider comingle; flip": {
 			expectedErr: config.ErrMVTDifferentProviders{
 				Original: "stdprovider1",
 				Current:  "provider1",
@@ -1390,7 +1390,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"13 reserved token name": {
+		"14 reserved token name": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1414,7 +1414,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"13 duplicate parameter name": {
+		"15 duplicate parameter name": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1443,7 +1443,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"13 duplicate token name": {
+		"16 duplicate token name": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1472,7 +1472,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"13 parameter unknown type": {
+		"17 parameter unknown type": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1496,7 +1496,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"13 parameter two defaults": {
+		"18 parameter two defaults": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1524,7 +1524,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"13 parameter invalid default": {
+		"19 parameter invalid default": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1551,7 +1551,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"13 invalid token name": {
+		"20 invalid token name": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1574,6 +1574,14 @@ func TestValidate(t *testing.T) {
 					Type:  "int",
 				},
 			},
+		},
+		"21 invalid webserver hostname": {
+			config: config.Config{
+				Webserver: config.Webserver{
+					HostName: ":\\malformed.host",
+				},
+			},
+			expectedErr: config.ErrInvalidHostName{},
 		},
 	}
 
