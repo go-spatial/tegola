@@ -202,7 +202,7 @@ func setHeaders(w http.ResponseWriter) {
 	// add our default CORS headers
 	for name, val := range DefaultCORSHeaders {
 		if val == "" {
-			log.Warnf("default CORS header (%v) has no value", name)
+			log.Warnf("default CORS header (%s) has no value", name)
 		}
 
 		w.Header().Set(name, val)
@@ -211,7 +211,7 @@ func setHeaders(w http.ResponseWriter) {
 	// set user defined headers
 	for name, val := range Headers {
 		if val == "" {
-			log.Warnf("header (%v) has no value", name)
+			log.Warnf("header (%s) has no value", name)
 		}
 
 		w.Header().Set(name, val)
