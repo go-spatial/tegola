@@ -113,7 +113,7 @@ func TestParse(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"1": {
+		"happy path": {
 			config: `
 				tile_buffer = 12
 
@@ -256,7 +256,7 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-		"2 test env": {
+		"test env": {
 			config: `
 				[webserver]
 				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
@@ -412,7 +412,7 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-		"3 missing env": {
+		"missing env": {
 			config: `
 				[webserver]
 				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
@@ -479,7 +479,7 @@ func TestParse(t *testing.T) {
 			expected:    config.Config{},
 			expectedErr: env.ErrEnvVar("I_AM_MISSING"),
 		},
-		"4 test empty proxy_protocol": {
+		"test empty proxy_protocol": {
 			config: `
 				[webserver]
 				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
@@ -647,7 +647,6 @@ func TestValidateMutateZoom(t *testing.T) {
 
 	type tcase struct {
 		config          *config.Config
-		layerName       string
 		expectedMinZoom int
 		expectedMaxZoom int
 	}
@@ -675,7 +674,7 @@ func TestValidateMutateZoom(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"1 - default max zoom": {
+		"default max zoom": {
 			expectedMinZoom: 0,
 			expectedMaxZoom: 22,
 			config: &config.Config{
@@ -719,7 +718,7 @@ func TestValidateMutateZoom(t *testing.T) {
 				},
 			},
 		},
-		"2 - max zoom 0, default to 1": {
+		"max zoom 0, default to 1": {
 			expectedMinZoom: 0,
 			expectedMaxZoom: 1,
 			config: &config.Config{
@@ -790,7 +789,7 @@ func TestValidate(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"1": {
+		"happy path 1": {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
@@ -858,7 +857,7 @@ func TestValidate(t *testing.T) {
 				ProviderLayer2: "provider2.water",
 			},
 		},
-		"2": {
+		"happy path 2": {
 			config: config.Config{
 				Providers: []env.Dict{
 					{
@@ -924,7 +923,7 @@ func TestValidate(t *testing.T) {
 				ProviderLayer2: "provider2.water_5_10",
 			},
 		},
-		"3": {
+		"happy path 3": {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
@@ -1007,7 +1006,7 @@ func TestValidate(t *testing.T) {
 			},
 			expectedErr: nil,
 		},
-		"4 default zooms": {
+		"default zooms": {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
@@ -1076,7 +1075,7 @@ func TestValidate(t *testing.T) {
 			},
 			expectedErr: nil,
 		},
-		"5 default zooms fail": {
+		"default zooms fail": {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
@@ -1140,7 +1139,7 @@ func TestValidate(t *testing.T) {
 				ProviderLayer2: "provider2.water_default_z",
 			},
 		},
-		"6 blocked headers": {
+		"blocked headers": {
 			config: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
@@ -1154,7 +1153,7 @@ func TestValidate(t *testing.T) {
 				Header: "Content-Encoding",
 			},
 		},
-		"7 non-existant provider type": {
+		"non-existant provider type": {
 			expectedErr: config.ErrUnknownProviderType{Type: "nonexistant", Name: "provider1", KnownProviders: []string{"..."}},
 			config: config.Config{
 				Providers: []env.Dict{
@@ -1165,7 +1164,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"8 missing name field": {
+		"missing name field": {
 			expectedErr: config.ErrProviderNameRequired{Pos: 0},
 			config: config.Config{
 				Providers: []env.Dict{
@@ -1175,7 +1174,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"8 duplicate name field": {
+		"duplicate name field": {
 			expectedErr: config.ErrProviderNameDuplicate{Pos: 1},
 			config: config.Config{
 				Providers: []env.Dict{
@@ -1190,7 +1189,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"8 missing name field at pos 1": {
+		"missing name field at pos 1": {
 			expectedErr: config.ErrProviderNameRequired{Pos: 1},
 			config: config.Config{
 				Providers: []env.Dict{
@@ -1204,7 +1203,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"9 missing type field": {
+		"missing type field": {
 			expectedErr: config.ErrProviderTypeRequired{Pos: 0},
 			config: config.Config{
 				Providers: []env.Dict{
@@ -1214,7 +1213,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"9 missing type field at pos 1": {
+		"missing type field at pos 1": {
 			expectedErr: config.ErrProviderTypeRequired{Pos: 1},
 			config: config.Config{
 				Providers: []env.Dict{
@@ -1228,7 +1227,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"10 happy 1 mvt provider only 1 layer": {
+		"happy 1 mvt provider only 1 layer": {
 			config: config.Config{
 				Providers: []env.Dict{
 					{
@@ -1249,7 +1248,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"10 happy 1 mvt provider only 2 layer": {
+		"happy 1 mvt provider only 2 layer": {
 			config: config.Config{
 				Providers: []env.Dict{
 					{
@@ -1273,7 +1272,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"10 happy 1 mvt, 1 std provider only 1 layer": {
+		"happy 1 mvt, 1 std provider only 1 layer": {
 			config: config.Config{
 				Providers: []env.Dict{
 					{
@@ -1301,7 +1300,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"11 invalid provider referenced in map": {
+		"invalid provider referenced in map": {
 			expectedErr: config.ErrInvalidProviderForMap{
 				MapName:      "happy",
 				ProviderName: "bad",
@@ -1326,7 +1325,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"12 mvt_provider comingle": {
+		"mvt_provider comingle": {
 			expectedErr: config.ErrMVTDifferentProviders{
 				Original: "provider1",
 				Current:  "stdprovider1",
@@ -1358,7 +1357,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"13 mvt_provider comingle; flip": {
+		"mvt_provider comingle; flip": {
 			expectedErr: config.ErrMVTDifferentProviders{
 				Original: "stdprovider1",
 				Current:  "provider1",
@@ -1390,7 +1389,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"14 reserved token name": {
+		"reserved token name": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1414,7 +1413,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"15 duplicate parameter name": {
+		"duplicate parameter name": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1443,7 +1442,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"16 duplicate token name": {
+		"duplicate token name": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1472,7 +1471,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"17 parameter unknown type": {
+		"parameter unknown type": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1496,7 +1495,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"18 parameter two defaults": {
+		"parameter two defaults": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1524,7 +1523,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"19 parameter invalid default": {
+		"parameter invalid default": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1551,7 +1550,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"20 invalid token name": {
+		"invalid token name": {
 			config: config.Config{
 				Maps: []provider.Map{
 					{
@@ -1575,7 +1574,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		"21 invalid webserver hostname": {
+		"invalid webserver hostname": {
 			config: config.Config{
 				Webserver: config.Webserver{
 					HostName: ":\\malformed.host",

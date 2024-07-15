@@ -17,9 +17,20 @@ func TestHostName(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			// set the package variable
-			HostName = tc.hostName
-			Port = tc.port
+			// reset the server singleton values. this is not ideal
+			// but is the current design of this package
+			HostName = nil
+			Port = ""
+
+			if tc.hostName != "" {
+				// set the package variable
+				HostName = &url.URL{
+					Host: tc.hostName,
+				}
+			}
+			if tc.port != "" {
+				Port = tc.port
+			}
 
 			url, err := url.Parse(tc.url)
 			if err != nil {
@@ -29,12 +40,11 @@ func TestHostName(t *testing.T) {
 
 			req := http.Request{URL: url, Host: url.Host}
 
-			output := hostName(&req)
+			output := hostName(&req).Host
 			if output != tc.expected {
-				t.Errorf("hostname, expected %v got %v", tc.expected, output)
+				t.Errorf("hostname, expected (%s) got (%s)", tc.expected, output)
 				return
 			}
-
 		}
 	}
 
@@ -183,118 +193,5 @@ func TestScheme(t *testing.T) {
 		t.Run(name, fn(tc))
 	}
 
-	ProxyProtocol = ""
-}
-
-func TestBuildCapabilitiesURL(t *testing.T) {
-
-	type tcase struct {
-		request       http.Request
-		uriParts      []string
-		uriPrefix     string
-		query         url.Values
-		expected      string
-		proxyProtocol string
-	}
-
-	fn := func(tc tcase) func(t *testing.T) {
-		return func(t *testing.T) {
-
-			if tc.uriPrefix != "" {
-				URIPrefix = tc.uriPrefix
-			} else {
-				URIPrefix = "/"
-			}
-
-			if tc.proxyProtocol != "" {
-				ProxyProtocol = tc.proxyProtocol
-			} else {
-				ProxyProtocol = ""
-			}
-
-			output := buildCapabilitiesURL(&tc.request, tc.uriParts, tc.query)
-			if output != tc.expected {
-				t.Errorf("expected (%v) got (%v)", tc.expected, output)
-			}
-		}
-	}
-
-	tests := map[string]tcase{
-		"no uri prefix no query": {
-			request: http.Request{
-				Host: "cdn.tegola.io",
-			},
-			uriParts: []string{"foo", "bar"},
-			query:    url.Values{},
-			expected: "http://cdn.tegola.io/foo/bar",
-		},
-		"uri prefix no query": {
-			request: http.Request{
-				Host: "cdn.tegola.io",
-			},
-			uriParts:  []string{"foo", "bar"},
-			uriPrefix: "/tegola",
-			query:     url.Values{},
-			expected:  "http://cdn.tegola.io/tegola/foo/bar",
-		},
-		"uri prefix and query": {
-			request: http.Request{
-				Host: "cdn.tegola.io",
-			},
-			uriParts:  []string{"foo", "bar"},
-			uriPrefix: "/tegola",
-			query: url.Values{
-				"debug": []string{"true"},
-			},
-			expected: "http://cdn.tegola.io/tegola/foo/bar?debug=true",
-		},
-		"http proxy_protocol": {
-			request: http.Request{
-				Host: "cdn.tegola.io",
-			},
-			uriParts:      []string{"foo", "bar"},
-			query:         url.Values{},
-			proxyProtocol: "http",
-			expected:      "http://cdn.tegola.io/foo/bar",
-		},
-		"https proxy_protocol": {
-			request: http.Request{
-				Host: "cdn.tegola.io",
-			},
-			uriParts:      []string{"foo", "bar"},
-			query:         url.Values{},
-			proxyProtocol: "https",
-			expected:      "https://cdn.tegola.io/foo/bar",
-		},
-		"http proxy_protocol with https Request": {
-			request: http.Request{
-				TLS:  &tls.ConnectionState{},
-				Host: "cdn.tegola.io",
-			},
-			uriParts:      []string{"foo", "bar"},
-			query:         url.Values{},
-			proxyProtocol: "http",
-			expected:      "http://cdn.tegola.io/foo/bar",
-		},
-		"https proxy_protocol with uri_prefix": {
-			request: http.Request{
-				Host: "cdn.tegola.io",
-			},
-			uriParts:      []string{"foo", "bar"},
-			uriPrefix:     "/tegola",
-			query:         url.Values{},
-			proxyProtocol: "https",
-			expected:      "https://cdn.tegola.io/tegola/foo/bar",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, fn(tc))
-	}
-
-	// reset the URIPrefix. Ideally this would not be necessary but the server package is
-	// designed as a singleton right now. Eventually this will change so the tests
-	// don't need to consider each other
-	URIPrefix = "/"
 	ProxyProtocol = ""
 }

@@ -8,18 +8,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/proj"
-	"github.com/go-spatial/tegola/observability"
-	"github.com/go-spatial/tegola/provider"
-
 	"github.com/dimfeld/httptreemux"
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/mvt"
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/proj"
+
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/maths"
+	"github.com/go-spatial/tegola/observability"
+	"github.com/go-spatial/tegola/provider"
 )
 
 var (
@@ -95,7 +95,7 @@ func (req *HandleMapLayerZXY) parseURI(r *http.Request) error {
 	}
 
 	// check for debug request
-	if r.URL.Query().Get("debug") == "true" {
+	if r.URL.Query().Get(QueryKeyDebug) == "true" {
 		req.debug = true
 	}
 

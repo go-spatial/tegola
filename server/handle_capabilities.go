@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"path"
 
 	"github.com/go-spatial/geom"
+
 	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 type Capabilities struct {
@@ -19,16 +22,16 @@ type CapabilitiesMap struct {
 	Attribution  string              `json:"attribution"`
 	Bounds       *geom.Extent        `json:"bounds"`
 	Center       [3]float64          `json:"center"`
-	Tiles        []string            `json:"tiles"`
+	Tiles        []TileURLTemplate   `json:"tiles"`
 	Capabilities string              `json:"capabilities"`
 	Layers       []CapabilitiesLayer `json:"layers"`
 }
 
 type CapabilitiesLayer struct {
-	Name    string   `json:"name"`
-	Tiles   []string `json:"tiles"`
-	MinZoom uint     `json:"minzoom"`
-	MaxZoom uint     `json:"maxzoom"`
+	Name    string            `json:"name"`
+	Tiles   []TileURLTemplate `json:"tiles"`
+	MinZoom uint              `json:"minzoom"`
+	MaxZoom uint              `json:"maxzoom"`
 }
 
 type HandleCapabilities struct{}
@@ -39,16 +42,13 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		Version: Version,
 	}
 
-	// parse our query string
-	var query = r.URL.Query()
-
 	// iterate our registered maps
 	for _, m := range atlas.AllMaps() {
 		debugQuery := url.Values{}
 
 		// if we have a debug param add it to our URLs
-		if query.Get("debug") == "true" {
-			debugQuery.Set("debug", "true")
+		if r.URL.Query().Get(QueryKeyDebug) == "true" {
+			debugQuery.Set(QueryKeyDebug, "true")
 
 			// update our map to include the debug layers
 			m = m.AddDebugLayers()
@@ -60,10 +60,21 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			Attribution: m.Attribution,
 			Bounds:      m.Bounds,
 			Center:      m.Center,
-			Tiles: []string{
-				buildCapabilitiesURL(r, []string{"maps", m.Name, "{z}/{x}/{y}.pbf"}, debugQuery),
+			Tiles: []TileURLTemplate{
+				{
+					Scheme:     scheme(r),
+					Host:       hostName(r).Host,
+					PathPrefix: URIPrefix,
+					MapName:    m.Name,
+					Query:      debugQuery,
+				},
 			},
-			Capabilities: buildCapabilitiesURL(r, []string{"capabilities", m.Name + ".json"}, debugQuery),
+			Capabilities: (&url.URL{
+				Scheme:   scheme(r),
+				Host:     hostName(r).Host,
+				Path:     path.Join(URIPrefix, "capabilities", m.Name+".json"),
+				RawQuery: debugQuery.Encode(),
+			}).String(),
 		}
 
 		for i := range m.Layers {
@@ -93,8 +104,15 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			// build the layer details
 			cLayer := CapabilitiesLayer{
 				Name: m.Layers[i].MVTName(),
-				Tiles: []string{
-					buildCapabilitiesURL(r, []string{"maps", m.Name, m.Layers[i].MVTName(), "{z}/{x}/{y}.pbf"}, debugQuery),
+				Tiles: []TileURLTemplate{
+					{
+						Host:       hostName(r).Host,
+						Scheme:     scheme(r),
+						PathPrefix: URIPrefix,
+						MapName:    m.Name,
+						LayerName:  m.Layers[i].MVTName(),
+						Query:      debugQuery,
+					},
 				},
 				MinZoom: m.Layers[i].MinZoom,
 				MaxZoom: m.Layers[i].MaxZoom,
@@ -117,5 +135,7 @@ func (req HandleCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// setup a new json encoder and encode our capabilities
-	json.NewEncoder(w).Encode(capabilities)
+	if err := json.NewEncoder(w).Encode(capabilities); err != nil {
+		log.Errorf("error trying to encode capabilities response (%s)", err)
+	}
 }

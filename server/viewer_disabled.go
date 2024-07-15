@@ -5,6 +5,7 @@ package server
 
 import (
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/go-spatial/tegola/observability"
 )
 

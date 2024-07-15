@@ -29,7 +29,7 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 			cacher, _ := memory.New(nil)
 			a.SetCache(cacher)
 
-			w, router, err := doRequest(a, "GET", tc.uri, nil)
+			w, router, err := doRequest(t, a, http.MethodGet, tc.uri, nil)
 			if err != nil {
 				t.Errorf("error making request, expected nil got %v", err)
 				return
@@ -100,7 +100,7 @@ func TestMiddlewareTileCacheHandlerIgnoreParams(t *testing.T) {
 			cacher, _ := memory.New(nil)
 			a.SetCache(cacher)
 
-			w, router, err := doRequest(a, "GET", tc.uri, nil)
+			w, router, err := doRequest(t, a, http.MethodGet, tc.uri, nil)
 			if err != nil {
 				t.Errorf("error making request, expected nil got %v", err)
 				return

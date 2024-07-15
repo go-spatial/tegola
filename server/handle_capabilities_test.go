@@ -2,11 +2,11 @@ package server_test
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
-	"reflect"
+	"net/url"
 	"testing"
+
+	"github.com/go-test/deep"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/atlas"
@@ -16,49 +16,38 @@ import (
 func TestHandleCapabilities(t *testing.T) {
 
 	type tcase struct {
-		hostname string
+		hostname *url.URL
 		port     string
 		uri      string
-		method   string
 		expected server.Capabilities
 	}
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-			var err error
-
 			server.HostName = tc.hostname
 			server.Port = tc.port
+
 			a := newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
 
-			w, _, err := doRequest(a, tc.method, tc.uri, nil)
+			resp, _, err := doRequest(t, a, http.MethodGet, tc.uri, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			if w.Code != http.StatusOK {
-				t.Errorf("status code, expected %v got %v", http.StatusOK, w.Code)
+			if resp.Code != http.StatusOK {
+				t.Errorf("status code, expected %v got %v", http.StatusOK, resp.Code)
 				return
 			}
 
-			bytes, err := ioutil.ReadAll(w.Body)
-			if err != nil {
-				t.Errorf("error response body, expected nil got %v", err)
-				return
-			}
-
+			// read the response body
 			var capabilities server.Capabilities
-
-			// read the respons body
-			if err := json.Unmarshal(bytes, &capabilities); err != nil {
-				t.Errorf("error unmarshal JSON, expected nil got %v", err)
+			if err := json.NewDecoder(resp.Body).Decode(&capabilities); err != nil {
+				t.Errorf("unexpected error decoding response body: %s", err)
 				return
 			}
 
-			if !reflect.DeepEqual(tc.expected, capabilities) {
-				t.Errorf("response body, \n  expected %+v\n  got %+v", tc.expected, capabilities)
+			if diff := deep.Equal(tc.expected, capabilities); diff != nil {
+				t.Errorf("expected does not match output. diff: %v", diff)
 			}
-
 		}
 	}
 
@@ -75,22 +64,36 @@ func TestHandleCapabilities(t *testing.T) {
 						Center:       [3]float64{1.0, 2.0, 3.0},
 						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://localhost:8080/capabilities/test-map.json",
-						Tiles: []string{
-							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
+						Tiles: []server.TileURLTemplate{
+							{
+								Scheme:  "http",
+								Host:    "localhost:8080",
+								MapName: "test-map",
+							},
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
 								Name: testLayer1.MVTName(),
-								Tiles: []string{
-									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "localhost:8080",
+										MapName:   "test-map",
+										LayerName: testLayer1.MVTName(),
+									},
 								},
 								MinZoom: testLayer1.MinZoom,
 								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: testLayer2.MVTName(),
-								Tiles: []string{
-									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer2.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "localhost:8080",
+										MapName:   "test-map",
+										LayerName: testLayer2.MVTName(),
+									},
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
@@ -103,9 +106,11 @@ func TestHandleCapabilities(t *testing.T) {
 		"none port cdn host": {
 			// With hostname set and port set to "none" in config, urls should have host "cdn.tegola.io"
 			// debug layers turned on
-			hostname: "cdn.tegola.io",
-			port:     "none", // Set to none or port 8080 from uri will be used.
-			uri:      "http://localhost:8080/capabilities?debug=true",
+			hostname: &url.URL{
+				Host: "cdn.tegola.io",
+			},
+			port: "none", // Set to none or port 8080 from uri will be used.
+			uri:  "http://localhost:8080/capabilities?debug=true",
 			expected: server.Capabilities{
 				Version: serverVersion,
 				Maps: []server.CapabilitiesMap{
@@ -115,38 +120,77 @@ func TestHandleCapabilities(t *testing.T) {
 						Center:       [3]float64{1.0, 2.0, 3.0},
 						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
-						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
+						Tiles: []server.TileURLTemplate{
+							{
+								Scheme:  "http",
+								Host:    "cdn.tegola.io",
+								MapName: "test-map",
+								Query: url.Values{
+									server.QueryKeyDebug: []string{"true"},
+								},
+							},
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
 								Name: testLayer1.MVTName(),
-								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: testLayer1.MVTName(),
+										Query: url.Values{
+											server.QueryKeyDebug: []string{"true"},
+										},
+									},
 								},
 								MinZoom: testLayer1.MinZoom,
 								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
-								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: testLayer2.MVTName(),
+										Query: url.Values{
+											server.QueryKeyDebug: []string{"true"},
+										},
+									},
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
 							},
 							{
 								Name: "debug-tile-outline",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: "debug-tile-outline",
+										Query: url.Values{
+											server.QueryKeyDebug: []string{"true"},
+										},
+									},
 								},
 								MinZoom: 0,
 								MaxZoom: atlas.MaxZoom,
 							},
 							{
 								Name: "debug-tile-center",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: "debug-tile-center",
+										Query: url.Values{
+											server.QueryKeyDebug: []string{"true"},
+										},
+									},
 								},
 								MinZoom: 0,
 								MaxZoom: atlas.MaxZoom,
@@ -167,22 +211,36 @@ func TestHandleCapabilities(t *testing.T) {
 						Center:       [3]float64{1.0, 2.0, 3.0},
 						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://localhost:8080/capabilities/test-map.json",
-						Tiles: []string{
-							"http://localhost:8080/maps/test-map/{z}/{x}/{y}.pbf",
+						Tiles: []server.TileURLTemplate{
+							{
+								Scheme:  "http",
+								Host:    "localhost:8080",
+								MapName: "test-map",
+							},
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
 								Name: testLayer1.MVTName(),
-								Tiles: []string{
-									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer1.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "localhost:8080",
+										MapName:   "test-map",
+										LayerName: testLayer1.MVTName(),
+									},
 								},
 								MinZoom: testLayer1.MinZoom,
 								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: testLayer2.MVTName(),
-								Tiles: []string{
-									fmt.Sprintf("http://localhost:8080/maps/test-map/%v/{z}/{x}/{y}.pbf", testLayer2.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "localhost:8080",
+										MapName:   "test-map",
+										LayerName: testLayer2.MVTName(),
+									},
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
@@ -195,9 +253,11 @@ func TestHandleCapabilities(t *testing.T) {
 		"unset port set host": {
 			// With hostname set in config, port unset in config, and no port in request uri,
 			// urls should have host from config and no port: "cdn.tegola.io"
-			hostname: "cdn.tegola.io",
-			port:     "none", // Set to none or port 8080 from uri will be used.
-			uri:      "http://localhost/capabilities?debug=true",
+			hostname: &url.URL{
+				Host: "cdn.tegola.io",
+			},
+			port: "none", // Set to none or port 8080 from uri will be used.
+			uri:  "http://localhost/capabilities?debug=true",
 			expected: server.Capabilities{
 				Version: serverVersion,
 				Maps: []server.CapabilitiesMap{
@@ -207,38 +267,87 @@ func TestHandleCapabilities(t *testing.T) {
 						Center:       [3]float64{1.0, 2.0, 3.0},
 						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
-						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
+						Tiles: []server.TileURLTemplate{
+							{
+								Scheme:  "http",
+								Host:    "cdn.tegola.io",
+								MapName: "test-map",
+								Query: url.Values{
+									server.QueryKeyDebug: []string{
+										"true",
+									},
+								},
+							},
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
 								Name: testLayer1.MVTName(),
-								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: testLayer1.MVTName(),
+										Query: url.Values{
+											server.QueryKeyDebug: []string{
+												"true",
+											},
+										},
+									},
 								},
 								MinZoom: testLayer1.MinZoom,
 								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
-								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: testLayer2.MVTName(),
+										Query: url.Values{
+											server.QueryKeyDebug: []string{
+												"true",
+											},
+										},
+									},
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
 							},
 							{
 								Name: "debug-tile-outline",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: "debug-tile-outline",
+										Query: url.Values{
+											server.QueryKeyDebug: []string{
+												"true",
+											},
+										},
+									},
 								},
 								MinZoom: 0,
 								MaxZoom: atlas.MaxZoom,
 							},
 							{
 								Name: "debug-tile-center",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: "debug-tile-center",
+										Query: url.Values{
+											server.QueryKeyDebug: []string{
+												"true",
+											},
+										},
+									},
 								},
 								MinZoom: 0,
 								MaxZoom: atlas.MaxZoom,
@@ -251,8 +360,10 @@ func TestHandleCapabilities(t *testing.T) {
 		"config set hostname unset port": {
 			// With hostname set and port unset in config, urls should have host from config and
 			//  port from uri: "cdn.tegola.io:8080"
-			hostname: "cdn.tegola.io",
-			uri:      "http://localhost:8080/capabilities?debug=true",
+			hostname: &url.URL{
+				Host: "cdn.tegola.io",
+			},
+			uri: "http://localhost:8080/capabilities?debug=true",
 			expected: server.Capabilities{
 				Version: serverVersion,
 				Maps: []server.CapabilitiesMap{
@@ -262,38 +373,77 @@ func TestHandleCapabilities(t *testing.T) {
 						Center:       [3]float64{1.0, 2.0, 3.0},
 						Bounds:       tegola.WGS84Bounds,
 						Capabilities: "http://cdn.tegola.io/capabilities/test-map.json?debug=true",
-						Tiles: []string{
-							"http://cdn.tegola.io/maps/test-map/{z}/{x}/{y}.pbf?debug=true",
+						Tiles: []server.TileURLTemplate{
+							{
+								Scheme:  "http",
+								Host:    "cdn.tegola.io",
+								MapName: "test-map",
+								Query: url.Values{
+									server.QueryKeyDebug: []string{"true"},
+								},
+							},
 						},
 						Layers: []server.CapabilitiesLayer{
 							{
 								Name: testLayer1.MVTName(),
-								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer1.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: testLayer1.MVTName(),
+										Query: url.Values{
+											server.QueryKeyDebug: []string{"true"},
+										},
+									},
 								},
 								MinZoom: testLayer1.MinZoom,
 								MaxZoom: testLayer3.MaxZoom, // layer 1 and layer 3 share a name in our test so the zoom range includes the entire zoom range
 							},
 							{
 								Name: "test-layer-2-name",
-								Tiles: []string{
-									fmt.Sprintf("http://cdn.tegola.io/maps/test-map/%v/{z}/{x}/{y}.pbf?debug=true", testLayer2.MVTName()),
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: testLayer2.MVTName(),
+										Query: url.Values{
+											server.QueryKeyDebug: []string{"true"},
+										},
+									},
 								},
 								MinZoom: testLayer2.MinZoom,
 								MaxZoom: testLayer2.MaxZoom,
 							},
 							{
 								Name: "debug-tile-outline",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-outline/{z}/{x}/{y}.pbf?debug=true",
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: "debug-tile-outline",
+										Query: url.Values{
+											server.QueryKeyDebug: []string{"true"},
+										},
+									},
 								},
 								MinZoom: 0,
 								MaxZoom: atlas.MaxZoom,
 							},
 							{
 								Name: "debug-tile-center",
-								Tiles: []string{
-									"http://cdn.tegola.io/maps/test-map/debug-tile-center/{z}/{x}/{y}.pbf?debug=true",
+								Tiles: []server.TileURLTemplate{
+									{
+										Scheme:    "http",
+										Host:      "cdn.tegola.io",
+										MapName:   "test-map",
+										LayerName: "debug-tile-center",
+										Query: url.Values{
+											server.QueryKeyDebug: []string{"true"},
+										},
+									},
 								},
 								MinZoom: 0,
 								MaxZoom: atlas.MaxZoom,

@@ -3,15 +3,18 @@ package server_test
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom"
+
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/provider/test"
 	"github.com/go-spatial/tegola/server"
@@ -39,7 +42,7 @@ var testLayer1 = atlas.Layer{
 	MaxZoom:           9,
 	Provider:          &test.TileProvider{},
 	GeomType:          geom.Point{},
-	DefaultTags: map[string]interface{}{
+	DefaultTags: map[string]any{
 		"foo": "bar",
 	},
 }
@@ -51,7 +54,7 @@ var testLayer2 = atlas.Layer{
 	MaxZoom:           15,
 	Provider:          &test.TileProvider{},
 	GeomType:          geom.Line{},
-	DefaultTags: map[string]interface{}{
+	DefaultTags: map[string]any{
 		"foo": "bar",
 	},
 }
@@ -63,7 +66,7 @@ var testLayer3 = atlas.Layer{
 	MaxZoom:           20,
 	Provider:          &test.TileProvider{},
 	GeomType:          geom.Point{},
-	DefaultTags:       map[string]interface{}{},
+	DefaultTags:       map[string]any{},
 }
 
 func newTestMapWithLayers(layers ...atlas.Layer) *atlas.Atlas {
@@ -93,28 +96,32 @@ func newTestMapWithBounds(minx, miny, maxx, maxy float64) *atlas.Atlas {
 	return a
 }
 
-func doRequest(a *atlas.Atlas, method string, uri string, body io.Reader) (w *httptest.ResponseRecorder, router *httptreemux.TreeMux, err error) {
-
-	router = server.NewRouter(a)
+func doRequest(t *testing.T, a *atlas.Atlas, method string, uri string, body io.Reader) (*httptest.ResponseRecorder, *httptreemux.TreeMux, error) {
+	t.Helper()
 
 	// Default Method to GET
 	if method == "" {
-		method = "GET"
+		method = http.MethodGet
 	}
 
 	r, err := http.NewRequest(method, uri, body)
 	if err != nil {
 		return nil, nil, err
 	}
-	w = httptest.NewRecorder()
+
+	router := server.NewRouter(a)
+	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
+
 	return w, router, nil
 }
 
 // pre test setup phase
-func init() {
+func TestMain(m *testing.M) {
 	server.Version = serverVersion
-	server.HostName = serverHostName
+	server.HostName = &url.URL{
+		Host: serverHostName,
+	}
 
 	testMap := atlas.NewWebMercatorMap(testMapName)
 	testMap.Attribution = testMapAttribution
@@ -127,13 +134,15 @@ func init() {
 
 	// register a map with atlas
 	atlas.AddMap(testMap)
+
+	os.Exit(m.Run())
 }
 
 func TestURLRoot(t *testing.T) {
 	type tcase struct {
 		request  http.Request
-		hostName string
-		expected string
+		hostName *url.URL
+		expected *url.URL
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
@@ -141,25 +150,35 @@ func TestURLRoot(t *testing.T) {
 
 			server.HostName = tc.hostName
 
-			output := server.URLRoot(&tc.request).String()
-			if output != tc.expected {
-				t.Errorf("expected (%v) got (%v)", tc.expected, output)
+			output := server.URLRoot(&tc.request)
+			if !reflect.DeepEqual(output, tc.expected) {
+				t.Errorf("expected (%+v) got (%+v)", tc.expected, output)
 			}
 		}
 	}
 
 	tests := map[string]tcase{
 		"http": {
-			request:  http.Request{},
-			hostName: serverHostName,
-			expected: fmt.Sprintf("http://%v", serverHostName),
+			request: http.Request{},
+			hostName: &url.URL{
+				Host: serverHostName,
+			},
+			expected: &url.URL{
+				Scheme: "http",
+				Host:   serverHostName,
+			},
 		},
 		"https": {
 			request: http.Request{
 				TLS: &tls.ConnectionState{},
 			},
-			hostName: serverHostName,
-			expected: fmt.Sprintf("https://%v", serverHostName),
+			hostName: &url.URL{
+				Host: serverHostName,
+			},
+			expected: &url.URL{
+				Scheme: "https",
+				Host:   serverHostName,
+			},
 		},
 	}
 
