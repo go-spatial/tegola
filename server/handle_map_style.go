@@ -2,16 +2,16 @@ package server
 
 import (
 	"encoding/json"
-
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
+	"github.com/go-spatial/geom"
 	"gopkg.in/go-playground/colors.v1"
 
-	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/mapbox/style"
@@ -28,7 +28,8 @@ type HandleMapStyle struct {
 // tileJSON spec (https://github.com/mapbox/tilejson-spec/tree/master/2.1.0)
 //
 // URI scheme: /capabilities/:map_name.json
-// 	map_name - map name in the config file
+//
+//	map_name - map name in the config file
 func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
 
@@ -56,8 +57,8 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// if we have a debug param add it to our URLs
 	debugQuery := url.Values{}
-	if r.URL.Query().Get("debug") == "true" {
-		debugQuery.Set("debug", "true")
+	if r.URL.Query().Get(QueryKeyDebug) == "true" {
+		debugQuery.Set(QueryKeyDebug, "true")
 
 		// update our map to include the debug layers
 		m = m.AddDebugLayers()
@@ -71,7 +72,12 @@ func (req HandleMapStyle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Sources: map[string]style.Source{
 			req.mapName: {
 				Type: style.SourceTypeVector,
-				URL:  buildCapabilitiesURL(r, []string{"capabilities", req.mapName + ".json"}, debugQuery),
+				URL: (&url.URL{
+					Scheme:   scheme(r),
+					Host:     hostName(r).Host,
+					Path:     path.Join(URIPrefix, "capabilities", req.mapName+".json"),
+					RawQuery: debugQuery.Encode(),
+				}).String(),
 			},
 		},
 		Layers: []style.Layer{},

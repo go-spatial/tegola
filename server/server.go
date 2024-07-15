@@ -2,25 +2,25 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
-	"path"
-
-	"github.com/go-spatial/tegola/internal/build"
-
-	"github.com/go-spatial/tegola/observability"
 
 	"github.com/dimfeld/httptreemux"
 
 	"github.com/go-spatial/tegola/atlas"
+	"github.com/go-spatial/tegola/internal/build"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/observability"
 )
 
 const (
 	// MaxTileSize is 500k. Currently, just throws a warning when tile
 	// is larger than MaxTileSize
 	MaxTileSize = 500000
+
+	// QueryKeyDebug is a common query string key used throughout the pacakge
+	// the value should always be a boolean
+	QueryKeyDebug = "debug"
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 
 	// HostName is the name of the host to use for construction of URLS.
 	// configurable via the tegola config.toml file (set in main.go)
-	HostName string
+	HostName *url.URL
 
 	// Port is the port the server is listening on, used for construction of URLS.
 	// configurable via the tegola config.toml file (set in main.go)
@@ -135,15 +135,15 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 	return srv
 }
 
-// hostName determines weather to use an user defined HostName
+// hostName determines whether to use an user defined HostName
 // or the host from the incoming request
-func hostName(r *http.Request) string {
+func hostName(r *http.Request) *url.URL {
 	// if the HostName has been configured, don't mutate it
-	if HostName != "" {
+	if HostName != nil {
 		return HostName
 	}
 
-	return r.Host
+	return r.URL
 }
 
 // various checks to determine if the request is http or https. the scheme is needed for the TileURLs
@@ -164,37 +164,15 @@ func scheme(r *http.Request) string {
 // URLRoot builds a string containing the scheme, host and port based on a combination of user defined values,
 // headers and request parameters. The function is public so it can be overridden for other implementations.
 var URLRoot = func(r *http.Request) *url.URL {
-	root := url.URL{
+	return &url.URL{
 		Scheme: scheme(r),
-		Host:   hostName(r),
+		Host:   hostName(r).Host,
 	}
-
-	return &root
-}
-
-// buildCapabilitiesURL is responsible for building the various URLs which are returned by
-// the capabilities endpoints using the request, uri parts, and query params the function
-// will determine the protocol host:port and URI prefix that need to be included based on
-// user defined configurations and request context
-func buildCapabilitiesURL(r *http.Request, uriParts []string, query url.Values) string {
-	uri := path.Join(uriParts...)
-	q := query.Encode()
-	if q != "" {
-		// prepend our query identifier
-		q = "?" + q
-	}
-
-	// usually the url.URL package would be used for building the URL, but the
-	// uri template for the tiles contains characters that the package does not like:
-	// {z}/{x}/{y}. These values are escaped during the String() call which does not
-	// work for the capabilities URLs.
-	return fmt.Sprintf("%v%v%v", URLRoot(r), path.Join(URIPrefix, uri), q)
 }
 
 // corsHandler is used to respond to all OPTIONS requests for registered routes
 func corsHandler(w http.ResponseWriter, _ *http.Request, _ map[string]string) {
 	setHeaders(w)
-	return
 }
 
 // setHeaders sets default headers and user defined headers

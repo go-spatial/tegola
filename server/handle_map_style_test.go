@@ -2,30 +2,29 @@ package server_test
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
-	"reflect"
+	"net/url"
+	"path"
 	"testing"
 
 	"github.com/go-spatial/tegola/mapbox/style"
 	"github.com/go-spatial/tegola/server"
+	"github.com/go-test/deep"
 )
 
 func TestHandleMapStyle(t *testing.T) {
 	type tcase struct {
 		handler    http.Handler
 		uriPrefix  string
-		hostName   string
-		port       string
 		uri        string
 		uriPattern string
-		reqMethod  string
 		expected   style.Root
 	}
 
 	// config params this test relies on
-	server.HostName = serverHostName
+	server.HostName = &url.URL{
+		Host: serverHostName,
+	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
@@ -37,34 +36,22 @@ func TestHandleMapStyle(t *testing.T) {
 				server.URIPrefix = "/"
 			}
 
-			w, _, err := doRequest(nil, tc.reqMethod, tc.uri, nil)
+			resp, _, err := doRequest(t, nil, http.MethodGet, tc.uri, nil)
 			if err != nil {
-				t.Errorf("unexpected error: %v", err)
-				return
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if resp.Code != http.StatusOK {
+				t.Fatalf("handler returned wrong status code: got (%d) expected (%d)", resp.Code, http.StatusOK)
 			}
 
-			if w.Code != http.StatusOK {
-				t.Errorf("handler returned wrong status code: got (%v) expected (%v)", w.Code, http.StatusOK)
-				return
-			}
-
-			bytes, err := ioutil.ReadAll(w.Body)
-			if err != nil {
-				t.Errorf("err reading response body: %v", err)
-				return
-			}
-
-			var output style.Root
 			// read the response body
-			if err := json.Unmarshal(bytes, &output); err != nil {
-				t.Errorf("unable to unmarshal JSON response body: %v", err)
-				return
-
+			var output style.Root
+			if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+				t.Fatalf("unable to unmarshal JSON response body: %s", err)
 			}
 
-			if !reflect.DeepEqual(output, tc.expected) {
-				t.Errorf("failed. output \n\n %+v \n\n does not match expected \n\n %+v", output, tc.expected)
-				return
+			if diff := deep.Equal(output, tc.expected); diff != nil {
+				t.Fatalf("output does not match expected. diff %s", diff)
 			}
 		}
 	}
@@ -72,9 +59,8 @@ func TestHandleMapStyle(t *testing.T) {
 	tests := map[string]tcase{
 		"default": {
 			handler:    server.HandleMapStyle{},
-			uri:        fmt.Sprintf("/maps/%v/style.json", testMapName),
+			uri:        path.Join("/maps", testMapName, "style.json"),
 			uriPattern: "/maps/:map_name/style.json",
-			reqMethod:  "GET",
 			expected: style.Root{
 				Name:    testMapName,
 				Version: style.Version,
@@ -83,7 +69,11 @@ func TestHandleMapStyle(t *testing.T) {
 				Sources: map[string]style.Source{
 					testMapName: {
 						Type: style.SourceTypeVector,
-						URL:  fmt.Sprintf("http://%v/capabilities/%v.json", serverHostName, testMapName),
+						URL: (&url.URL{
+							Scheme: "http",
+							Host:   serverHostName,
+							Path:   path.Join(server.URIPrefix, "capabilities", testMapName+".json"),
+						}).String(),
 					},
 				},
 				Layers: []style.Layer{
@@ -118,9 +108,8 @@ func TestHandleMapStyle(t *testing.T) {
 		"uri prefix set": {
 			handler:    server.HandleMapStyle{},
 			uriPrefix:  "/tegola",
-			uri:        fmt.Sprintf("/tegola/maps/%v/style.json", testMapName),
+			uri:        path.Join("/tegola", "maps", testMapName, "style.json"),
 			uriPattern: "/tegola/maps/:map_name/style.json",
-			reqMethod:  "GET",
 			expected: style.Root{
 				Name:    testMapName,
 				Version: style.Version,
@@ -129,7 +118,11 @@ func TestHandleMapStyle(t *testing.T) {
 				Sources: map[string]style.Source{
 					testMapName: {
 						Type: style.SourceTypeVector,
-						URL:  fmt.Sprintf("http://%v/tegola/capabilities/%v.json", serverHostName, testMapName),
+						URL: (&url.URL{
+							Scheme: "http",
+							Host:   serverHostName,
+							Path:   path.Join(server.URIPrefix, "tegola", "capabilities", testMapName+".json"),
+						}).String(),
 					},
 				},
 				Layers: []style.Layer{
@@ -171,7 +164,7 @@ func TestHandleMapStyle(t *testing.T) {
 func TestHandleMapStyleCORS(t *testing.T) {
 	tests := map[string]CORSTestCase{
 		"1": {
-			uri: fmt.Sprintf("/maps/%v/style.json", testMapName),
+			uri: path.Join("maps", testMapName, "style.json"),
 		},
 	}
 

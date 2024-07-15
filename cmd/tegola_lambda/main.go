@@ -8,8 +8,8 @@ import (
 
 	"github.com/akrylysov/algnhsa"
 	"github.com/dimfeld/httptreemux"
-
 	"github.com/go-spatial/geom/encoding/mvt"
+
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/config"
@@ -91,7 +91,12 @@ func init() {
 	// set our server version
 	server.Version = build.Version
 	if conf.Webserver.HostName != "" {
-		server.HostName = string(conf.Webserver.HostName)
+		hostname, err := url.Parse(string(conf.Webserver.HostName))
+		if err != nil {
+			log.Fatalf("unable to parse webserver.hostname: %s", err)
+		}
+
+		server.HostName = hostname
 	}
 
 	// set user defined response headers

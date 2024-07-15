@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/dimfeld/httptreemux"
+
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/ui"
 )
