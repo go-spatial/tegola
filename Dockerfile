@@ -27,7 +27,7 @@
 #  $ docker run -v /path/to/docker-config:/opt/tegola_config -p 8080 tegola serve
 
 # Intermediary container for building
-FROM golang:1.21.9-alpine3.18 AS build
+FROM golang:1.21.12-alpine3.20 AS build
 
 ARG BUILDPKG="github.com/go-spatial/tegola/internal/build"
 ARG VER="Version Not Set"
@@ -52,10 +52,10 @@ RUN env
 
 # Build binary
 RUN cd /go/src/github.com/go-spatial/tegola/cmd/tegola \
- 	&& go build -v  \
-    -ldflags "-w -X '${BUILD_PKG}.Version=${VERSION}' -X '${BUILD_PKG}.GitRevision=${GIT_REVISION}' -X '${BUILD_PKG}.GitBranch=${GIT_BRANCH}'" \
-    -gcflags "-N -l" \
-    -o /opt/tegola \
+	&& go build -v  \
+	-ldflags "-w -X '${BUILD_PKG}.Version=${VERSION}' -X '${BUILD_PKG}.GitRevision=${GIT_REVISION}' -X '${BUILD_PKG}.GitBranch=${GIT_BRANCH}'" \
+	-gcflags "-N -l" \
+	-o /opt/tegola \
 	&& chmod a+x /opt/tegola
 
 # Create minimal deployment image, just alpine & the binary
