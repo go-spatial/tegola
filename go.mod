@@ -21,7 +21,7 @@ require (
 	github.com/jackc/pgproto3/v2 v2.3.3
 	github.com/jackc/pgtype v1.14.0
 	github.com/jackc/pgx/v4 v4.18.2
-	github.com/mattn/go-sqlite3 v1.14.6
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mattn/goveralls v0.0.5
 	github.com/pborman/uuid v1.2.0
 	github.com/prometheus/client_golang v1.14.0
