@@ -150,8 +150,8 @@ github.com/go-spatial/proj/merror
 github.com/go-spatial/proj/mlog
 github.com/go-spatial/proj/operations
 github.com/go-spatial/proj/support
-# github.com/go-test/deep v0.0.0-20170429201529-f49763a6ea0a
-## explicit
+# github.com/go-test/deep v1.1.1
+## explicit; go 1.16
 github.com/go-test/deep
 # github.com/gofrs/uuid v4.0.0+incompatible
 ## explicit
