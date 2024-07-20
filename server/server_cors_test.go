@@ -3,6 +3,7 @@ package server_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -24,7 +25,9 @@ func CORSTest(tc CORSTestCase) func(*testing.T) {
 	return func(t *testing.T) {
 		var err error
 
-		server.HostName = tc.hostname
+		server.HostName = &url.URL{
+			Host: tc.hostname,
+		}
 		server.Port = tc.port
 		server.URIPrefix = "/"
 

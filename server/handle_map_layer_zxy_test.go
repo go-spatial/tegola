@@ -1,15 +1,16 @@
 package server_test
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
+
 	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
 	"github.com/go-spatial/tegola/atlas"
-	"github.com/golang/protobuf/proto"
 )
 
 type MapHandlerTCase struct {
@@ -29,7 +30,7 @@ func MapHandlerTester(tc MapHandlerTCase) func(t *testing.T) {
 		if a == nil {
 			a = newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
 		}
-		w, _, err := doRequest(a, tc.method, tc.uri, nil)
+		w, _, err := doRequest(t, a, tc.method, tc.uri, nil)
 		if err != nil {
 			t.Fatalf("doRequest: %v", err)
 		}
@@ -60,7 +61,7 @@ func MapHandlerTester(tc MapHandlerTCase) func(t *testing.T) {
 		var tile vectorTile.Tile
 		var responseBodyBytes []byte
 
-		responseBodyBytes, err = ioutil.ReadAll(w.Body)
+		responseBodyBytes, err = io.ReadAll(w.Body)
 		if err != nil {
 			t.Errorf("reading response body, expected nil got %v", err)
 			return

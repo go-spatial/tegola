@@ -54,7 +54,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		Attribution: &m.Attribution,
 		Bounds:      m.Bounds.Extent(),
 		Center:      m.Center,
-		Format:      "pbf",
+		Format:      TileURLFileFormat,
 		Name:        &m.Name,
 		Scheme:      tilejson.SchemeXYZ,
 		TileJSON:    tilejson.Version,
@@ -68,8 +68,8 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	debugQuery := url.Values{}
 	// if we have a debug param add it to our URLs
-	if query.Get("debug") == "true" {
-		debugQuery.Set("debug", "true")
+	if query.Get(QueryKeyDebug) == "true" {
+		debugQuery.Set(QueryKeyDebug, "true")
 
 		// update our map to include the debug layers
 		m = m.AddDebugLayers()
@@ -125,7 +125,14 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			MinZoom: m.Layers[i].MinZoom,
 			MaxZoom: m.Layers[i].MaxZoom,
 			Tiles: []string{
-				buildCapabilitiesURL(r, []string{"maps", req.mapName, m.Layers[i].MVTName(), "{z}/{x}/{y}.pbf"}, debugQuery),
+				TileURLTemplate{
+					Scheme:     scheme(r),
+					Host:       hostName(r).Host,
+					PathPrefix: URIPrefix,
+					MapName:    req.mapName,
+					LayerName:  m.Layers[i].MVTName(),
+					Query:      debugQuery,
+				}.String(),
 			},
 		}
 
@@ -145,7 +152,13 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 	}
 
-	tileURL := buildCapabilitiesURL(r, []string{"maps", req.mapName, "{z}/{x}/{y}.pbf"}, debugQuery)
+	tileURL := TileURLTemplate{
+		Scheme:     scheme(r),
+		Host:       hostName(r).Host,
+		PathPrefix: URIPrefix,
+		MapName:    req.mapName,
+		Query:      debugQuery,
+	}.String()
 
 	// build our URL scheme for the tile grid
 	tileJSON.Tiles = append(tileJSON.Tiles, tileURL)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-spatial/cobra"
@@ -38,9 +39,17 @@ var serverCmd = &cobra.Command{
 			serverPort = string(conf.Webserver.Port)
 		}
 
+		if conf.Webserver.HostName != "" {
+			hostname, err := url.Parse(string(conf.Webserver.HostName))
+			if err != nil {
+				log.Fatalf("unable to parse webserver.hostname: %s", err)
+			}
+
+			server.HostName = hostname
+		}
+
 		// set our server version
 		server.Version = build.Version
-		server.HostName = string(conf.Webserver.HostName)
 		build.Commands = append(build.Commands, cmd.Name())
 		atlas.StartSubProcesses()
 
