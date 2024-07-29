@@ -38,6 +38,12 @@ func (p Point) X() float64 { return p[0] }
 // Y is the y coordinate of a point in the projection
 func (p Point) Y() float64 { return p[1] }
 
+// Lon is the lon coordinate of a point in the projection
+func (p Point) Lon() float64 { return p[0] }
+
+// Lat is the lat coordinate of a point in the projection
+func (p Point) Lat() float64 { return p[1] }
+
 // MaxX is the same as X
 func (p Point) MaxX() float64 { return p[0] }
 

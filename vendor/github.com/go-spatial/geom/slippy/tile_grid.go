@@ -2,130 +2,165 @@ package slippy
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/proj"
 )
 
-// TileGrid contains the tile layout, including ability to get WGS84 coordinates for tile extents
-type Grid interface {
+// TileGridder contains the tile layout, including ability to get WGS84 coordinates for tile extents
+type TileGridder interface {
 	// SRID returns the SRID of the coordinate system of the
-	// implementer. The geomtries returned by the other methods
+	// implementer. The geometries returned by the other methods
 	// will be in these coordinates.
-	SRID() uint
+	SRID() proj.EPSGCode
 
 	// Size returns a tile where the X and Y are the size of that zoom's
 	// tile grid. AKA:
 	//	Tile{z, MaxX + 1, MaxY + 1
-	Size(z uint) (*Tile, bool)
+	Size(z Zoom) (Tile, bool)
 
 	// FromNative converts from a point (in the Grid's coordinates system) and zoom
-	// to a tile. ok will be false if the point is not valid for this coordinate
-	// system.
-	FromNative(z uint, pt geom.Point) (tile *Tile, ok bool)
+	// to a tile.
+	FromNative(z Zoom, pt geom.Point) (tile Tile, err error)
 
 	// ToNative returns the tiles upper left point. ok will be false if
-	// the tile is not valid. A note on implemetation is that this method
+	// the tile is not valid. A note on implementation is that this method
 	// should be able to take tiles with x and y values 1 higher than the max,
 	// this is to fetch the bottom right corner of the grid
-	ToNative(*Tile) (pt geom.Point, ok bool)
+	ToNative(Tile) (pt geom.Point, err error)
 }
 
-func Extent(g Grid, t *Tile) (ext *geom.Extent, ok bool) {
-	if t == nil {
-		return nil, false
+// NewGrid will return a grid for the requested EPSGCode.
+// if tileSize is zero, then the DefaultTileSize is used
+func NewGrid(srid proj.EPSGCode, tileSize uint32) TileGridder {
+	if tileSize == 0 {
+		tileSize = DefaultTileSize
 	}
-
-	tl, ok := g.ToNative(t)
-	if !ok {
-		return nil, false
+	if srid == proj.EPSG4326 {
+		return Grid4326{tileSize: tileSize}
 	}
-	br, ok := g.ToNative(NewTile(t.Z, t.X + 1, t.Y + 1))
-	if !ok {
-		return nil, false
-	}
-
-	return geom.NewExtentFromPoints(tl, br), true
-}
-
-// NewGrid returns the grid conventionally used with the
-// given SRID. Errors if the SRID is not supported. The
-// currently supported SRID's are:
-//	4326
-//	3857
-func NewGrid(srid uint) (Grid, error) {
-	switch srid {
-	case 4326:
-		return &grid{
-			srid: srid,
-			tilingRatio: 2,
-			maxx: LonMax,
-			maxy: LatMax,
-		}, nil
-	case 3857:
-		return &grid{
-			srid: srid,
-			tilingRatio: 1,
-			maxx: WebMercatorMax,
-			maxy: WebMercatorMax,
-		}, nil
-	default:
-		return nil, fmt.Errorf("unsupported srid: %v", srid)
+	return Grid{
+		tileSize: tileSize,
+		Srid:     srid,
 	}
 }
 
-// WebMercatorMax is the max size in meters of a tile
-const WebMercatorMax = 20037508.34
-const LatMax = 90
-const LonMax = 180
-
-type grid struct {
-	srid uint
-	// aspect ratio of tile scheme (colums / rows)
-	// TODO(ear7h) this will break tall maps(the x from Size(0) will be 0)
-	tilingRatio float64
-	// TODO(ear7h) change this to ranges and origin point
-	// might be needed for future coordinate systems.
-	maxx, maxy float64 // in native coords
+func Extent(g TileGridder, t Tile) (*geom.Extent, error) {
+	topLeft, err := g.ToNative(t)
+	if err != nil {
+		return nil, fmt.Errorf("failed get top left point: %w", err)
+	}
+	bottomRight, err := g.ToNative(Tile{Z: t.Z, X: t.X + 1, Y: t.Y + 1})
+	if err != nil {
+		return nil, fmt.Errorf("failed get bottom right point: %w", err)
+	}
+	return geom.NewExtentFromPoints(topLeft, bottomRight), nil
 }
 
-func (g *grid) SRID() uint {
-	return g.srid
-}
+func NewTileMinMaxer(g TileGridder, ext geom.MinMaxer) (Tile, error) {
+	tile, err := g.FromNative(MaxZoom, geom.Point{ext.MinX(), ext.MinY()})
+	if err != nil {
+		return Tile{}, fmt.Errorf("failed get tile for min points: %w", err)
+	}
+	var (
+		ret   Tile
+		found bool
+		ext1  *geom.Extent
+	)
 
-func (g *grid) Size(zoom uint) (*Tile, bool) {
-	if zoom > MaxZoom {
-		return nil, false
+	for z := Zoom(MaxZoom); int(z) >= 0 && !found; z-- {
+		err = nil
+		tile.FamilyAt(z)(func(tile Tile) bool {
+			ext1, err = Extent(g, tile)
+			if err != nil {
+				// stop iteration
+				return false
+			}
+			if ext1.Contains(geom.Point(ext1.Max())) {
+				ret = tile
+				found = true
+				return false
+			}
+			return true
+		})
+		if err != nil {
+			return Tile{}, fmt.Errorf("failed get min tile: %w", err)
+		}
+	}
+	if !found {
+		return Tile{}, fmt.Errorf("tile for min point not found")
 	}
 
-	dim := uint(1) << zoom // hopefully the zoom isn't larger than 64
-	return NewTile(zoom, dim * uint(g.tilingRatio), dim), true
+	return ret, nil
 }
 
-func (g *grid) FromNative(zoom uint, pt geom.Point) (*Tile, bool) {
-	if zoom > MaxZoom || pt.X() > g.maxx || pt.Y() > g.maxy {
-		return nil, false
-	}
-
-	res := g.maxx * 2 / g.tilingRatio / math.Exp2(float64(zoom))
-	x := uint((pt.X() + g.maxx) / res)
-
-	res = g.maxy * 2 / math.Exp2(float64(zoom))
-	y := uint(-(pt.Y() - g.maxy) / res)
-
-	return NewTile(zoom, x, y), true
+type Grid struct {
+	tileSize uint32
+	Srid     proj.EPSGCode
 }
 
-func (g *grid) ToNative(tile *Tile) (geom.Point, bool) {
-	if max, ok := g.Size(tile.Z); !ok || tile.X > max.X || tile.Y > max.Y {
-		return geom.Point{}, false
+func (g Grid) SRID() proj.EPSGCode { return g.Srid }
+func (g Grid) Size(z Zoom) (Tile, bool) {
+	if z > MaxZoom {
+		return Tile{}, false
 	}
+	return z.TileSize(), true
+}
+func (g Grid) FromNative(z Zoom, pt geom.Point) (tile Tile, err error) {
+	pts, err := proj.Inverse(g.Srid, pt[:])
+	if err != nil {
+		return Tile{}, fmt.Errorf("failed to convert to 4326: %w", err)
+	}
+	x := lon2Num(g.tileSize, z, pts[0])
+	y := lat2Num(g.tileSize, z, pts[1])
+	return Tile{
+		Z: z,
+		X: uint(x),
+		Y: uint(y),
+	}, nil
+}
+func (g Grid) ToNative(tile Tile) (pt geom.Point, err error) {
+	lat := y2deg(tile.Z, int(tile.Y))
+	lon := x2deg(tile.Z, int(tile.X))
+	pts, err := proj.Convert(g.Srid, []float64{lon, lat})
+	if err != nil {
+		return geom.Point{}, fmt.Errorf("failed to convert from 4326: %w", err)
+	}
+	return geom.Point{pts[0], pts[1]}, nil
+}
 
-	res := g.maxx * 2 / g.tilingRatio / math.Exp2(float64(tile.Z))
-	x := -g.maxx + float64(tile.X)*res
+type Grid4326 struct {
+	// TileSize if 0 will default to DefaultTileSize
+	tileSize uint32
+}
 
-	res = g.maxy * 2 / math.Exp2(float64(tile.Z))
-	y := g.maxy - float64(tile.Y)*res
+func (Grid4326) SRID() proj.EPSGCode { return proj.EPSG4326 }
+func (Grid4326) Size(z Zoom) (Tile, bool) {
+	if z > MaxZoom {
+		return Tile{}, false
+	}
+	return z.TileSize(), true
+}
 
-	return geom.Point{x, y}, true
+func (g Grid4326) TileSize() uint32 {
+	if g.tileSize == 0 {
+		return DefaultTileSize
+	}
+	return g.tileSize
+}
+
+// FromNative will convert a pt in 3857 coordinates and a zoom to a Tile coordinate
+func (g Grid4326) FromNative(z Zoom, pt geom.Point) (tile Tile, err error) {
+	y := lat2Num(g.tileSize, z, pt.Lat())
+	x := lon2Num(g.tileSize, z, pt.Lon())
+	return Tile{
+		Z: z,
+		X: uint(x),
+		Y: uint(y),
+	}, nil
+}
+func (g Grid4326) ToNative(tile Tile) (pt geom.Point, err error) {
+	lat := y2deg(tile.Z, int(tile.Y))
+	lon := x2deg(tile.Z, int(tile.X))
+	return PtFromLatLon(lat, lon), nil
 }
