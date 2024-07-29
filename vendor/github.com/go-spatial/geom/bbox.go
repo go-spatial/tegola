@@ -9,6 +9,13 @@ type Extenter interface {
 	Extent() (extent [4]float64)
 }
 
+type PtMinMaxer interface {
+	// Min returns the minimum x and y values
+	Min() Point
+	// Max returns the maximum x and y values
+	Max() Point
+}
+
 // MinMaxer is a wrapper for an Extent that gets min/max of the extent
 type MinMaxer interface {
 	MinX() float64
@@ -51,7 +58,7 @@ func (e *Extent) Edges(cwfn ClockwiseFunc) [][2][2]float64 {
 	}
 }
 
-// MaxX is the larger of the x values.
+// MaxX is the largest of the x values.
 func (e *Extent) MaxX() float64 {
 	if e == nil {
 		return math.MaxFloat64
@@ -59,7 +66,7 @@ func (e *Extent) MaxX() float64 {
 	return e[2]
 }
 
-// MinX  is the smaller of the x values.
+// MinX  is the smallest of the x values.
 func (e *Extent) MinX() float64 {
 	if e == nil {
 		return -math.MaxFloat64
@@ -67,7 +74,7 @@ func (e *Extent) MinX() float64 {
 	return e[0]
 }
 
-// MaxY is the larger of the y values.
+// MaxY is the largest of the y values.
 func (e *Extent) MaxY() float64 {
 	if e == nil {
 		return math.MaxFloat64
@@ -75,7 +82,7 @@ func (e *Extent) MaxY() float64 {
 	return e[3]
 }
 
-// MinY is the smaller of the y values.
+// MinY is the smallest of the y values.
 func (e *Extent) MinY() float64 {
 	if e == nil {
 		return -math.MaxFloat64
@@ -84,13 +91,13 @@ func (e *Extent) MinY() float64 {
 }
 
 // Min returns the (MinX, MinY) values
-func (e *Extent) Min() [2]float64 {
-	return [2]float64{e[0], e[1]}
+func (e *Extent) Min() Point {
+	return Point{e[0], e[1]}
 }
 
 // Max returns the (MaxX, MaxY) values
-func (e *Extent) Max() [2]float64 {
-	return [2]float64{e[2], e[3]}
+func (e *Extent) Max() Point {
+	return Point{e[2], e[3]}
 }
 
 // XSpan is the distance of the Extent in X or inf
@@ -242,7 +249,7 @@ func NewExtentFromGeometry(g Geometry) (*Extent, error) {
 	return &e, nil
 }
 
-// Contains will return whether the given  extent is inside of the  extent.
+// Contains will return whether the given  extent is inside the  extent.
 func (e *Extent) Contains(ne MinMaxer) bool {
 	// Nil extent contains the world.
 	if e == nil {
@@ -333,6 +340,7 @@ func (e *Extent) Clone() *Extent {
 //	+--------------+----------+      |
 //	               |             B   |
 //	               +-----------------+
+//
 // For example the for the above Box A intersects Box B at the area surround by C.
 //
 // If the Boxes don't intersect does will be false, otherwise ibb will be the intersect.

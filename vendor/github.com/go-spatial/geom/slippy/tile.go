@@ -2,77 +2,125 @@ package slippy
 
 import (
 	"errors"
-	"fmt"
+	"math"
+	"strconv"
 
 	"github.com/go-spatial/geom"
+)
+
+var (
+	ErrNilBounds = errors.New("slippy: Bounds cannot be nil")
 )
 
 // MaxZoom is the lowest zoom (furthest in)
 const MaxZoom = 22
 
-// NewTile returns a Tile of Z,X,Y passed in
-func NewTile(z, x, y uint) *Tile {
-	return &Tile{
+// Zoom represents a zoom level; this usually goes from 0 to 22
+type Zoom uint
+
+func (z Zoom) N() float64 { return math.Exp2(float64(z)) }
+func (z Zoom) TileSize() Tile {
+	n := uint(z.N())
+	return Tile{
 		Z: z,
-		X: x,
-		Y: y,
+		X: n,
+		Y: n,
 	}
 }
 
 // Tile describes a slippy tile.
 type Tile struct {
 	// zoom
-	Z uint
+	Z Zoom
 	// column
 	X uint
 	// row
 	Y uint
 }
 
-// NewTileMinMaxer returns the smallest tile which fits the
-// geom.MinMaxer. Note: it assumes the values of ext are
-// EPSG:4326 (lng/lat)
-func NewTileMinMaxer(g Grid, ext geom.MinMaxer) (*Tile, bool) {
-	tile, ok := g.FromNative(MaxZoom, geom.Point{
-		ext.MinX(),
-		ext.MinY(),
-	})
+func (tile Tile) ZXY() (Zoom, uint, uint) { return tile.Z, tile.X, tile.Y }
 
-	if !ok {
-		return nil, false
-	}
-
-
-	var ret *Tile
-
-	for z := uint(MaxZoom); int(z) >= 0 && ret == nil; z-- {
-		RangeFamilyAt(g, tile, z, func(tile *Tile) error {
-			if ext, ok := Extent(g, tile); ok && ext.Contains(geom.Point(ext.Max())) {
-				ret = tile
-				return errors.New("stop iter")
-			}
-
-			return nil
-		})
-	}
-
-	return ret, true
+// Equal tests for equality
+func (tile Tile) Equal(other Tile) bool {
+	return tile.Z == other.Z && tile.X == other.X && tile.Y == other.Y
 }
 
-// FromBounds returns a list of tiles that make up the bound given. The bounds should be defined as the following lng/lat points [4]float64{west,south,east,north}
-func FromBounds(g Grid, bounds *geom.Extent, z uint) []Tile {
+// Less weather the `other` tile is less than the tile, by first checking the zoom, then the x coordinate, and finally the y coordinate.
+func (tile Tile) Less(other Tile) bool {
+	zi, xi, yi := tile.ZXY()
+	zj, xj, yj := other.ZXY()
+	switch {
+	case zi != zj:
+		return zi < zj
+	case xi != xj:
+		return xi < xj
+	default:
+		return yi < yj
+	}
+}
+
+func (tile Tile) String() string {
+	return strconv.FormatInt(int64(tile.Z), 10) + "/" +
+		strconv.FormatInt(int64(tile.X), 10) + "/" +
+		strconv.FormatInt(int64(tile.Y), 10)
+}
+
+// FamilyAt returns an iterator function that will call the yield function with every related tile at the requested
+// zoom. This will include the provided tile itself. (if the same zoom is provided). The parent (overlapping tile at a lower zoom level),
+// or children (overlapping tiles at a higher zoom level).
+//
+//		This function is structured so that it can take advantage of go1.23's Range Funcs. e.g.:
+//	    for tile := range aTile.FamilyAt(10) {
+//	       fmt.Printf("got tile: %v\n",tile)
+//	    }
+func (tile Tile) FamilyAt(zoom Zoom) func(yield func(Tile) bool) {
+	return func(yield func(Tile) bool) {
+		// handle ancestors and self
+		if zoom <= tile.Z {
+			mag := tile.Z - zoom
+			yield(Tile{Z: zoom, X: tile.X >> mag, Y: tile.Y >> mag})
+			return
+		}
+
+		// handle descendants
+		mag := int(zoom) - int(tile.Z)
+		delta := int(math.Exp2(float64(mag)))
+		leastX := int(tile.X) << mag
+		leastY := int(tile.Y) << mag
+		for x := leastX; x < leastX+delta; x++ {
+			for y := leastY; y < leastY+delta; y++ {
+				if !yield(Tile{Z: zoom, X: uint(x), Y: uint(y)}) {
+					// stop iterating
+					return
+				}
+			}
+		}
+	}
+}
+
+// RangeFamilyAt returns an iterator function that will call the yield function with every related tile at the requested
+// zoom. This will include the provided tile itself. (if the same zoom is provided). The parent (overlapping tile at a lower zoom level),
+// or children (overlapping tiles at a higher zoom level).
+func RangeFamilyAt(tile Tile, zoom Zoom, yield func(Tile) bool) { tile.FamilyAt(zoom)(yield) }
+
+// FromBounds returns a list of tiles that make up the bound given.
+// The bounds should be defined as the following lng/lat points [4]float64{west,south,east,north}
+//
+//	The only errors this generates are if the bounds is nil, or any errors grid returns from
+//	transformation the bounds points.
+func FromBounds(g TileGridder, bounds geom.PtMinMaxer, z Zoom) ([]Tile, error) {
 	if bounds == nil {
-		return nil
+		return nil, ErrNilBounds
 	}
 
-	p1, ok := g.FromNative(z, bounds.Min())
-	if !ok {
-		return nil
+	p1, err := g.FromNative(z, bounds.Min())
+	if err != nil {
+		return nil, err
 	}
 
-	p2, ok := g.FromNative(z, bounds.Max())
-	if !ok {
-		return nil
+	p2, err := g.FromNative(z, bounds.Max())
+	if err != nil {
+		return nil, err
 	}
 
 	minx, maxx := p1.X, p2.X
@@ -93,45 +141,30 @@ func FromBounds(g Grid, bounds *geom.Extent, z uint) []Tile {
 		}
 	}
 
-	return ret
+	return ret, nil
 }
 
-// ZXY returns back the z,x,y of the tile
-func (t Tile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
+// MvtTileDim is the number of pixels in a tile
+const MvtTileDim = 4096.0
 
-type Iterator func(*Tile) error
-
-// RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
-// TODO (ear7h): sibling support
-func RangeFamilyAt(g Grid, t *Tile, zoom uint, f Iterator) error {
-	tl, ok := g.ToNative(t)
-	if !ok {
-		return fmt.Errorf("tile %v not valid for grid", t)
+// PixelRatioForZoom returns the ratio of pixels to projected units at the given zoom. Multiply this value by
+// the pixel count in tile.buffer to get the expected conversion.
+//
+// if zoom is larger the MaxZoom, it will be set to MaxZoom
+// if tileDim is 0, it will be set to MvtTileDim
+func PixelRatioForZoom(g TileGridder, zoom Zoom, tileDim uint64) float64 {
+	if zoom > MaxZoom {
+		zoom = MaxZoom
 	}
-
-	br, ok := g.ToNative(NewTile(t.Z, t.X+1, t.Y+1))
-	if !ok {
-		return fmt.Errorf("tile %v not valid for grid", t)
+	if tileDim == 0 {
+		tileDim = MvtTileDim
 	}
+	ext, _ := Extent(g, Tile{Z: zoom})
+	return ext.XSpan() / float64(tileDim)
+}
 
-	tlt, ok := g.FromNative(zoom, tl)
-	if !ok {
-		return fmt.Errorf("tile %v not valid for grid", t)
-	}
-
-	brt, ok := g.FromNative(zoom, br)
-	if !ok {
-		return fmt.Errorf("tile %v not valid for grid", t)
-	}
-
-	for x := tlt.X; x < brt.X; x++ {
-		for y := tlt.Y; y < brt.Y; y++ {
-			err := f(NewTile(zoom, x, y))
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+// MvtPixelRationForZoom returns the ratio of pixels to projected units at the given zoom.
+// This assumes an MVT tile is being used.
+func MvtPixelRationForZoom(g TileGridder, zoom Zoom) float64 {
+	return PixelRatioForZoom(g, zoom, MvtTileDim)
 }
