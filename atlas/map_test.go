@@ -21,7 +21,7 @@ import (
 func TestMapFilterLayersByZoom(t *testing.T) {
 	testcases := []struct {
 		atlasMap atlas.Map
-		zoom     uint
+		zoom     slippy.Zoom
 		expected atlas.Map
 	}{
 		{
@@ -216,7 +216,7 @@ func TestEncode(t *testing.T) {
 
 	type tcase struct {
 		grid     atlas.Map
-		tile     *slippy.Tile
+		tile     slippy.Tile
 		expected vectorTile.Tile
 	}
 
@@ -365,7 +365,7 @@ func TestEncode(t *testing.T) {
 					},
 				},
 			},
-			tile: slippy.NewTile(2, 3, 3),
+			tile: slippy.Tile{Z: 2, X: 3, Y: 3},
 			expected: vectorTile.Tile{
 				Layers: []*vectorTile.Tile_Layer{
 					{
@@ -423,7 +423,7 @@ func TestEncode(t *testing.T) {
 					},
 				},
 			},
-			tile: slippy.NewTile(2, 3, 3),
+			tile: slippy.Tile{Z: 2, X: 3, Y: 3},
 			expected: vectorTile.Tile{
 				Layers: []*vectorTile.Tile_Layer{
 					{

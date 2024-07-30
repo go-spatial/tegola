@@ -92,11 +92,10 @@ func (f Format) Parse(val string) (z, x, y uint, err error) {
 	return uint(zi), uint(xi), uint(yi), nil
 }
 
-func (f Format) ParseTile(val string) (tile *slippy.Tile, err error) {
+func (f Format) ParseTile(val string) (tile slippy.Tile, err error) {
 	z, x, y, err := format.Parse(val)
 	if err != nil {
-		return nil, err
+		return slippy.Tile{}, err
 	}
-	tile = slippy.NewTile(z, x, y)
-	return tile, nil
+	return slippy.Tile{Z: slippy.Zoom(z), X: x, Y: y}, nil
 }

@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola/maths/webmercator"
 )
 
@@ -53,6 +54,8 @@ func NewTile(z, x, y uint) (t *Tile) {
 	t.Init()
 	return t
 }
+
+func TileFromSlippyTile(t slippy.Tile) *Tile { return NewTile(uint(t.Z), t.X, t.Y) }
 
 // NewTileLatLong will return a non-nil tile object.
 func NewTileLatLong(z uint, lat, lon float64) (t *Tile) {

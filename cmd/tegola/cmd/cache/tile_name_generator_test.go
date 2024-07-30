@@ -11,7 +11,7 @@ import (
 func TestGenerateTilesForTileName(t *testing.T) {
 
 	type tcase struct {
-		tile     *slippy.Tile
+		tile     slippy.Tile
 		zooms    []uint
 		explicit bool
 		tiles    sTiles
@@ -51,29 +51,29 @@ func TestGenerateTilesForTileName(t *testing.T) {
 
 	tests := map[string]tcase{
 		"max_zoom=0 tile-name=0/0/0": {
-			tile:     slippy.NewTile(0, 0, 0),
+			tile:     slippy.Tile{},
 			explicit: true,
 			tiles: sTiles{
-				slippy.NewTile(0, 0, 0),
+				slippy.Tile{},
 			},
 		},
 		"max_zoom=0 tile-name=14/300/781": {
-			tile:     slippy.NewTile(14, 300, 781),
+			tile:     slippy.Tile{Z: 14, X: 300, Y: 781},
 			explicit: true,
 			tiles: sTiles{
-				slippy.NewTile(14, 300, 781),
+				slippy.Tile{Z: 14, X: 300, Y: 781},
 			},
 		},
 		"min_zoom= 13 max_zoom=15 tile-name=14/300/781": {
-			tile:  slippy.NewTile(14, 300, 781),
+			tile:  slippy.Tile{Z: 14, X: 300, Y: 781},
 			zooms: []uint{13, 14, 15},
 			tiles: sTiles{
-				slippy.NewTile(13, 150, 390),
-				slippy.NewTile(14, 300, 781),
-				slippy.NewTile(15, 600, 1562),
-				slippy.NewTile(15, 600, 1563),
-				slippy.NewTile(15, 601, 1562),
-				slippy.NewTile(15, 601, 1563),
+				slippy.Tile{Z: 13, X: 150, Y: 390},
+				slippy.Tile{Z: 14, X: 300, Y: 781},
+				slippy.Tile{Z: 15, X: 600, Y: 1562},
+				slippy.Tile{Z: 15, X: 600, Y: 1563},
+				slippy.Tile{Z: 15, X: 601, Y: 1562},
+				slippy.Tile{Z: 15, X: 601, Y: 1563},
 			},
 		},
 	}

@@ -23,16 +23,8 @@ import (
 )
 
 var (
-	webmercatorGrid slippy.Grid
+	webmercatorGrid = slippy.NewGrid(3857, 0)
 )
-
-func init() {
-	var err error
-	webmercatorGrid, err = slippy.NewGrid(3857)
-	if err != nil {
-		log.Fatal("Could not create Web Mercator grid (3857): ", err)
-	}
-}
 
 type HandleMapLayerZXY struct {
 	// required
@@ -137,7 +129,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filter down the layers we need for this zoom
-	m = m.FilterLayersByZoom(req.z)
+	m = m.FilterLayersByZoom(slippy.Zoom(req.z))
 	if len(m.Layers) == 0 {
 		msg := fmt.Sprintf("map (%v) has no layers, at zoom %v", req.mapName, req.z)
 		log.Debug(msg)
@@ -156,16 +148,16 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tile := slippy.NewTile(req.z, req.x, req.y)
+	tile := slippy.Tile{Z: slippy.Zoom(req.z), X: req.x, Y: req.y}
 
 	{
 		// Check to see that the zxy is within the bounds of the map.
 		// TODO(@ear7h): use a more efficient version of Intersect that doesn't
 		// make a new extent
-		ext3857, ok := slippy.Extent(webmercatorGrid, tile)
-		if !ok {
+		ext3857, err := slippy.Extent(webmercatorGrid, tile)
+		if err != nil {
 			msg := fmt.Sprintf("map (%v -- %v) does not contains tile at %v/%v/%v. Unable to generate extent.", req.mapName, m.Bounds, req.z, req.x, req.y)
-			log.Debug(msg)
+			log.Debug(msg, err)
 			http.Error(w, msg, http.StatusNotFound)
 			return
 		}
@@ -180,7 +172,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		ext4326 := &geom.Extent{}
 		copy(ext4326[:], points4326)
-		if _, intersect := m.Bounds.Intersect(ext4326); !intersect || !ok {
+		if _, intersect := m.Bounds.Intersect(ext4326); !intersect {
 			msg := fmt.Sprintf("map (%v -- %v) does not contains tile at %v/%v/%v -- %v", req.mapName, m.Bounds, req.z, req.x, req.y, ext4326)
 			log.Debug(msg)
 			http.Error(w, msg, http.StatusNotFound)

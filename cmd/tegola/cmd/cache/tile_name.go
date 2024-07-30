@@ -12,7 +12,7 @@ import (
 	"github.com/go-spatial/tegola/provider"
 )
 
-var tileNameTile *slippy.Tile
+var tileNameTile slippy.Tile
 
 var TileNameCmd = &cobra.Command{
 	Use:     "tile-name z/x/y",
@@ -78,16 +78,13 @@ func tileNameCommand(cmd *cobra.Command, args []string) (err error) {
 
 }
 
-func generateTilesForTileName(ctx context.Context, tile *slippy.Tile, explicit bool, zooms []uint) *TileChannel {
+func generateTilesForTileName(ctx context.Context, tile slippy.Tile, explicit bool, zooms []uint) *TileChannel {
 	tce := &TileChannel{
-		channel: make(chan *slippy.Tile),
+		channel: make(chan slippy.Tile),
 	}
 
 	go func() {
 		defer tce.Close()
-		if tile == nil {
-			return
-		}
 		if explicit || len(zooms) == 0 {
 			select {
 			case tce.channel <- tile:
@@ -99,17 +96,16 @@ func generateTilesForTileName(ctx context.Context, tile *slippy.Tile, explicit b
 		}
 		for _, zoom := range zooms {
 			// range will include the original tile.
-			err := rangeFamilyAt(tile, zoom, func(tile *slippy.Tile) error {
+			slippy.RangeFamilyAt(tile, slippy.Zoom(zoom), func(tile slippy.Tile) bool {
 				select {
 				case tce.channel <- tile:
 				case <-ctx.Done():
-					// we have been cancelled
-					return context.Canceled
+					return false
 				}
-				return nil
+				return true
 			})
 			// gracefully stop if cancelled
-			if err != nil {
+			if ctx.Err() != nil {
 				return
 			}
 		}
