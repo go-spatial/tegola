@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"time"
@@ -36,7 +37,7 @@ func seedWorker(overwrite bool, logThresholdMs int64) func(ctx context.Context, 
 		m, err := atlas.GetMap(mt.MapName)
 		if err != nil {
 			return seedPurgeWorkerTileError{
-				Tile: *mt.Tile,
+				Tile: mt.Tile,
 				Err:  err,
 			}
 		}
@@ -57,7 +58,7 @@ func seedWorker(overwrite bool, logThresholdMs int64) func(ctx context.Context, 
 			//	cache key
 			key := cache.Key{
 				MapName: mt.MapName,
-				Z:       z,
+				Z:       uint(z),
 				X:       x,
 				Y:       y,
 			}
@@ -75,12 +76,12 @@ func seedWorker(overwrite bool, logThresholdMs int64) func(ctx context.Context, 
 		}
 
 		//	seed the tile
-		if err = atlas.SeedMapTile(ctx, m, z, x, y); err != nil {
-			if err == context.Canceled {
+		if err = atlas.SeedMapTile(ctx, m, uint(z), x, y); err != nil {
+			if errors.Is(err, context.Canceled) {
 				return err
 			}
 			return seedPurgeWorkerTileError{
-				Tile: *mt.Tile,
+				Tile: mt.Tile,
 				Err:  err,
 			}
 		}
@@ -89,7 +90,7 @@ func seedWorker(overwrite bool, logThresholdMs int64) func(ctx context.Context, 
 		//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
 		runtime.GC()
 
-		durationMs := time.Now().Sub(t).Nanoseconds()/1000000
+		durationMs := time.Now().Sub(t).Nanoseconds() / 1000000
 		if durationMs >= logThresholdMs {
 			log.Infof("seeding map (%v) tile (%v/%v/%v) took: %dms", mt.MapName, z, x, y, durationMs)
 		}
@@ -110,18 +111,18 @@ func purgeWorker(_ context.Context, mt MapTile) error {
 	if err != nil {
 		return seedPurgeWorkerTileError{
 			Purge: true,
-			Tile:  *mt.Tile,
+			Tile:  mt.Tile,
 			Err:   err,
 		}
 	}
 
 	//	purge the tile
-	ttile := tegola.NewTile(mt.Tile.ZXY())
+	ttile := tegola.TileFromSlippyTile(mt.Tile)
 
 	if err = atlas.PurgeMapTile(m, ttile); err != nil {
 		return seedPurgeWorkerTileError{
 			Purge: true,
-			Tile:  *mt.Tile,
+			Tile:  mt.Tile,
 			Err:   err,
 		}
 	}

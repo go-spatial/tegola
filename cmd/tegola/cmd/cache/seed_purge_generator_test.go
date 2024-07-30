@@ -10,22 +10,11 @@ import (
 	"github.com/go-spatial/geom/slippy"
 )
 
-type sTiles []*slippy.Tile
+type sTiles []slippy.Tile
 
-func (st sTiles) Len() int      { return len(st) }
-func (st sTiles) Swap(i, j int) { st[i], st[j] = st[j], st[i] }
-func (st sTiles) Less(i, j int) bool {
-	zi, xi, yi := st[i].ZXY()
-	zj, xj, yj := st[j].ZXY()
-	switch {
-	case zi != zj:
-		return zi < zj
-	case xi != xj:
-		return xi < xj
-	default:
-		return yi < yj
-	}
-}
+func (st sTiles) Len() int           { return len(st) }
+func (st sTiles) Swap(i, j int)      { st[i], st[j] = st[j], st[i] }
+func (st sTiles) Less(i, j int) bool { return st[i].Less(st[j]) }
 
 // IsEqual report true only if both the size and the elements are the same. Where a tile is equal only if the z,x,y elements match.
 func (st sTiles) IsEqual(ost sTiles) bool {
@@ -118,24 +107,24 @@ func TestGenerateTilesForBounds(t *testing.T) {
 		"max_zoom=0": {
 			zooms:  []uint{0},
 			bounds: worldBounds,
-			tiles:  sTiles{slippy.NewTile(0, 0, 0)},
+			tiles:  sTiles{slippy.Tile{}},
 		},
 		"min_zoom=1 max_zoom=1": {
 			zooms:  []uint{1},
 			bounds: worldBounds,
 			tiles: sTiles{
-				slippy.NewTile(1, 0, 0),
-				slippy.NewTile(1, 0, 1),
-				slippy.NewTile(1, 1, 0),
-				slippy.NewTile(1, 1, 1),
+				slippy.Tile{Z: 1},
+				slippy.Tile{Z: 1, Y: 1},
+				slippy.Tile{Z: 1, X: 1},
+				slippy.Tile{Z: 1, X: 1, Y: 1},
 			},
 		},
 		"min_zoom=1 max_zoom=1 bounds=180,90,0,0": {
 			zooms:  []uint{1},
 			bounds: [4]float64{180.0, 90.0, 0.0, 0.0},
 			tiles: sTiles{
-				slippy.NewTile(1, 1, 0),
-				slippy.NewTile(1, 1, 1),
+				slippy.Tile{Z: 1, X: 1},
+				slippy.Tile{Z: 1, X: 1, Y: 1},
 			},
 		},
 	}

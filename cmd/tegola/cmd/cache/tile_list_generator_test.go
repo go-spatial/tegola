@@ -81,12 +81,12 @@ func TestGenerateTilesForTileList(t *testing.T) {
 			format:       defaultTileNameFormat,
 			zooms:        []uint{13, 14, 15},
 			tiles: sTiles{
-				slippy.NewTile(13, 150, 390),
-				slippy.NewTile(14, 300, 781),
-				slippy.NewTile(15, 600, 1562),
-				slippy.NewTile(15, 600, 1563),
-				slippy.NewTile(15, 601, 1562),
-				slippy.NewTile(15, 601, 1563),
+				slippy.Tile{Z: 13, X: 150, Y: 390},
+				slippy.Tile{Z: 14, X: 300, Y: 781},
+				slippy.Tile{Z: 15, X: 600, Y: 1562},
+				slippy.Tile{Z: 15, X: 600, Y: 1563},
+				slippy.Tile{Z: 15, X: 601, Y: 1562},
+				slippy.Tile{Z: 15, X: 601, Y: 1563},
 			},
 		},
 		{
@@ -94,7 +94,7 @@ func TestGenerateTilesForTileList(t *testing.T) {
 			format:       defaultTileNameFormat,
 			explicit:     true,
 			tiles: sTiles{
-				slippy.NewTile(14, 300, 781),
+				slippy.Tile{Z: 14, X: 300, Y: 781},
 			},
 		},
 	}

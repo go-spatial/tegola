@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/provider"
@@ -239,7 +240,8 @@ func TestNewTileProvider(t *testing.T) {
 type MockTile struct {
 	extent         *geom.Extent
 	bufferedExtent *geom.Extent
-	Z, X, Y        uint
+	Z              slippy.Zoom
+	X, Y           uint
 	srid           uint64
 }
 
@@ -249,7 +251,7 @@ func (t *MockTile) Extent() (*geom.Extent, uint64) { return t.extent, t.srid }
 // TODO(arolek): BufferedExtent needs to return a geom.Extent
 func (t *MockTile) BufferedExtent() (*geom.Extent, uint64) { return t.bufferedExtent, t.srid }
 
-func (t *MockTile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
+func (t *MockTile) ZXY() (slippy.Zoom, uint, uint) { return t.Z, t.X, t.Y }
 
 func TestTileFeatures(t *testing.T) {
 	type tcase struct {
@@ -608,7 +610,7 @@ func TestOpenNonExistantFile(t *testing.T) {
 			err: gpkg.ErrInvalidFilePath{FilePath: ""},
 		},
 		"nonexistance": {
-			// should not exists
+			// should not exist
 			config: dict.Dict{
 				gpkg.ConfigKeyFilePath: NONEXISTANTFILE,
 			},

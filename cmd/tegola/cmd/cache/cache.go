@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -16,7 +17,7 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 )
 
-// the config from the main app
+// Config from the main app
 var Config *config.Config
 var RequireCache bool
 
@@ -61,14 +62,14 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 }
 
 type TileChannel struct {
-	channel  chan *slippy.Tile
+	channel  chan slippy.Tile
 	cl       sync.RWMutex
 	isClosed bool
 	l        sync.RWMutex
 	err      error
 }
 
-func (tc *TileChannel) Channel() <-chan *slippy.Tile {
+func (tc *TileChannel) Channel() <-chan slippy.Tile {
 	if tc == nil {
 		return nil
 	}
@@ -111,7 +112,7 @@ func (tc *TileChannel) Close() {
 
 type MapTile struct {
 	MapName string
-	Tile    *slippy.Tile
+	Tile    slippy.Tile
 }
 
 func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, concurrency int, worker func(context.Context, MapTile) error) (err error) {
@@ -150,7 +151,7 @@ func doWork(ctx context.Context, tileChannel *TileChannel, maps []atlas.Map, con
 			}
 			if cleanup {
 				log.Debugf("worker %v waiting on clean up of tiler", i)
-				for _ = range tiler {
+				for range tiler {
 					continue
 				}
 			}
@@ -205,7 +206,7 @@ TileChannelLoop:
 	close(tiler)
 	if cleanup {
 		// want to soak up any messages
-		for _ = range tileChannel.Channel() {
+		for range tileChannel.Channel() {
 			continue
 		}
 	}
@@ -226,7 +227,7 @@ TileChannelLoop:
 	if err == nil {
 		err = mapTileErr
 	}
-	if err == context.Canceled {
+	if errors.Is(err, context.Canceled) {
 		return nil
 	}
 	return err

@@ -8,12 +8,13 @@ import (
 
 func TestRangeFamilyAt(t *testing.T) {
 	type coord struct {
-		z, x, y uint
+		z    slippy.Zoom
+		x, y uint
 	}
 
 	type tcase struct {
-		tile     *slippy.Tile
-		zoomAt   uint
+		tile     slippy.Tile
+		zoomAt   slippy.Zoom
 		expected []coord
 	}
 
@@ -31,13 +32,15 @@ func TestRangeFamilyAt(t *testing.T) {
 		return func(t *testing.T) {
 
 			coordList := make([]coord, 0, len(tc.expected))
-			rangeFamilyAt(tc.tile, tc.zoomAt, func(tile *slippy.Tile) error {
+			//for tile := range tc.tile.FamilyAt(tc.zoomAt)
+
+			slippy.RangeFamilyAt(tc.tile, tc.zoomAt, func(tile slippy.Tile) bool {
 				z, x, y := tile.ZXY()
 				c := coord{z, x, y}
 
 				coordList = append(coordList, c)
 
-				return nil
+				return true
 			})
 
 			if len(coordList) != len(tc.expected) {
@@ -56,7 +59,7 @@ func TestRangeFamilyAt(t *testing.T) {
 
 	testcases := map[string]tcase{
 		"children 1": {
-			tile:   slippy.NewTile(0, 0, 0),
+			tile:   slippy.Tile{},
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 0},
@@ -66,7 +69,7 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"children 2": {
-			tile:   slippy.NewTile(8, 3, 5),
+			tile:   slippy.Tile{Z: 8, X: 3, Y: 5},
 			zoomAt: 10,
 			expected: []coord{
 				{10, 12, 20},
@@ -91,14 +94,14 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"parent 1": {
-			tile:   slippy.NewTile(1, 0, 0),
+			tile:   slippy.Tile{Z: 1},
 			zoomAt: 0,
 			expected: []coord{
 				{0, 0, 0},
 			},
 		},
 		"parent 2": {
-			tile:   slippy.NewTile(3, 3, 5),
+			tile:   slippy.Tile{Z: 3, X: 3, Y: 5},
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 1},

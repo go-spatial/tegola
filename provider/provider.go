@@ -14,7 +14,7 @@ import (
 // providerType defines the type of providers we have in the system.
 // Standard providers allow layers to be co-mingled from different data sources
 // because Tegola takes care of the geometry processing and mvt generation.
-// MVT providers do not allow layers to be co-mingled and bypasses tegola's geometry
+// MVT providers do not allow layers to be co-mingled and bypasses Tegola's geometry
 // processing and mvt generation.
 type providerType uint8
 
@@ -30,16 +30,8 @@ const (
 )
 
 var (
-	webmercatorGrid slippy.Grid
+	webmercatorGrid = slippy.NewGrid(3857, 0)
 )
-
-func init() {
-	var err error
-	webmercatorGrid, err = slippy.NewGrid(3857)
-	if err != nil {
-		log.Fatal("Could not create Web Mercator grid (3857): ", err)
-	}
-}
 
 func (pt providerType) Prefix() string {
 	if pt == TypeMvt {
@@ -88,7 +80,7 @@ type tile_t struct {
 }
 
 // NewTile creates a new slippy tile with a Buffer
-func NewTile(z, x, y, buf, srid uint) Tile {
+func NewTile(z slippy.Zoom, x uint, y uint, buf, srid uint) Tile {
 	return &tile_t{
 		Tile: slippy.Tile{
 			Z: z,
@@ -101,29 +93,27 @@ func NewTile(z, x, y, buf, srid uint) Tile {
 
 // Extent returns the extent of the tile
 func (tile *tile_t) Extent() (ext *geom.Extent, srid uint64) {
-	if ext, ok := slippy.Extent(webmercatorGrid, &tile.Tile); ok {
-		return ext, 3857
+	var err error
+	ext, err = slippy.Extent(webmercatorGrid, tile.Tile)
+	if err != nil {
+		log.Error("Could not generate valid extent for tile.", tile, err)
+		return &geom.Extent{}, 3857
 	}
+	return ext, 3857
 
-	log.Error("Could not generate valid extent for tile.", tile)
-	return &geom.Extent{}, 3857
 }
 
-// BufferedExtent returns a the extent of the tile, with the define buffer
+// BufferedExtent returns an extent of the tile, with the define buffer
 func (tile *tile_t) BufferedExtent() (ext *geom.Extent, srid uint64) {
 	ext, _ = tile.Extent()
-	// WARNING: slippy.PixelsToNative() is misnamed. It doesn't convert the given number of pixels into
-	// anything--the pixels arguments isn't even used (hence set to 0 here). Instead, slippy.PixelsToNative()
-	// return the ratio of pixels to projected units at the given zoom. We multiply its return value by
-	// the pixel count in tile.buffer to get the expected conversion.
-	return ext.ExpandBy(slippy.PixelsToNative(webmercatorGrid, tile.Z, 0) * float64(tile.buffer)), 3857
+	return ext.ExpandBy(slippy.MvtPixelRationForZoom(webmercatorGrid, tile.Z) * float64(tile.buffer)), 3857
 }
 
 // Tile is an interface used by Tiler, it is an unnecessary abstraction and is
-// due to be removed. The tiler interface will, instead take a, *geom.Extent.
+// due to be removed. The tiler interface will, instead take a *geom.Extent.
 type Tile interface {
 	// ZXY returns the z, x and y values of the tile
-	ZXY() (uint, uint, uint)
+	ZXY() (slippy.Zoom, uint, uint)
 	// Extent returns the extent of the tile excluding any buffer
 	Extent() (extent *geom.Extent, srid uint64)
 	// BufferedExtent returns the extent of the tile including any buffer
@@ -137,7 +127,7 @@ var ParameterTokenRegexp = regexp.MustCompile("![a-zA-Z0-9_-]+!")
 type Tiler interface {
 	Layerer
 
-	// TileFeature will stream decoded features to the callback function fn
+	// TileFeatures will stream decoded features to the callback function fn
 	// if fn returns ErrCanceled, the TileFeatures method should stop processing
 	TileFeatures(ctx context.Context, layer string, t Tile, params Params, fn func(f *Feature) error) error
 }
@@ -163,7 +153,7 @@ func (tu TilerUnion) Layers() ([]LayerInfo, error) {
 // InitFunc initialize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
 type InitFunc func(dicter dict.Dicter, maps []Map) (Tiler, error)
 
-// CleanupFunc is called to when the system is shutting down, this allows the provider to cleanup.
+// CleanupFunc is called to when the system is shutting down, this allows the provider to clean up.
 type CleanupFunc func()
 
 type pfns struct {
@@ -179,7 +169,7 @@ var providers map[string]pfns
 
 // Register the provider with the system. This call is generally made in the init functions of the provider.
 //
-//	the clean up function will be called during shutdown of the provider to allow the provider to do any cleanup.
+//	the cleanup function will be called during shutdown of the provider to allow the provider to do any cleanup.
 //
 // The init function can not be nil, the cleanup function may be nil
 func Register(name string, init InitFunc, cleanup CleanupFunc) error {
@@ -204,7 +194,7 @@ func Register(name string, init InitFunc, cleanup CleanupFunc) error {
 
 // MVTRegister the provider with the system. This call is generally made in the init functions of the provider.
 //
-//	the clean up function will be called during shutdown of the provider to allow the provider to do any cleanup.
+//	the cleanup function will be called during shutdown of the provider to allow the provider to do any cleanup.
 //
 // The init function can not be nil, the cleanup function may be nil
 func MVTRegister(name string, init MVTInitFunc, cleanup CleanupFunc) error {
@@ -284,7 +274,7 @@ func For(name string, config dict.Dicter, maps []Map) (val TilerUnion, err error
 	return val, ErrInvalidRegisteredProvider{Name: name}
 }
 
-// Cleanup is called at the end of the run to allow providers to cleanup
+// Cleanup is called at the end of the run to allow providers to clean up
 func Cleanup() {
 	log.Info("cleaning up providers")
 	for _, p := range providers {

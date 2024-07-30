@@ -200,15 +200,10 @@ func seedPurgeCommand(_ *cobra.Command, _ []string) (err error) {
 func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint) *TileChannel {
 
 	tce := &TileChannel{
-		channel: make(chan *slippy.Tile),
+		channel: make(chan slippy.Tile),
 	}
 
-	webmercatorGrid, err := slippy.NewGrid(3857)
-	if err != nil {
-		tce.setError(fmt.Errorf("Could not create Web Mercator grid (3857): %s", err))
-		tce.Close()
-		return tce
-	}
+	webmercatorGrid := slippy.NewGrid(3857, 0)
 
 	go func() {
 		defer tce.Close()
@@ -216,11 +211,16 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 		var extent geom.Extent = bounds
 		for _, z := range zooms {
 
-			tiles := slippy.FromBounds(webmercatorGrid, &extent, z)
+			tiles, err := slippy.FromBounds(webmercatorGrid, &extent, slippy.Zoom(z))
+			if err != nil {
+				tce.setError(fmt.Errorf("got error trying to get tiles: %w", err))
+				tce.Close()
+				return
+			}
 			for _, tile := range tiles {
 				t := tile
 				select {
-				case tce.channel <- &t:
+				case tce.channel <- t:
 				case <-ctx.Done():
 					// we have been cancelled
 					return
