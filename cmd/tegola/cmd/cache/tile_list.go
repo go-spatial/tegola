@@ -100,7 +100,7 @@ func tileListCommand(cmd *cobra.Command, args []string) (err error) {
 // if explicit is false and zooms is not empty, it will include the tiles above and below with in the provided zooms
 func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit bool, zooms []uint, format Format) *TileChannel {
 	tce := &TileChannel{
-		channel: make(chan *slippy.Tile),
+		channel: make(chan slippy.Tile),
 	}
 
 	go func() {
@@ -109,7 +109,7 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 		var (
 			err        error
 			lineNumber int
-			tile       *slippy.Tile
+			tile       slippy.Tile
 		)
 
 		scanner := bufio.NewScanner(tilelist)
@@ -135,17 +135,18 @@ func generateTilesForTileList(ctx context.Context, tilelist io.Reader, explicit 
 
 			for _, zoom := range zooms {
 				// range will include the original tile.
-				err = rangeFamilyAt(tile, zoom, func(tile *slippy.Tile) error {
+				slippy.RangeFamilyAt(tile, slippy.Zoom(zoom), func(tile slippy.Tile) bool {
 					select {
 					case tce.channel <- tile:
 					case <-ctx.Done():
 						// we have been cancelled
-						return context.Canceled
+						return false
 					}
-					return nil
+					return true
+
 				})
 				// gracefully stop if cancelled
-				if err != nil {
+				if ctx.Err() != nil {
 					return
 				}
 			}

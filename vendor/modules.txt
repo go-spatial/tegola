@@ -129,8 +129,8 @@ github.com/go-redis/redis/internal/singleflight
 # github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 ## explicit
 github.com/go-spatial/cobra
-# github.com/go-spatial/geom v0.0.0-20220918193402-3cd2f5a9a082
-## explicit; go 1.13
+# github.com/go-spatial/geom v0.1.0
+## explicit; go 1.22
 github.com/go-spatial/geom
 github.com/go-spatial/geom/cmp
 github.com/go-spatial/geom/encoding/mvt

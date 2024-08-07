@@ -144,11 +144,11 @@ func (m Map) AddDebugLayers() Map {
 }
 
 // FilterLayersByZoom returns a copy of a Map with a subset of layers that match the given zoom
-func (m Map) FilterLayersByZoom(zoom uint) Map {
+func (m Map) FilterLayersByZoom(zoom slippy.Zoom) Map {
 	var layers []Layer
 
 	for i := range m.Layers {
-		if m.Layers[i].MinZoom <= zoom && m.Layers[i].MaxZoom >= zoom {
+		if slippy.Zoom(m.Layers[i].MinZoom) <= zoom && slippy.Zoom(m.Layers[i].MaxZoom) >= zoom {
 			layers = append(layers, m.Layers[i])
 			continue
 		}
@@ -182,7 +182,7 @@ func (m Map) FilterLayersByName(names ...string) Map {
 	return m
 }
 
-func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
+func (m Map) encodeMVTProviderTile(ctx context.Context, tile slippy.Tile, params provider.Params) ([]byte, error) {
 	// get the list of our layers
 	ptile := provider.NewTile(tile.Z, tile.X, tile.Y, uint(m.TileBuffer), uint(m.SRID))
 
@@ -199,7 +199,7 @@ func (m Map) encodeMVTProviderTile(ctx context.Context, tile *slippy.Tile, param
 
 // encodeMVTTile will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
-func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
+func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provider.Params) ([]byte, error) {
 
 	// tile container
 	var mvtTile mvt.Tile
@@ -209,7 +209,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provid
 	// layer stack
 	mvtLayers := make([]*mvt.Layer, len(m.Layers))
 
-	// set our waitgroup count
+	// set our WaitGroup count
 	wg.Add(len(m.Layers))
 
 	// iterate our layers
@@ -237,7 +237,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provid
 
 				geo := f.Geometry
 
-				// check if the feature SRID and map SRID are different. If they are then reporject
+				// check if the feature SRID and map SRID are different. If they are then reprojected
 				if f.SRID != m.SRID {
 					// TODO(arolek): support for additional projections
 					g, err := basic.ToWebMercator(f.SRID, geo)
@@ -261,12 +261,12 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provid
 				}
 
 				// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-				tegolaTile := tegola.NewTile(tile.ZXY())
+				tegolaTile := tegola.TileFromSlippyTile(tile)
 
 				sg := tegolaGeo
 				// multiple ways to turn off simplification. check the atlas init() function
 				// for how the second two conditions are set
-				if !l.DontSimplify && simplifyGeometries && tile.Z < simplificationMaxZoom {
+				if !l.DontSimplify && simplifyGeometries && tile.Z < slippy.Zoom(simplificationMaxZoom) {
 					sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
 				}
 
@@ -340,10 +340,9 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provid
 					// Do nothing, context was canceled
 
 				default:
-					z, x, y := tile.ZXY()
 					// TODO (arolek): should we return an error to the response or just log the error?
-					// we can't just write to the response as the waitgroup is going to write to the response as well
-					log.Errorf("err fetching tile (z: %v, x: %v, y: %v) features: %v", z, x, y, err)
+					// we can't just write to the response as the WaitGroup is going to write to the response as well
+					log.Errorf("err fetching tile (%v) features: %v", tile, err)
 				}
 				return
 			}
@@ -353,12 +352,12 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provid
 		}(i, layer)
 	}
 
-	// wait for the waitgroup to finish
+	// wait for the WaitGroup to finish
 	wg.Wait()
 
 	// stop processing if the context has an error. this check is necessary
 	// otherwise the server continues processing even if the request was canceled
-	// as the waitgroup was not notified of the cancel
+	// as the WaitGroup was not notified of the cancel
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -380,7 +379,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile *slippy.Tile, params provid
 }
 
 // Encode will encode the given tile into mvt format
-func (m Map) Encode(ctx context.Context, tile *slippy.Tile, params provider.Params) ([]byte, error) {
+func (m Map) Encode(ctx context.Context, tile slippy.Tile, params provider.Params) ([]byte, error) {
 	var (
 		tileBytes []byte
 		err       error
