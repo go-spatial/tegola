@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -72,7 +71,7 @@ type Config struct {
 
 // Webserver represents the config options for the webserver part of Tegola
 type Webserver struct {
-	HostName      env.String `toml:"hostname"`
+	HostName      env.URL    `toml:"hostname"`
 	Port          env.String `toml:"port"`
 	URIPrefix     env.String `toml:"uri_prefix"`
 	Headers       env.Dict   `toml:"headers"`
@@ -330,17 +329,6 @@ func (c *Config) Validate() error {
 		uriPrefix := string(c.Webserver.URIPrefix)
 		if string(uriPrefix[0]) != "/" {
 			return ErrInvalidURIPrefix(uriPrefix)
-		}
-	}
-
-	// if HostName is set, validate it
-	if string(c.Webserver.HostName) != "" {
-		_, err := url.Parse(string(c.Webserver.HostName))
-		if err != nil {
-			return ErrInvalidHostName{
-				HostName: string(c.Webserver.HostName),
-				Err:      err,
-			}
 		}
 	}
 

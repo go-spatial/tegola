@@ -2,10 +2,12 @@ package config_test
 
 import (
 	"errors"
+	"os"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
+
+	"github.com/go-test/deep"
 
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/env"
@@ -50,7 +52,7 @@ func setEnv(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	type tcase struct {
-		config      string
+		configPath  string
 		expected    config.Config
 		expectedErr error
 	}
@@ -60,129 +62,62 @@ func TestParse(t *testing.T) {
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 
-			r := strings.NewReader(tc.config)
+			f, err := os.Open(tc.configPath)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
 
-			conf, err := config.Parse(r, "")
-
+			conf, err := config.Parse(f, "")
 			if tc.expectedErr != nil {
 				if err == nil {
-					t.Errorf("expected err %v, got nil", tc.expectedErr.Error())
-					return
+					t.Fatalf("expected err %s, got nil", tc.expectedErr)
 				}
 
 				// compare error messages
 				if tc.expectedErr.Error() != err.Error() {
-					t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
-					return
+					t.Fatalf("invalid error. expected %v, got %v", tc.expectedErr, err)
 				}
 
 				return
 			}
-
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 
 			// compare the various parts fo the config
-			if !reflect.DeepEqual(conf.LocationName, tc.expected.LocationName) {
-				t.Errorf("expected LocationName \n\n %+v \n\n got \n\n %+v ", tc.expected.LocationName, conf.LocationName)
-				return
+			if diff := deep.Equal(conf.LocationName, tc.expected.LocationName); diff != nil {
+				t.Fatalf("LocationName: got does not match expected: %v", diff)
 			}
 
-			if !reflect.DeepEqual(conf.Webserver, tc.expected.Webserver) {
-				t.Errorf("expected Webserver output \n\n %+v \n\n got \n\n %+v ", tc.expected.Webserver, conf.Webserver)
-				return
+			if diff := deep.Equal(conf.Webserver, tc.expected.Webserver); diff != nil {
+				t.Fatalf("Webserver: got does not match expected: %v", diff)
 			}
 
-			if !reflect.DeepEqual(conf.Providers, tc.expected.Providers) {
-				t.Errorf("expected Providers output \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected.Providers, conf.Providers)
-				return
+			if diff := deep.Equal(conf.Providers, tc.expected.Providers); diff != nil {
+				t.Fatalf("Providers: got does not match expected: %v", diff)
 			}
 
-			if !reflect.DeepEqual(conf.Maps, tc.expected.Maps) {
-				t.Errorf("expected Maps output \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected.Maps, conf.Maps)
-				return
+			if diff := deep.Equal(conf.Maps, tc.expected.Maps); diff != nil {
+				t.Fatalf("Maps: got does not match expected: %v", diff)
 			}
 
-			if !reflect.DeepEqual(conf, tc.expected) {
-				t.Errorf("expected \n\n (%+v) \n\n got \n\n (%+v) ", tc.expected, conf)
-				return
+			if diff := deep.Equal(conf, tc.expected); diff != nil {
+				t.Fatalf("got does not match expected: %v", diff)
 			}
 		}
 	}
 
 	tests := map[string]tcase{
 		"happy path": {
-			config: `
-				tile_buffer = 12
-
-				[webserver]
-				hostname = "cdn.tegola.io"
-				port = ":8080"
-				cors_allowed_origin = "tegola.io"
-        		proxy_protocol = "https"
-
-					[webserver.headers]
-					Access-Control-Allow-Origin = "*"
-					Access-Control-Allow-Methods = "GET, OPTIONS"
-
-				[cache]
-				type = "file"
-				basepath = "/tmp/tegola-cache"
-
-				[[providers]]
-				name = "provider1"
-				type = "postgis"
-				host = "localhost"
-				port = 5432
-				database = "osm_water" 
-				user = "admin"
-				password = ""
-
-					[[providers.layers]]
-					name = "water"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-				[[maps]]
-				name = "osm"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = [-76.275329586789, 39.153492567373, 8.0]
-
-					[[maps.layers]]
-					provider_layer = "provider1.water"
-					min_zoom = 10
-					max_zoom = 20
-					dont_simplify = true
-					dont_clip = true
-					dont_clean = true
-
-					[[maps.params]]
-					name = "param1"
-					token = "!param1!"
-					type = "string"
-					
-					[[maps.params]]
-					name = "param2"
-					token = "!PARAM2!"
-					type = "int"
-					sql = "AND answer = ?"
-					default_value = "42"
-					
-					[[maps.params]]
-					name = "param3"
-					token = "!PARAM3!"
-					type = "float"
-					default_sql = "AND pi = 3.1415926"
-					`,
+			configPath: "testdata/happy_path.toml",
 			expected: config.Config{
 				TileBuffer:   env.IntPtr(env.Int(12)),
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName:      "cdn.tegola.io",
+					HostName: env.URL{
+						Scheme: "https",
+						Host:   "cdn.tegola.io",
+					},
 					Port:          ":8080",
 					ProxyProtocol: "https",
 					Headers: env.Dict{
@@ -257,79 +192,15 @@ func TestParse(t *testing.T) {
 			},
 		},
 		"test env": {
-			config: `
-				[webserver]
-				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
-				port = "${ENV_TEST_WEBSERVER_PORT}"
-                
-                [webserver.headers]
-                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
-				   Test = "Test"
-                   # impossible but to test ParseDict
-                   Impossible-Header = {"test" = "${ENV_TEST_WEBSERVER_HEADER_STRING}"}
-
-				[[providers]]
-				name = "provider1"
-				type = "postgis"
-				host = "localhost"
-				port = 5432
-				database = "osm_water" 
-				user = "admin"
-				password = ""
-
-					[[providers.layers]]
-					name = "water_0_5"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-					[[providers.layers]]
-					name = "water_6_10"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-				[[maps]]
-				name = "osm"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_6_10"
-					min_zoom = 6
-					max_zoom = 10
-
-				[[maps]]
-				name = "osm_2"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = [-76.275329586789, 39.153492567373, 8.0]
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_0_5"
-					min_zoom = 0
-					max_zoom = 5
-
-                    [maps.layers.default_tags]
-                    provider = "${ENV_TEST_MAP_LAYER_DEFAULT_TAG}"
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_6_10"
-					min_zoom = 6
-					max_zoom = 10`,
+			configPath: "testdata/test_env.toml",
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName: ENV_TEST_HOST_CONCAT,
-					Port:     ENV_TEST_WEBSERVER_PORT,
+					HostName: env.URL{
+						Scheme: "https",
+						Host:   ENV_TEST_HOST_CONCAT,
+					},
+					Port: ENV_TEST_WEBSERVER_PORT,
 					Headers: env.Dict{
 						"Cache-Control": ENV_TEST_WEBSERVER_HEADER_STRING,
 						"Test":          "Test",
@@ -413,147 +284,20 @@ func TestParse(t *testing.T) {
 			},
 		},
 		"missing env": {
-			config: `
-				[webserver]
-				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
-				port = "${ENV_TEST_WEBSERVER_PORT}"
-                
-                [webserver.headers]
-                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
-				   Test = "${I_AM_MISSING}"
-
-				[[providers]]
-				name = "provider1"
-				type = "postgis"
-				host = "localhost"
-				port = 5432
-				database = "osm_water" 
-				user = "admin"
-				password = ""
-
-					[[providers.layers]]
-					name = "water_0_5"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-					[[providers.layers]]
-					name = "water_6_10"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-				[[maps]]
-				name = "osm"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_6_10"
-					min_zoom = 6
-					max_zoom = 10
-
-				[[maps]]
-				name = "osm_2"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = [-76.275329586789, 39.153492567373, 8.0]
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_0_5"
-					min_zoom = 0
-					max_zoom = 5
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_6_10"
-					min_zoom = 6
-					max_zoom = 10`,
+			configPath:  "testdata/missing_env.toml",
 			expected:    config.Config{},
 			expectedErr: env.ErrEnvVar("I_AM_MISSING"),
 		},
-		"test empty proxy_protocol": {
-			config: `
-				[webserver]
-				hostname = "${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
-				port = "${ENV_TEST_WEBSERVER_PORT}"
-        		proxy_protocol = ""
-                
-                [webserver.headers]
-                   Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
-				   Test = "Test"
-                   # impossible but to test ParseDict
-                   Impossible-Header = {"test" = "${ENV_TEST_WEBSERVER_HEADER_STRING}"}
-
-				[[providers]]
-				name = "provider1"
-				type = "postgis"
-				host = "localhost"
-				port = 5432
-				database = "osm_water" 
-				user = "admin"
-				password = ""
-
-					[[providers.layers]]
-					name = "water_0_5"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-					[[providers.layers]]
-					name = "water_6_10"
-					geometry_fieldname = "geom"
-					id_fieldname = "gid"
-					sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
-
-				[[maps]]
-				name = "osm"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_6_10"
-					min_zoom = 6
-					max_zoom = 10
-
-				[[maps]]
-				name = "osm_2"
-				attribution = "Test Attribution"
-				bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
-				center = [-76.275329586789, 39.153492567373, 8.0]
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_0_5"
-					min_zoom = 0
-					max_zoom = 5
-
-                    [maps.layers.default_tags]
-                    provider = "${ENV_TEST_MAP_LAYER_DEFAULT_TAG}"
-
-					[[maps.layers]]
-					name = "water"
-					provider_layer = "provider1.water_6_10"
-					min_zoom = 6
-					max_zoom = 10`,
+		"empty proxy_protocol": {
+			configPath: "testdata/empty_proxy_protocol.toml",
 			expected: config.Config{
 				LocationName: "",
 				Webserver: config.Webserver{
-					HostName: ENV_TEST_HOST_CONCAT,
-					Port:     ENV_TEST_WEBSERVER_PORT,
+					HostName: env.URL{
+						Scheme: "https",
+						Host:   ENV_TEST_HOST_CONCAT,
+					},
+					Port: ENV_TEST_WEBSERVER_PORT,
 					Headers: env.Dict{
 						"Cache-Control": ENV_TEST_WEBSERVER_HEADER_STRING,
 						"Test":          "Test",
@@ -1573,14 +1317,6 @@ func TestValidate(t *testing.T) {
 					Type:  "int",
 				},
 			},
-		},
-		"invalid webserver hostname": {
-			config: config.Config{
-				Webserver: config.Webserver{
-					HostName: ":\\malformed.host",
-				},
-			},
-			expectedErr: config.ErrInvalidHostName{},
 		},
 	}
 

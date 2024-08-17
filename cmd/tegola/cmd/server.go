@@ -39,13 +39,9 @@ var serverCmd = &cobra.Command{
 			serverPort = string(conf.Webserver.Port)
 		}
 
-		if conf.Webserver.HostName != "" {
-			hostname, err := url.Parse(string(conf.Webserver.HostName))
-			if err != nil {
-				log.Fatalf("unable to parse webserver.hostname: %s", err)
-			}
-
-			server.HostName = hostname
+		if conf.Webserver.HostName.Host != "" {
+			u := url.URL(conf.Webserver.HostName)
+			server.HostName = &u
 		}
 
 		// set our server version

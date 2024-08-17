@@ -90,13 +90,9 @@ func init() {
 
 	// set our server version
 	server.Version = build.Version
-	if conf.Webserver.HostName != "" {
-		hostname, err := url.Parse(string(conf.Webserver.HostName))
-		if err != nil {
-			log.Fatalf("unable to parse webserver.hostname: %s", err)
-		}
-
-		server.HostName = hostname
+	if conf.Webserver.HostName.Host != "" {
+		u := url.URL(conf.Webserver.HostName)
+		server.HostName = &u
 	}
 
 	// set user defined response headers

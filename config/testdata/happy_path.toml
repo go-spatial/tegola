@@ -1,0 +1,62 @@
+tile_buffer = 12
+
+[webserver]
+hostname = "https://cdn.tegola.io"
+port = ":8080"
+cors_allowed_origin = "tegola.io"
+proxy_protocol = "https"
+
+    [webserver.headers]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, OPTIONS"
+
+[cache]
+type = "file"
+basepath = "/tmp/tegola-cache"
+
+[[providers]]
+name = "provider1"
+type = "postgis"
+host = "localhost"
+port = 5432
+database = "osm_water" 
+user = "admin"
+password = ""
+
+    [[providers.layers]]
+    name = "water"
+    geometry_fieldname = "geom"
+    id_fieldname = "gid"
+    sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+[[maps]]
+name = "osm"
+attribution = "Test Attribution"
+bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+center = [-76.275329586789, 39.153492567373, 8.0]
+
+    [[maps.layers]]
+    provider_layer = "provider1.water"
+    min_zoom = 10
+    max_zoom = 20
+    dont_simplify = true
+    dont_clip = true
+    dont_clean = true
+
+    [[maps.params]]
+    name = "param1"
+    token = "!param1!"
+    type = "string"
+    
+    [[maps.params]]
+    name = "param2"
+    token = "!PARAM2!"
+    type = "int"
+    sql = "AND answer = ?"
+    default_value = "42"
+    
+    [[maps.params]]
+    name = "param3"
+    token = "!PARAM3!"
+    type = "float"
+    default_sql = "AND pi = 3.1415926"

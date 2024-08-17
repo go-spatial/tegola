@@ -2,6 +2,7 @@ package env
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -20,7 +21,7 @@ func (e ErrEnvVar) Error() string {
 
 // ErrType corresponds with an incorrect type passed to UnmarshalTOML
 type ErrType struct {
-	v interface{}
+	v any
 }
 
 func (te ErrType) Error() string {
@@ -53,7 +54,7 @@ func replaceEnvVar(in string) (string, error) {
 
 //TODO(@ear7h): implement UnmarshalJSON for types
 
-func (t *Dict) UnmarshalTOML(v interface{}) error {
+func (t *Dict) UnmarshalTOML(v any) error {
 	var d *Dict
 	var err error
 
@@ -73,7 +74,7 @@ func BoolPtr(v Bool) *Bool {
 	return &v
 }
 
-func (t *Bool) UnmarshalTOML(v interface{}) error {
+func (t *Bool) UnmarshalTOML(v any) error {
 	var b *bool
 	var err error
 
@@ -92,7 +93,7 @@ func StringPtr(v String) *String {
 	return &v
 }
 
-func (t *String) UnmarshalTOML(v interface{}) error {
+func (t *String) UnmarshalTOML(v any) error {
 	var s *string
 	var err error
 
@@ -111,7 +112,7 @@ func IntPtr(v Int) *Int {
 	return &v
 }
 
-func (t *Int) UnmarshalTOML(v interface{}) error {
+func (t *Int) UnmarshalTOML(v any) error {
 	var i *int
 	var err error
 
@@ -130,7 +131,7 @@ func UintPtr(v Uint) *Uint {
 	return &v
 }
 
-func (t *Uint) UnmarshalTOML(v interface{}) error {
+func (t *Uint) UnmarshalTOML(v any) error {
 	var ui *uint
 	var err error
 
@@ -149,7 +150,7 @@ func FloatPtr(v Float) *Float {
 	return &v
 }
 
-func (t *Float) UnmarshalTOML(v interface{}) error {
+func (t *Float) UnmarshalTOML(v any) error {
 	var f *float64
 	var err error
 
@@ -159,5 +160,21 @@ func (t *Float) UnmarshalTOML(v interface{}) error {
 	}
 
 	*t = Float(*f)
+	return nil
+}
+
+type URL url.URL
+
+func (t *URL) UnmarshalTOML(v any) error {
+	u, err := ParseURL(v)
+	if err != nil {
+		return err
+	}
+
+	if u == nil {
+		return nil
+	}
+
+	*t = URL(*u)
 	return nil
 }

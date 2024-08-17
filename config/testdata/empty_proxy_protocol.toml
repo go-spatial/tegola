@@ -1,0 +1,68 @@
+[webserver]
+hostname = "https://${ENV_TEST_HOST_1}.${ENV_TEST_HOST_2}.${ENV_TEST_HOST_3}"
+port = "${ENV_TEST_WEBSERVER_PORT}"
+proxy_protocol = ""
+
+[webserver.headers]
+    Cache-Control = "${ENV_TEST_WEBSERVER_HEADER_STRING}"
+    Test = "Test"
+    # impossible but to test ParseDict
+    Impossible-Header = {"test" = "${ENV_TEST_WEBSERVER_HEADER_STRING}"}
+
+[[providers]]
+name = "provider1"
+type = "postgis"
+host = "localhost"
+port = 5432
+database = "osm_water" 
+user = "admin"
+password = ""
+
+    [[providers.layers]]
+    name = "water_0_5"
+    geometry_fieldname = "geom"
+    id_fieldname = "gid"
+    sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+    [[providers.layers]]
+    name = "water_6_10"
+    geometry_fieldname = "geom"
+    id_fieldname = "gid"
+    sql = "SELECT gid, ST_AsBinary(geom) AS geom FROM simplified_water_polygons WHERE geom && !BBOX!"
+
+[[maps]]
+name = "osm"
+attribution = "Test Attribution"
+bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+center = ["${ENV_TEST_CENTER_X}", "${ENV_TEST_CENTER_Y}", "${ENV_TEST_CENTER_Z}"]
+
+    [[maps.layers]]
+    name = "water"
+    provider_layer = "${ENV_TEST_PROVIDER_LAYER}"
+
+    [[maps.layers]]
+    name = "water"
+    provider_layer = "provider1.water_6_10"
+    min_zoom = 6
+    max_zoom = 10
+
+[[maps]]
+name = "osm_2"
+attribution = "Test Attribution"
+bounds = [-180.0, -85.05112877980659, 180.0, 85.0511287798066]
+center = [-76.275329586789, 39.153492567373, 8.0]
+
+    [[maps.layers]]
+    name = "water"
+    provider_layer = "provider1.water_0_5"
+    min_zoom = 0
+    max_zoom = 5
+
+    [maps.layers.default_tags]
+    provider = "${ENV_TEST_MAP_LAYER_DEFAULT_TAG}"
+
+    [[maps.layers]]
+    name = "water"
+    provider_layer = "provider1.water_6_10"
+    min_zoom = 6
+    max_zoom = 10

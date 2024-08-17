@@ -1,6 +1,7 @@
 package env
 
 import (
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -271,4 +272,22 @@ func ParseDict(v interface{}) (*Dict, error) {
 	}
 
 	return &d, nil
+}
+
+func ParseURL(v any) (*url.URL, error) {
+	if v == nil {
+		return nil, nil
+	}
+
+	switch val := v.(type) {
+	case string:
+		val, err := replaceEnvVar(val)
+		if err != nil {
+			return nil, err
+		}
+
+		return url.Parse(val)
+	default:
+		return nil, ErrType{v}
+	}
 }

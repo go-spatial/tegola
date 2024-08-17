@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -180,28 +179,6 @@ type ErrInvalidURIPrefix string
 
 func (e ErrInvalidURIPrefix) Error() string {
 	return fmt.Sprintf("config: invalid uri_prefix (%s). uri_prefix must start with a forward slash '/' ", string(e))
-}
-
-type ErrInvalidHostName struct {
-	HostName string
-	Err      error
-}
-
-func (e ErrInvalidHostName) Error() string {
-	return fmt.Sprintf("config: invalid hostname (%s) - %s", string(e.HostName), e.Err)
-}
-
-func (e ErrInvalidHostName) Unwrap() error {
-	return e.Err
-}
-
-func (e ErrInvalidHostName) Is(target error) bool {
-
-	if _, ok := target.(ErrInvalidHostName); ok {
-		return true
-	}
-
-	return errors.Is(e.Err, target)
 }
 
 // ErrUnknownProviderType is returned when the config contains a provider type that has not been registered
