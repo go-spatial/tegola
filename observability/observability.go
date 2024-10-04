@@ -142,7 +142,7 @@ func Register(observerType string, init InitFunc, cleanup CleanUpFunc) error {
 
 // Registered returns the set of Registered observers
 func Registered() []string {
-	obs := make([]string, len(observers))
+	obs := make([]string, 0, len(observers))
 	for k := range observers {
 		obs = append(obs, k)
 	}
