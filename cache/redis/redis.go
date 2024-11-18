@@ -10,6 +10,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 const CacheType = "redis"
@@ -22,6 +23,7 @@ const (
 	ConfigKeyMaxZoom  = "max_zoom"
 	ConfigKeyTTL      = "ttl"
 	ConfigKeySSL      = "ssl"
+	ConfigKeyURI      = "uri"
 )
 
 var (
@@ -29,6 +31,7 @@ var (
 	defaultNetwork  = "tcp"
 	defaultAddress  = "127.0.0.1:6379"
 	defaultPassword = ""
+	defaultURI      = ""
 	defaultDB       = 0
 	defaultMaxZoom  = uint(tegola.MaxZ)
 	defaultTTL      = 0
@@ -39,8 +42,25 @@ func init() {
 	cache.Register(CacheType, New)
 }
 
+// TODO @iwpnd: deprecate connection with Addr
 // CreateOptions creates redis.Options from an implicit or explicit c
 func CreateOptions(c dict.Dicter) (opts *redis.Options, err error) {
+	uri, err := c.String(ConfigKeyURI, &defaultURI)
+	if err != nil {
+		return nil, err
+	}
+
+	if uri != "" {
+		opts, err := redis.ParseURL(uri)
+		if err != nil {
+			return nil, err
+		}
+
+		return opts, nil
+	}
+
+	log.Warn("connecting to redis using 'Addr' is deprecated. use 'uri' instead.")
+
 	network, err := c.String(ConfigKeyNetwork, &defaultNetwork)
 	if err != nil {
 		return nil, err

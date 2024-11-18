@@ -50,7 +50,7 @@ func TestCreateOptions(t *testing.T) {
 
 	tests := map[string]tcase{
 		"test complete config": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network":  "tcp",
 				"address":  "127.0.0.1:6379",
 				"password": "test",
@@ -65,8 +65,31 @@ func TestCreateOptions(t *testing.T) {
 				Password: "test",
 			},
 		},
+		"test with uri no ssl": {
+			config: map[string]any{
+				"uri": "redis://user:test@127.0.0.1:6379/0",
+			},
+			expected: &goredis.Options{
+				Network:  "tcp",
+				DB:       0,
+				Addr:     "127.0.0.1:6379",
+				Password: "test",
+			},
+		},
+		"test with uri with ssl": {
+			config: map[string]any{
+				"uri": "rediss://user:test@127.0.0.1:6379/0",
+			},
+			expected: &goredis.Options{
+				Network:   "tcp",
+				DB:        0,
+				Addr:      "127.0.0.1:6379",
+				Password:  "test",
+				TLSConfig: &tls.Config{ /* no deep comparison */ },
+			},
+		},
 		"test empty config": {
-			config: map[string]interface{}{},
+			config: map[string]any{},
 			expected: &goredis.Options{
 				Network:  "tcp",
 				DB:       0,
@@ -76,7 +99,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test ssl config": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network":  "tcp",
 				"address":  "127.0.0.1:6379",
 				"password": "test",
@@ -94,7 +117,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test bad address": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network":  "tcp",
 				"address":  2,
 				"password": "test",
@@ -108,7 +131,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test bad host": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network": "tcp",
 				"address": "::8080",
 				"db":      0,
@@ -117,7 +140,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test missing host": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network": "tcp",
 				"address": ":8080",
 				"db":      0,
@@ -126,7 +149,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test missing port": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network": "tcp",
 				"address": "localhost",
 				"db":      0,
@@ -135,7 +158,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test bad db": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network": "tcp",
 				"address": "127.0.0.1:6379",
 				"db":      "fails",
@@ -148,7 +171,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test bad password": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network":  "tcp",
 				"address":  "127.0.0.1:6379",
 				"password": 0,
@@ -161,7 +184,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test bad network": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network": 0,
 				"address": "127.0.0.1:6379",
 			},
@@ -173,7 +196,7 @@ func TestCreateOptions(t *testing.T) {
 		},
 		"test bad ssl": {
 			name: "test test ssl config",
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network": "tcp",
 				"address": "127.0.0.1:6379",
 				"ssl":     0,
@@ -265,7 +288,7 @@ func TestNew(t *testing.T) {
 
 	tests := map[string]tcase{
 		"explicit config": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"network":  "tcp",
 				"address":  "127.0.0.1:6379",
 				"password": "",
@@ -274,19 +297,32 @@ func TestNew(t *testing.T) {
 				"ssl":      false,
 			},
 		},
+		"explicit config with uri": {
+			config: map[string]any{
+				"uri": "redis://127.0.0.1:6379/0",
+			},
+		},
 		"implicit config": {
-			config: map[string]interface{}{},
+			config: map[string]any{},
 		},
 		"bad config address": {
-			config: map[string]interface{}{"address": 0},
+			config: map[string]any{"address": 0},
 			expectedErr: dict.ErrKeyType{
 				Key:   "address",
 				Value: 0,
 				T:     reflect.TypeOf(""),
 			},
 		},
+		"bad config uri": {
+			config: map[string]any{"uri": 1},
+			expectedErr: dict.ErrKeyType{
+				Key:   "uri",
+				Value: 1,
+				T:     reflect.TypeOf(""),
+			},
+		},
 		"bad config ttl": {
-			config: map[string]interface{}{"ttl": "fails"},
+			config: map[string]any{"ttl": "fails"},
 			expectedErr: dict.ErrKeyType{
 				Key:   "ttl",
 				Value: "fails",
@@ -294,7 +330,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		"bad address": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"address": "127.0.0.1:6000",
 			},
 			expectedErr: &net.OpError{
@@ -310,7 +346,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		"bad max_zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"max_zoom": "2",
 			},
 			expectedErr: dict.ErrKeyType{
@@ -320,7 +356,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		"bad max_zoom 2": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"max_zoom": -2,
 			},
 			expectedErr: dict.ErrKeyType{
@@ -392,7 +428,7 @@ func TestSetGetPurge(t *testing.T) {
 
 	testcases := map[string]tcase{
 		"redis cache hit": {
-			config: map[string]interface{}{},
+			config: map[string]any{},
 			key: cache.Key{
 				Z: 0,
 				X: 1,
@@ -402,7 +438,7 @@ func TestSetGetPurge(t *testing.T) {
 			expectedHit:  true,
 		},
 		"redis cache miss": {
-			config: map[string]interface{}{},
+			config: map[string]any{},
 			key: cache.Key{
 				Z: 0,
 				X: 0,
@@ -475,7 +511,7 @@ func TestSetOverwrite(t *testing.T) {
 
 	testcases := map[string]tcase{
 		"redis overwrite": {
-			config: map[string]interface{}{},
+			config: map[string]any{},
 			key: cache.Key{
 				Z: 0,
 				X: 1,
@@ -539,7 +575,7 @@ func TestMaxZoom(t *testing.T) {
 
 	tests := map[string]tcase{
 		"over max zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{
@@ -551,7 +587,7 @@ func TestMaxZoom(t *testing.T) {
 			expectedHit: false,
 		},
 		"under max zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{
@@ -563,7 +599,7 @@ func TestMaxZoom(t *testing.T) {
 			expectedHit: true,
 		},
 		"equals max zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{
