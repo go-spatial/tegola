@@ -1,6 +1,7 @@
 package s3_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -102,6 +103,7 @@ func TestNew(t *testing.T) {
 func TestSetGetPurge(t *testing.T) {
 	skipS3Tests(t)
 
+	ctx := context.Background()
 	type tcase struct {
 		config   dict.Dict
 		key      cache.Key
@@ -119,12 +121,12 @@ func TestSetGetPurge(t *testing.T) {
 			}
 
 			// test write
-			if err = fc.Set(&tc.key, tc.expected); err != nil {
+			if err = fc.Set(ctx, &tc.key, tc.expected); err != nil {
 				t.Errorf("write failed. err: %v", err)
 				return
 			}
 
-			output, hit, err := fc.Get(&tc.key)
+			output, hit, err := fc.Get(ctx, &tc.key)
 			if err != nil {
 				t.Errorf("read failed. err: %v", err)
 				return
@@ -140,7 +142,7 @@ func TestSetGetPurge(t *testing.T) {
 			}
 
 			// test purge
-			if err = fc.Purge(&tc.key); err != nil {
+			if err = fc.Purge(ctx, &tc.key); err != nil {
 				t.Errorf("purge failed. err: %v", err)
 				return
 			}
@@ -171,6 +173,7 @@ func TestSetGetPurge(t *testing.T) {
 func TestSetOverwrite(t *testing.T) {
 	skipS3Tests(t)
 
+	ctx := context.Background()
 	type tcase struct {
 		config   dict.Dict
 		key      cache.Key
@@ -190,19 +193,19 @@ func TestSetOverwrite(t *testing.T) {
 			}
 
 			// test write1
-			if err = fc.Set(&tc.key, tc.bytes1); err != nil {
+			if err = fc.Set(ctx, &tc.key, tc.bytes1); err != nil {
 				t.Errorf("write 1 failed. err: %v", err)
 				return
 			}
 
 			// test write2
-			if err = fc.Set(&tc.key, tc.bytes2); err != nil {
+			if err = fc.Set(ctx, &tc.key, tc.bytes2); err != nil {
 				t.Errorf("write 2 failed. err: %v", err)
 				return
 			}
 
 			// fetch the cache entry
-			output, hit, err := fc.Get(&tc.key)
+			output, hit, err := fc.Get(ctx, &tc.key)
 			if err != nil {
 				t.Errorf("read failed. err: %v", err)
 				return
@@ -218,7 +221,7 @@ func TestSetOverwrite(t *testing.T) {
 			}
 
 			// clean up
-			if err = fc.Purge(&tc.key); err != nil {
+			if err = fc.Purge(ctx, &tc.key); err != nil {
 				t.Errorf("purge failed. err: %v", err)
 				return
 			}
@@ -250,6 +253,7 @@ func TestSetOverwrite(t *testing.T) {
 func TestMaxZoom(t *testing.T) {
 	skipS3Tests(t)
 
+	ctx := context.Background()
 	type tcase struct {
 		config      dict.Dict
 		key         cache.Key
@@ -268,13 +272,13 @@ func TestMaxZoom(t *testing.T) {
 			}
 
 			// test set
-			if err = fc.Set(&tc.key, tc.bytes); err != nil {
+			if err = fc.Set(ctx, &tc.key, tc.bytes); err != nil {
 				t.Errorf("write failed. err: %v", err)
 				return
 			}
 
 			// fetch the cache entry
-			_, hit, err := fc.Get(&tc.key)
+			_, hit, err := fc.Get(ctx, &tc.key)
 			if err != nil {
 				t.Errorf("read failed. err: %v", err)
 				return
@@ -286,7 +290,7 @@ func TestMaxZoom(t *testing.T) {
 
 			// clean up
 			if tc.expectedHit {
-				if err != fc.Purge(&tc.key) {
+				if err != fc.Purge(ctx, &tc.key) {
 					t.Errorf("%v", err)
 					return
 				}

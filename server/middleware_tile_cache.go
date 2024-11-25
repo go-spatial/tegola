@@ -43,7 +43,7 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 		}
 
 		// use the URL path as the key
-		cachedTile, hit, err := cacher.Get(key)
+		cachedTile, hit, err := cacher.Get(r.Context(), key)
 		if err != nil {
 			log.Errorf("cache middleware: error reading from cache: %v", err)
 			next.ServeHTTP(w, r)
@@ -70,7 +70,7 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 				return
 			}
 
-			if err := cacher.Set(key, buff.Bytes()); err != nil {
+			if err := cacher.Set(r.Context(), key, buff.Bytes()); err != nil {
 				log.Warnf("cache response writer err: %v", err)
 			}
 			return
