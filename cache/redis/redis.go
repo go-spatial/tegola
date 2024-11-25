@@ -153,8 +153,7 @@ type RedisCache struct {
 	MaxZoom    uint
 }
 
-func (rdc *RedisCache) Set(key *cache.Key, val []byte) error {
-	ctx := context.Background()
+func (rdc *RedisCache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 	if key.Z > rdc.MaxZoom {
 		return nil
 	}
@@ -164,8 +163,7 @@ func (rdc *RedisCache) Set(key *cache.Key, val []byte) error {
 		Err()
 }
 
-func (rdc *RedisCache) Get(key *cache.Key) (val []byte, hit bool, err error) {
-	ctx := context.Background()
+func (rdc *RedisCache) Get(ctx context.Context, key *cache.Key) (val []byte, hit bool, err error) {
 	val, err = rdc.Redis.Get(ctx, key.String()).Bytes()
 
 	switch err {
@@ -178,7 +176,6 @@ func (rdc *RedisCache) Get(key *cache.Key) (val []byte, hit bool, err error) {
 	}
 }
 
-func (rdc *RedisCache) Purge(key *cache.Key) (err error) {
-	ctx := context.Background()
+func (rdc *RedisCache) Purge(ctx context.Context, key *cache.Key) (err error) {
 	return rdc.Redis.Del(ctx, key.String()).Err()
 }
