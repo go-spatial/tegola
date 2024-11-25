@@ -25,6 +25,7 @@ require (
 	github.com/mattn/goveralls v0.0.5
 	github.com/pborman/uuid v1.2.0
 	github.com/prometheus/client_golang v1.14.0
+	github.com/redis/go-redis/v9 v9.7.0
 	github.com/theckman/goconstraint v1.10.1-0.20180216224824-e867bde6e4e1
 	go.uber.org/zap v1.21.0
 	gopkg.in/go-playground/colors.v1 v1.0.2-0.20150924111726-b53ecfb39623
@@ -39,7 +40,8 @@ require (
 	github.com/arolek/p v0.0.0-20191103215535-df3c295ed582 // indirect
 	github.com/aws/aws-lambda-go v1.41.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
