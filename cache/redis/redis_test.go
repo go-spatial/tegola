@@ -8,11 +8,11 @@ import (
 	"syscall"
 	"testing"
 
-	goredis "github.com/go-redis/redis"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/redis"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 // TESTENV is the environment variable that must be set to "yes" to run the redis tests.
