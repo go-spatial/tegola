@@ -58,8 +58,8 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, err
 	}
 
-	gcsCache.Ctx = context.Background()
-	client, err := storage.NewClient(gcsCache.Ctx)
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 
 	// write gzip encoded test file
-	if err := gcsCache.Set(&key, testData); err != nil {
+	if err := gcsCache.Set(ctx, &key, testData); err != nil {
 		e := cache.ErrSettingToCache{
 			CacheType: CacheType,
 			Err:       err,
@@ -87,7 +87,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 
 	// read the test file
-	_, hit, err := gcsCache.Get(&key)
+	_, hit, err := gcsCache.Get(ctx, &key)
 	if err != nil {
 		e := cache.ErrGettingFromCache{
 			CacheType: CacheType,
@@ -101,7 +101,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 
 	// purge the test file
-	if err := gcsCache.Purge(&key); err != nil {
+	if err := gcsCache.Purge(ctx, &key); err != nil {
 		e := cache.ErrPurgingCache{
 			CacheType: CacheType,
 			Err:       err,
@@ -138,11 +138,11 @@ type GCSCache struct {
 	Bucket *storage.BucketHandle
 }
 
-func (gcsCache *GCSCache) Get(key *cache.Key) ([]byte, bool, error) {
+func (gcsCache *GCSCache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) {
 	k := filepath.Join(gcsCache.Basepath, key.String())
 	obj := gcsCache.Bucket.Object(k)
 
-	r, err := obj.NewReader(gcsCache.Ctx)
+	r, err := obj.NewReader(ctx)
 	if err != nil {
 		return nil, false, nil
 	}
@@ -158,7 +158,7 @@ func (gcsCache *GCSCache) Get(key *cache.Key) ([]byte, bool, error) {
 	return val, true, nil
 }
 
-func (gcsCache *GCSCache) Set(key *cache.Key, val []byte) error {
+func (gcsCache *GCSCache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 	k := filepath.Join(gcsCache.Basepath, key.String())
 	obj := gcsCache.Bucket.Object(k)
 
@@ -167,7 +167,7 @@ func (gcsCache *GCSCache) Set(key *cache.Key, val []byte) error {
 		return nil
 	}
 
-	w := obj.NewWriter(gcsCache.Ctx)
+	w := obj.NewWriter(ctx)
 	if _, err := w.Write(val); err != nil {
 		return err
 	}
@@ -180,11 +180,11 @@ func (gcsCache *GCSCache) Set(key *cache.Key, val []byte) error {
 	return nil
 }
 
-func (gcsCache *GCSCache) Purge(key *cache.Key) error {
+func (gcsCache *GCSCache) Purge(ctx context.Context, key *cache.Key) error {
 	k := filepath.Join(gcsCache.Basepath, key.String())
 	obj := gcsCache.Bucket.Object(k)
 
-	if err := obj.Delete(gcsCache.Ctx); err != nil {
+	if err := obj.Delete(ctx); err != nil {
 		return err
 	}
 

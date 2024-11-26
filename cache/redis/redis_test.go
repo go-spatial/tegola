@@ -1,6 +1,7 @@
 package redis_test
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"os"
@@ -376,6 +377,7 @@ func TestNew(t *testing.T) {
 func TestSetGetPurge(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
+	ctx := context.Background()
 	type tcase struct {
 		config       dict.Dict
 		key          cache.Key
@@ -393,7 +395,7 @@ func TestSetGetPurge(t *testing.T) {
 
 			// test write
 			if tc.expectedHit {
-				err = rc.Set(&tc.key, tc.expectedData)
+				err = rc.Set(ctx, &tc.key, tc.expectedData)
 				if err != nil {
 					t.Errorf("unexpected err, expected %v got %v", nil, err)
 				}
@@ -401,7 +403,7 @@ func TestSetGetPurge(t *testing.T) {
 			}
 
 			// test read
-			output, hit, err := rc.Get(&tc.key)
+			output, hit, err := rc.Get(ctx, &tc.key)
 			if err != nil {
 				t.Errorf("read failed with error, expected %v got %v", nil, err)
 				return
@@ -418,7 +420,7 @@ func TestSetGetPurge(t *testing.T) {
 
 			// test purge
 			if tc.expectedHit {
-				err = rc.Purge(&tc.key)
+				err = rc.Purge(ctx, &tc.key)
 				if err != nil {
 					t.Errorf("purge failed with err, expected %v got %v", nil, err)
 					return
@@ -458,6 +460,8 @@ func TestSetGetPurge(t *testing.T) {
 
 func TestSetOverwrite(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
+
+	ctx := context.Background()
 	type tcase struct {
 		config   dict.Dict
 		key      cache.Key
@@ -475,19 +479,19 @@ func TestSetOverwrite(t *testing.T) {
 			}
 
 			// test write1
-			if err = rc.Set(&tc.key, tc.bytes1); err != nil {
+			if err = rc.Set(ctx, &tc.key, tc.bytes1); err != nil {
 				t.Errorf("write failed with err, expected %v got %v", nil, err)
 				return
 			}
 
 			// test write2
-			if err = rc.Set(&tc.key, tc.bytes2); err != nil {
+			if err = rc.Set(ctx, &tc.key, tc.bytes2); err != nil {
 				t.Errorf("write failed with err, expected %v got %v", nil, err)
 				return
 			}
 
 			// fetch the cache entry
-			output, hit, err := rc.Get(&tc.key)
+			output, hit, err := rc.Get(ctx, &tc.key)
 			if err != nil {
 				t.Errorf("read failed with err, expected %v got %v", nil, err)
 				return
@@ -503,7 +507,7 @@ func TestSetOverwrite(t *testing.T) {
 			}
 
 			// clean up
-			if err = rc.Purge(&tc.key); err != nil {
+			if err = rc.Purge(ctx, &tc.key); err != nil {
 				t.Errorf("purge failed with err, expected %v got %v", nil, err)
 				return
 			}
@@ -531,6 +535,8 @@ func TestSetOverwrite(t *testing.T) {
 
 func TestMaxZoom(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
+	ctx := context.Background()
+
 	type tcase struct {
 		config      dict.Dict
 		key         cache.Key
@@ -549,14 +555,14 @@ func TestMaxZoom(t *testing.T) {
 
 			// test write
 			if tc.expectedHit {
-				err = rc.Set(&tc.key, tc.bytes)
+				err = rc.Set(ctx, &tc.key, tc.bytes)
 				if err != nil {
 					t.Fatalf("unexpected err, expected %v got %v", nil, err)
 				}
 			}
 
 			// test read
-			_, hit, err := rc.Get(&tc.key)
+			_, hit, err := rc.Get(ctx, &tc.key)
 			if err != nil {
 				t.Fatalf("read failed with error, expected %v got %v", nil, err)
 			}
@@ -566,7 +572,7 @@ func TestMaxZoom(t *testing.T) {
 
 			// test purge
 			if tc.expectedHit {
-				err = rc.Purge(&tc.key)
+				err = rc.Purge(ctx, &tc.key)
 				if err != nil {
 					t.Fatalf("purge failed with err, expected %v got %v", nil, err)
 				}

@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -118,11 +119,11 @@ func (co *cache) labels(cmd string, key *tegolaCache.Key) (lbs prometheus.Labels
 }
 
 // Get will record metrics around the getting the tile from the sub cache
-func (co *cache) Get(key *tegolaCache.Key) ([]byte, bool, error) {
+func (co *cache) Get(ctx context.Context, key *tegolaCache.Key) ([]byte, bool, error) {
 	co.inFlightGauge.Inc()
 	lbs := co.labels("get", key)
 	now := time.Now()
-	body, ok, err := co.cache.Get(key)
+	body, ok, err := co.cache.Get(ctx, key)
 	co.durationSeconds.With(lbs).Observe(time.Since(now).Seconds())
 	if err != nil {
 		co.errors.With(lbs).Add(1)
@@ -141,11 +142,11 @@ func (co *cache) Get(key *tegolaCache.Key) ([]byte, bool, error) {
 }
 
 // Set will observe metrics around setting the tile via the sub cache.
-func (co *cache) Set(key *tegolaCache.Key, body []byte) error {
+func (co *cache) Set(ctx context.Context, key *tegolaCache.Key, body []byte) error {
 	co.inFlightGauge.Inc()
 	lbs := co.labels("set", key)
 	now := time.Now()
-	err := co.cache.Set(key, body)
+	err := co.cache.Set(ctx, key, body)
 	co.durationSeconds.With(lbs).Observe(time.Since(now).Seconds())
 	if err != nil {
 		co.errors.With(lbs).Add(1)
@@ -158,11 +159,11 @@ func (co *cache) Set(key *tegolaCache.Key, body []byte) error {
 }
 
 // Purge will record the metrics around purging the tile from the sub cache.
-func (co *cache) Purge(key *tegolaCache.Key) error {
+func (co *cache) Purge(ctx context.Context, key *tegolaCache.Key) error {
 	co.inFlightGauge.Inc()
 	lbs := co.labels("purge", key)
 	now := time.Now()
-	err := co.cache.Purge(key)
+	err := co.cache.Purge(ctx, key)
 	co.durationSeconds.With(lbs).Observe(time.Since(now).Seconds())
 	if err != nil {
 		co.errors.With(lbs).Add(1)
