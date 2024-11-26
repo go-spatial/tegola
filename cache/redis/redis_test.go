@@ -8,7 +8,8 @@ import (
 	"syscall"
 	"testing"
 
-	goredis "github.com/go-redis/redis"
+	goredis "github.com/redis/go-redis/v9"
+
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/cache/redis"
 	"github.com/go-spatial/tegola/dict"
