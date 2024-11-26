@@ -64,7 +64,7 @@ func seedWorker(overwrite bool, logThresholdMs int64) func(ctx context.Context, 
 			}
 
 			//	read the tile from the cache
-			_, hit, err := c.Get(&key)
+			_, hit, err := c.Get(ctx, &key)
 			if err != nil {
 				return fmt.Errorf("error reading from cache: %v", err)
 			}
@@ -100,7 +100,7 @@ func seedWorker(overwrite bool, logThresholdMs int64) func(ctx context.Context, 
 
 }
 
-func purgeWorker(_ context.Context, mt MapTile) error {
+func purgeWorker(ctx context.Context, mt MapTile) error {
 
 	z, x, y := mt.Tile.ZXY()
 
@@ -119,7 +119,7 @@ func purgeWorker(_ context.Context, mt MapTile) error {
 	//	purge the tile
 	ttile := tegola.TileFromSlippyTile(mt.Tile)
 
-	if err = atlas.PurgeMapTile(m, ttile); err != nil {
+	if err = atlas.PurgeMapTile(ctx, m, ttile); err != nil {
 		return seedPurgeWorkerTileError{
 			Purge: true,
 			Tile:  mt.Tile,
