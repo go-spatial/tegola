@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -15,9 +16,9 @@ import (
 
 // Interface defines a cache back end
 type Interface interface {
-	Get(key *Key) (val []byte, hit bool, err error)
-	Set(key *Key, val []byte) error
-	Purge(key *Key) error
+	Get(ctx context.Context, key *Key) (val []byte, hit bool, err error)
+	Set(ctx context.Context, key *Key, val []byte) error
+	Purge(ctx context.Context, key *Key) error
 }
 
 // Wrapped Cache are for cache backend that wrap other cache backends

@@ -147,15 +147,15 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 		Y:       y,
 	}
 
-	return a.cacher.Set(&key, b)
+	return a.cacher.Set(ctx, &key, b)
 }
 
 // PurgeMapTile will purge a map tile from the configured cache backend
-func (a *Atlas) PurgeMapTile(m Map, tile *tegola.Tile) error {
+func (a *Atlas) PurgeMapTile(ctx context.Context, m Map, tile *tegola.Tile) error {
 	if a == nil {
 		// Use the default Atlas if a, is nil. This way the empty value is
 		// still useful.
-		return defaultAtlas.PurgeMapTile(m, tile)
+		return defaultAtlas.PurgeMapTile(ctx, m, tile)
 	}
 
 	if len(m.Params) > 0 {
@@ -174,7 +174,7 @@ func (a *Atlas) PurgeMapTile(m Map, tile *tegola.Tile) error {
 		Y:       tile.Y,
 	}
 
-	return a.cacher.Purge(&key)
+	return a.cacher.Purge(ctx, &key)
 }
 
 // Map looks up a Map by name and returns a copy of the Map
@@ -337,8 +337,8 @@ func SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 
 // PurgeMapTile will purge a map tile from the configured cache backend
 // for the defaultAtlas
-func PurgeMapTile(m Map, tile *tegola.Tile) error {
-	return defaultAtlas.PurgeMapTile(m, tile)
+func PurgeMapTile(ctx context.Context, m Map, tile *tegola.Tile) error {
+	return defaultAtlas.PurgeMapTile(ctx, m, tile)
 }
 
 // SetObservability sets the observability backend for the defaultAtlas
