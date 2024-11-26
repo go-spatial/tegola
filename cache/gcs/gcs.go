@@ -114,10 +114,6 @@ func New(config dict.Dicter) (cache.Interface, error) {
 }
 
 type GCSCache struct {
-
-	// Context
-	Ctx context.Context
-
 	// Bucket is the name of the GCS bucket to operate on
 	BucketName string
 
