@@ -12,7 +12,6 @@ require (
 	github.com/aws/aws-sdk-go v1.34.0
 	github.com/dimfeld/httptreemux v5.0.1+incompatible
 	github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
-	github.com/go-redis/redis v6.9.0+incompatible
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 	github.com/go-spatial/geom v0.1.0
 	github.com/go-spatial/proj v0.2.0
@@ -57,8 +56,6 @@ require (
 	github.com/jackc/puddle v1.3.0 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/onsi/gomega v1.26.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.39.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect

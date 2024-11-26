@@ -120,15 +120,6 @@ github.com/dimfeld/httptreemux
 # github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
 ## explicit
 github.com/gdey/tbltest
-# github.com/go-redis/redis v6.9.0+incompatible
-## explicit
-github.com/go-redis/redis
-github.com/go-redis/redis/internal
-github.com/go-redis/redis/internal/consistenthash
-github.com/go-redis/redis/internal/hashtag
-github.com/go-redis/redis/internal/pool
-github.com/go-redis/redis/internal/proto
-github.com/go-redis/redis/internal/singleflight
 # github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 ## explicit
 github.com/go-spatial/cobra
@@ -237,10 +228,6 @@ github.com/mattn/goveralls
 # github.com/matttproud/golang_protobuf_extensions v1.0.4
 ## explicit; go 1.9
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/onsi/ginkgo v1.16.5
-## explicit; go 1.16
-# github.com/onsi/gomega v1.26.0
-## explicit; go 1.18
 # github.com/pborman/uuid v1.2.0
 ## explicit
 github.com/pborman/uuid
