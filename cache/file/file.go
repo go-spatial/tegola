@@ -1,8 +1,9 @@
 package file
 
 import (
+	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -28,9 +29,8 @@ func init() {
 
 // New instantiates a Cache. The config expects the following params:
 //
-// 	basepath (string): a path to where the cache will be written
-// 	max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
-//
+//	basepath (string): a path to where the cache will be written
+//	max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
 func New(config dict.Dicter) (cache.Interface, error) {
 	var err error
 
@@ -68,10 +68,11 @@ type Cache struct {
 	MaxZoom uint
 }
 
-// 	Get reads a z,x,y entry from the cache and returns the contents
+//	Get reads a z,x,y entry from the cache and returns the contents
+//
 // if there is a hit. the second argument denotes a hit or miss
 // so the consumer does not need to sniff errors for cache read misses
-func (fc *Cache) Get(key *cache.Key) ([]byte, bool, error) {
+func (fc *Cache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) {
 	path := filepath.Join(fc.Basepath, key.String())
 
 	f, err := os.Open(path)
@@ -84,7 +85,11 @@ func (fc *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	}
 	defer f.Close()
 
-	val, err := ioutil.ReadAll(f)
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
+
+	val, err := io.ReadAll(f)
 	if err != nil {
 		return nil, false, err
 	}
@@ -92,12 +97,16 @@ func (fc *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	return val, true, nil
 }
 
-func (fc *Cache) Set(key *cache.Key, val []byte) error {
+func (fc *Cache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 	var err error
 
 	// check for maxzoom
 	if key.Z > fc.MaxZoom {
 		return nil
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	// the tmpPath uses the destPath with a simple "-tmp" suffix. we're going to do
@@ -135,12 +144,16 @@ func (fc *Cache) Set(key *cache.Key, val []byte) error {
 	return os.Rename(tmpPath, destPath)
 }
 
-func (fc *Cache) Purge(key *cache.Key) error {
+func (fc *Cache) Purge(ctx context.Context, key *cache.Key) error {
 	path := filepath.Join(fc.Basepath, key.String())
 
 	// check if we have a file. if no file exists, return
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	// remove the locker key on purge

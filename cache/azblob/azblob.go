@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -34,7 +34,7 @@ const (
 )
 
 const (
-	BlobHeaderLen = 8 // bytes
+	BlobHeaderLen = 8       // bytes
 	BlobReqMaxLen = 4194304 // ~4MB
 )
 
@@ -124,10 +124,12 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		Y:         0,
 	}
 
+	ctx := context.Background()
+
 	// seperate test for read only caches
 	if azCache.ReadOnly {
 		// read test file
-		_, _, err := azCache.Get(&key)
+		_, _, err := azCache.Get(ctx, &key)
 		if err != nil {
 			return nil, cache.ErrGettingFromCache{
 				Err:       err,
@@ -136,7 +138,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		}
 	} else {
 		// write test file
-		err = azCache.Set(&key, []byte(testMsg))
+		err = azCache.Set(ctx, &key, []byte(testMsg))
 		if err != nil {
 			return nil, cache.ErrSettingToCache{
 				Err:       err,
@@ -145,7 +147,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		}
 
 		// read test file
-		byt, hit, err := azCache.Get(&key)
+		byt, hit, err := azCache.Get(ctx, &key)
 		if err != nil {
 			return nil, cache.ErrGettingFromCache{
 				Err:       err,
@@ -167,7 +169,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 			}
 		}
 
-		err = azCache.Purge(&key)
+		err = azCache.Purge(ctx, &key)
 		if err != nil {
 			return nil, cache.ErrPurgingCache{
 				Err:       err,
@@ -186,12 +188,10 @@ type Cache struct {
 	Container azblob.ContainerURL
 }
 
-func (azb *Cache) Set(key *cache.Key, val []byte) error {
+func (azb *Cache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 	if key.Z > azb.MaxZoom || azb.ReadOnly {
 		return nil
 	}
-
-	ctx := context.Background()
 
 	httpHeaders := azblob.BlobHTTPHeaders{
 		ContentType: "application/x-protobuf",
@@ -211,17 +211,14 @@ func (azb *Cache) Set(key *cache.Key, val []byte) error {
 	return nil
 }
 
-func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
+func (azb *Cache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) {
 	if key.Z > azb.MaxZoom {
 		return nil, false, nil
 	}
 
-	ctx := context.Background()
-
 	res, err := azb.makeBlob(key).
 		ToBlockBlobURL().
 		Download(ctx, 0, 0, azblob.BlobAccessConditions{}, false)
-
 
 	if err != nil {
 		// check if 404
@@ -237,7 +234,7 @@ func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	body := res.Body(azblob.RetryReaderOptions{})
 	defer body.Close()
 
-	blobSlice, err := ioutil.ReadAll(body)
+	blobSlice, err := io.ReadAll(body)
 	if err != nil {
 		return nil, false, err
 	}
@@ -245,16 +242,14 @@ func (azb *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	return blobSlice, true, nil
 }
 
-func (azb *Cache) Purge(key *cache.Key) error {
+func (azb *Cache) Purge(ctx context.Context, key *cache.Key) error {
 	if azb.ReadOnly {
 		return nil
 	}
 
-	ctx := context.Background()
-
-	_, err :=  azb.makeBlob(key).
+	_, err := azb.makeBlob(key).
 		Delete(ctx, azblob.DeleteSnapshotsOptionNone,
-		azblob.BlobAccessConditions{})
+			azblob.BlobAccessConditions{})
 
 	if err != nil {
 		return err

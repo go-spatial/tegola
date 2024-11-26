@@ -236,8 +236,9 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		Y:         0,
 	}
 
+	ctx := context.Background()
 	// write gzip encoded test file
-	if err := s3cache.Set(&key, testData); err != nil {
+	if err := s3cache.Set(ctx, &key, testData); err != nil {
 		e := cache.ErrSettingToCache{
 			CacheType: CacheType,
 			Err:       err,
@@ -247,7 +248,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 
 	// read the test file
-	_, hit, err := s3cache.Get(&key)
+	_, hit, err := s3cache.Get(ctx, &key)
 	if err != nil {
 		e := cache.ErrGettingFromCache{
 			CacheType: CacheType,
@@ -261,7 +262,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 
 	// purge the test file
-	if err := s3cache.Purge(&key); err != nil {
+	if err := s3cache.Purge(ctx, &key); err != nil {
 		e := cache.ErrPurgingCache{
 			CacheType: CacheType,
 			Err:       err,
@@ -300,7 +301,7 @@ type Cache struct {
 	ContentType string
 }
 
-func (s3c *Cache) Set(key *cache.Key, val []byte) error {
+func (s3c *Cache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 	var err error
 
 	// check for maxzoom
@@ -333,7 +334,7 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	return nil
 }
 
-func (s3c *Cache) Get(key *cache.Key) ([]byte, bool, error) {
+func (s3c *Cache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) {
 	var err error
 
 	// add our basepath
@@ -346,7 +347,7 @@ func (s3c *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 
 	// GetObjectWithContenxt is used here so the "Accept-Encoding: gzip" header can be added
 	// without this our gzip response will be decompressed by the underlying transport
-	result, err := s3c.Client.GetObjectWithContext(context.Background(), &input, func(r *request.Request) {
+	result, err := s3c.Client.GetObjectWithContext(ctx, &input, func(r *request.Request) {
 		r.HTTPRequest.Header.Add("Accept-Encoding", "gzip")
 	})
 	if err != nil {
@@ -370,7 +371,7 @@ func (s3c *Cache) Get(key *cache.Key) ([]byte, bool, error) {
 	return buf.Bytes(), true, nil
 }
 
-func (s3c *Cache) Purge(key *cache.Key) error {
+func (s3c *Cache) Purge(ctx context.Context, key *cache.Key) error {
 	var err error
 
 	// add our basepath
@@ -381,7 +382,7 @@ func (s3c *Cache) Purge(key *cache.Key) error {
 		Key:    aws.String(k),
 	}
 
-	_, err = s3c.Client.DeleteObject(&input)
+	_, err = s3c.Client.DeleteObjectWithContext(ctx, &input)
 	if err != nil {
 		return err
 	}

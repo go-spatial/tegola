@@ -1,13 +1,14 @@
 package memory
 
 import (
+	"context"
 	"sync"
 
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
 )
 
-const CacheType  = "memory"
+const CacheType = "memory"
 
 func init() {
 	cache.Register(CacheType, New)
@@ -25,7 +26,7 @@ type MemoryCache struct {
 	sync.RWMutex
 }
 
-func (mc *MemoryCache) Get(key *cache.Key) ([]byte, bool, error) {
+func (mc *MemoryCache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
@@ -37,7 +38,7 @@ func (mc *MemoryCache) Get(key *cache.Key) ([]byte, bool, error) {
 	return val, true, nil
 }
 
-func (mc *MemoryCache) Set(key *cache.Key, val []byte) error {
+func (mc *MemoryCache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 	mc.Lock()
 	defer mc.Unlock()
 
@@ -46,7 +47,7 @@ func (mc *MemoryCache) Set(key *cache.Key, val []byte) error {
 	return nil
 }
 
-func (mc *MemoryCache) Purge(key *cache.Key) error {
+func (mc *MemoryCache) Purge(ctx context.Context, key *cache.Key) error {
 	mc.Lock()
 	defer mc.Unlock()
 
