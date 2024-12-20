@@ -83,6 +83,11 @@ func TestHostName(t *testing.T) {
 			url:      "http://localhost/capabilities",
 			expected: "localhost",
 		},
+		"no host on url": {
+			// With hostname & port unset in config, expect host:port matching URL
+			url:      "/capabilities",
+			expected: "",
+		},
 	}
 
 	for name, tc := range tests {

@@ -14,21 +14,25 @@ import (
 
 func TestHandleMapStyle(t *testing.T) {
 	type tcase struct {
-		handler    http.Handler
-		uriPrefix  string
-		uri        string
-		uriPattern string
-		expected   style.Root
-	}
-
-	// config params this test relies on
-	server.HostName = &url.URL{
-		Host: serverHostName,
+		handler        http.Handler
+		uriPrefix      string
+		uri            string
+		uriPattern     string
+		serverHostName string
+		expected       style.Root
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			var err error
+
+			// config params this test relies on
+			server.HostName = nil
+			if tc.serverHostName != "" {
+				server.HostName = &url.URL{
+					Host: tc.serverHostName,
+				}
+			}
 
 			if tc.uriPrefix != "" {
 				server.URIPrefix = tc.uriPrefix
@@ -58,9 +62,10 @@ func TestHandleMapStyle(t *testing.T) {
 
 	tests := map[string]tcase{
 		"default": {
-			handler:    server.HandleMapStyle{},
-			uri:        path.Join("/maps", testMapName, "style.json"),
-			uriPattern: "/maps/:map_name/style.json",
+			handler:        server.HandleMapStyle{},
+			uri:            path.Join("/maps", testMapName, "style.json"),
+			uriPattern:     "/maps/:map_name/style.json",
+			serverHostName: serverHostName,
 			expected: style.Root{
 				Name:    testMapName,
 				Version: style.Version,
@@ -106,10 +111,11 @@ func TestHandleMapStyle(t *testing.T) {
 			},
 		},
 		"uri prefix set": {
-			handler:    server.HandleMapStyle{},
-			uriPrefix:  "/tegola",
-			uri:        path.Join("/tegola", "maps", testMapName, "style.json"),
-			uriPattern: "/tegola/maps/:map_name/style.json",
+			handler:        server.HandleMapStyle{},
+			uriPrefix:      "/tegola",
+			uri:            path.Join("/tegola", "maps", testMapName, "style.json"),
+			uriPattern:     "/tegola/maps/:map_name/style.json",
+			serverHostName: serverHostName,
 			expected: style.Root{
 				Name:    testMapName,
 				Version: style.Version,
