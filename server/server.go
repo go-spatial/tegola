@@ -143,8 +143,20 @@ func hostName(r *http.Request) *url.URL {
 		return HostName
 	}
 
-	return r.URL
+	// favor the r.URL.Host attribute in case tegola is behind a proxy
+	// https://stackoverflow.com/questions/42921567/what-is-the-difference-between-host-and-url-host-for-golang-http-request
+	if r.URL != nil && r.URL.Host != "" {
+		return r.URL
+	}
+
+	return &url.URL{
+		Host: r.Host,
+	}
 }
+
+const (
+	HeaderXForwardedProto = "X-Forwarded-Proto"
+)
 
 // various checks to determine if the request is http or https. the scheme is needed for the TileURLs
 // r.URL.Scheme can be empty if a relative request is issued from the client. (i.e. GET /foo.html)
@@ -152,9 +164,12 @@ func scheme(r *http.Request) string {
 	if ProxyProtocol != "" {
 		return ProxyProtocol
 	}
-	if r.Header.Get("X-Forwarded-Proto") != "" {
-		return r.Header.Get("X-Forwarded-Proto")
-	} else if r.TLS != nil {
+
+	if r.Header.Get(HeaderXForwardedProto) != "" {
+		return r.Header.Get(HeaderXForwardedProto)
+	}
+
+	if r.TLS != nil {
 		return "https"
 	}
 
