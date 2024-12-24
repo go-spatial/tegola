@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/proj"
 )
 
 type sTiles []slippy.Tile
@@ -70,6 +71,7 @@ func TestGenerateTilesForBounds(t *testing.T) {
 		zooms  []uint
 		bounds [4]float64
 		tiles  sTiles
+		grid   slippy.TileGridder
 		err    error
 	}
 
@@ -77,7 +79,7 @@ func TestGenerateTilesForBounds(t *testing.T) {
 		return func(t *testing.T) {
 
 			// Setup up the generator.
-			tilechannel := generateTilesForBounds(context.Background(), tc.bounds, tc.zooms)
+			tilechannel := generateTilesForBounds(context.Background(), tc.bounds, tc.zooms, tc.grid)
 			tiles := make(sTiles, 0, len(tc.tiles))
 			for tile := range tilechannel.Channel() {
 				tiles = append(tiles, tile)
@@ -125,6 +127,28 @@ func TestGenerateTilesForBounds(t *testing.T) {
 			tiles: sTiles{
 				slippy.Tile{Z: 1, X: 1},
 				slippy.Tile{Z: 1, X: 1, Y: 1},
+			},
+		},
+		"min_zoom=1 max_zoom=1 bounds=5.9,45.8,10.5,47.8 WSG84": {
+			// see: https://github.com/go-spatial/tegola/issues/880#issuecomment-2556563251
+			zooms:  []uint{10},
+			bounds: [4]float64{5.9, 45.8, 10.5, 47.8},
+			grid:   slippy.NewGrid(proj.EPSG4326, 0),
+			tiles: sTiles{
+				slippy.Tile{Z: 10, X: 528, Y: 356}, slippy.Tile{Z: 10, X: 528, Y: 357}, slippy.Tile{Z: 10, X: 528, Y: 358}, slippy.Tile{Z: 10, X: 528, Y: 359}, slippy.Tile{Z: 10, X: 528, Y: 360}, slippy.Tile{Z: 10, X: 528, Y: 361}, slippy.Tile{Z: 10, X: 528, Y: 362}, slippy.Tile{Z: 10, X: 528, Y: 363}, slippy.Tile{Z: 10, X: 528, Y: 364}, slippy.Tile{Z: 10, X: 528, Y: 365},
+				slippy.Tile{Z: 10, X: 529, Y: 356}, slippy.Tile{Z: 10, X: 529, Y: 357}, slippy.Tile{Z: 10, X: 529, Y: 358}, slippy.Tile{Z: 10, X: 529, Y: 359}, slippy.Tile{Z: 10, X: 529, Y: 360}, slippy.Tile{Z: 10, X: 529, Y: 361}, slippy.Tile{Z: 10, X: 529, Y: 362}, slippy.Tile{Z: 10, X: 529, Y: 363}, slippy.Tile{Z: 10, X: 529, Y: 364}, slippy.Tile{Z: 10, X: 529, Y: 365},
+				slippy.Tile{Z: 10, X: 530, Y: 356}, slippy.Tile{Z: 10, X: 530, Y: 357}, slippy.Tile{Z: 10, X: 530, Y: 358}, slippy.Tile{Z: 10, X: 530, Y: 359}, slippy.Tile{Z: 10, X: 530, Y: 360}, slippy.Tile{Z: 10, X: 530, Y: 361}, slippy.Tile{Z: 10, X: 530, Y: 362}, slippy.Tile{Z: 10, X: 530, Y: 363}, slippy.Tile{Z: 10, X: 530, Y: 364}, slippy.Tile{Z: 10, X: 530, Y: 365},
+				slippy.Tile{Z: 10, X: 531, Y: 356}, slippy.Tile{Z: 10, X: 531, Y: 357}, slippy.Tile{Z: 10, X: 531, Y: 358}, slippy.Tile{Z: 10, X: 531, Y: 359}, slippy.Tile{Z: 10, X: 531, Y: 360}, slippy.Tile{Z: 10, X: 531, Y: 361}, slippy.Tile{Z: 10, X: 531, Y: 362}, slippy.Tile{Z: 10, X: 531, Y: 363}, slippy.Tile{Z: 10, X: 531, Y: 364}, slippy.Tile{Z: 10, X: 531, Y: 365},
+				slippy.Tile{Z: 10, X: 532, Y: 356}, slippy.Tile{Z: 10, X: 532, Y: 357}, slippy.Tile{Z: 10, X: 532, Y: 358}, slippy.Tile{Z: 10, X: 532, Y: 359}, slippy.Tile{Z: 10, X: 532, Y: 360}, slippy.Tile{Z: 10, X: 532, Y: 361}, slippy.Tile{Z: 10, X: 532, Y: 362}, slippy.Tile{Z: 10, X: 532, Y: 363}, slippy.Tile{Z: 10, X: 532, Y: 364}, slippy.Tile{Z: 10, X: 532, Y: 365},
+				slippy.Tile{Z: 10, X: 533, Y: 356}, slippy.Tile{Z: 10, X: 533, Y: 357}, slippy.Tile{Z: 10, X: 533, Y: 358}, slippy.Tile{Z: 10, X: 533, Y: 359}, slippy.Tile{Z: 10, X: 533, Y: 360}, slippy.Tile{Z: 10, X: 533, Y: 361}, slippy.Tile{Z: 10, X: 533, Y: 362}, slippy.Tile{Z: 10, X: 533, Y: 363}, slippy.Tile{Z: 10, X: 533, Y: 364}, slippy.Tile{Z: 10, X: 533, Y: 365},
+				slippy.Tile{Z: 10, X: 534, Y: 356}, slippy.Tile{Z: 10, X: 534, Y: 357}, slippy.Tile{Z: 10, X: 534, Y: 358}, slippy.Tile{Z: 10, X: 534, Y: 359}, slippy.Tile{Z: 10, X: 534, Y: 360}, slippy.Tile{Z: 10, X: 534, Y: 361}, slippy.Tile{Z: 10, X: 534, Y: 362}, slippy.Tile{Z: 10, X: 534, Y: 363}, slippy.Tile{Z: 10, X: 534, Y: 364}, slippy.Tile{Z: 10, X: 534, Y: 365},
+				slippy.Tile{Z: 10, X: 535, Y: 356}, slippy.Tile{Z: 10, X: 535, Y: 357}, slippy.Tile{Z: 10, X: 535, Y: 358}, slippy.Tile{Z: 10, X: 535, Y: 359}, slippy.Tile{Z: 10, X: 535, Y: 360}, slippy.Tile{Z: 10, X: 535, Y: 361}, slippy.Tile{Z: 10, X: 535, Y: 362}, slippy.Tile{Z: 10, X: 535, Y: 363}, slippy.Tile{Z: 10, X: 535, Y: 364}, slippy.Tile{Z: 10, X: 535, Y: 365},
+				slippy.Tile{Z: 10, X: 536, Y: 356}, slippy.Tile{Z: 10, X: 536, Y: 357}, slippy.Tile{Z: 10, X: 536, Y: 358}, slippy.Tile{Z: 10, X: 536, Y: 359}, slippy.Tile{Z: 10, X: 536, Y: 360}, slippy.Tile{Z: 10, X: 536, Y: 361}, slippy.Tile{Z: 10, X: 536, Y: 362}, slippy.Tile{Z: 10, X: 536, Y: 363}, slippy.Tile{Z: 10, X: 536, Y: 364}, slippy.Tile{Z: 10, X: 536, Y: 365},
+				slippy.Tile{Z: 10, X: 537, Y: 356}, slippy.Tile{Z: 10, X: 537, Y: 357}, slippy.Tile{Z: 10, X: 537, Y: 358}, slippy.Tile{Z: 10, X: 537, Y: 359}, slippy.Tile{Z: 10, X: 537, Y: 360}, slippy.Tile{Z: 10, X: 537, Y: 361}, slippy.Tile{Z: 10, X: 537, Y: 362}, slippy.Tile{Z: 10, X: 537, Y: 363}, slippy.Tile{Z: 10, X: 537, Y: 364}, slippy.Tile{Z: 10, X: 537, Y: 365},
+				slippy.Tile{Z: 10, X: 538, Y: 356}, slippy.Tile{Z: 10, X: 538, Y: 357}, slippy.Tile{Z: 10, X: 538, Y: 358}, slippy.Tile{Z: 10, X: 538, Y: 359}, slippy.Tile{Z: 10, X: 538, Y: 360}, slippy.Tile{Z: 10, X: 538, Y: 361}, slippy.Tile{Z: 10, X: 538, Y: 362}, slippy.Tile{Z: 10, X: 538, Y: 363}, slippy.Tile{Z: 10, X: 538, Y: 364}, slippy.Tile{Z: 10, X: 538, Y: 365},
+				slippy.Tile{Z: 10, X: 539, Y: 356}, slippy.Tile{Z: 10, X: 539, Y: 357}, slippy.Tile{Z: 10, X: 539, Y: 358}, slippy.Tile{Z: 10, X: 539, Y: 359}, slippy.Tile{Z: 10, X: 539, Y: 360}, slippy.Tile{Z: 10, X: 539, Y: 361}, slippy.Tile{Z: 10, X: 539, Y: 362}, slippy.Tile{Z: 10, X: 539, Y: 363}, slippy.Tile{Z: 10, X: 539, Y: 364}, slippy.Tile{Z: 10, X: 539, Y: 365},
+				slippy.Tile{Z: 10, X: 540, Y: 356}, slippy.Tile{Z: 10, X: 540, Y: 357}, slippy.Tile{Z: 10, X: 540, Y: 358}, slippy.Tile{Z: 10, X: 540, Y: 359}, slippy.Tile{Z: 10, X: 540, Y: 360}, slippy.Tile{Z: 10, X: 540, Y: 361}, slippy.Tile{Z: 10, X: 540, Y: 362}, slippy.Tile{Z: 10, X: 540, Y: 363}, slippy.Tile{Z: 10, X: 540, Y: 364}, slippy.Tile{Z: 10, X: 540, Y: 365},
+				slippy.Tile{Z: 10, X: 541, Y: 356}, slippy.Tile{Z: 10, X: 541, Y: 357}, slippy.Tile{Z: 10, X: 541, Y: 358}, slippy.Tile{Z: 10, X: 541, Y: 359}, slippy.Tile{Z: 10, X: 541, Y: 360}, slippy.Tile{Z: 10, X: 541, Y: 361}, slippy.Tile{Z: 10, X: 541, Y: 362}, slippy.Tile{Z: 10, X: 541, Y: 363}, slippy.Tile{Z: 10, X: 541, Y: 364}, slippy.Tile{Z: 10, X: 541, Y: 365},
 			},
 		},
 	}

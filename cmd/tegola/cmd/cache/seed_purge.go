@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/proj"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/build"
 	gdcmd "github.com/go-spatial/tegola/internal/cmd"
@@ -41,15 +43,17 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 
 // flag parameters
 var (
-	// the amount of concurrency to use. defaults to the number of CPUs on the machine
+	// cacheConcurrency is the amount of concurrency to use. defaults to the number of CPUs on the machine
 	cacheConcurrency int
-	// cache overwrite
+	// cacheOverwrite determines if we should overwrite already existing files or skip them
 	cacheOverwrite bool
-	// bounds to cache within. default -180, -85.0511, 180, 85.0511
+	// cacheBounds is the bounds that the cache is within. defaults to -180, -85.0511, 180, 85.0511
 	cacheBounds string
-	// name of the map
+	// cacheBoundsSRID is the srid of grid system that the bounds is at. Should Default to 4326
+	cacheBoundsSRID int
+	// cacheMap is the name of the map
 	cacheMap string
-	// while seeding, on log output for tiles that take longer than this (in milliseconds) to render
+	// cacheLogThreshold is cache threshold while seeding, to log output for tiles that take longer than this (in milliseconds) to render
 	cacheLogThreshold int64
 )
 
@@ -76,6 +80,7 @@ func init() {
 	SeedPurgeCmd.PersistentFlags().Int64VarP(&cacheLogThreshold, "log-threshold", "", 0, "during seeding, only log tiles that take this number of milliseconds or longer to render (default all tiles)")
 
 	SeedPurgeCmd.Flags().StringVarP(&cacheBounds, "bounds", "", "-180,-85.0511,180,85.0511", "lng/lat bounds to seed the cache with in the format: minx, miny, maxx, maxy")
+	SeedPurgeCmd.Flags().IntVarP(&cacheBoundsSRID, "bounds-srid", "", int(proj.EPSG4326), "the srid of the grid system for bounds.")
 
 	SeedPurgeCmd.PersistentPreRunE = seedPurgeCmdValidatePersistent
 	SeedPurgeCmd.PreRunE = seedPurgeCmdValidate
@@ -143,6 +148,15 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 }
 
 func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
+	// validate the cache-bounds-srid
+	if !proj.IsKnownConversionSRID(proj.EPSGCode(cacheBoundsSRID)) {
+		var str strings.Builder
+		str.WriteString(fmt.Sprintf("SRID=%d is not a know conversion  ePSG code\n known codes are:", cacheBoundsSRID))
+		for _, code := range proj.AvailableConversions() {
+			str.WriteString(fmt.Sprintf(" %d\n", int(code)))
+		}
+		return errors.New(str.String())
+	}
 
 	// validate and set bounds flag
 	boundsParts := strings.Split(strings.TrimSpace(cacheBounds), ",")
@@ -191,19 +205,23 @@ func seedPurgeCommand(_ *cobra.Command, _ []string) (err error) {
 		}
 	}()
 
+	grid := slippy.NewGrid(proj.EPSGCode(cacheBoundsSRID), 0)
+
 	log.Info("zoom list: ", zooms)
-	tileChannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms)
+	tileChannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms, grid)
 
 	return doWork(ctx, tileChannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)
 }
 
-func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint) *TileChannel {
+func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint, grid slippy.TileGridder) *TileChannel {
 
 	tce := &TileChannel{
 		channel: make(chan slippy.Tile),
 	}
 
-	webmercatorGrid := slippy.NewGrid(3857, 0)
+	if grid == nil {
+		grid = slippy.NewGrid(proj.EPSGCode(cacheBoundsSRID), 0)
+	}
 
 	go func() {
 		defer tce.Close()
@@ -211,7 +229,7 @@ func generateTilesForBounds(ctx context.Context, bounds [4]float64, zooms []uint
 		var extent geom.Extent = bounds
 		for _, z := range zooms {
 
-			tiles, err := slippy.FromBounds(webmercatorGrid, &extent, slippy.Zoom(z))
+			tiles, err := slippy.FromBounds(grid, &extent, slippy.Zoom(z))
 			if err != nil {
 				tce.setError(fmt.Errorf("got error trying to get tiles: %w", err))
 				tce.Close()

@@ -27,7 +27,7 @@ Tegola is a vector tile server delivering [Mapbox Vector Tiles](https://github.c
 
 ```
 tegola is a vector tile server
-Version: v0.17.0
+Version: v0.21.0
 
 Usage:
   tegola [command]
