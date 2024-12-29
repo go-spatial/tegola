@@ -5,11 +5,11 @@
 <script>
 import { store, mutations } from "@/globals/store";
 import { mapSetters } from "@/globals/map";
-import ToggleTileBoundariesControl from "./MapboxControls";
+import ToggleTileBoundariesControl from "./MapControls";
 import maplibregl from "maplibre-gl";
 
 export default {
-  name: "ViewerMapbox",
+  name: "Viewer",
   mounted() {
     // build the style url
     let url = store.apiRoot + "maps/" + store.activeMap.name + "/style.json";

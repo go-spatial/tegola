@@ -5,7 +5,7 @@ export default class ToggleTileBoundariesControl {
   onAdd(map) {
     this._map = map;
     this._container = document.createElement("div");
-    this._container.className = "mapboxgl-ctrl mapboxgl-ctrl-group";
+    this._container.className = "maplibregl-ctrl maplibregl-ctrl-group";
     this._container.style.color = "#f00";
 
     // toggle the tile boundaries on / off on click
@@ -16,7 +16,7 @@ export default class ToggleTileBoundariesControl {
     // build button with grid icon
     let btn = document.createElement("button");
     btn.title = "Toggle tile boundaries";
-    btn.className = "mapboxgl-ctrl-icon mapboxgl-ctrl-toggle-tile-boundaries";
+    btn.className = "maplibregl-ctrl-icon maplibregl-ctrl-toggle-tile-boundaries";
     this._container.appendChild(btn);
 
     return this._container;
