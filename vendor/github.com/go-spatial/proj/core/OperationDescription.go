@@ -8,6 +8,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/go-spatial/proj/merror"
 )
 
@@ -58,7 +60,7 @@ func RegisterConvertLPToXY(
 
 	_, ok := OperationDescriptionTable[id]
 	if ok {
-		panic(99)
+		panic(fmt.Sprintf("duplicate operation description id '%s' : %s", id, description))
 	}
 	OperationDescriptionTable[id] = pi
 }
@@ -73,7 +75,7 @@ func (desc *OperationDescription) CreateOperation(sys *System) (IOperation, erro
 	return nil, merror.New(merror.NotYetSupported)
 }
 
-// IsConvertLPToXY returns true iff the operation can be casted to an IConvertLPToXY
+// IsConvertLPToXY returns true iff the operation can be cast to an IConvertLPToXY
 func (desc *OperationDescription) IsConvertLPToXY() bool {
 	return desc.OperationType == OperationTypeConversion &&
 		desc.InputType == CoordTypeLP &&

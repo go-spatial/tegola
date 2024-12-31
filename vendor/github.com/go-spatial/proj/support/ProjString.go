@@ -9,9 +9,9 @@ package support
 
 import (
 	"encoding/json"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 
 	"github.com/go-spatial/proj/merror"
 )
@@ -215,7 +215,7 @@ func (pl *ProjString) GetAsFloat(key string) (float64, bool) {
 }
 
 // GetAsFloats returns the value of the first occurrence of the key,
-// interpretted as comma-separated floats
+// interpreted as comma-separated floats
 func (pl *ProjString) GetAsFloats(key string) ([]float64, bool) {
 
 	value, ok := pl.get(key)
@@ -225,7 +225,7 @@ func (pl *ProjString) GetAsFloats(key string) ([]float64, bool) {
 
 	nums := strings.Split(value, ",")
 
-	floats := []float64{}
+	floats := make([]float64, 0, len(nums))
 
 	for _, num := range nums {
 		f, err := strconv.ParseFloat(num, 64)
