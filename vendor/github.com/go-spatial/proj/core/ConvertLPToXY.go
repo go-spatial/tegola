@@ -243,26 +243,28 @@ func (op *ConvertLPToXY) inverseFinalize(coo *CoordLP) (*CoordLP, error) {
 
 	sys := op.System
 
-	if sys.Left == IOUnitsAngular {
+	// if left is not in radians return the value as is.
+	if sys.Left != IOUnitsAngular {
+		return coo, nil
+	}
 
-		if sys.Right != IOUnitsAngular {
-			/* Distance from central meridian, taking system zero meridian into account */
-			coo.Lam = coo.Lam + sys.FromGreenwich + sys.Lam0
+	if sys.Right != IOUnitsAngular {
+		/* Distance from central meridian, taking system zero meridian into account */
+		coo.Lam = coo.Lam + sys.FromGreenwich + sys.Lam0
 
-			/* adjust longitude to central meridian */
-			if !sys.Over {
-				coo.Lam = support.Adjlon(coo.Lam)
-			}
-
-			if coo.Lam == math.MaxFloat64 {
-				return coo, nil
-			}
+		/* adjust longitude to central meridian */
+		if !sys.Over {
+			coo.Lam = support.Adjlon(coo.Lam)
 		}
 
-		/* If input latitude was geocentrical, convert back to geocentrical */
-		if sys.Geoc {
-			coo = GeocentricLatitude(sys, DirectionForward, coo)
+		if coo.Lam == math.MaxFloat64 {
+			return coo, nil
 		}
+	}
+
+	/* If input latitude was geocentrical, convert back to geocentrical */
+	if sys.Geoc {
+		coo = GeocentricLatitude(sys, DirectionForward, coo)
 	}
 
 	return coo, nil

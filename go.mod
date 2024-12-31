@@ -14,7 +14,7 @@ require (
 	github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
 	github.com/go-spatial/cobra v0.0.3-0.20181105183926-68194e4fbcc6
 	github.com/go-spatial/geom v0.1.0
-	github.com/go-spatial/proj v0.2.0
+	github.com/go-spatial/proj v0.3.0
 	github.com/go-test/deep v1.1.1
 	github.com/golang/protobuf v1.5.3
 	github.com/jackc/pgproto3/v2 v2.3.3
@@ -65,7 +65,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20230116083435-1de6713980de // indirect
-	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect

@@ -25,16 +25,13 @@ type EPSGCode int
 const (
 	EPSG3395                    EPSGCode = 3395
 	WorldMercator                        = EPSG3395
-	EPSG3857                             = 3857
+	EPSG3857                    EPSGCode = 3857
 	WebMercator                          = EPSG3857
-	EPSG4087                             = 4087
+	EPSG4087                    EPSGCode = 4087
 	WorldEquidistantCylindrical          = EPSG4087
-	EPSG4326                             = 4326
+	EPSG4326                    EPSGCode = 4326
 	WGS84                                = EPSG4326
 )
-
-// ensure only one person is updating our cache of converters at a time
-var cacheLock = sync.Mutex{}
 
 // Convert performs a conversion from a 4326 coordinate system (lon/lat
 // degrees, 2D) to the given projected system (x/y meters, 2D).
@@ -77,6 +74,14 @@ func Inverse(src EPSGCode, input []float64) ([]float64, error) {
 	return conv.inverse(input)
 }
 
+// CustomProjection provides write-only access to the internal projection list
+// so that projections may be added without having to modify the library code.
+func CustomProjection(code EPSGCode, str string) {
+	projStringLock.Lock()
+	projStrings[code] = str
+	projStringLock.Unlock()
+}
+
 //---------------------------------------------------------------------------
 
 // conversion holds the objects needed to perform a conversion
@@ -88,19 +93,48 @@ type conversion struct {
 	converter  core.IConvertLPToXY
 }
 
-var conversions = map[EPSGCode]*conversion{}
+var (
+	// cacheLock ensure only one person is updating our cache of converters at a time
+	cacheLock   = sync.Mutex{}
+	conversions = map[EPSGCode]*conversion{}
 
-var projStrings = map[EPSGCode]string{
-	EPSG3395: "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84",                            // TODO: support +units=m +no_defs
-	EPSG3857: "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0", // TODO: support +units=m +nadgrids=@null +wktext +no_defs
-	EPSG4087: "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84",               // TODO: support +units=m +no_defs
+	projStringLock = sync.RWMutex{}
+	projStrings    = map[EPSGCode]string{
+		EPSG3395: "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84",                            // TODO: support +units=m +no_defs
+		EPSG3857: "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0", // TODO: support +units=m +nadgrids=@null +wktext +no_defs
+		EPSG4087: "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84",               // TODO: support +units=m +no_defs
+	}
+)
+
+// AvailableConversions  returns a list of conversion that the system knows about
+func AvailableConversions() (ret []EPSGCode) {
+	projStringLock.RLock()
+	defer projStringLock.RUnlock()
+	if len(projStrings) == 0 {
+		return nil
+	}
+	ret = make([]EPSGCode, 0, len(projStrings))
+	for k := range projStrings {
+		ret = append(ret, k)
+	}
+	return ret
+}
+
+// IsKnownConversionSRID returns if we know about the conversion
+func IsKnownConversionSRID(srid EPSGCode) bool {
+	projStringLock.RLock()
+	defer projStringLock.RUnlock()
+	_, ok := projStrings[srid]
+	return ok
 }
 
 // newConversion creates a conversion object for the destination systems. If
 // such a conversion already exists in the cache, use that.
 func newConversion(dest EPSGCode) (*conversion, error) {
 
+	projStringLock.RLock()
 	str, ok := projStrings[dest]
+	projStringLock.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("epsg code is not a supported projection")
 	}

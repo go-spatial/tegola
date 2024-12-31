@@ -136,8 +136,8 @@ github.com/go-spatial/geom/encoding/wkb/internal/encode
 github.com/go-spatial/geom/encoding/wkt
 github.com/go-spatial/geom/slippy
 github.com/go-spatial/geom/winding
-# github.com/go-spatial/proj v0.2.0
-## explicit
+# github.com/go-spatial/proj v0.3.0
+## explicit; go 1.23.4
 github.com/go-spatial/proj
 github.com/go-spatial/proj/core
 github.com/go-spatial/proj/merror
@@ -308,7 +308,7 @@ golang.org/x/crypto/pbkdf2
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
 golang.org/x/exp/slices
-# golang.org/x/net v0.25.0
+# golang.org/x/net v0.33.0
 ## explicit; go 1.18
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
