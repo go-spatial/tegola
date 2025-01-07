@@ -147,12 +147,28 @@ func seedPurgeCmdValidatePersistent(cmd *cobra.Command, args []string) error {
 
 }
 
+func IsKnownSrcConversionSRID(code proj.EPSGCode) bool {
+	return code == proj.EPSG3395 ||
+		code == proj.WebMercator ||
+		code == proj.WGS84 ||
+		code == proj.WorldEquidistantCylindrical
+}
+
+func AvailableSrcConversions() []proj.EPSGCode {
+	return []proj.EPSGCode{
+		proj.EPSG3395,
+		proj.WebMercator,
+		proj.WGS84,
+		proj.WorldEquidistantCylindrical,
+	}
+}
+
 func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
 	// validate the cache-bounds-srid
-	if !proj.IsKnownConversionSRID(proj.EPSGCode(cacheBoundsSRID)) {
+	if !IsKnownSrcConversionSRID(proj.EPSGCode(cacheBoundsSRID)) {
 		var str strings.Builder
 		str.WriteString(fmt.Sprintf("SRID=%d is not a know conversion  ePSG code\n known codes are:", cacheBoundsSRID))
-		for _, code := range proj.AvailableConversions() {
+		for _, code := range AvailableSrcConversions() {
 			str.WriteString(fmt.Sprintf(" %d\n", int(code)))
 		}
 		return errors.New(str.String())
