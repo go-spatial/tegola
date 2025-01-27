@@ -199,7 +199,7 @@ func (h *BinaryHeader) IsGeometryEmpty() bool {
 	return h.flags.IsEmpty()
 }
 
-// IsStandardGeometery is the geometry a core/extended geometry type, or a user defined geometry type.
+// IsStandardGeometry is the geometry a core/extended geometry type, or a user defined geometry type.
 func (h *BinaryHeader) IsStandardGeometry() bool {
 	if h == nil {
 		return true
