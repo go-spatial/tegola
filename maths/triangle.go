@@ -579,7 +579,7 @@ func destructure(polygons [][]Line) (lines []Line) {
 // We only care about the first triangle node, as an edge can only contain two triangles.
 type aNodeList map[[2]Pt]*TriangleNode
 
-// AddTrinagleForPts will order the points, create a new Triangle and add it to the Node List.
+// AddTriangleForPts will order the points, create a new Triangle and add it to the Node List.
 func (nl aNodeList) AddTriangleForPts(pt1, pt2, pt3 Pt, fnIsConstrained func(pt1, pt2 Pt) bool) (tri *TriangleNode, err error) {
 
 	var fn = func(pt1, pt2 Pt) bool { return false }
