@@ -6,9 +6,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,11 +22,12 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/jackc/pgproto3/v2"
-	"github.com/jackc/pgtype"
-	gofrs "github.com/jackc/pgtype/ext/gofrs-uuid"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/tracelog"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -53,6 +54,7 @@ func (c connectionPoolCollector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 	stat := c.Stat()
+
 	ch <- prometheus.MustNewConstMetric(
 		c.maxConnectionDesc,
 		prometheus.GaugeValue,
@@ -70,7 +72,7 @@ func (c connectionPoolCollector) Collect(ch chan<- prometheus.Metric) {
 	)
 }
 
-func (c *connectionPoolCollector) Collectors(prefix string, _ func(configKey string) map[string]interface{}) ([]observability.Collector, error) {
+func (c *connectionPoolCollector) Collectors(prefix string, _ func(configKey string) map[string]any) ([]observability.Collector, error) {
 	if c == nil {
 		return nil, nil
 	}
@@ -101,6 +103,7 @@ func (c *connectionPoolCollector) Collectors(prefix string, _ func(configKey str
 		nil,
 		prometheus.Labels{"provider_name": c.providerName},
 	)
+
 	return []observability.Collector{c}, nil
 }
 
@@ -126,7 +129,10 @@ type Provider struct {
 	queryHistogramSeconds            *prometheus.HistogramVec
 }
 
-func (p *Provider) Collectors(prefix string, cfgFn func(configKey string) map[string]interface{}) ([]observability.Collector, error) {
+func (p *Provider) Collectors(
+	prefix string,
+	cfgFn func(configKey string) map[string]interface{},
+) ([]observability.Collector, error) {
 	if p.collectorsRegistered {
 		return nil, nil
 	}
@@ -170,7 +176,8 @@ const (
 	stdSQL = `SELECT %[1]v FROM %[2]v WHERE "%[3]v" && ` + conf.BboxToken
 	mvtSQL = `SELECT %[1]v FROM %[2]v`
 
-	// SQL to get the column names, without hitting the information_schema. Though it might be better to hit the information_schema.
+	// SQL to get the column names, without hitting the information_schema.
+	// Though it might be better to hit the information_schema.
 	fldsSQL = `SELECT * FROM %[1]v LIMIT 0;`
 )
 
@@ -207,12 +214,7 @@ const (
 // case-insensitive and ignoring any preceding whitespace and SQL comments.
 var isSelectQuery = regexp.MustCompile(`(?i)^((\s*)(--.*\n)?)*select`)
 
-type hstoreOID struct {
-	OID     uint32
-	hasInit bool
-}
-
-// validateURI validates for minimum requirements for a valid postgresql uri
+// validateURI validates for minimum requirements for a valid postgresql uri.
 func validateURI(u string) error {
 	uri, err := url.Parse(u)
 	if err != nil {
@@ -249,9 +251,8 @@ func validateURI(u string) error {
 	return nil
 }
 
-// BuildURI creates a database URI from config
+// BuildURI creates a database URI from config.
 func BuildURI(config dict.Dicter) (*url.URL, *url.Values, error) {
-
 	sslmode := DefaultSSLMode
 	sslmode, err := config.String(ConfigKeySSLMode, &sslmode)
 	if err != nil {
@@ -315,45 +316,38 @@ func BuildDBConfig(opts *DBConfigOptions) (*pgxpool.Config, error) {
 		return nil, err
 	}
 
-	dbconfig.ConnConfig.LogLevel = pgx.LogLevelWarn
 	dbconfig.ConnConfig.RuntimeParams = opts.GetRuntimeParams()
-	var hstore hstoreOID
+
+	// NOTE: reflects previous pgx/v4 behaviour of passing pgx.loglevelwarn
+	logAdapter := NewLoggerAdapter()
+	tracer := &tracelog.TraceLog{
+		Logger:   logAdapter,
+		LogLevel: tracelog.LogLevelWarn,
+	}
+	dbconfig.ConnConfig.Tracer = tracer
+
+	var hstoreOID uint32
 
 	dbconfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-		// The AfterConnect call runs everytime a new connection is acquired,
-		// including everytime the connection pool expands. The hstore OID
-		// is not constant, so we lookup the OID once per provider and store it.
-		// Extensions have to be registered for every new connection.
-
-		if !hstore.hasInit {
-			row := conn.QueryRow(ctx, "SELECT oid FROM pg_type WHERE typname = 'hstore';")
-			if err = row.Scan(&hstore.OID); err != nil {
-				switch {
-				case errors.Is(err, pgx.ErrNoRows):
-					// do nothing, because query can be empty if hstore is not installed
-					break
-				default:
-					return fmt.Errorf("error fetching hstore oid: %w", err)
-				}
+		row := conn.QueryRow(ctx, "SELECT oid FROM pg_type WHERE typname = 'hstore';")
+		if err = row.Scan(&hstoreOID); err != nil {
+			switch {
+			case errors.Is(err, pgx.ErrNoRows):
+				// do nothing, because query can be empty if hstore is not installed
+				break
+			default:
+				return fmt.Errorf("error fetching hstore oid: %w", err)
 			}
-			hstore.hasInit = true
 		}
 
-		// dont register hstore data type if hstore extension is not installed
-		if hstore.OID != 0 {
-			conn.ConnInfo().RegisterDataType(pgtype.DataType{
-				Value: &pgtype.Hstore{},
-				Name:  "hstore",
-				OID:   hstore.OID,
-			})
-		}
+		conn.TypeMap().RegisterType(&pgtype.Type{
+			Name:  "hstore",
+			OID:   hstoreOID,
+			Codec: pgtype.HstoreCodec{},
+		})
 
 		// register UUID type, see https://github.com/jackc/pgx/wiki/UUID-Support
-		conn.ConnInfo().RegisterDataType(pgtype.DataType{
-			Value: &gofrs.UUID{},
-			Name:  "uuid",
-			OID:   pgtype.UUIDOID,
-		})
+		pgxuuid.Register(conn.TypeMap())
 
 		return nil
 	}
@@ -451,7 +445,7 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 		name:   name,
 	}
 
-	pool, err := pgxpool.ConnectConfig(context.Background(), &p.config)
+	pool, err := pgxpool.NewWithConfig(context.Background(), &p.config)
 	if err != nil {
 		return nil, fmt.Errorf("failed while creating connection pool: %w", err)
 	}
@@ -523,7 +517,7 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 			log.Debugf("both %v and %v field are specified for layer (%v) %v, using only %[2]v field.", ConfigKeyTablename, ConfigKeySQL, i, lName)
 		}
 
-		var lsrid = srid
+		lsrid := srid
 		if lsrid, err = layer.Int(ConfigKeySRID, &lsrid); err != nil {
 			return nil, err
 		}
@@ -608,7 +602,6 @@ func CreateProvider(config dict.Dicter, maps []provider.Map, providerType string
 
 // ConfigTLS is derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
 func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string, cc *pgxpool.Config) error {
-
 	switch sslMode {
 	case "disable":
 		cc.ConnConfig.TLSConfig = nil
@@ -630,7 +623,7 @@ func ConfigTLS(sslMode string, sslKey string, sslCert string, sslRootCert string
 	if sslRootCert != "" {
 		caCertPool := x509.NewCertPool()
 
-		caCert, err := ioutil.ReadFile(sslRootCert)
+		caCert, err := os.ReadFile(sslRootCert)
 		if err != nil {
 			return fmt.Errorf("unable to read CA file (%q): %w", sslRootCert, err)
 		}
@@ -788,7 +781,7 @@ func (p *Provider) Layer(name string) (Layer, bool) {
 
 // Layers returns meta data about the various layers which are configured with the provider
 func (p Provider) Layers() ([]provider.LayerInfo, error) {
-	var ls []provider.LayerInfo
+	ls := []provider.LayerInfo{}
 
 	for i := range p.layers {
 		ls = append(ls, p.layers[i])
@@ -798,8 +791,13 @@ func (p Provider) Layers() ([]provider.LayerInfo, error) {
 }
 
 // TileFeatures adheres to the provider.Tiler interface
-func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.Tile, params provider.Params, fn func(f *provider.Feature) error) error {
-
+func (p Provider) TileFeatures(
+	ctx context.Context,
+	layer string,
+	tile provider.Tile,
+	params provider.Params,
+	fn func(f *provider.Feature) error,
+) error {
 	var mapName string
 	{
 		mapNameVal := ctx.Value(observability.ObserveVarMapName)
@@ -849,7 +847,7 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	// when using ctxErr, it's import to make sure the defer rows.Close()
 	// statement happens before the error check. The context may have been
 	// canceled, but rows were also returned. If we don't close the rows
-	// the the provider can't clean up the pool and the process will hang
+	// the provider can't clean up the pool and the process will hang
 	// trying to clean itself up.
 	defer rows.Close()
 	if err := ctxErr(ctx, err); err != nil {
@@ -857,8 +855,10 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	}
 
 	// fieldDescriptions
-	var fdescs []pgproto3.FieldDescription
+	var fdescs []pgconn.FieldDescription
+
 	reportedLayerFieldName := ""
+
 	for rows.Next() {
 		// context check
 		if err := ctx.Err(); err != nil {
@@ -869,14 +869,18 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 		// returned to aid in decoding. This only needs to be done once.
 		if fdescs == nil {
 			fdescs = rows.FieldDescriptions()
+
 			// loop our field descriptions looking for the geometry field
 			var geomFieldFound bool
+
 			for i := range fdescs {
 				if string(fdescs[i].Name) == plyr.GeomFieldName() {
 					geomFieldFound = true
+
 					break
 				}
 			}
+
 			if !geomFieldFound {
 				return ErrGeomFieldNotFound{
 					GeomFieldName: plyr.GeomFieldName(),
@@ -907,12 +911,15 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 			switch err.(type) {
 			case wkb.ErrUnknownGeometryType:
 				rplfn := layer + ":" + plyr.GeomFieldName()
-				// Only report to the log once. This is to prevent the logs from filling up if there are many geometries in the layer
+				// Only report to the log once.
+				// This is to prevent the logs from filling up if there are many geometries in the layer
 				if reportedLayerFieldName == "" || reportedLayerFieldName == rplfn {
 					reportedLayerFieldName = rplfn
 					log.Warnf("Ignoring unsupported geometry in layer (%v). Only basic 2D geometry type are supported. Try using `ST_Force2D(%v)`.", layer, plyr.GeomFieldName())
 				}
+
 				continue
+
 			default:
 				return fmt.Errorf("unable to decode layer (%v) geometry field (%v) into wkb where (%v = %v): %w", layer, plyr.GeomFieldName(), plyr.IDFieldName(), gid, err)
 			}
@@ -934,7 +941,12 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 	return rows.Err()
 }
 
-func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params provider.Params, layers []provider.Layer) ([]byte, error) {
+func (p Provider) MVTForLayers(
+	ctx context.Context,
+	tile provider.Tile,
+	params provider.Params,
+	layers []provider.Layer,
+) ([]byte, error) {
 	var (
 		err     error
 		sqls    = make([]string, 0, len(layers))
@@ -993,8 +1005,11 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params p
 		))
 	}
 	subsqls := strings.Join(sqls, "||")
+
 	fsql := fmt.Sprintf(`SELECT (%s) AS data`, subsqls)
-	var data pgtype.Bytea
+
+	var data []byte
+
 	if debugExecuteSQL {
 		log.Debugf("%s:%s: %v", EnvSQLDebugName, EnvSQLDebugExecute, fsql)
 	}
@@ -1016,7 +1031,7 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params p
 		if err != nil {
 			log.Errorf("%s:%s: returned error %v", EnvSQLDebugName, EnvSQLDebugExecute, err)
 		} else {
-			log.Debugf("%s:%s: returned %v bytes", EnvSQLDebugName, EnvSQLDebugExecute, len(data.Bytes))
+			log.Debugf("%s:%s: returned %v bytes", EnvSQLDebugName, EnvSQLDebugExecute, len(data))
 		}
 	}
 
@@ -1024,7 +1039,8 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params p
 	if err := ctxErr(ctx, err); err != nil {
 		return []byte{}, err
 	}
-	return data.Bytes, nil
+
+	return data, nil
 }
 
 // Close will close the Provider's database connectio

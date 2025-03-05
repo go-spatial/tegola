@@ -1,15 +1,14 @@
 package postgis_test
 
 import (
-	"testing"
-
 	"context"
+	"testing"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/ttools"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/postgis"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestDBConfig(t *testing.T) {
@@ -84,7 +83,6 @@ func TestTLSConfig(t *testing.T) {
 			DefaultTransactionReadOnly: "TRUE",
 			ApplicationName:            "tegola",
 		})
-
 	if err != nil {
 		t.Fatalf("unable to build db config: %v", err)
 	}
