@@ -75,7 +75,7 @@ func ParseKey(str string) (*Key, error) {
 			val:  zxy[0],
 		}
 
-		log.Printf(err.Error())
+		log.Printf("cache: invalid file key: %s", err.Error())
 		return nil, err
 	}
 
@@ -90,7 +90,7 @@ func ParseKey(str string) (*Key, error) {
 			val:  zxy[1],
 		}
 
-		log.Printf(err.Error())
+		log.Printf("cache: invalid file key: %s", err.Error())
 		return nil, err
 	}
 
@@ -106,7 +106,7 @@ func ParseKey(str string) (*Key, error) {
 			val:  zxy[2],
 		}
 
-		log.Printf(err.Error())
+		log.Printf("cache: invalid file key: %s", err.Error())
 		return nil, err
 	}
 	key.Y = uint(placeholder)
