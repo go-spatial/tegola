@@ -5,29 +5,6 @@ jobs:
     name: Test on Ubuntu
     runs-on: ubuntu-22.04
 
-    services:
-      # label used to access the service container
-      postgis:
-        # docker hub image
-        image: postgis/postgis:12-3.0-alpine
-        env:
-          # set the master password for the instance
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
-        options: --entrypoint redis-server
-
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -45,19 +22,8 @@ jobs:
           echo ${HOME}
           echo ${GITHUB_WORKSPACE}
 
-      - name: Load Postgres test data
-        env:
-          TEST_DATA_URL: https://raw.githubusercontent.com/go-spatial/tegola-testdata/master/tegola.dump
-          TEST_DATA: tegola.backup
-          PGUSER: postgres
-          PGHOST: localhost
-          PGDATABASE: postgres
-          PGPASSWORD: postgres
-        run: |
-          curl ${TEST_DATA_URL} > ${TEST_DATA}
-          pg_restore -d postgres -C ${TEST_DATA}
-          psql -c "CREATE ROLE tegola_no_access LOGIN PASSWORD 'postgres'"
-          rm ${TEST_DATA}
+      - name: Setup test environment
+        run: docker compose up -d
 
       - name: Postgres Debug
         env:
@@ -107,6 +73,9 @@ jobs:
           pushd ${GITHUB_WORKSPACE}/server
           go generate ./...
           popd
+
+      - name: Tear down test environment
+        run: docker compose down
 
   govulncheck:
     name: Run govulncheck
