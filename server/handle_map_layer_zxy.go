@@ -123,7 +123,7 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m, err := req.Atlas.Map(req.mapName)
 	if err != nil {
 		errMsg := fmt.Sprintf("map (%v) not configured. check your config file", req.mapName)
-		log.Errorf(errMsg)
+		log.Error(errMsg)
 		http.Error(w, errMsg, http.StatusNotFound)
 		return
 	}

@@ -104,7 +104,7 @@ func InstrumentAPIHandler(method, route string, observer APIObserver, handler ht
 	return method, route, observer.InstrumentedAPIHttpHandler(method, route, handler)
 }
 
-// InstrumentViewHandler is a convenience  function
+// InstrumentViewerHandler is a convenience  function
 func InstrumentViewerHandler(method, route string, observer ViewerObserver, handler http.Handler) (string, string, http.Handler) {
 	if observer == nil {
 		return method, route, handler
