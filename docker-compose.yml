@@ -32,7 +32,9 @@ services:
     environment:
       PGUSER: postgres
       PGPASSWORD: postgres
-    command: 
+    volumes:
+      - ./testdata:/testdata
+    command:
       - /bin/bash
       - -c
       - |
@@ -40,6 +42,7 @@ services:
         psql -h postgis -p 5432 -U postgres -d postgres -c "DROP DATABASE IF EXISTS tegola;"
         pg_restore -h postgis -p 5432 -U postgres -d postgres -C tegola.dump
         psql -h postgis -U postgres -d postgres -c "DROP ROLE IF EXISTS tegola_no_access;CREATE ROLE tegola_no_access LOGIN PASSWORD 'postgres'"
+        psql -h postgis -U postgres -d tegola -f ./testdata/postgis-add-test-tags-table.sql
         rm tegola.dump
 
 
