@@ -134,7 +134,7 @@ type Provider struct {
 
 func (p *Provider) Collectors(
 	prefix string,
-	cfgFn func(configKey string) map[string]interface{},
+	cfgFn func(configKey string) map[string]any,
 ) ([]observability.Collector, error) {
 	if p.collectorsRegistered {
 		return nil, nil
@@ -822,7 +822,7 @@ func (p Provider) inspectLayerGeomType(pname string, l *Layer, maps []provider.M
 	// substitute default values to parameter
 	params := extractQueryParamValues(pname, maps, l)
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	sql = params.ReplaceParams(sql, &args)
 
 	if provider.ParameterTokenRegexp.MatchString(sql) {
@@ -934,7 +934,7 @@ func (p Provider) TileFeatures(
 	}
 
 	// replace configured query parameters if any
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	sql = params.ReplaceParams(sql, &args)
 	if err != nil {
 		return err
@@ -1089,7 +1089,7 @@ func (p Provider) MVTForLayers(
 		}
 	}
 
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 
 	for i := range layers {
 		if debug {
