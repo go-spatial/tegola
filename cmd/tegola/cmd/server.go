@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/go-spatial/cobra"
@@ -55,7 +56,8 @@ var serverCmd = &cobra.Command{
 			val := fmt.Sprintf("%v", value)
 			// check that we have a value set
 			if val == "" {
-				log.Fatalf("webserver.header (%v) has no configured value", val)
+				log.Errorf("webserver.header (%v) has no configured value", val)
+				os.Exit(1)
 			}
 
 			server.Headers[name] = val
@@ -72,12 +74,14 @@ var serverCmd = &cobra.Command{
 		if conf.Webserver.SSLCert+conf.Webserver.SSLKey != "" {
 			if conf.Webserver.SSLCert == "" {
 				// error
-				log.Fatal("config must have both or nether ssl_key and ssl_cert, missing ssl_cert")
+				log.Error("config must have both or nether ssl_key and ssl_cert, missing ssl_cert")
+				os.Exit(1)
 			}
 
 			if conf.Webserver.SSLKey == "" {
 				// error
-				log.Fatal("config must have both or nether ssl_key and ssl_cert, missing ssl_key")
+				log.Error("config must have both or nether ssl_key and ssl_cert, missing ssl_key")
+				os.Exit(1)
 			}
 
 			server.SSLCert = string(conf.Webserver.SSLCert)
@@ -89,7 +93,6 @@ var serverCmd = &cobra.Command{
 		shutdown(srv)
 		<-gdcmd.Cancelled()
 		gdcmd.Complete()
-
 	},
 }
 

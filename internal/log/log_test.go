@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStackTraceHandler_TableDriven(t *testing.T) {
+func TestStackTraceHandler(t *testing.T) {
 	testCases := []struct {
 		name        string
 		level       slog.Level
