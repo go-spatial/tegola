@@ -214,6 +214,8 @@ github.com/jackc/puddle/v2/internal/genstack
 # github.com/jmespath/go-jmespath v0.3.0
 ## explicit; go 1.14
 github.com/jmespath/go-jmespath
+# github.com/kr/text v0.2.0
+## explicit
 # github.com/mattn/go-sqlite3 v1.14.22
 ## explicit; go 1.19
 github.com/mattn/go-sqlite3
@@ -282,21 +284,6 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# go.uber.org/atomic v1.7.0
-## explicit; go 1.13
-go.uber.org/atomic
-# go.uber.org/multierr v1.6.0
-## explicit; go 1.12
-go.uber.org/multierr
-# go.uber.org/zap v1.21.0
-## explicit; go 1.13
-go.uber.org/zap
-go.uber.org/zap/buffer
-go.uber.org/zap/internal/bufferpool
-go.uber.org/zap/internal/color
-go.uber.org/zap/internal/exit
-go.uber.org/zap/zapcore
-go.uber.org/zap/zaptest/observer
 # golang.org/x/crypto v0.31.0
 ## explicit; go 1.20
 golang.org/x/crypto/pbkdf2

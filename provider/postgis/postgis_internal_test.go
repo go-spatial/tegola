@@ -399,6 +399,8 @@ func TestBuildUri(t *testing.T) {
 }
 
 func TestPGXOnNotice(t *testing.T) {
+	ttools.ShouldSkip(t, TESTENV)
+
 	tc := &TCConfig{}
 	c := tc.Config(DefaultConfig)
 	uri, _, err := BuildURI(c)
