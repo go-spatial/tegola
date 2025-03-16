@@ -25,7 +25,6 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/theckman/goconstraint v1.10.1-0.20180216224824-e867bde6e4e1
-	go.uber.org/zap v1.21.0
 	gopkg.in/go-playground/colors.v1 v1.0.2-0.20150924111726-b53ecfb39623
 )
 
@@ -51,6 +50,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.39.0 // indirect
@@ -58,8 +58,6 @@ require (
 	github.com/rogpeppe/go-internal v1.14.0 // indirect
 	github.com/spf13/pflag v1.0.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20230116083435-1de6713980de // indirect
 	golang.org/x/net v0.33.0 // indirect
