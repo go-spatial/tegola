@@ -3,11 +3,16 @@ package log
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"runtime/debug"
 	"strings"
 )
+
+// LevelSilent is a custom log level for which
+// the output writer is io.Discard
+const LevelSilent = -8
 
 // NewLogger returns a new tegola JSON logger.
 func NewLogger(lvl slog.Level, options ...func(opts *slog.HandlerOptions)) *slog.Logger {
@@ -22,9 +27,14 @@ func NewLogger(lvl slog.Level, options ...func(opts *slog.HandlerOptions)) *slog
 		opt(handlerOptions)
 	}
 
+	var w io.Writer = os.Stderr
+	if lvl == LevelSilent {
+		w = io.Discard
+	}
+
 	// Create a base handler that outputs to stderr.
 	// The AddSource option includes file and line info in each log record.
-	baseHandler := slog.NewJSONHandler(os.Stderr, handlerOptions)
+	baseHandler := slog.NewJSONHandler(w, handlerOptions)
 
 	// Wrap the base handler with our custom handler to add stack traces for errors.
 	handler := NewHandler(baseHandler)
@@ -78,7 +88,7 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 }
 
 // ParseLogLevel converts the provided log level string to the corresponding slog.Level.
-// Supported values are "debug", "info", "warn", and "error". If the input does not match
+// Supported values are "debug", "info", "warn", "error" and "silent". If the input does not match
 // any supported level, the function defaults to slog.LevelInfo.
 func ParseLogLevel(level string) slog.Level {
 	switch strings.ToLower(level) {
@@ -90,6 +100,8 @@ func ParseLogLevel(level string) slog.Level {
 		return slog.LevelWarn
 	case "error":
 		return slog.LevelError
+	case "silent":
+		return LevelSilent
 	default:
 		return slog.LevelInfo
 	}
