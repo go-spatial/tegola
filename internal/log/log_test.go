@@ -32,7 +32,7 @@ func TestStackTraceHandler(t *testing.T) {
 				AddSource: true,
 			})
 			handler := log.NewHandler(baseHandler)
-			logger := slog.New(handler)
+			logger := slog.New(handler).WithGroup("testGroup").With("foo", "bar")
 
 			// Log based on level.
 			switch tc.level {
@@ -53,9 +53,17 @@ func TestStackTraceHandler(t *testing.T) {
 				if !strings.Contains(output, "stack") {
 					t.Fatal("expect stack in log")
 				}
+
+				if tc.level != log.LevelSilent && !strings.Contains(output, "testGroup") {
+					t.Fatal("expect testGroup in log")
+				}
 			} else {
 				if strings.Contains(output, "stack") {
 					t.Fatal("did not expect stack to be in log")
+				}
+
+				if tc.level != log.LevelSilent && !strings.Contains(output, "testGroup") {
+					t.Fatal("expect testGroup in log")
 				}
 			}
 		})
