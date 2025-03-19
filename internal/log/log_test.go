@@ -21,7 +21,6 @@ func TestStackTraceHandler(t *testing.T) {
 		{name: "Info", level: slog.LevelInfo, message: "info", expectStack: false},
 		{name: "Warn", level: slog.LevelWarn, message: "warn", expectStack: false},
 		{name: "Error", level: slog.LevelError, message: "error", expectStack: true},
-		// TODO: test silent separately
 		{name: "Silent", level: log.LevelSilent, message: "error", expectStack: false},
 	}
 

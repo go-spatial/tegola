@@ -3,15 +3,14 @@ package log
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"runtime/debug"
 	"strings"
 )
 
-// LevelSilent is a custom log level for which
-// the output writer is io.Discard
+// LevelSilent is a custom log level that will not
+// generate any logs.
 const LevelSilent = -8
 
 // NewLogger returns a new tegola JSON logger.
@@ -27,14 +26,9 @@ func NewLogger(lvl slog.Level, options ...func(opts *slog.HandlerOptions)) *slog
 		opt(handlerOptions)
 	}
 
-	var w io.Writer = os.Stderr
-	if lvl == LevelSilent {
-		w = io.Discard
-	}
-
 	// Create a base handler that outputs to stderr.
 	// The AddSource option includes file and line info in each log record.
-	baseHandler := slog.NewJSONHandler(w, handlerOptions)
+	baseHandler := slog.NewJSONHandler(os.Stderr, handlerOptions)
 
 	// Wrap the base handler with our custom handler to add stack traces for errors.
 	handler := NewHandler(baseHandler)
