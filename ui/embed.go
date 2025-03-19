@@ -4,12 +4,14 @@ import (
 	"embed"
 	"io/fs"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/go-spatial/tegola/internal/log"
 )
 
-//Embed UI dist Folder recursively
+// Embed UI dist Folder recursively
+//
 //go:embed dist/*
 var dist embed.FS
 
@@ -27,7 +29,8 @@ func GetDistFileSystem() http.FileSystem {
 func GetDistFS() fs.FS {
 	distFS, err := fs.Sub(dist, distDir)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		os.Exit(1)
 	}
 	return distFS
 }

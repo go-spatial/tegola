@@ -19,11 +19,9 @@ import (
 	"github.com/go-spatial/tegola/server"
 )
 
-var (
-	// mux is a reference to the http muxer. it's stored as a package
-	// var so we can take advantage of Lambda's "Global State".
-	mux *httptreemux.TreeMux
-)
+// mux is a reference to the http muxer. it's stored as a package
+// var so we can take advantage of Lambda's "Global State".
+var mux *httptreemux.TreeMux
 
 const DefaultConfLocation = "config.toml"
 
@@ -50,12 +48,14 @@ func init() {
 	// read our config
 	conf, err := config.Load(confLocation)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		os.Exit(1)
 	}
 
 	// validate our config
 	if err = conf.Validate(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		os.Exit(1)
 	}
 
 	// init our providers
@@ -68,12 +68,14 @@ func init() {
 	// register the providers
 	providers, err := register.Providers(provArr, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		os.Exit(1)
 	}
 
 	// register the maps
 	if err = register.Maps(nil, conf.Maps, providers); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		os.Exit(1)
 	}
 
 	// check if a cache backend is provided
@@ -81,7 +83,8 @@ func init() {
 		// register the cache backend
 		cache, err := register.Cache(conf.Cache)
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
+			os.Exit(1)
 		}
 		if cache != nil {
 			atlas.SetCache(cache)
@@ -101,7 +104,8 @@ func init() {
 		val := fmt.Sprintf("%v", value)
 		// check that we have a value set
 		if val == "" {
-			log.Fatalf("webserver.header (%v) has no configured value", val)
+			log.Errorf("webserver.header (%v) has no configured value", val)
+			os.Exit(1)
 		}
 
 		server.Headers[name] = val
