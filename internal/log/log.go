@@ -4,9 +4,34 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"runtime/debug"
 	"strings"
 )
+
+// NewLogger returns a new tegola JSON logger.
+func NewLogger(lvl slog.Level, options ...func(opts *slog.HandlerOptions)) *slog.Logger {
+	handlerOptions := &slog.HandlerOptions{
+		Level: lvl,
+		// TODO: enable once we switch to slog.Default
+		// instead of internal/log methods
+		AddSource: false,
+	}
+
+	for _, opt := range options {
+		opt(handlerOptions)
+	}
+
+	// Create a base handler that outputs to stderr.
+	// The AddSource option includes file and line info in each log record.
+	baseHandler := slog.NewJSONHandler(os.Stderr, handlerOptions)
+
+	// Wrap the base handler with our custom handler to add stack traces for errors.
+	handler := NewHandler(baseHandler)
+	logger := slog.New(handler)
+
+	return logger
+}
 
 // NewHandler returns a new custom slog.Handler that wraps the provided baseHandler.
 // The returned handler augments error-level logs by appending a stack trace.

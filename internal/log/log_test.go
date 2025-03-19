@@ -1,4 +1,4 @@
-package log
+package log_test
 
 import (
 	"bytes"
@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/go-spatial/tegola/internal/log"
 )
 
 func TestStackTraceHandler(t *testing.T) {
@@ -29,7 +31,7 @@ func TestStackTraceHandler(t *testing.T) {
 				Level:     slog.LevelDebug,
 				AddSource: true,
 			})
-			handler := &Handler{handler: baseHandler}
+			handler := log.NewHandler(baseHandler)
 			logger := slog.New(handler)
 
 			// Log based on level.

@@ -68,18 +68,7 @@ func initConfig(configFile string, cacheRequired bool, logLevel string) (err err
 	// Parse the provided log level; default to INFO if parsing fails.
 	lvl := log.ParseLogLevel(logLevel)
 
-	// Create a base text handler that outputs to stderr.
-	// The AddSource option includes file and line info in each log record.
-	baseHandler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level: lvl,
-		// TODO: enable once we switch to slog.Default
-		// instead of internal/log methods
-		AddSource: false,
-	})
-
-	// Wrap the base handler with our custom handler to add stack traces for errors.
-	handler := log.NewHandler(baseHandler)
-	logger := slog.New(handler).
+	logger := log.NewLogger(lvl).
 		WithGroup("tegola").
 		With("version", build.Version, "pid", os.Getpid(), "rev", build.GitRevision)
 
