@@ -81,7 +81,7 @@ func initConfig(configFile string, cacheRequired bool, logLevel string) (err err
 	handler := log.NewHandler(baseHandler)
 	logger := slog.New(handler).
 		WithGroup("tegola").
-		With("version", build.Version, "pid", os.Getpid())
+		With("version", build.Version, "pid", os.Getpid(), "rev", build.GitRevision)
 
 	// set out logger as the new default slog logger
 	slog.SetDefault(logger)
