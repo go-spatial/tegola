@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/go-spatial/tegola/internal/log"
 )
@@ -52,9 +51,13 @@ func TestStackTraceHandler(t *testing.T) {
 
 			output := buf.String()
 			if tc.expectStack {
-				require.Contains(t, output, "stack", "Error log should include a stack trace")
+				if !strings.Contains(output, "stack") {
+					t.Fatal("expect stack in log")
+				}
 			} else {
-				require.NotContains(t, output, "stack", "Non-error log should not include a stack trace")
+				if strings.Contains(output, "stack") {
+					t.Fatal("did not expect stack to be in log")
+				}
 			}
 		})
 	}
