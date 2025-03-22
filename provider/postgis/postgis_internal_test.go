@@ -1,6 +1,7 @@
 package postgis
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"strings"
@@ -10,14 +11,16 @@ import (
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
 	"github.com/go-spatial/tegola/provider"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // TESTENV is the environment variable that must be set to "yes" to run postgis tests.
 const TESTENV = "RUN_POSTGIS_TESTS"
 
-var DefaultEnvConfig map[string]interface{}
+var DefaultEnvConfig map[string]any
 
-var DefaultConfig map[string]interface{} = map[string]interface{}{
+var DefaultConfig map[string]any = map[string]any{
 	ConfigKeyURI:         "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable",
 	ConfigKeySSLMode:     "disable",
 	ConfigKeySSLKey:      "",
@@ -25,9 +28,12 @@ var DefaultConfig map[string]interface{} = map[string]interface{}{
 	ConfigKeySSLRootCert: "",
 }
 
-func getConfigFromEnv() map[string]interface{} {
-	return map[string]interface{}{
-		ConfigKeyURI:         ttools.GetEnvDefault("PGURI", "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable"),
+func getConfigFromEnv() map[string]any {
+	return map[string]any{
+		ConfigKeyURI: ttools.GetEnvDefault(
+			"PGURI",
+			"postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable",
+		),
 		ConfigKeySSLMode:     ttools.GetEnvDefault("PGSSLMODE", "disable"),
 		ConfigKeySSLKey:      ttools.GetEnvDefault("PGSSLKEY", ""),
 		ConfigKeySSLCert:     ttools.GetEnvDefault("PGSSLCERT", ""),
@@ -40,17 +46,17 @@ func init() {
 }
 
 type TCConfig struct {
-	BaseConfig     map[string]interface{}
-	ConfigOverride map[string]interface{}
-	LayerConfig    []map[string]interface{}
+	BaseConfig     map[string]any
+	ConfigOverride map[string]any
+	LayerConfig    []map[string]any
 }
 
-func (cfg TCConfig) Config(mConfig map[string]interface{}) dict.Dict {
-	var config map[string]interface{}
+func (cfg TCConfig) Config(mConfig map[string]any) dict.Dict {
+	var config map[string]any
 	if cfg.BaseConfig != nil {
 		mConfig = cfg.BaseConfig
 	}
-	config = make(map[string]interface{}, len(mConfig))
+	config = make(map[string]any, len(mConfig))
 	for k, v := range mConfig {
 		config[k] = v
 	}
@@ -61,7 +67,7 @@ func (cfg TCConfig) Config(mConfig map[string]interface{}) dict.Dict {
 	}
 
 	if len(cfg.LayerConfig) > 0 {
-		layerConfig, _ := config[ConfigKeyLayers].([]map[string]interface{})
+		layerConfig, _ := config[ConfigKeyLayers].([]map[string]any)
 		layerConfig = append(layerConfig, cfg.LayerConfig...)
 		config[ConfigKeyLayers] = layerConfig
 	}
@@ -117,7 +123,7 @@ func TestMVTProviders(t *testing.T) {
 	tests := map[string]tcase{
 		"1": {
 			TCConfig: TCConfig{
-				LayerConfig: []map[string]interface{}{
+				LayerConfig: []map[string]any{
 					{
 						ConfigKeyGeomIDField: "gid",
 						ConfigKeyGeomType:    "multipolygon",
@@ -136,11 +142,9 @@ func TestMVTProviders(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
 	}
-
 }
 
 func TestLayerGeomType(t *testing.T) {
-
 	ttools.ShouldSkip(t, TESTENV)
 
 	type tcase struct {
@@ -180,7 +184,7 @@ func TestLayerGeomType(t *testing.T) {
 	tests := map[string]tcase{
 		"1": {
 			TCConfig: TCConfig{
-				LayerConfig: []map[string]interface{}{
+				LayerConfig: []map[string]any{
 					{
 						ConfigKeyLayerName: "land",
 						ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE geom && !BBOX!",
@@ -192,7 +196,7 @@ func TestLayerGeomType(t *testing.T) {
 		},
 		"zoom token replacement": {
 			TCConfig: TCConfig{
-				LayerConfig: []map[string]interface{}{
+				LayerConfig: []map[string]any{
 					{
 						ConfigKeyLayerName: "land",
 						ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE gid = !ZOOM! AND geom && !BBOX!",
@@ -204,7 +208,7 @@ func TestLayerGeomType(t *testing.T) {
 		},
 		"configured geometry_type": {
 			TCConfig: TCConfig{
-				LayerConfig: []map[string]interface{}{
+				LayerConfig: []map[string]any{
 					{
 						ConfigKeyLayerName: "land",
 						ConfigKeyGeomType:  "multipolygon",
@@ -217,7 +221,7 @@ func TestLayerGeomType(t *testing.T) {
 		},
 		"configured geometry_type (case insensitive)": {
 			TCConfig: TCConfig{
-				LayerConfig: []map[string]interface{}{
+				LayerConfig: []map[string]any{
 					{
 						ConfigKeyLayerName: "land",
 						ConfigKeyGeomType:  "MultiPolyGOn",
@@ -230,7 +234,7 @@ func TestLayerGeomType(t *testing.T) {
 		},
 		"invalid configured geometry_type": {
 			TCConfig: TCConfig{
-				LayerConfig: []map[string]interface{}{
+				LayerConfig: []map[string]any{
 					{
 						ConfigKeyLayerName: "land",
 						ConfigKeyGeomType:  "invalid",
@@ -244,10 +248,13 @@ func TestLayerGeomType(t *testing.T) {
 		},
 		"role no access to table": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
-					ConfigKeyURI: ttools.GetEnvDefault("PGURI_NO_ACCESS", "postgres://tegola_no_access:postgres@localhost:5432/tegola"),
+				ConfigOverride: map[string]any{
+					ConfigKeyURI: ttools.GetEnvDefault(
+						"PGURI_NO_ACCESS",
+						"postgres://tegola_no_access:postgres@localhost:5432/tegola",
+					),
 				},
-				LayerConfig: []map[string]interface{}{
+				LayerConfig: []map[string]any{
 					{
 						ConfigKeyLayerName: "land",
 						ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE geom && !BBOX!",
@@ -260,10 +267,10 @@ func TestLayerGeomType(t *testing.T) {
 		},
 		"configure from postgreql URI": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: DefaultEnvConfig["uri"],
 				},
-				LayerConfig: []map[string]interface{}{
+				LayerConfig: []map[string]any{
 					{
 						ConfigKeyLayerName: "land",
 						ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) FROM ne_10m_land_scale_rank WHERE geom && !BBOX!",
@@ -281,7 +288,6 @@ func TestLayerGeomType(t *testing.T) {
 }
 
 func TestBuildUri(t *testing.T) {
-
 	type tcase struct {
 		TCConfig
 		expectedUri string
@@ -291,7 +297,7 @@ func TestBuildUri(t *testing.T) {
 	tests := map[string]tcase{
 		"add sslmode to uri if missing": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432/tegola",
 				},
 			},
@@ -299,7 +305,7 @@ func TestBuildUri(t *testing.T) {
 		},
 		"add sslmode of uri and dont overwrite with default": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432/tegola?sslmode=prefer",
 				},
 			},
@@ -307,7 +313,7 @@ func TestBuildUri(t *testing.T) {
 		},
 		"invalid uri": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: false,
 				},
 			},
@@ -315,7 +321,7 @@ func TestBuildUri(t *testing.T) {
 		},
 		"invalid uri scheme": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: "http://hi.de",
 				},
 			},
@@ -323,7 +329,7 @@ func TestBuildUri(t *testing.T) {
 		},
 		"invalid uri missing user": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: "postgres://hi.de",
 				},
 			},
@@ -331,7 +337,7 @@ func TestBuildUri(t *testing.T) {
 		},
 		"invalid uri missing port": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: "postgres://postgres:postgres@localhost/bla",
 				},
 			},
@@ -339,7 +345,7 @@ func TestBuildUri(t *testing.T) {
 		},
 		"invalid uri missing host": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: "postgres://postgres:postgres@:5432/bla",
 				},
 			},
@@ -347,7 +353,7 @@ func TestBuildUri(t *testing.T) {
 		},
 		"invalid uri missing database": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432",
 				},
 			},
@@ -355,7 +361,7 @@ func TestBuildUri(t *testing.T) {
 		},
 		"invalid sslmode": {
 			TCConfig: TCConfig{
-				ConfigOverride: map[string]interface{}{
+				ConfigOverride: map[string]any{
 					ConfigKeySSLMode: false,
 				},
 			},
@@ -389,5 +395,63 @@ func TestBuildUri(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
+	}
+}
+
+func TestPGXOnNotice(t *testing.T) {
+	tc := &TCConfig{}
+	c := tc.Config(DefaultConfig)
+	uri, _, err := BuildURI(c)
+	if err != nil {
+		t.Fatal("building the uri should not fail:", err)
+	}
+
+	dbconfig, err := BuildDBConfig(&DBConfigOptions{Uri: uri.String()})
+	if err != nil {
+		t.Fatal("building db config should not fail:", err)
+	}
+	if dbconfig.ConnConfig.Tracer == nil {
+		t.Fatal("tracer should not be nil on dbconfig")
+	}
+
+	var noticeBuffer bytes.Buffer
+
+	// Set the OnNotice callback to write the notice messages into our buffer.
+	dbconfig.ConnConfig.OnNotice = func(_ *pgconn.PgConn, n *pgconn.Notice) {
+		noticeBuffer.WriteString(n.Message)
+	}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), dbconfig)
+	if err != nil {
+		t.Fatal("creating a pool from config should not fail:", err)
+	}
+	defer pool.Close()
+
+	r, err := pool.Query(context.Background(), "SELECT test_warning_log();")
+	if err != nil {
+		t.Fatal("querying a row should not fail:", err)
+	}
+	t.Cleanup(func() {
+		r.Close()
+	})
+
+	for r.Next() {
+		var result string
+		if err := r.Scan(&result); err != nil {
+			t.Fatalf("failed to scan row: %v", err)
+		}
+	}
+
+	if err := r.Err(); err != nil {
+		t.Fatalf("error during row iteration: %v", err)
+	}
+
+	expectedMsg := "This is a test warning message"
+	if !strings.Contains(noticeBuffer.String(), expectedMsg) {
+		t.Errorf(
+			"expected notice message %q not found in buffer, got: %s",
+			expectedMsg,
+			noticeBuffer.String(),
+		)
 	}
 }
