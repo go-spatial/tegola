@@ -4,6 +4,7 @@ package server
 import (
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/dimfeld/httptreemux"
 
@@ -84,16 +85,21 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	}
 
 	// capabilities endpoints
-	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities", o, HeadersHandler(HandleCapabilities{})))
-	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities/:map_name", o, HeadersHandler(HandleMapCapabilities{})))
+	group.UsingContext().
+		Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities", o, HeadersHandler(HandleCapabilities{})))
+	group.UsingContext().
+		Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities/:map_name", o, HeadersHandler(HandleMapCapabilities{})))
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}
-	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
-	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/:layer_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
+	group.UsingContext().
+		Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
+	group.UsingContext().
+		Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/:layer_name/:z/:x/:y", o, HeadersHandler(GZipHandler(TileCacheHandler(a, hMapLayerZXY)))))
 
 	// map style
-	group.UsingContext().Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/style.json", o, HeadersHandler(HandleMapStyle{})))
+	group.UsingContext().
+		Handler(observability.InstrumentAPIHandler(http.MethodGet, "/maps/:map_name/style.json", o, HeadersHandler(HandleMapStyle{})))
 
 	// setup viewer routes, which can be excluded via build flags
 	setupViewer(o, group)
@@ -103,7 +109,6 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 
 // Start starts the tile server binding to the provided port
 func Start(a *atlas.Atlas, port string) *http.Server {
-
 	// notify the user the server is starting
 	log.Infof("starting tegola server (%v) on port %v", build.Version, port)
 
@@ -127,7 +132,8 @@ func Start(a *atlas.Atlas, port string) *http.Server {
 			log.Info("http server closed")
 			return
 		default:
-			log.Fatal(err)
+			log.Error(err)
+			os.Exit(1)
 			return
 		}
 	}()
