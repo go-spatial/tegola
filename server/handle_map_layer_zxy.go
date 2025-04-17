@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"log/slog"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom"
@@ -226,7 +227,14 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// check for tile size warnings
 	if len(pbyte) > MaxTileSize {
-		log.Infof("tile z:%v, x:%v, y:%v is rather large - %vKb", req.z, req.x, req.y, len(pbyte)/1024)
+		slog.Default().Info("tile is rather large", 
+			slog.String("map", req.mapName),
+			slog.String("layer", req.layerName),
+			slog.Uint64("z", uint64(req.z)),
+			slog.Uint64("x", uint64(req.x)),
+			slog.Uint64("y", uint64(req.y)),
+			slog.Int("size_kb", len(pbyte)/1024),
+		)
 	}
 }
 
