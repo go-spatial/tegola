@@ -230,9 +230,9 @@ func (req HandleMapLayerZXY) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		slog.Default().Info("tile is rather large", 
 			slog.String("map", req.mapName),
 			slog.String("layer", req.layerName),
-			slog.Uint64("z", req.z),
-			slog.Uint64("x", req.x),
-			slog.Uint64("y", req.y),
+			slog.Uint64("z", uint64(req.z)),
+			slog.Uint64("x", uint64(req.x)),
+			slog.Uint64("y", uint64(req.y)),
 			slog.Int("size_kb", len(pbyte)/1024),
 		)
 	}
