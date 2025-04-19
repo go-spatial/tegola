@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"log/slog"
 
 	"github.com/dimfeld/httptreemux"
 	"github.com/go-spatial/geom"
