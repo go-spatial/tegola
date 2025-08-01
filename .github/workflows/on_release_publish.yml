@@ -277,7 +277,7 @@ jobs:
         docker run --rm ${DOCKERHUB_ORG}/${DOCKERHUB_REPO}:${VERSION} version
 
     - name: Publish Docker edge container
-      if: github.ref == env.DEFAULT_BRANCH_REF
+      if: github.ref == env.DEFAULT_BRANCH_REF && (env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '')
       uses: docker/build-push-action@v5
       with:
         context: .

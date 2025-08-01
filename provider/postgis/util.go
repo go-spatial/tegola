@@ -13,8 +13,9 @@ import (
 	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/jackc/pgproto3/v2"
-	"github.com/jackc/pgtype"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/tracelog"
 )
 
 // isMVT will return true if the provider is MVT based
@@ -23,8 +24,14 @@ func isMVT(providerType string) bool {
 }
 
 // genSQL will fill in the SQL field of a layer given a pool, and list of fields.
-func genSQL(l *Layer, pool *connectionPoolCollector, tblname string, flds []string, buffer bool, providerType string) (sql string, err error) {
-
+func genSQL(
+	l *Layer,
+	pool *connectionPoolCollector,
+	tblname string,
+	flds []string,
+	buffer bool,
+	providerType string,
+) (sql string, err error) {
 	// we need to hit the database to see what the fields are.
 	if len(flds) == 0 {
 		sql := fmt.Sprintf(fldsSQL, tblname)
@@ -141,7 +148,14 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 
 	minPt, maxPt := minGeo.(geom.Point), maxGeo.(geom.Point)
 
-	bbox := fmt.Sprintf("ST_MakeEnvelope(%.8f,%.8f,%.8f,%.8f,%d)", minPt.X(), minPt.Y(), maxPt.X(), maxPt.Y(), srid)
+	bbox := fmt.Sprintf(
+		"ST_MakeEnvelope(%.8f,%.8f,%.8f,%.8f,%d)",
+		minPt.X(),
+		minPt.Y(),
+		maxPt.X(),
+		maxPt.Y(),
+		srid,
+	)
 
 	extent, _ = tile.Extent()
 	// TODO: Always convert to meter if we support different projections
@@ -201,7 +215,7 @@ func uppercaseTokens(str string) string {
 	return provider.ParameterTokenRegexp.ReplaceAllStringFunc(str, strings.ToUpper)
 }
 
-func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
+func transformVal(valType uint32, val any) (any, error) {
 	switch valType {
 	default:
 		switch vt := val.(type) {
@@ -213,9 +227,19 @@ func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 		case string:
 			return vt, nil
 		}
-	case pgtype.BoolOID, pgtype.ByteaOID, pgtype.TextOID, pgtype.OIDOID, pgtype.VarcharOID, pgtype.JSONBOID:
+	case pgtype.BoolOID,
+		pgtype.ByteaOID,
+		pgtype.TextOID,
+		pgtype.OIDOID,
+		pgtype.VarcharOID,
+		pgtype.JSONBOID:
 		return val, nil
-	case pgtype.Int8OID, pgtype.Int2OID, pgtype.NumericOID, pgtype.Int4OID, pgtype.Float4OID, pgtype.Float8OID:
+	case pgtype.Int8OID,
+		pgtype.Int2OID,
+		pgtype.NumericOID,
+		pgtype.Int4OID,
+		pgtype.Float4OID,
+		pgtype.Float8OID:
 		switch vt := val.(type) {
 		case int8:
 			return int64(vt), nil
@@ -244,10 +268,15 @@ func transformVal(valType pgtype.OID, val interface{}) (interface{}, error) {
 }
 
 // decipherFields is responsible for processing the SQL result set, decoding geometries, ids and feature tags.
-func decipherFields(ctx context.Context, geomFieldname, idFieldname string, descriptions []pgproto3.FieldDescription, values []interface{}) (gid uint64, geom []byte, tags map[string]interface{}, err error) {
+func decipherFields(
+	ctx context.Context,
+	geomFieldname, idFieldname string,
+	descriptions []pgconn.FieldDescription,
+	values []any,
+) (gid uint64, geom []byte, tags map[string]any, err error) {
 	var ok bool
 
-	tags = make(map[string]interface{})
+	tags = make(map[string]any)
 
 	var idParsed bool
 	for i := range values {
@@ -268,7 +297,10 @@ func decipherFields(ctx context.Context, geomFieldname, idFieldname string, desc
 		switch descName {
 		case geomFieldname:
 			if geom, ok = values[i].([]byte); !ok {
-				return 0, nil, nil, fmt.Errorf("unable to convert geometry field (%v) into bytes", geomFieldname)
+				return 0, nil, nil, fmt.Errorf(
+					"unable to convert geometry field (%v) into bytes",
+					geomFieldname,
+				)
 			}
 		case idFieldname:
 			// the id has to be parsed once but it can also be a tag
@@ -278,6 +310,8 @@ func decipherFields(ctx context.Context, geomFieldname, idFieldname string, desc
 					return 0, nil, nil, err
 				}
 				idParsed = true
+				// NOTE: if it can also be a tag, then breaking here
+				// will never add it to tags
 				break
 			}
 
@@ -286,20 +320,48 @@ func decipherFields(ctx context.Context, geomFieldname, idFieldname string, desc
 		default:
 			switch vex := values[i].(type) {
 			case map[string]pgtype.Text:
-				for k, v := range vex {
+				for key, value := range vex {
 					// we need to check if the key already exists. if it does, then don't overwrite it
-					if _, ok := tags[k]; !ok {
-						tags[k] = v.String
+					if _, ok := tags[key]; !ok {
+						tags[key] = value
+					} else {
+						log.Warnf("tag %s already exists", key)
+					}
+				}
+			case pgtype.Hstore:
+				for key, ptr := range vex {
+					value := ""
+					if ptr != nil {
+						value = *ptr
+					}
+
+					// we need to check if the key already exists. if it does, then don't overwrite it
+					if _, ok := tags[key]; !ok {
+						tags[key] = value
+					} else {
+						log.Warnf("tag %s already exists", key)
 					}
 				}
 			case pgtype.Numeric:
-				var num float64
-				vex.AssignTo(&num)
-				tags[descName] = num
-			default:
-				value, err := transformVal(pgtype.OID(desc.DataTypeOID), values[i])
+				num, err := vex.Float64Value()
 				if err != nil {
-					return gid, geom, tags, fmt.Errorf("unable to convert field [%v] (%v) of type (%v - %v) to a suitable value: %+v (%T)", i, descName, desc.DataTypeOID, pgtype.OID(desc.DataTypeOID), values[i], values[i])
+					return 0, nil, nil, fmt.Errorf("unable to scan numeric field (%v) into float64", vex)
+				}
+
+				tags[descName] = num.Float64
+			default:
+				value, err := transformVal(desc.DataTypeOID, values[i])
+				if err != nil {
+					return gid,
+						geom,
+						tags,
+						fmt.Errorf("unable to convert field [%v] (%v) of type (%v) to a suitable value: %+v (%T)",
+							i,
+							descName,
+							desc.DataTypeOID,
+							values[i],
+							values[i],
+						)
 				}
 				tags[descName] = value
 			}
@@ -309,7 +371,7 @@ func decipherFields(ctx context.Context, geomFieldname, idFieldname string, desc
 	return gid, geom, tags, nil
 }
 
-func gId(v interface{}) (gid uint64, err error) {
+func gId(v any) (gid uint64, err error) {
 	switch aval := v.(type) {
 	case float64:
 		return uint64(aval), nil
@@ -346,4 +408,30 @@ func ctxErr(ctx context.Context, err error) error {
 	}
 
 	return err
+}
+
+// NOTE: @iwpnd to remove this adapter once we move to slog
+// LoggerAdapter adapts the internal logger to the pgx tracelog.Logger interface.
+type LoggerAdapter struct{}
+
+func NewLoggerAdapter() *LoggerAdapter {
+	return &LoggerAdapter{}
+}
+
+// Log is the implementation of the Log method required by pgx's tracelog.Logger interface.
+// It logs messages with the warn level only.
+func (l *LoggerAdapter) Log(
+	ctx context.Context, level tracelog.LogLevel,
+	msg string, data map[string]any,
+) {
+	// drop >3, where 2=Error 3=Warn
+	if level > tracelog.LogLevelWarn {
+		return
+	}
+
+	if level == tracelog.LogLevelError {
+		log.Errorf("PostGIS(pgx): %s, %#v", msg, data)
+	} else {
+		log.Warnf("PostGIS(pgx): %s, %#v", msg, data)
+	}
 }

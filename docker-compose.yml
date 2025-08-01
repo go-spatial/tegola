@@ -1,12 +1,10 @@
 # this file is used to bootstrap services to run tegola tests against
-version: "3"
-
 services:
   redis:
     image: redis:6.2.6
     container_name: redis
     ports:
-      - 6379:6379
+    - 6379:6379
 
   postgis:
     image: postgis/postgis:12-3.0-alpine
@@ -21,7 +19,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     ports:
-      - 5432:5432
+    - 5432:5432
 
   migration:
     image: postgis/postgis:12-3.0-alpine
@@ -32,14 +30,21 @@ services:
     environment:
       PGUSER: postgres
       PGPASSWORD: postgres
-    command: 
-      - /bin/bash
-      - -c
-      - |
-        wget "https://github.com/go-spatial/tegola-testdata/raw/master/tegola.dump" 
-        psql -h postgis -p 5432 -U postgres -d postgres -c "DROP DATABASE IF EXISTS tegola;"
-        pg_restore -h postgis -p 5432 -U postgres -d postgres -C tegola.dump
-        psql -h postgis -U postgres -d postgres -c "DROP ROLE IF EXISTS tegola_no_access;CREATE ROLE tegola_no_access LOGIN PASSWORD 'postgres'"
-        rm tegola.dump
+    volumes:
+    - ./testdata:/testdata
+    command: ["/bin/bash", "-c", "testdata/postgis/migration.sh"]
 
-
+  # NOTE: useful for debugging
+  # does not run by default, only when you run with:
+  # docker-compose --profile pgadmin up (-d)
+  # afterwards navigate to localhost:5555 in the browser
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@tegola.io"
+      PGADMIN_DEFAULT_PASSWORD: "admin"
+    ports:
+    - "5555:80"
+    profiles:
+    - pgadmin
