@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 	"testing"
@@ -40,14 +41,10 @@ func (cfg TCConfig) Config() dict.Dict {
 		mConfig = cfg.BaseConfig
 	}
 	config = make(map[string]interface{}, len(mConfig))
-	for k, v := range mConfig {
-		config[k] = v
-	}
+	maps.Copy(config, mConfig)
 
 	// set the config overrides
-	for k, v := range cfg.ConfigOverride {
-		config[k] = v
-	}
+	maps.Copy(config, cfg.ConfigOverride)
 
 	if len(cfg.LayerConfig) > 0 {
 		layerConfig, _ := config[hana.ConfigKeyLayers].([]map[string]interface{})
