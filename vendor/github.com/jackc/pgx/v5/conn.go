@@ -172,7 +172,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 		delete(config.RuntimeParams, "statement_cache_capacity")
 		n, err := strconv.ParseInt(s, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse statement_cache_capacity: %w", err)
+			return nil, pgconn.NewParseConfigError(connString, "cannot parse statement_cache_capacity", err)
 		}
 		statementCacheCapacity = int(n)
 	}
@@ -182,7 +182,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 		delete(config.RuntimeParams, "description_cache_capacity")
 		n, err := strconv.ParseInt(s, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse description_cache_capacity: %w", err)
+			return nil, pgconn.NewParseConfigError(connString, "cannot parse description_cache_capacity", err)
 		}
 		descriptionCacheCapacity = int(n)
 	}
@@ -202,7 +202,7 @@ func ParseConfigWithOptions(connString string, options ParseConfigOptions) (*Con
 		case "simple_protocol":
 			defaultQueryExecMode = QueryExecModeSimpleProtocol
 		default:
-			return nil, fmt.Errorf("invalid default_query_exec_mode: %s", s)
+			return nil, pgconn.NewParseConfigError(connString, "invalid default_query_exec_mode", err)
 		}
 	}
 
@@ -420,7 +420,7 @@ func (c *Conn) IsClosed() bool {
 	return c.pgConn.IsClosed()
 }
 
-func (c *Conn) die(err error) {
+func (c *Conn) die() {
 	if c.IsClosed() {
 		return
 	}
@@ -588,14 +588,6 @@ func (c *Conn) execPrepared(ctx context.Context, sd *pgconn.StatementDescription
 	return result.CommandTag, result.Err
 }
 
-type unknownArgumentTypeQueryExecModeExecError struct {
-	arg any
-}
-
-func (e *unknownArgumentTypeQueryExecModeExecError) Error() string {
-	return fmt.Sprintf("cannot use unregistered type %T as query argument in QueryExecModeExec", e.arg)
-}
-
 func (c *Conn) execSQLParams(ctx context.Context, sql string, args []any) (pgconn.CommandTag, error) {
 	err := c.eqb.Build(c.typeMap, nil, args)
 	if err != nil {
@@ -661,11 +653,12 @@ const (
 	// should implement pgtype.Int64Valuer.
 	QueryExecModeExec
 
-	// Use the simple protocol. Assume the PostgreSQL query parameter types based on the Go type of the arguments. Queries
-	// are executed in a single round trip. Type mappings can be registered with pgtype.Map.RegisterDefaultPgType. Queries
-	// will be rejected that have arguments that are unregistered or ambiguous. e.g. A map[string]string may have the
-	// PostgreSQL type json or hstore. Modes that know the PostgreSQL type can use a map[string]string directly as an
-	// argument. This mode cannot.
+	// Use the simple protocol. Assume the PostgreSQL query parameter types based on the Go type of the arguments. This is
+	// especially significant for []byte values. []byte values are encoded as PostgreSQL bytea. string must be used
+	// instead for text type values including json and jsonb. Type mappings can be registered with
+	// pgtype.Map.RegisterDefaultPgType. Queries will be rejected that have arguments that are unregistered or ambiguous.
+	// e.g. A map[string]string may have the PostgreSQL type json or hstore. Modes that know the PostgreSQL type can use a
+	// map[string]string directly as an argument. This mode cannot. Queries are executed in a single round trip.
 	//
 	// QueryExecModeSimpleProtocol should have the user application visible behavior as QueryExecModeExec. This includes
 	// the warning regarding differences in text format and binary format encoding with user defined types. There may be
