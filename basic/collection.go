@@ -8,7 +8,7 @@ type Geometry interface {
 // Collection type can represent one or more other basic types.
 type Collection []Geometry
 
-//Geometeries return a set of geometeies that make that collection.
+// Geometeries return a set of geometeies that make that collection.
 func (c Collection) Geometeries() (geometeries []G) {
 	geometeries = make([]G, 0, len(c))
 	for i := range c {

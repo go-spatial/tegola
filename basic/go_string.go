@@ -62,8 +62,9 @@ func (l Line) GoString() string { return l.GoStringTyped(true, 0, "") }
 
 /*
 basic.Polygon { // basic.Polygon len(1);
-   { lines… },
-}
+
+	   { lines… },
+	}
 */
 func (p Polygon) GoStringTypeDecorated(withType bool, indent int, lineComment string, pointDecorator func(pt Point) string) string {
 	const (

@@ -81,7 +81,7 @@ func (l Line) IsHorizontal() bool {
 	return l[0].Y == l[1].Y
 }
 
-//Clamp will return a point that is on the line based on pt. It will do this by restricting each of the coordinates to the line.
+// Clamp will return a point that is on the line based on pt. It will do this by restricting each of the coordinates to the line.
 func (l Line) Clamp(pt Pt) (p Pt) {
 	p = pt
 	lx, gx := l[0].X, l[1].X
@@ -175,7 +175,8 @@ func (l Line) DeltaX() float64 { return l[1].X - l[0].X }
 func (l Line) DeltaY() float64 { return l[1].Y - l[0].Y }
 
 // IsLeft  tests if point P2 is Left|On|Right of the line P0 to P1.
-//      returns: >0 for left, 0 for on, and <0 for  right of the line.
+//
+//	returns: >0 for left, 0 for on, and <0 for  right of the line.
 func (l Line) IsLeft(pt Pt) float64 {
 	return (l.DeltaX() * (pt.Y - l[0].Y)) - ((pt.X - l[0].X) * l.DeltaY())
 }

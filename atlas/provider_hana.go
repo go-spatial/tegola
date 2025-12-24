@@ -1,3 +1,4 @@
+//go:build !noHanaProvider
 // +build !noHanaProvider
 
 package atlas

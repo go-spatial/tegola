@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/go-spatial/tegola/container/singlelist"
+	list "github.com/go-spatial/tegola/container/singlelist"
 	"github.com/go-spatial/tegola/maths"
 )
 

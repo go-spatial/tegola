@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/go-spatial/tegola/container/singlelist"
+	list "github.com/go-spatial/tegola/container/singlelist"
 	ptList "github.com/go-spatial/tegola/container/singlelist/point/list"
 	"github.com/go-spatial/tegola/maths"
 )

@@ -98,7 +98,8 @@ func (a *Axis) Intersect(line maths.Line) (pt maths.Pt, doesIntersect bool) {
 
 // inside determines if the pt provided on the Inside side of the axises.
 // For example give a cLockwise region and axises 0
-//   the area to the left of and including the axis is outside, while the area to the right is inside.
+//
+//	the area to the left of and including the axis is outside, while the area to the right is inside.
 func (a *Axis) inside(pt maths.Pt) bool {
 
 	/*
@@ -165,15 +166,14 @@ const (
 
 // Placement returns where according to the region axis the point is.
 //
-// 		                     0010
+//	                     0010
 //
-// 			       pt   ______  pt
-// 			           |      |
-// 			    1000   | 0000 |    0100
-// 			           |______|
-// 			       pt           pt
-// 			             0001
-//
+//		       pt   ______  pt
+//		           |      |
+//		    1000   | 0000 |    0100
+//		           |______|
+//		       pt           pt
+//		             0001
 func (a *Axis) Placement(pt maths.Pt) PlacementCode {
 
 	idx := a.idx % 4

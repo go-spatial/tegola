@@ -1,3 +1,4 @@
+//go:build !noPrometheusObserver
 // +build !noPrometheusObserver
 
 package atlas

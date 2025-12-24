@@ -1,3 +1,4 @@
+//go:build !noAzblobCache
 // +build !noAzblobCache
 
 package atlas

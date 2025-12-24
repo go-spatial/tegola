@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/go-spatial/cobra"
 	"github.com/go-spatial/tegola/internal/build"
-	"strings"
 )
 
 var versionCmd = &cobra.Command{

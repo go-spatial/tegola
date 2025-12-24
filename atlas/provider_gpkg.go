@@ -1,3 +1,4 @@
+//go:build !noGpkgProvider
 // +build !noGpkgProvider
 
 package atlas

@@ -41,7 +41,8 @@ type featureTableDetails struct {
 }
 
 // Creates a config instance of the type NewTileProvider() requires including all available feature
-//    tables in the gpkg at 'gpkgPath'.
+//
+//	tables in the gpkg at 'gpkgPath'.
 func AutoConfig(gpkgPath string) (map[string]interface{}, error) {
 	// Get all feature tables
 	db, err := sql.Open("sqlite3", gpkgPath)

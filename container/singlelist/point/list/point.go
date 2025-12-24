@@ -3,7 +3,7 @@ package list
 import (
 	"fmt"
 
-	"github.com/go-spatial/tegola/container/singlelist"
+	list "github.com/go-spatial/tegola/container/singlelist"
 	"github.com/go-spatial/tegola/maths"
 )
 

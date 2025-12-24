@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ajstarks/svgo"
+	svg "github.com/ajstarks/svgo"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/maths"
 	"github.com/go-spatial/tegola/maths/clip/region"

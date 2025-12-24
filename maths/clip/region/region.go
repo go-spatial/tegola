@@ -7,7 +7,6 @@ import (
 
 /*
 A region is made up of axises and a winding order. A region can hold other points along it's axises.
-
 */
 type Region struct {
 	list.List

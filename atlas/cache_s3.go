@@ -1,3 +1,4 @@
+//go:build !noS3Cache
 // +build !noS3Cache
 
 package atlas
