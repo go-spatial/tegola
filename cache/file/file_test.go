@@ -1,10 +1,12 @@
 package file_test
 
 import (
-	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
@@ -43,7 +45,7 @@ func TestNew(t *testing.T) {
 
 	tests := map[string]tcase{
 		"valid basepath": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"basepath": "testfiles/tegola-cache",
 			},
 			expected: &file.Cache{
@@ -53,7 +55,7 @@ func TestNew(t *testing.T) {
 			err: nil,
 		},
 		"valid basepath and max zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": uint(9),
 			},
@@ -63,13 +65,26 @@ func TestNew(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid basepath, max zoom and ttl": {
+			config: map[string]any{
+				"basepath": "testfiles/tegola-cache",
+				"max_zoom": uint(9),
+				"ttl":      9,
+			},
+			expected: &file.Cache{
+				Basepath:   "testfiles/tegola-cache",
+				MaxZoom:    9,
+				Expiration: time.Duration(9) * time.Second,
+			},
+			err: nil,
+		},
 		"missing basepath": {
-			config:   map[string]interface{}{},
+			config:   map[string]any{},
 			expected: nil,
 			err:      file.ErrMissingBasepath,
 		},
 		"invalid zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": "foo",
 			},
@@ -90,7 +105,7 @@ func TestSetGetPurge(t *testing.T) {
 		expected []byte
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
@@ -132,7 +147,7 @@ func TestSetGetPurge(t *testing.T) {
 
 	tests := map[string]tcase{
 		"get set purge": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"basepath": "testfiles/tegola-cache",
 			},
 			key: cache.Key{
@@ -158,7 +173,7 @@ func TestSetOverwrite(t *testing.T) {
 		expected []byte
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
@@ -207,7 +222,7 @@ func TestSetOverwrite(t *testing.T) {
 
 	tests := map[string]tcase{
 		"set overwrite": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"basepath": "testfiles/tegola-cache",
 			},
 			key: cache.Key{
@@ -234,7 +249,7 @@ func TestMaxZoom(t *testing.T) {
 		expectedHit bool
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
@@ -274,7 +289,7 @@ func TestMaxZoom(t *testing.T) {
 
 	tests := map[string]tcase{
 		"over max zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": uint(10),
 			},
@@ -287,7 +302,7 @@ func TestMaxZoom(t *testing.T) {
 			expectedHit: false,
 		},
 		"under max zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": uint(10),
 			},
@@ -300,7 +315,7 @@ func TestMaxZoom(t *testing.T) {
 			expectedHit: true,
 		},
 		"equals max zoom": {
-			config: map[string]interface{}{
+			config: map[string]any{
 				"basepath": "testfiles/tegola-cache",
 				"max_zoom": uint(10),
 			},
@@ -311,6 +326,87 @@ func TestMaxZoom(t *testing.T) {
 			},
 			bytes:       []byte{0x66, 0x6f, 0x6f},
 			expectedHit: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
+func TestExpiration(t *testing.T) {
+	type tcase struct {
+		config   dict.Dict
+		key      cache.Key
+		expected []byte
+	}
+
+	ctx := t.Context()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+
+			fc, err := file.New(tc.config)
+			if err != nil {
+				t.Errorf("%v", err)
+				return
+			}
+
+			// test write
+			if err = fc.Set(ctx, &tc.key, tc.expected); err != nil {
+				t.Errorf("write failed. err: %v", err)
+				return
+			}
+
+			_, hit, err := fc.Get(ctx, &tc.key)
+			if err != nil {
+				t.Errorf("read failed. err: %v", err)
+				return
+			}
+			if !hit {
+				t.Errorf("read failed. should not have expired yet")
+				return
+			}
+
+			time.Sleep(1 * time.Second)
+
+			_, hit, err = fc.Get(ctx, &tc.key)
+			if err != nil {
+				t.Errorf("read failed. err: %v", err)
+				return
+			}
+			if hit {
+				t.Errorf("read succeeded. should have expired and report a miss")
+				return
+			}
+
+			basePath, err := tc.config.String(file.ConfigKeyBasepath, nil)
+			if err != nil {
+				t.Fatal("basepath must exist in test config")
+			}
+			path := filepath.Join(basePath, tc.key.String())
+			_, oErr := os.Open(path)
+			if oErr != nil {
+				if !os.IsNotExist(oErr) {
+					t.Errorf("cache filed should no longer exist, when expired")
+					return
+				}
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"get set purge": {
+			config: map[string]any{
+				"basepath": "testfiles/tegola-cache",
+				"ttl":      1,
+			},
+			key: cache.Key{
+				Z: 0,
+				X: 1,
+				Y: 2,
+			},
+			expected: []byte{0x53, 0x69, 0x6c, 0x61, 0x73},
 		},
 	}
 
