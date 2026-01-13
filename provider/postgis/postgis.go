@@ -1069,6 +1069,71 @@ func (p Provider) TileFeatures(
 	return rows.Err()
 }
 
+// LayerFields returns a map of field names to their types for a given layer.
+// It executes a sample query (LIMIT 0) to get column information without fetching data.
+func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string]interface{}, error) {
+	plyr, ok := p.Layer(layerName)
+	if !ok {
+		return nil, ErrLayerNotFound{layerName}
+	}
+
+	// Use a dummy tile to replace tokens in the SQL
+	dummyTile := provider.NewTile(0, 0, 0, 256, 3857)
+	sql, err := replaceTokens(plyr.sql, &plyr, dummyTile, true)
+	if err != nil {
+		return nil, fmt.Errorf("error replacing layer tokens for layer (%v): %w", layerName, err)
+	}
+
+	// Wrap the query to get column information without fetching rows
+	sql = fmt.Sprintf("SELECT * FROM (%s) AS subquery LIMIT 0", sql)
+
+	rows, err := p.pool.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("error querying fields for layer (%v): %w", layerName, err)
+	}
+	defer rows.Close()
+
+	fields := make(map[string]interface{})
+	fdescs := rows.FieldDescriptions()
+
+	for _, desc := range fdescs {
+		fieldName := string(desc.Name)
+
+		// Skip geometry and ID fields as they're not attributes
+		if fieldName == plyr.GeomFieldName() || fieldName == plyr.IDFieldName() {
+			continue
+		}
+
+		// Map PostgreSQL OID types to simple type names
+		fieldType := postgresTypeToString(desc.DataTypeOID)
+		fields[fieldName] = fieldType
+	}
+
+	return fields, nil
+}
+
+// postgresTypeToString converts PostgreSQL OID types to simple type strings
+func postgresTypeToString(oid uint32) string {
+	// Common PostgreSQL type OIDs
+	// Reference: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
+	switch oid {
+	case 16: // bool
+		return "Boolean"
+	case 20, 21, 23, 26: // int8, int2, int4, oid
+		return "Number"
+	case 700, 701, 1700: // float4, float8, numeric
+		return "Number"
+	case 18, 19, 25, 1042, 1043: // char, name, text, bpchar, varchar
+		return "String"
+	case 1114, 1184: // timestamp, timestamptz
+		return "String"
+	case 114, 3802: // json, jsonb
+		return "String"
+	default:
+		return "String"
+	}
+}
+
 func (p Provider) MVTForLayers(
 	ctx context.Context,
 	tile provider.Tile,

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/mapbox/tilejson"
+	"github.com/go-spatial/tegola/provider"
 )
 
 type HandleMapCapabilities struct {
@@ -22,7 +24,7 @@ type HandleMapCapabilities struct {
 }
 
 // ServeHTTP returns details about a map according to the
-// tileJSON spec (https://github.com/mapbox/tilejson-spec/tree/master/2.1.0)
+// tileJSON spec (https://github.com/mapbox/tilejson-spec/tree/master/3.0.0)
 //
 // URI scheme: /capabilities/:map_name.json
 // map_name - map name in the config file
@@ -134,6 +136,16 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 					Query:      debugQuery,
 				}.String(),
 			},
+			Fields: make(map[string]interface{}),
+		}
+
+		// Try to get field information from the provider if it supports it
+		if fielder, ok := m.Layers[i].Provider.(provider.LayerFielder); ok {
+			if fields, err := fielder.LayerFields(context.Background(), m.Layers[i].ProviderLayerName); err == nil {
+				layer.Fields = fields
+			} else {
+				log.Debugf("error getting fields for layer (%v): %v", m.Layers[i].MVTName(), err)
+			}
 		}
 
 		switch m.Layers[i].GeomType.(type) {
