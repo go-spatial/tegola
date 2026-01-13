@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/dimfeld/httptreemux"
 
@@ -14,6 +15,11 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/mapbox/tilejson"
 	"github.com/go-spatial/tegola/provider"
+)
+
+var (
+	capabilitiesCache = make(map[string]tilejson.TileJSON)
+	capabilitiesMux   sync.RWMutex
 )
 
 type HandleMapCapabilities struct {
@@ -43,6 +49,16 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	} else {
 		req.extension = "json"
 	}
+
+	// Check cache
+	capabilitiesMux.RLock()
+	if cached, ok := capabilitiesCache[req.mapName]; ok {
+		capabilitiesMux.RUnlock()
+		w.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(cached)
+		return
+	}
+	capabilitiesMux.RUnlock()
 
 	// lookup our Map
 	m, err := atlas.GetMap(req.mapName)
@@ -174,6 +190,11 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 	// build our URL scheme for the tile grid
 	tileJSON.Tiles = append(tileJSON.Tiles, tileURL)
+
+	// Store in cache
+	capabilitiesMux.Lock()
+	capabilitiesCache[req.mapName] = tileJSON
+	capabilitiesMux.Unlock()
 
 	// content type
 	w.Header().Add("Content-Type", "application/json")
