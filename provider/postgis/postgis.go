@@ -1081,7 +1081,7 @@ func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string
 	dummyTile := provider.NewTile(0, 0, 0, 256, 3857)
 	sql, err := replaceTokens(plyr.sql, &plyr, dummyTile, true)
 	if err != nil {
-		return nil, fmt.Errorf("error replacing layer tokens for layer (%v): %w", layerName, err)
+		return nil, fmt.Errorf("error replacing layer tokens for layer (%s): %w", layerName, err)
 	}
 
 	// Wrap the query to get column information without fetching rows
