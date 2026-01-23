@@ -1089,7 +1089,7 @@ func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string
 
 	rows, err := p.pool.Query(ctx, sql)
 	if err != nil {
-		return nil, fmt.Errorf("error querying fields for layer (%v): %w", layerName, err)
+		return nil, fmt.Errorf("error querying fields for layer (%s): %w", layerName, err)
 	}
 	defer rows.Close()
 
