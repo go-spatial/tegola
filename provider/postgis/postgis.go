@@ -1097,7 +1097,7 @@ func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string
 	fdescs := rows.FieldDescriptions()
 
 	for _, desc := range fdescs {
-		fieldName := string(desc.Name)
+		fieldName := desc.Name
 
 		// Skip geometry and ID fields as they're not attributes
 		if fieldName == plyr.GeomFieldName() || fieldName == plyr.IDFieldName() {
