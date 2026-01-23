@@ -157,7 +157,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 		// Try to get field information from the provider if it supports it
 		if fielder, ok := m.Layers[i].Provider.(provider.LayerFielder); ok {
-			if fields, err := fielder.LayerFields(context.Background(), m.Layers[i].ProviderLayerName); err == nil {
+			if fields, err := fielder.LayerFields(r.Context(), m.Layers[i].ProviderLayerName); err == nil {
 				layer.Fields = fields
 			} else {
 				log.Debugf("error getting fields for layer (%v): %v", m.Layers[i].MVTName(), err)
