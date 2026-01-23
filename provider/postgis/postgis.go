@@ -1093,7 +1093,7 @@ func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string
 	}
 	defer rows.Close()
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fdescs := rows.FieldDescriptions()
 
 	for _, desc := range fdescs {
