@@ -1114,20 +1114,19 @@ func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string
 
 // postgresTypeToString converts PostgreSQL OID types to simple type strings
 func postgresTypeToString(oid uint32) string {
-	// Common PostgreSQL type OIDs
-	// Reference: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
+	// Common PostgreSQL type OIDs using pgtype constants
 	switch oid {
-	case 16: // bool
+	case pgtype.BoolOID:
 		return "Boolean"
-	case 20, 21, 23, 26: // int8, int2, int4, oid
+	case pgtype.Int8OID, pgtype.Int2OID, pgtype.Int4OID, pgtype.OIDOID:
 		return "Number"
-	case 700, 701, 1700: // float4, float8, numeric
+	case pgtype.Float4OID, pgtype.Float8OID, pgtype.NumericOID:
 		return "Number"
-	case 18, 19, 25, 1042, 1043: // char, name, text, bpchar, varchar
+	case pgtype.QCharOID, pgtype.NameOID, pgtype.TextOID, pgtype.BPCharOID, pgtype.VarcharOID:
 		return "String"
-	case 1114, 1184: // timestamp, timestamptz
+	case pgtype.TimestampOID, pgtype.TimestamptzOID:
 		return "String"
-	case 114, 3802: // json, jsonb
+	case pgtype.JSONOID, pgtype.JSONBOID:
 		return "String"
 	default:
 		return "String"
