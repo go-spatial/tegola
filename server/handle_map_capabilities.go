@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -19,6 +18,7 @@ import (
 
 var (
 	capabilitiesCache = make(map[string]tilejson.TileJSON)
+	capabilitiesOnce  = make(map[string]*sync.Once)
 	capabilitiesMux   sync.RWMutex
 )
 
@@ -58,17 +58,24 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		json.NewEncoder(w).Encode(cached)
 		return
 	}
+	// Get or create sync.Once for this map to avoid duplicate work
+	once, exists := capabilitiesOnce[req.mapName]
+	if !exists {
+		once = &sync.Once{}
+		capabilitiesOnce[req.mapName] = once
+	}
 	capabilitiesMux.RUnlock()
 
-	// lookup our Map
-	m, err := atlas.GetMap(req.mapName)
-	if err != nil {
-		log.Errorf("map (%v) not configured. check your config file", req.mapName)
-		http.Error(w, "map ("+req.mapName+") not configured. check your config file", http.StatusBadRequest)
-		return
-	}
+	// Build TileJSON only once per map (idempotent operation)
+	once.Do(func() {
+		// lookup our Map
+		m, err := atlas.GetMap(req.mapName)
+		if err != nil {
+			log.Errorf("map (%v) not configured. check your config file", req.mapName)
+			return
+		}
 
-	tileJSON := tilejson.TileJSON{
+		tileJSON := tilejson.TileJSON{
 		Attribution: &m.Attribution,
 		Bounds:      m.Bounds.Extent(),
 		Center:      m.Center,
@@ -180,21 +187,27 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
 	}
 
-	tileURL := TileURLTemplate{
-		Scheme:     scheme(r),
-		Host:       hostName(r).Host,
-		PathPrefix: URIPrefix,
-		MapName:    req.mapName,
-		Query:      debugQuery,
-	}.String()
+		tileURL := TileURLTemplate{
+			Scheme:     scheme(r),
+			Host:       hostName(r).Host,
+			PathPrefix: URIPrefix,
+			MapName:    req.mapName,
+			Query:      debugQuery,
+		}.String()
 
-	// build our URL scheme for the tile grid
-	tileJSON.Tiles = append(tileJSON.Tiles, tileURL)
+		// build our URL scheme for the tile grid
+		tileJSON.Tiles = append(tileJSON.Tiles, tileURL)
 
-	// Store in cache
-	capabilitiesMux.Lock()
-	capabilitiesCache[req.mapName] = tileJSON
-	capabilitiesMux.Unlock()
+		// Store in cache
+		capabilitiesMux.Lock()
+		capabilitiesCache[req.mapName] = tileJSON
+		capabilitiesMux.Unlock()
+	})
+
+	// Read from cache after construction (all goroutines, including the one that built it)
+	capabilitiesMux.RLock()
+	cached := capabilitiesCache[req.mapName]
+	capabilitiesMux.RUnlock()
 
 	// content type
 	w.Header().Add("Content-Type", "application/json")
@@ -204,7 +217,7 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	w.Header().Add("Pragma", "no-cache")
 	w.Header().Add("Expires", "0")
 
-	if err = json.NewEncoder(w).Encode(tileJSON); err != nil {
+	if err := json.NewEncoder(w).Encode(cached); err != nil {
 		log.Errorf("error encoding tileJSON for map (%v)", req.mapName)
 	}
 }
