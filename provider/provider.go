@@ -137,7 +137,7 @@ type Tiler interface {
 // property in TileJSON 3.0.0 capabilities.
 type LayerFielder interface {
 	// LayerFields returns a map of field names to their type descriptions for the given layer
-	LayerFields(ctx context.Context, layerName string) (map[string]interface{}, error)
+	LayerFields(ctx context.Context, layerName string) (map[string]any, error)
 }
 
 // TilerUnion represents either a Std Tiler or and MVTTiler; only one should be not nil.
