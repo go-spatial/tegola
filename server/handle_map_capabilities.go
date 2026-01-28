@@ -23,6 +23,7 @@ var (
 )
 
 type HandleMapCapabilities struct {
+	Atlas *atlas.Atlas
 	// required
 	mapName string
 	// the requests extension defaults to "json"
@@ -50,57 +51,81 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		req.extension = "json"
 	}
 
+	cacheKey := req.mapName + "|" + URLRoot(r).String() + "|" + r.URL.Query().Encode()
+
 	// Check cache
 	capabilitiesMux.RLock()
-	if cached, ok := capabilitiesCache[req.mapName]; ok {
+	if cached, ok := capabilitiesCache[cacheKey]; ok {
 		capabilitiesMux.RUnlock()
 		w.Header().Add("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(cached)
 		return
 	}
 	// Get or create sync.Once for this map to avoid duplicate work
-	once, exists := capabilitiesOnce[req.mapName]
+	once, exists := capabilitiesOnce[cacheKey]
 	if !exists {
 		once = &sync.Once{}
-		capabilitiesOnce[req.mapName] = once
+		capabilitiesOnce[cacheKey] = once
 	}
 	capabilitiesMux.RUnlock()
 
 	// Build TileJSON only once per map (idempotent operation)
 	once.Do(func() {
 		// lookup our Map
-		m, err := atlas.GetMap(req.mapName)
+		var (
+			m   atlas.Map
+			err error
+		)
+		if req.Atlas != nil {
+			m, err = req.Atlas.Map(req.mapName)
+		} else {
+			m, err = atlas.GetMap(req.mapName)
+		}
 		if err != nil {
 			log.Errorf("map (%v) not configured. check your config file", req.mapName)
 			return
 		}
 
+		// Determine TileJSON version based on whether any provider implements LayerFielder
+		hasLayerFielder := false
+		for i := range m.Layers {
+			if _, ok := m.Layers[i].Provider.(provider.LayerFielder); ok {
+				hasLayerFielder = true
+				break
+			}
+		}
+
+		tileJSONVersion := tilejson.Version2
+		if hasLayerFielder {
+			tileJSONVersion = tilejson.Version
+		}
+
 		tileJSON := tilejson.TileJSON{
-		Attribution: &m.Attribution,
-		Bounds:      m.Bounds.Extent(),
-		Center:      m.Center,
-		Format:      TileURLFileFormat,
-		Name:        &m.Name,
-		Scheme:      tilejson.SchemeXYZ,
-		TileJSON:    tilejson.Version,
-		Version:     "1.0.0",
-		Grids:       make([]string, 0),
-		Data:        make([]string, 0),
-	}
+			Attribution: &m.Attribution,
+			Bounds:      m.Bounds.Extent(),
+			Center:      m.Center,
+			Format:      TileURLFileFormat,
+			Name:        &m.Name,
+			Scheme:      tilejson.SchemeXYZ,
+			TileJSON:    tileJSONVersion,
+			Version:     "1.0.0",
+			Grids:       make([]string, 0),
+			Data:        make([]string, 0),
+		}
 
-	// parse our query string
-	var query = r.URL.Query()
+		// parse our query string
+		var query = r.URL.Query()
 
-	debugQuery := url.Values{}
-	// if we have a debug param add it to our URLs
-	if query.Get(QueryKeyDebug) == "true" {
-		debugQuery.Set(QueryKeyDebug, "true")
+		debugQuery := url.Values{}
+		// if we have a debug param add it to our URLs
+		if query.Get(QueryKeyDebug) == "true" {
+			debugQuery.Set(QueryKeyDebug, "true")
 
-		// update our map to include the debug layers
-		m = m.AddDebugLayers()
-	}
+			// update our map to include the debug layers
+			m = m.AddDebugLayers()
+		}
 
-	for i := range m.Layers {
+		for i := range m.Layers {
 		// check if the layer already exists in our slice. this can happen if the config
 		// is using the "name" param for a layer to override the providerLayerName
 		var skip bool
@@ -141,51 +166,54 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			continue
 		}
 
-		//	build our vector layer details
-		layer := tilejson.VectorLayer{
-			Version: 2,
-			Extent:  4096,
-			ID:      m.Layers[i].MVTName(),
-			Name:    m.Layers[i].MVTName(),
-			MinZoom: m.Layers[i].MinZoom,
-			MaxZoom: m.Layers[i].MaxZoom,
-			Tiles: []string{
-				TileURLTemplate{
-					Scheme:     scheme(r),
-					Host:       hostName(r).Host,
-					PathPrefix: URIPrefix,
-					MapName:    req.mapName,
-					LayerName:  m.Layers[i].MVTName(),
-					Query:      debugQuery,
-				}.String(),
-			},
-			Fields: make(map[string]interface{}),
-		}
-
-		// Try to get field information from the provider if it supports it
-		if fielder, ok := m.Layers[i].Provider.(provider.LayerFielder); ok {
-			if fields, err := fielder.LayerFields(r.Context(), m.Layers[i].ProviderLayerName); err == nil {
-				layer.Fields = fields
-			} else {
-				log.Debugf("error getting fields for layer (%v): %v", m.Layers[i].MVTName(), err)
+			//	build our vector layer details
+			layer := tilejson.VectorLayer{
+				Version: 2,
+				Extent:  4096,
+				ID:      m.Layers[i].MVTName(),
+				Name:    m.Layers[i].MVTName(),
+				MinZoom: m.Layers[i].MinZoom,
+				MaxZoom: m.Layers[i].MaxZoom,
+				Tiles: []string{
+					TileURLTemplate{
+						Scheme:     scheme(r),
+						Host:       hostName(r).Host,
+						PathPrefix: URIPrefix,
+						MapName:    req.mapName,
+						LayerName:  m.Layers[i].MVTName(),
+						Query:      debugQuery,
+					}.String(),
+				},
 			}
-		}
 
-		switch m.Layers[i].GeomType.(type) {
-		case geom.Point, geom.MultiPoint:
-			layer.GeometryType = tilejson.GeomTypePoint
-		case geom.Line, geom.LineString, geom.MultiLineString:
-			layer.GeometryType = tilejson.GeomTypeLine
-		case geom.Polygon, geom.MultiPolygon:
-			layer.GeometryType = tilejson.GeomTypePolygon
-		default:
-			layer.GeometryType = tilejson.GeomTypeUnknown
-			// TODO: debug log
-		}
+			// Try to get field information from the provider if it supports it
+			// Only populate Fields if using TileJSON 3.0.0
+			if hasLayerFielder {
+				layer.Fields = make(map[string]interface{})
+				if fielder, ok := m.Layers[i].Provider.(provider.LayerFielder); ok {
+					if fields, err := fielder.LayerFields(r.Context(), m.Layers[i].ProviderLayerName); err == nil {
+						layer.Fields = fields
+					} else {
+						log.Debugf("error getting fields for layer (%v): %v", m.Layers[i].MVTName(), err)
+					}
+				}
+			}
 
-		// add our layer to our tile layer response
-		tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
-	}
+			switch m.Layers[i].GeomType.(type) {
+			case geom.Point, geom.MultiPoint:
+				layer.GeometryType = tilejson.GeomTypePoint
+			case geom.Line, geom.LineString, geom.MultiLineString:
+				layer.GeometryType = tilejson.GeomTypeLine
+			case geom.Polygon, geom.MultiPolygon:
+				layer.GeometryType = tilejson.GeomTypePolygon
+			default:
+				layer.GeometryType = tilejson.GeomTypeUnknown
+				// TODO: debug log
+			}
+
+			// add our layer to our tile layer response
+			tileJSON.VectorLayers = append(tileJSON.VectorLayers, layer)
+		}
 
 		tileURL := TileURLTemplate{
 			Scheme:     scheme(r),
@@ -200,13 +228,13 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 
 		// Store in cache
 		capabilitiesMux.Lock()
-		capabilitiesCache[req.mapName] = tileJSON
+		capabilitiesCache[cacheKey] = tileJSON
 		capabilitiesMux.Unlock()
 	})
 
 	// Read from cache after construction (all goroutines, including the one that built it)
 	capabilitiesMux.RLock()
-	cached := capabilitiesCache[req.mapName]
+	cached := capabilitiesCache[cacheKey]
 	capabilitiesMux.RUnlock()
 
 	// content type

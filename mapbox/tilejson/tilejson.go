@@ -2,7 +2,10 @@
 // https://github.com/mapbox/tilejson-spec
 package tilejson
 
-const Version = "3.0.0"
+const (
+	Version  = "3.0.0"
+	Version2 = "2.0.0"
+)
 
 type GeomType string
 
@@ -137,5 +140,5 @@ type VectorLayer struct {
 	Tiles []string `json:"tiles"`
 	// REQUIRED in TileJSON 3.0.0. An object whose keys and values are the names
 	// and descriptions of attributes available in this layer.
-	Fields map[string]any{} `json:"fields"`
+	Fields map[string]any `json:"fields,omitempty"`
 }
