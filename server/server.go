@@ -88,7 +88,7 @@ func NewRouter(a *atlas.Atlas) *httptreemux.TreeMux {
 	group.UsingContext().
 		Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities", o, HeadersHandler(HandleCapabilities{})))
 	group.UsingContext().
-		Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities/:map_name", o, HeadersHandler(HandleMapCapabilities{Atlas: a})))
+		Handler(observability.InstrumentAPIHandler(http.MethodGet, "/capabilities/:map_name", o, HeadersHandler(HandleMapCapabilities{})))
 
 	// map tiles
 	hMapLayerZXY := HandleMapLayerZXY{Atlas: a}

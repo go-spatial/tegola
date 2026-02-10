@@ -3,8 +3,8 @@
 package tilejson
 
 const (
-	Version  = "3.0.0"
 	Version2 = "2.0.0"
+	Version3 = "3.0.0"
 )
 
 type GeomType string
