@@ -1,6 +1,6 @@
 module github.com/go-spatial/tegola
 
-go 1.25.5
+go 1.25.7
 
 require (
 	cloud.google.com/go/storage v1.28.1
