@@ -32,13 +32,28 @@ default_transaction_read_only = "off"
 
 ## Connection Properties
 
-Establishing a connection via connection string (`uri`) will become the default
-connection method as of v0.16.0. Connecting via host/port/database is deprecated.
-
--   `uri` (string): [Required] PostGIS connection string
+-   `uri` (string): [Optional] PostGIS connection string
 -   `name` (string): [Required] provider name is referenced from map layers
--   `type` (string): [Required] the type of data provider. must be "postgis" to use this data provider
+-   `type` (string): [Required] the type of data provider. enum: postgis, mvt_postgis. 
 -   `srid` (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
+
+### env mode vs uri mode
+
+Connection related environment variables take full precedence over `uri` when any trigger (PGHOST,PGPASSWORD,PGUSER,PGDATABASE,PGPORT) is present 
+in the environment. With this we follow [libpq environment variables](https://www.postgresql.org/docs/current/libpq-envars.html) and allow users to configure they're connection entirely through the environment.
+
+```
+if env trigger variables present:
+    mode = env
+    ignore uri, uses env vars to establish connection
+    can be enriched with config values
+else:
+    mode = uri, either uri controls it all, or we can enrich with config values
+```
+
+> [!WARNING]
+> Configuring multiple postgis providers in the same application requires the 
+> use of a a connection string.
 
 ### Connection string properties
 

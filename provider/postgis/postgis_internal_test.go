@@ -284,145 +284,34 @@ func TestLayerGeomType(t *testing.T) {
 	}
 }
 
-func TestBuildUri(t *testing.T) {
-	type tcase struct {
-		TCConfig
-		expectedUri string
-		err         string
-	}
-
-	tests := map[string]tcase{
-		"add sslmode to uri if missing": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432/tegola",
-				},
-			},
-			expectedUri: "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable",
-		},
-		"add sslmode of uri and dont overwrite with default": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432/tegola?sslmode=prefer",
-				},
-			},
-			expectedUri: "postgres://postgres:postgres@localhost:5432/tegola?sslmode=prefer",
-		},
-		"invalid uri": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeyURI: false,
-				},
-			},
-			err: "config: value mapped to \"uri\" is bool not string",
-		},
-		"invalid uri scheme": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeyURI: "http://hi.de",
-				},
-			},
-			err: "postgis: invalid uri (invalid connection scheme (http))",
-		},
-		"invalid uri missing user": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeyURI: "postgres://hi.de",
-				},
-			},
-			err: "postgis: invalid uri (auth credentials missing)",
-		},
-		"invalid uri missing port": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeyURI: "postgres://postgres:postgres@localhost/bla",
-				},
-			},
-			err: "postgis: splitting host port error: address localhost: missing port in address",
-		},
-		"invalid uri missing host": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeyURI: "postgres://postgres:postgres@:5432/bla",
-				},
-			},
-			err: "postgis: invalid uri (address :5432: missing host in address)",
-		},
-		"invalid uri missing database": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeyURI: "postgres://postgres:postgres@localhost:5432",
-				},
-			},
-			err: "postgis: invalid uri (missing database)",
-		},
-		"invalid sslmode": {
-			TCConfig: TCConfig{
-				ConfigOverride: map[string]any{
-					ConfigKeySSLMode: false,
-				},
-			},
-			err: "config: value mapped to \"ssl_mode\" is bool not string",
-		},
-	}
-
-	fn := func(tc tcase) func(t *testing.T) {
-		return func(t *testing.T) {
-			config := tc.Config(DefaultConfig)
-			uri, _, err := BuildURI(config)
-
-			if tc.err != "" {
-				if err == nil || !strings.Contains(err.Error(), tc.err) {
-					t.Logf("error %#v", err)
-					t.Errorf("expected error with %v in BuildURI, got: %v", tc.err, err)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("unexpected error: %v", err)
-				return
-			}
-
-			if uri.String() != tc.expectedUri {
-				t.Errorf("expected: %v, got: %v", tc.expectedUri, uri)
-			}
-		}
-	}
-
-	for name, tc := range tests {
-		t.Run(name, fn(tc))
-	}
-}
-
 func TestPGXOnNotice(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
+	ctx := t.Context()
+
 	tc := &TCConfig{}
-	c := tc.Config(DefaultConfig)
-	uri, _, err := BuildURI(c)
+	cfg := tc.Config(DefaultConfig)
+	c := newDefaultConnector(cfg)
+
+	_, pgxCfg, _, err := c.Connect(ctx)
 	if err != nil {
-		t.Fatal("building the uri should not fail:", err)
+		t.Fatal("connecting should not error")
 	}
 
-	dbconfig, err := BuildDBConfig(&DBConfigOptions{Uri: uri.String()})
-	if err != nil {
-		t.Fatal("building db config should not fail:", err)
-	}
-	if dbconfig.ConnConfig.Tracer == nil {
+	if pgxCfg.ConnConfig.Tracer == nil {
 		t.Fatal("tracer should not be nil on dbconfig")
 	}
 
 	var noticeBuffer bytes.Buffer
 
 	// Set the OnNotice callback to write the notice messages into our buffer.
-	dbconfig.ConnConfig.OnNotice = func(_ *pgconn.PgConn, n *pgconn.Notice) {
+	pgxCfg.ConnConfig.OnNotice = func(_ *pgconn.PgConn, n *pgconn.Notice) {
 		noticeBuffer.WriteString(n.Message)
 	}
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), dbconfig)
+	pool, err := pgxpool.NewWithConfig(ctx, pgxCfg)
 	if err != nil {
-		t.Fatal("creating a pool from config should not fail:", err)
+		t.Fatalf("connecting to pool: %s", err)
 	}
 	defer pool.Close()
 
