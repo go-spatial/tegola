@@ -5,12 +5,12 @@ import "testing"
 func TestEnvSelectorConnModeEnv(t *testing.T) {
 	type tcase struct {
 		triggers         []string
-		expectedConnMode ConnMode
+		expectedConnMode connMode
 	}
 
 	tcases := map[string]tcase{
 		"connModeEnv": {
-			triggers:         envTriggers,
+			triggers:         connModeEnvTriggers,
 			expectedConnMode: connModeEnv,
 		},
 		"connModeURI": {
@@ -23,7 +23,7 @@ func TestEnvSelectorConnModeEnv(t *testing.T) {
 		},
 	}
 
-	fn := func(t *testing.T, env string, expectedConnMode ConnMode) {
+	fn := func(t *testing.T, env string, expectedConnMode connMode) {
 		t.Setenv(env, "something")
 		es := &envSelector{}
 
