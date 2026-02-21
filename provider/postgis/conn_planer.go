@@ -9,6 +9,21 @@ import (
 	"github.com/go-spatial/tegola/dict"
 )
 
+// SSLMode represents a PostgreSQL sslmode value.
+type SSLMode string
+
+const (
+	SSLModeEmpty      SSLMode = ""
+	SSLModeDisable    SSLMode = "disable"
+	SSLModeAllow      SSLMode = "allow"
+	SSLModePrefer     SSLMode = "prefer"
+	SSLModeRequire    SSLMode = "require"
+	SSLModeVerifyCA   SSLMode = "verify-ca"
+	SSLModeVerifyFull SSLMode = "verify-full"
+)
+
+type runtimeParams map[string]string
+
 // connPlan is the resolved connection inputs from
 // configuration and environment variables. It is the output of the
 // planner and the input to the connection builder.
@@ -20,13 +35,13 @@ type connPlan struct {
 	URIString   string
 
 	// resolved ssl inputs (paths + mode) used by ConfigTLS
-	SSLMode     string
+	SSLMode     SSLMode
 	SSLKey      string
 	SSLCert     string
 	SSLRootCert string
 
 	// resolved runtime params
-	RuntimeParams map[string]string
+	RuntimeParams runtimeParams
 }
 
 // planer defines the interface to creating a connection plan from
@@ -93,7 +108,7 @@ func (dp defaultPlanner) Plan(cfg dict.Dicter, mode connMode, triggers []string)
 			sslRoot = v
 		}
 
-		cp.SSLMode, cp.SSLKey, cp.SSLCert, cp.SSLRootCert = sslMode, sslKey, sslCert, sslRoot
+		cp.SSLMode, cp.SSLKey, cp.SSLCert, cp.SSLRootCert = SSLMode(sslMode), sslKey, sslCert, sslRoot
 		return cp, nil
 	}
 
@@ -127,10 +142,10 @@ func (dp defaultPlanner) Plan(cfg dict.Dicter, mode connMode, triggers []string)
 	}
 
 	cp.URIString = uri.String()
-	cp.SSLMode, cp.SSLKey, cp.SSLCert, cp.SSLRootCert = sslMode, sslKey, sslCert, sslRoot
+	cp.SSLMode, cp.SSLKey, cp.SSLCert, cp.SSLRootCert = SSLMode(sslMode), sslKey, sslCert, sslRoot
 
 	if sslmode := query.Get("sslmode"); sslmode != "" {
-		cp.SSLMode = sslmode
+		cp.SSLMode = SSLMode(sslmode)
 	}
 
 	return cp, nil

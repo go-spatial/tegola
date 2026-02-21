@@ -184,7 +184,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 		"no env overwrites and uri provided and ssl mode overwrite from query": {
 			mode: connModeURI,
 			config: dict.Dict(map[string]any{
-				"uri": "postgres://user:password@host:1337/dbname?sslmode=not_prefer",
+				"uri": "postgres://user:password@host:1337/dbname?sslmode=disable",
 			}),
 			envTriggerKeys: connModeEnvTriggers,
 			expectedPlan: connPlan{
@@ -192,9 +192,9 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 				EnvTriggerKeys: connModeEnvTriggers,
 
 				URIProvided: true,
-				URIString:   "postgres://user:password@host:1337/dbname?sslmode=not_prefer",
+				URIString:   "postgres://user:password@host:1337/dbname?sslmode=disable",
 
-				SSLMode:     "not_prefer",
+				SSLMode:     SSLModeDisable,
 				SSLKey:      DefaultSSLKey,
 				SSLCert:     DefaultSSLCert,
 				SSLRootCert: "",
