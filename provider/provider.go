@@ -132,6 +132,14 @@ type Tiler interface {
 	TileFeatures(ctx context.Context, layer string, t Tile, params Params, fn func(f *Feature) error) error
 }
 
+// LayerFielder is an optional interface that providers can implement to expose
+// field information for their layers. This is used to populate the "fields"
+// property in TileJSON 3.0.0 capabilities.
+type LayerFielder interface {
+	// LayerFields returns a map of field names to their type descriptions for the given layer
+	LayerFields(ctx context.Context, layerName string) (map[string]any, error)
+}
+
 // TilerUnion represents either a Std Tiler or and MVTTiler; only one should be not nil.
 type TilerUnion struct {
 	Std Tiler
