@@ -42,7 +42,7 @@ var (
 // selector defines the behavior required to determine
 // which connection mode should be used.
 type selector interface {
-	Select()
+	Select() (connMode, []string)
 }
 
 // envSelector implements selector by inspecting environment variables.
@@ -54,12 +54,16 @@ type envSelector struct{}
 // If any of the variables in envTriggers is non-empty we assume
 // the connModeEnv, otherwise connModeURI where we expect the presence
 // of a config connection URI.
-func (e envSelector) Select() connMode {
+func (e envSelector) Select() (connMode, []string) {
+	triggers := []string{}
 	for _, env := range connModeEnvTriggers {
 		if value := os.Getenv(env); value != "" {
-			return connModeEnv
+			triggers = append(triggers, env)
 		}
 	}
+	if len(triggers) > 0 {
+		return connModeEnv, triggers
+	}
 
-	return connModeURI
+	return connModeURI, triggers
 }

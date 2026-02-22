@@ -1,6 +1,9 @@
 package postgis
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestEnvSelectorConnModeEnv(t *testing.T) {
 	type tcase struct {
@@ -23,21 +26,29 @@ func TestEnvSelectorConnModeEnv(t *testing.T) {
 		},
 	}
 
-	fn := func(t *testing.T, env string, expectedConnMode connMode) {
-		t.Setenv(env, "something")
+	fn := func(t *testing.T, tc tcase) {
+		for _, env := range tc.triggers {
+			t.Setenv(env, "test")
+		}
+
 		es := &envSelector{}
 
-		connMode := es.Select()
-		if connMode != expectedConnMode {
-			t.Fatalf("expected ConnMode to be '%s' but got %s", expectedConnMode, connMode)
+		connMode, triggers := es.Select()
+		if connMode != tc.expectedConnMode {
+			t.Fatalf("expected ConnMode to be '%s' but got %s", tc.expectedConnMode, connMode)
+		}
+
+		// noop for connModeURI
+		for _, trigger := range triggers {
+			if !slices.Contains(tc.triggers, trigger) {
+				t.Fatalf("expected all env triggers to be present in returned triggers: %s is missing", trigger)
+			}
 		}
 	}
 
 	for name, tc := range tcases {
-		for _, env := range tc.triggers {
-			t.Run(name, func(t *testing.T) {
-				fn(t, env, tc.expectedConnMode)
-			})
-		}
+		t.Run(name, func(t *testing.T) {
+			fn(t, tc)
+		})
 	}
 }
