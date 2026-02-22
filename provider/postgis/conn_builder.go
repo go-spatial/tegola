@@ -68,8 +68,6 @@ func (b *defaultBuilder) applyTracer(cfg *pgxpool.Config) {
 		LogLevel: tracelog.LogLevelWarn,
 	}
 	cfg.ConnConfig.Tracer = tracer
-
-	return
 }
 
 // applyAfterConnectHook adds the hstore and uuid type to the pool configs

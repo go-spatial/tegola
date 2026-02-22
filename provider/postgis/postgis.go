@@ -558,28 +558,66 @@ func (p Provider) inspectLayerGeomType(pname string, l *Layer, maps []provider.M
 	return rows.Err()
 }
 
-// CreateProvider instantiates and returns a new postgis provider or an error.
-// The function will validate that the config object looks good before
-// trying to create a driver. This Provider supports the following fields
-// in the provided map[string]any{} map:
+// CreateProvider instantiates and returns a new PostGIS provider or an error.
 //
-//	 name (string): [Required] name of the provider
-//		host (string): [Required] postgis database host
-//		port (int): [Required] postgis database port (required)
-//		database (string): [Required] postgis database name
-//		user (string): [Required] postgis database user
-//		password (string): [Required] postgis database password
-//		srid (int): [Optional] The default SRID for the provider. Defaults to WebMercator (3857) but also supports WGS84 (4326)
-//		max_connections : [Optional] The max connections to maintain in the connection pool. Default is 100. 0 means no max.
-//		layers (map[string]struct{})  — This is map of layers keyed by the layer name. supports the following properties
+// Connection configuration is resolved using either a PostgreSQL connection
+// URI or environment variables, with environment variables taking precedence.
 //
-//			name (string): [Required] the name of the layer. This is used to reference this layer from map layers.
-//			tablename (string): [*Required] the name of the database table to query against. Required if sql is not defined.
-//			geometry_fieldname (string): [Optional] the name of the filed which contains the geometry for the feature. defaults to geom
-//			id_fieldname (string): [Optional] the name of the feature id field. defaults to gid
-//			fields ([]string): [Optional] a list of fields to include alongside the feature. Can be used if sql is not defined.
-//			srid (int): [Optional] the SRID of the layer. Supports 3857 (WebMercator) or 4326 (WGS84).
-//			sql (string): [*Required] custom SQL to use use. Required if tablename is not defined. Supports the following tokens:
+// The provider requires:
+//
+//   - name (string): [Required] unique name of the provider.
+//   - uri (string): [Required unless environment mode is used] full PostgreSQL
+//     connection URI (postgres:// or postgresql://).
+//
+// Connection resolution rules:
+//
+//  1. If one or more PostgreSQL environment variables relevant to connection
+//     configuration (e.g. PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD,
+//     PGSSLMODE, etc.) are present, the provider operates in environment mode.
+//     In this mode, connection parameters are derived from the environment
+//     and the configured URI (if provided) is ignored.
+//
+//  2. If no environment trigger variables are present, the configured URI
+//     is used.
+//
+// In environment mode, strict validation is applied to the resolved
+// configuration to ensure host, port, database, and user are set. If the
+// configuration is incomplete, provider initialization fails with a
+// descriptive error.
+//
+// When multiple PostGIS providers are defined within a single Tegola
+// configuration, using explicit URIs is strongly recommended. Environment
+// variables apply process-wide and will override all PostGIS providers
+// uniformly, potentially leading to unintended shared connections.
+//
+// Additional provider configuration:
+//
+//   - srid (int): [Optional] default SRID for the provider. Defaults to
+//     WebMercator (3857) but also supports WGS84 (4326).
+//
+//   - max_connections (int): [Optional] maximum number of connections in the
+//     pool. Default is 100. A value of 0 disables the limit.
+//
+//   - layers (map[string]struct{}): map of layers keyed by layer name. Each
+//     layer supports:
+//
+//   - name (string): [Required] name of the layer.
+//
+//   - tablename (string): [Required if sql is not defined] database table
+//     to query.
+//
+//   - geometry_fieldname (string): [Optional] geometry column name.
+//     Defaults to "geom".
+//
+//   - id_fieldname (string): [Optional] feature ID column.
+//
+//   - fields ([]string): [Optional] additional fields to include if sql
+//     is not defined.
+//
+//   - srid (int): [Optional] layer SRID (3857 or 4326).
+//
+//   - sql (string): [Required if tablename is not defined] custom SQL
+//     statement. The SQL must include required tokens where applicable.
 func CreateProvider(
 	config dict.Dicter,
 	maps []provider.Map,
@@ -736,11 +774,10 @@ func CreateProvider(
 
 		if sql != "" {
 			// convert !BOX! (MapServer) and !bbox! (Mapnik) to !BBOX! for compatibility
-			sql := strings.Replace(
-				strings.Replace(sql, "!BOX!", conf.BboxToken, -1),
+			sql := strings.ReplaceAll(
+				strings.ReplaceAll(sql, "!BOX!", conf.BboxToken),
 				"!bbox!",
 				conf.BboxToken,
-				-1,
 			)
 			// make sure that the sql has a !BBOX! token
 			if !strings.Contains(sql, conf.BboxToken) {
@@ -839,26 +876,4 @@ func Cleanup() {
 	}
 
 	providers = make([]Provider, 0)
-}
-
-type DBConfigOptions struct {
-	Uri                        string
-	DefaultTransactionReadOnly string
-	ApplicationName            string
-}
-
-func (opts *DBConfigOptions) GetRuntimeParams() map[string]string {
-	pr := map[string]string{
-		ConfigKeyApplicationName: opts.ApplicationName,
-	}
-
-	// as per https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY
-	// default_transaction_read_only accepts boolean, and is not set by default
-	// hence if OFF, we do not add it to RuntimeParams
-	if opts.DefaultTransactionReadOnly != "" &&
-		strings.ToUpper(opts.DefaultTransactionReadOnly) != "OFF" {
-		pr[ConfigKeyDefaultTransactionReadOnly] = strings.ToUpper(opts.DefaultTransactionReadOnly)
-	}
-
-	return pr
 }
