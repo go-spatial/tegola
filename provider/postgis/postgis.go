@@ -2,13 +2,7 @@ package postgis
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
 	"fmt"
-	"net"
-	"net/url"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,12 +16,8 @@ import (
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
-	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/jackc/pgx/v5/tracelog"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -595,80 +585,27 @@ func CreateProvider(
 	maps []provider.Map,
 	providerType string,
 ) (*Provider, error) {
-	uri, params, err := BuildURI(config)
+	c := newDefaultConnector(config)
+	pool, pgxCfg, _, err := c.Connect(context.Background())
 	if err != nil {
 		return nil, err
-	}
-
-	sslmode := params.Get("sslmode")
-
-	sslkey := DefaultSSLKey
-	sslkey, err = config.String(ConfigKeySSLKey, &sslkey)
-	if err != nil {
-		return nil, err
-	}
-
-	sslcert := DefaultSSLCert
-	sslcert, err = config.String(ConfigKeySSLCert, &sslcert)
-	if err != nil {
-		return nil, err
-	}
-
-	sslrootcert := DefaultSSLCert
-	sslrootcert, err = config.String(ConfigKeySSLRootCert, &sslrootcert)
-	if err != nil {
-		return nil, err
-	}
-
-	default_transaction_read_only := DefaultDefaultTransactionReadOnly
-	default_transaction_read_only, err = config.String(
-		ConfigKeyDefaultTransactionReadOnly,
-		&default_transaction_read_only,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	application_name := DefaultApplicationName
-	application_name, err = config.String(ConfigKeyApplicationName, &application_name)
-	if err != nil {
-		return nil, err
-	}
-
-	dbconfig, err := BuildDBConfig(
-		&DBConfigOptions{
-			Uri:                        uri.String(),
-			DefaultTransactionReadOnly: default_transaction_read_only,
-			ApplicationName:            application_name,
-		})
-	if err != nil {
-		return nil, fmt.Errorf("failed while building db config: %w", err)
 	}
 
 	srid := DefaultSRID
 	if srid, err = config.Int(ConfigKeySRID, &srid); err != nil {
 		return nil, err
 	}
-
 	name, err := config.String(ConfigKeyName, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = ConfigTLS(sslmode, sslkey, sslcert, sslrootcert, dbconfig); err != nil {
-		return nil, err
-	}
-
 	p := Provider{
 		srid:   uint64(srid),
-		config: *dbconfig,
+		config: *pgxCfg,
 		name:   name,
 	}
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), &p.config)
-	if err != nil {
-		return nil, fmt.Errorf("failed while creating connection pool: %w", err)
-	}
 	p.pool = &connectionPoolCollector{Pool: pool, providerName: name}
 
 	layers, err := config.MapSlice(ConfigKeyLayers)
@@ -891,62 +828,6 @@ func CreateProvider(
 	return &p, nil
 }
 
-// ConfigTLS is derived from github.com/jackc/pgx configTLS (https://github.com/jackc/pgx/blob/master/conn.go)
-func ConfigTLS(
-	sslMode string,
-	sslKey string,
-	sslCert string,
-	sslRootCert string,
-	cc *pgxpool.Config,
-) error {
-	switch sslMode {
-	case "disable":
-		cc.ConnConfig.TLSConfig = nil
-		return nil
-	case "allow":
-		cc.ConnConfig.TLSConfig = &tls.Config{InsecureSkipVerify: true}
-	case "prefer":
-		cc.ConnConfig.TLSConfig = &tls.Config{InsecureSkipVerify: true}
-	case "require":
-		cc.ConnConfig.TLSConfig = &tls.Config{InsecureSkipVerify: true}
-	case "verify-ca", "verify-full":
-		cc.ConnConfig.TLSConfig = &tls.Config{
-			ServerName: cc.ConnConfig.Host,
-		}
-	default:
-		return ErrInvalidSSLMode(sslMode)
-	}
-
-	if sslRootCert != "" {
-		caCertPool := x509.NewCertPool()
-
-		caCert, err := os.ReadFile(sslRootCert)
-		if err != nil {
-			return fmt.Errorf("unable to read CA file (%q): %w", sslRootCert, err)
-		}
-
-		if !caCertPool.AppendCertsFromPEM(caCert) {
-			return fmt.Errorf("unable to add CA to cert pool")
-		}
-
-		cc.ConnConfig.TLSConfig.RootCAs = caCertPool
-		cc.ConnConfig.TLSConfig.ClientCAs = caCertPool
-	}
-
-	if (sslCert == "") != (sslKey == "") {
-		return fmt.Errorf("both 'sslcert' and 'sslkey' are required")
-	} else if sslCert != "" { // we must have both now
-		cert, err := tls.LoadX509KeyPair(sslCert, sslKey)
-		if err != nil {
-			return fmt.Errorf("unable to read cert: %w", err)
-		}
-
-		cc.ConnConfig.TLSConfig.Certificates = []tls.Certificate{cert}
-	}
-
-	return nil
-}
-
 // Cleanup will close all database connections and destroy all previously instantiated Provider instances
 func Cleanup() {
 	if len(providers) > 0 {
@@ -980,139 +861,4 @@ func (opts *DBConfigOptions) GetRuntimeParams() map[string]string {
 	}
 
 	return pr
-}
-
-// BuildDBConfig build db config with defaults
-func BuildDBConfig(opts *DBConfigOptions) (*pgxpool.Config, error) {
-	dbconfig, err := pgxpool.ParseConfig(opts.Uri)
-	if err != nil {
-		return nil, err
-	}
-
-	dbconfig.ConnConfig.RuntimeParams = opts.GetRuntimeParams()
-
-	// NOTE: reflects previous pgx/v4 behaviour of passing pgx.loglevelwarn
-	logAdapter := NewLoggerAdapter()
-	tracer := &tracelog.TraceLog{
-		Logger:   logAdapter,
-		LogLevel: tracelog.LogLevelWarn,
-	}
-	dbconfig.ConnConfig.Tracer = tracer
-
-	type hstoreOID struct {
-		OID     uint32
-		hasInit bool
-	}
-	var hstore hstoreOID
-
-	dbconfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-		// The AfterConnect call runs everytime a new connection is acquired,
-		// including everytime the connection pool expands. The hstore OID
-		// is not constant, so we lookup the OID once per provider and store it.
-		// Extensions have to be registered for every new connection.
-		if !hstore.hasInit {
-			row := conn.QueryRow(ctx, "SELECT oid FROM pg_type WHERE typname = 'hstore';")
-			if err = row.Scan(&hstore.OID); err != nil {
-				switch {
-				case errors.Is(err, pgx.ErrNoRows):
-					// do nothing, because query can be empty if hstore is not installed
-					break
-				default:
-					return fmt.Errorf("error fetching hstore oid: %w", err)
-				}
-			}
-
-			hstore.hasInit = true
-		}
-
-		// dont register hstore data type if hstore extension is not installed
-		if hstore.OID != 0 {
-			conn.TypeMap().RegisterType(&pgtype.Type{
-				Name:  "hstore",
-				OID:   hstore.OID,
-				Codec: pgtype.HstoreCodec{},
-			})
-		}
-
-		// register UUID type, see https://github.com/jackc/pgx/wiki/UUID-Support
-		pgxuuid.Register(conn.TypeMap())
-
-		return nil
-	}
-
-	return dbconfig, nil
-}
-
-// validateURI validates for minimum requirements for a valid postgresql uri.
-func validateURI(u string) error {
-	uri, err := url.Parse(u)
-	if err != nil {
-		return ErrInvalidURI{Err: err}
-	}
-
-	if uri.Scheme != "postgres" && uri.Scheme != "postgresql" {
-		return ErrInvalidURI{
-			Msg: fmt.Sprintf("invalid connection scheme (%v)", uri.Scheme),
-		}
-	}
-
-	if uri.User == nil {
-		return ErrInvalidURI{Msg: "auth credentials missing"}
-	}
-
-	host, port, err := net.SplitHostPort(uri.Host)
-	if err != nil {
-		return ErrInvalidURI{
-			Err: fmt.Errorf("splitting host port error: %w", err),
-		}
-	}
-
-	if host == "" {
-		return ErrInvalidURI{
-			Msg: fmt.Sprintf("address %v:%v: missing host in address", host, port),
-		}
-	}
-
-	if uri.Path == "" {
-		return ErrInvalidURI{Msg: "missing database"}
-	}
-
-	return nil
-}
-
-// BuildURI creates a database URI from config.
-func BuildURI(config dict.Dicter) (*url.URL, *url.Values, error) {
-	sslmode := DefaultSSLMode
-	sslmode, err := config.String(ConfigKeySSLMode, &sslmode)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	uri, err := config.String(ConfigKeyURI, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err := validateURI(uri); err != nil {
-		return nil, nil, err
-	}
-
-	parsedUri, err := url.Parse(uri)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// parse query to make sure sslmode is attached
-	parsedQuery, err := url.ParseQuery(parsedUri.RawQuery)
-	if err != nil {
-		return &url.URL{}, nil, err
-	}
-
-	if ok := parsedQuery.Get("sslmode"); ok == "" {
-		parsedQuery.Add("sslmode", sslmode)
-	}
-
-	parsedUri.RawQuery = parsedQuery.Encode()
-
-	return parsedUri, &parsedQuery, nil
 }
