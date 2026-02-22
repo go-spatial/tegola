@@ -27,7 +27,7 @@ func TestNewTileProvider(t *testing.T) {
 
 	tests := map[string]postgis.TCConfig{
 		"1": {
-			LayerConfig: []map[string]interface{}{
+			LayerConfig: []map[string]any{
 				{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
@@ -95,7 +95,7 @@ func TestTileFeatures(t *testing.T) {
 	tests := map[string]tcase{
 		"tablename query": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
 				}},
@@ -106,7 +106,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"tablename query with fields": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeyTablename: "ne_10m_land_scale_rank",
 					postgis.ConfigKeyFields:    []string{"scalerank"},
@@ -118,7 +118,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"tablename query with fields and id as field": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName:   "land",
 					postgis.ConfigKeyTablename:   "ne_10m_land_scale_rank",
 					postgis.ConfigKeyGeomIDField: "gid",
@@ -131,7 +131,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 				}},
@@ -142,7 +142,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query multi line": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL: ` (
 					SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100
@@ -155,7 +155,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query and tablename": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       "(SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 					postgis.ConfigKeyTablename: "not_good_name",
@@ -167,7 +167,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query space after prens": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       "(  SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 				}},
@@ -178,7 +178,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query space before prens": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       "   (SELECT gid, geom, featurecla FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 				}},
@@ -189,7 +189,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query with comments": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       " -- this is a comment\n-- accross multiple lines\n (SELECT gid, geom, scalerank FROM ne_10m_land_scale_rank LIMIT 100) AS sub -- another comment at the end",
 				}},
@@ -200,7 +200,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query with *": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       "(SELECT * FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 				}},
@@ -211,7 +211,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query with * and fields": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       "(SELECT * FROM ne_10m_land_scale_rank LIMIT 100) AS sub",
 					postgis.ConfigKeyFields:    []string{"scalerank"},
@@ -223,7 +223,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL with !ZOOM!": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       "SELECT gid, ST_AsBinary(geom) AS geom FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX!",
 				}},
@@ -233,7 +233,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query with token in SELECT": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeyGeomType:  "polygon", // required to disable SQL inspection
 					postgis.ConfigKeySQL:       "(SELECT gid, geom, !ZOOM! * 2 AS doublezoom FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",
@@ -245,7 +245,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL sub-query with fields": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       "(SELECT gid, geom, 1 AS a, '2' AS b, 3 AS c FROM ne_10m_land_scale_rank WHERE scalerank = !ZOOM! AND geom && !BBOX!) AS sub",
 					postgis.ConfigKeyFields:    []string{"gid", "a", "b"},
@@ -258,7 +258,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"SQL with comments": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "land",
 					postgis.ConfigKeySQL:       " -- this is a comment\n -- accross multiple lines \n \tSELECT gid, -- gid \nST_AsBinary(geom) AS geom -- geom \n FROM ne_10m_land_scale_rank WHERE scalerank=!ZOOM! AND geom && !BBOX! -- comment at the end",
 				}},
@@ -268,7 +268,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"decode numeric(x,x) types": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName:   "buildings",
 					postgis.ConfigKeyGeomIDField: "osm_id",
 					postgis.ConfigKeyGeomField:   "geometry",
@@ -281,7 +281,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"gracefully handle 3d point": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName:   "three_d_points",
 					postgis.ConfigKeyGeomIDField: "id",
 					postgis.ConfigKeyGeomField:   "geom",
@@ -293,7 +293,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"gracefully handle null geometry": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName:   "null_geom",
 					postgis.ConfigKeyGeomIDField: "id",
 					postgis.ConfigKeyGeomField:   "geometry",
@@ -307,7 +307,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"missing geom field name": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "missing_geom_field_name",
 					postgis.ConfigKeyGeomField: "geom",
 					// this SQL is a workaround the normal !BBOX! token check. We don't care about the bounding
@@ -323,7 +323,7 @@ func TestTileFeatures(t *testing.T) {
 		},
 		"empty geometry collection": {
 			TCConfig: postgis.TCConfig{
-				LayerConfig: []map[string]interface{}{{
+				LayerConfig: []map[string]any{{
 					postgis.ConfigKeyLayerName: "empty_geometry_collection",
 					postgis.ConfigKeyGeomField: "geom",
 					postgis.ConfigKeyGeomType:  "polygon", // bypass the geometry type sniff on init
