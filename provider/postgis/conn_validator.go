@@ -32,7 +32,7 @@ func newConnMeta(plan connPlan, cfg *pgxpool.Config) connMeta {
 // validator defines the interfaces responsible for validation a resolved pool
 // configuration.
 type validator interface {
-	Validate(plan connPlan, cfg pgxpool.Config) error
+	Validate(plan connPlan, cfg *pgxpool.Config) (connMeta, error)
 }
 
 // defaultValidator is the default implementation of validator for
