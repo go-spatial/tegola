@@ -44,9 +44,9 @@ type connPlan struct {
 	RuntimeParams runtimeParams
 }
 
-// planer defines the interface to creating a connection plan from
+// planner defines the interface to creating a connection plan from
 // a provider configuration and selected connMode.
-type planer interface {
+type planner interface {
 	Plan(cfg dict.Dicter, mode connMode, triggers []string) (connPlan, error)
 }
 

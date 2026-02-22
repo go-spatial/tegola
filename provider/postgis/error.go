@@ -1,7 +1,6 @@
 package postgis
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 )
@@ -20,8 +19,8 @@ type ErrEnvIncomplete struct {
 // mode was selected and the resolved connection configuration is
 // incomplete.
 func (e ErrEnvIncomplete) Error() string {
-	triggerStr := e.buildBuffer(e.Triggers)
-	mFieldsStr := e.buildBuffer(e.MissingFields)
+	triggerStr := buildBuffer(e.Triggers)
+	mFieldsStr := buildBuffer(e.MissingFields)
 	errMsg := "environment mode selected due to " + triggerStr + " but resolved connection is incomplete: missing " + mFieldsStr + "."
 
 	if !e.URIWasIgnored {
@@ -29,26 +28,6 @@ func (e ErrEnvIncomplete) Error() string {
 	}
 
 	return errMsg + " a URI was provided in config but ignored because env mode has precedence."
-}
-
-// buildBuffer joins the provided values using a comma delimiter.
-func (e ErrEnvIncomplete) buildBuffer(vals []string) string {
-	if len(vals) == 0 {
-		return "[]"
-	}
-	size := len(vals) - 1 // n-1 times ","
-	for _, v := range vals {
-		size += len(v)
-	}
-
-	buf := bytes.NewBuffer(make([]byte, 0, size))
-	for i, v := range vals {
-		if i > 0 {
-			buf.WriteByte(',')
-		}
-		buf.WriteString(v)
-	}
-	return buf.String()
 }
 
 type ErrLayerNotFound struct {
