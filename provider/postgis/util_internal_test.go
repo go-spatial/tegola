@@ -123,7 +123,7 @@ func TestDecipherFields(t *testing.T) {
 		expectedTags     map[string]any
 	}
 
-	uri := ttools.GetEnvDefault("PGURI", "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable")
+	uri := "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable"
 	c := newDefaultConnector(dict.Dict{"uri": uri})
 
 	pool, _, _, err := c.Connect(ctx)
