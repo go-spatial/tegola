@@ -68,6 +68,8 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 				for _, trigger := range triggers {
 					t.Setenv(trigger, "test")
 				}
+				// CI uses PGSSLMode disable so we overwrite here
+				t.Setenv("PGSSLMODE", "prefer")
 			},
 			expectedPlan: connPlan{
 				Mode:           connModeEnv,
