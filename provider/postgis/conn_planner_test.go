@@ -40,7 +40,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 		"all env overwrites": {
 			mode:           connModeEnv,
 			config:         dict.Dict{},
-			envTriggerKeys: connModeEnvTriggers,
+			envTriggerKeys: append(connModeEnvTriggers, sslEnvVars...),
 			setupFn: func(t *testing.T, triggers []string) {
 				for _, trigger := range triggers {
 					t.Setenv(trigger, "test")
@@ -48,7 +48,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 			},
 			expectedPlan: connPlan{
 				Mode:           connModeEnv,
-				EnvTriggerKeys: connModeEnvTriggers,
+				EnvTriggerKeys: append(connModeEnvTriggers, sslEnvVars...),
 				URIProvided:    false,
 				URIString:      "",
 
@@ -63,7 +63,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 		"connection env overwrites, ssl defaults": {
 			mode:           connModeEnv,
 			config:         dict.Dict{},
-			envTriggerKeys: connEnvVars,
+			envTriggerKeys: connModeEnvTriggers,
 			setupFn: func(t *testing.T, triggers []string) {
 				for _, trigger := range triggers {
 					t.Setenv(trigger, "test")
@@ -71,7 +71,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 			},
 			expectedPlan: connPlan{
 				Mode:           connModeEnv,
-				EnvTriggerKeys: connEnvVars,
+				EnvTriggerKeys: connModeEnvTriggers,
 				URIProvided:    false,
 				URIString:      "",
 

@@ -23,7 +23,7 @@ const (
 // See https://www.postgresql.org/docs/10/libpq-envars.html
 // for an exhaustive list.
 var (
-	connEnvVars = []string{
+	connModeEnvTriggers = []string{
 		"PGHOST",
 		"PGPORT",
 		"PGDATABASE",
@@ -36,7 +36,6 @@ var (
 		"PGSSLKEY",
 		"PGSSLROOTCERT",
 	}
-	connModeEnvTriggers = append(connEnvVars, sslEnvVars...)
 )
 
 // selector defines the behavior required to determine
