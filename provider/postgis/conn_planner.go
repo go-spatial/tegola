@@ -1,7 +1,7 @@
 package postgis
 
 import (
-	"fmt"
+	"errors"
 	"net/url"
 	"os"
 	"strings"
@@ -116,12 +116,12 @@ func (dp defaultPlanner) Plan(cfg dict.Dicter, mode connMode, triggers []string)
 		// on this path there's no way for us to create a configuration
 		// we do not have environment variables for the connection
 		// nor a URI from config.
-		return connPlan{}, fmt.Errorf("mmmissing %q in config and env mode not selected", ConfigKeyURI)
+		return connPlan{}, errors.New("neither env vars nor uri provided")
 	}
 
 	uri, err := url.Parse(cp.URIString)
 	if err != nil {
-		return connPlan{}, ErrInvalidURI{Err: err}
+		return connPlan{}, &ErrInvalidURI{Err: err}
 	}
 
 	// we now only validate the scheme. an exhaustive check here
@@ -129,14 +129,14 @@ func (dp defaultPlanner) Plan(cfg dict.Dicter, mode connMode, triggers []string)
 	// see viable uri schema of libpq:
 	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
 	if uri.Scheme != "postgres" && uri.Scheme != "postgresql" {
-		return connPlan{}, ErrInvalidURI{
-			Msg: "postgis: invalid connection scheme " + uri.Scheme,
+		return connPlan{}, &ErrInvalidURI{
+			Msg: "invalid connection scheme " + uri.Scheme,
 		}
 	}
 
 	query, err := url.ParseQuery(uri.RawQuery)
 	if err != nil {
-		return connPlan{}, ErrInvalidURI{
+		return connPlan{}, &ErrInvalidURI{
 			Err: err,
 		}
 	}

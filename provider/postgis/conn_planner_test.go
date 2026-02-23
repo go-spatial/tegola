@@ -1,6 +1,7 @@
 package postgis
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -14,25 +15,19 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 		envTriggerKeys []string
 		setupFn        func(t *testing.T, triggers []string)
 		expectedPlan   connPlan
-		expectErr      bool
-		expectedError  error
+
+		expectErrFn func(t *testing.T, err error)
 	}
 
 	fn := func(t *testing.T, tc tcase) {
 		planer := defaultPlanner{}
 
 		plan, err := planer.Plan(tc.config, tc.mode, tc.envTriggerKeys)
-		if err != nil {
-			if !tc.expectErr {
-				t.Fatalf("expected no error but got: %s", err)
-			}
-
-			if tc.expectedError != nil {
-				if tc.expectedError != err {
-					t.Fatalf("expected error to be %s but got: %s", tc.expectedError, err)
-				}
-			}
-
+		if err != nil && tc.expectErrFn == nil {
+			t.Fatalf("expected plan to succeed but got: %s", err)
+		}
+		if err != nil && tc.expectErrFn != nil {
+			tc.expectErrFn(t, err)
 			return
 		}
 
@@ -202,6 +197,55 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 				SSLRootCert: "",
 
 				RuntimeParams: resolveRunTimeParams(dict.Dict{}, defaultRuntimeParamRules()),
+			},
+		},
+		"not env mode no uri errs": {
+			mode:           connModeURI,
+			config:         dict.Dict(map[string]any{}),
+			envTriggerKeys: []string{},
+			expectErrFn: func(t *testing.T, err error) {
+				t.Helper()
+
+				if err.Error() != "neither env vars nor uri provided" {
+					t.Fatalf("expected empty uri error, got %T (%v)", err, err)
+				}
+			},
+		},
+		"invalid uri scheme": {
+			mode:           connModeURI,
+			config:         dict.Dict(map[string]any{"uri": "https://postgres:postgres@localhost:5432/tegola"}),
+			envTriggerKeys: []string{},
+			expectErrFn: func(t *testing.T, err error) {
+				var e *ErrInvalidURI
+				if !errors.As(err, &e) {
+					t.Fatalf("expected invalid uri error, got %T (%v)", err, err)
+				}
+			},
+		},
+		"invalid character in uri": {
+			mode: connModeURI,
+			config: dict.Dict(map[string]any{
+				"uri": "postgresql://postgres:post<gres@localhost:5432/tegola",
+			}),
+			envTriggerKeys: []string{},
+			expectErrFn: func(t *testing.T, err error) {
+				var e *ErrInvalidURI
+				if !errors.As(err, &e) {
+					t.Fatalf("expected invalid uri error, got %T (%v)", err, err)
+				}
+			},
+		},
+		"invalid character in query params": {
+			mode: connModeURI,
+			config: dict.Dict(map[string]any{
+				"uri": "postgresql://postgres:postgres@localhost:5432/tegola?foo=;bar",
+			}),
+			envTriggerKeys: []string{},
+			expectErrFn: func(t *testing.T, err error) {
+				var e *ErrInvalidURI
+				if !errors.As(err, &e) {
+					t.Fatalf("expected invalid uri error, got %T (%v)", err, err)
+				}
 			},
 		},
 	}

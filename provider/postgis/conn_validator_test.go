@@ -12,13 +12,13 @@ import (
 func TestConnValidator(t *testing.T) {
 	type tcase struct {
 		plan      connPlan
-		cfg       *pgxpool.Config
+		config    *pgxpool.Config
 		expectErr bool
 	}
 
 	fn := func(t *testing.T, tc tcase) {
 		v := &defaultValidator{}
-		meta, err := v.Validate(tc.plan, tc.cfg)
+		meta, err := v.Validate(tc.plan, tc.config)
 		if tc.expectErr {
 			var e ErrEnvIncomplete
 			if !errors.As(err, &e) {
@@ -27,19 +27,19 @@ func TestConnValidator(t *testing.T) {
 			return
 		}
 
-		expectedDatabase := tc.cfg.ConnConfig.Database
+		expectedDatabase := tc.config.ConnConfig.Database
 		if meta.Database != expectedDatabase {
 			t.Fatalf("expected database to be %s, got %s", expectedDatabase, meta.Database)
 		}
-		expectedHost := tc.cfg.ConnConfig.Host
+		expectedHost := tc.config.ConnConfig.Host
 		if meta.Host != expectedHost {
 			t.Fatalf("expected host to be %s, got %s", expectedHost, meta.Host)
 		}
-		expectedUser := tc.cfg.ConnConfig.User
+		expectedUser := tc.config.ConnConfig.User
 		if meta.User != expectedUser {
 			t.Fatalf("expected user to be %s, got %s", expectedUser, meta.User)
 		}
-		expectedPort := tc.cfg.ConnConfig.Port
+		expectedPort := tc.config.ConnConfig.Port
 		if meta.Port != expectedPort {
 			t.Fatalf("expected port to be %d, got %d", expectedPort, meta.Port)
 		}
@@ -50,7 +50,7 @@ func TestConnValidator(t *testing.T) {
 			plan: connPlan{
 				Mode: connModeEnv,
 			},
-			cfg: &pgxpool.Config{
+			config: &pgxpool.Config{
 				ConnConfig: &pgx.ConnConfig{
 					Config: pgconn.Config{
 						Host:     "host",
@@ -66,7 +66,7 @@ func TestConnValidator(t *testing.T) {
 			plan: connPlan{
 				Mode: connModeEnv,
 			},
-			cfg: &pgxpool.Config{
+			config: &pgxpool.Config{
 				ConnConfig: &pgx.ConnConfig{
 					Config: pgconn.Config{
 						Host: "host",
@@ -81,7 +81,7 @@ func TestConnValidator(t *testing.T) {
 			plan: connPlan{
 				Mode: connModeURI,
 			},
-			cfg: &pgxpool.Config{
+			config: &pgxpool.Config{
 				ConnConfig: &pgx.ConnConfig{
 					Config: pgconn.Config{
 						Host:     "host",
