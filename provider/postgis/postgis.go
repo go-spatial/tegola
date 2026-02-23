@@ -60,6 +60,12 @@ const (
 	ConfigKeyGeomType                   = "geometry_type"
 	ConfigKeyApplicationName            = "application_name"
 	ConfigKeyDefaultTransactionReadOnly = "default_transaction_read_only"
+	ConfigKeyPoolMinConns               = "pool_min_conns"
+	ConfigKeyPoolMinIdleConns           = "pool_min_idle_conns"
+	ConfigKeyPoolMaxConnLifeTime        = "pool_max_conn_lifetime"
+	ConfigKeyPoolMaxConnIdleTime        = "pool_max_conn_idletime"
+	ConfigKeyPoolHealthCheckPeriod      = "pool_health_check_period"
+	ConfigKeyPoolMaxConnLifeTimeJitter  = "pool_max_conn_lifetime_jitter"
 )
 
 var (

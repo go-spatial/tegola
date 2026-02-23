@@ -162,6 +162,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 				"uri":                           "postgres://user:password@host:1337/dbname",
 				"application_name":              "ratatata",
 				"default_transaction_read_only": "OFF",
+				"pool_min_conns":                "1",
 			}),
 			envTriggerKeys: connModeEnvTriggers,
 			expectedPlan: connPlan{
@@ -178,6 +179,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 
 				RuntimeParams: map[string]string{
 					"application_name": "ratatata",
+					"pool_min_conns":   "1",
 				},
 			},
 		},

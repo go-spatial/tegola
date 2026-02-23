@@ -224,8 +224,70 @@ func defaultRuntimeParamRules() []runtimeParamRule {
 				return v == "" || v == "OFF"
 			},
 		},
+		{
+			Name: ConfigKeyPoolMinConns,
+			Sources: []valueSource{
+				{
+					name: sourceConfig,
+					key:  ConfigKeyPoolMinConns,
+				},
+			},
+			OmitIf: omitIfEmpty,
+		},
+		{
+			Name: ConfigKeyPoolMinIdleConns,
+			Sources: []valueSource{
+				{
+					name: sourceConfig,
+					key:  ConfigKeyPoolMinIdleConns,
+				},
+			},
+			OmitIf: omitIfEmpty,
+		},
+		{
+			Name: ConfigKeyPoolMaxConnLifeTime,
+			Sources: []valueSource{
+				{
+					name: sourceConfig,
+					key:  ConfigKeyPoolMaxConnLifeTime,
+				},
+			},
+			OmitIf: omitIfEmpty,
+		},
+		{
+			Name: ConfigKeyPoolMaxConnIdleTime,
+			Sources: []valueSource{
+				{
+					name: sourceConfig,
+					key:  ConfigKeyPoolMaxConnIdleTime,
+				},
+			},
+			OmitIf: omitIfEmpty,
+		},
+		{
+			Name: ConfigKeyPoolHealthCheckPeriod,
+			Sources: []valueSource{
+				{
+					name: sourceConfig,
+					key:  ConfigKeyPoolHealthCheckPeriod,
+				},
+			},
+			OmitIf: omitIfEmpty,
+		},
+		{
+			Name: ConfigKeyPoolMaxConnLifeTimeJitter,
+			Sources: []valueSource{
+				{
+					name: sourceConfig,
+					key:  ConfigKeyPoolMaxConnLifeTimeJitter,
+				},
+			},
+			OmitIf: omitIfEmpty,
+		},
 	}
 }
+
+func omitIfEmpty(v string) bool { return v == "" }
 
 // resolveRunTimeParams resolves runtime parameters according to the
 // provided rules. For each rule, sources are evaluated in order and
