@@ -1071,7 +1071,7 @@ func (p Provider) TileFeatures(
 
 // LayerFields returns a map of field names to their types for a given layer.
 // It executes a sample query (LIMIT 0) to get column information without fetching data.
-func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string]interface{}, error) {
+func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string]any, error) {
 	plyr, ok := p.Layer(layerName)
 	if !ok {
 		return nil, ErrLayerNotFound{layerName}
