@@ -101,7 +101,6 @@ func (req HandleMapCapabilities) buildTileJSON(r *http.Request) (tilejson.TileJS
 	// we fall back to TileJSON 2.0.0 to maintain predictable behavior for clients.
 	// this prevents mixed scenarios where some layers have field metadata and others don't,
 	// which would make it difficult for clients to reliably work with field information.
-	// NOTE: to be discussed
 	hasLayerFielder := true
 	for i := range m.Layers {
 		if _, ok := m.Layers[i].Provider.(provider.LayerFielder); !ok {
