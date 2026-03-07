@@ -1,11 +1,15 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/go-spatial/tegola/mapbox/tilejson"
 	"github.com/go-spatial/tegola/provider"
 )
+
+var ErrUnknownTileJSONVersion = errors.New("tilejson_version invalid. can either be " + tilejson.Version2 + " or " + tilejson.Version3)
 
 type ErrMapNotFound struct {
 	MapName string
