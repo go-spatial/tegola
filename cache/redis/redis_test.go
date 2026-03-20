@@ -223,7 +223,7 @@ func compareOptions(t *testing.T, actual, expected *goredis.Options) {
 		t.Errorf("got %q, want %q", actual.Addr, expected.Addr)
 	}
 	if actual.DB != expected.DB {
-		t.Errorf("DB: got %q, expected %q", actual.DB, expected.DB)
+		t.Errorf("DB: got %d, expected %d", actual.DB, expected.DB)
 	}
 	if actual.TLSConfig == nil && expected.TLSConfig != nil {
 		t.Errorf("got nil TLSConfig, expected a TLSConfig")
