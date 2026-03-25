@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"database/sql"
-	"fmt"
 	"reflect"
 	"time"
 )
@@ -29,33 +28,36 @@ const (
 )
 
 // RegisterScanType registers driver owned datatype scantypes (e.g. Decimal, Lob).
-func RegisterScanType(dt DataType, scanType reflect.Type) bool {
-	scanTypes[dt] = scanType
+func RegisterScanType(dt DataType, scanType, scanNullType reflect.Type) bool {
+	scanTypes[dt].scanType = scanType
+	scanTypes[dt].scanNullType = scanNullType
 	return true
 }
 
-var scanTypes = []reflect.Type{
-	DtUnknown:  reflect.TypeOf((*any)(nil)).Elem(),
-	DtBoolean:  reflect.TypeOf((*bool)(nil)).Elem(),
-	DtTinyint:  reflect.TypeOf((*uint8)(nil)).Elem(),
-	DtSmallint: reflect.TypeOf((*int16)(nil)).Elem(),
-	DtInteger:  reflect.TypeOf((*int32)(nil)).Elem(),
-	DtBigint:   reflect.TypeOf((*int64)(nil)).Elem(),
-	DtReal:     reflect.TypeOf((*float32)(nil)).Elem(),
-	DtDouble:   reflect.TypeOf((*float64)(nil)).Elem(),
-	DtTime:     reflect.TypeOf((*time.Time)(nil)).Elem(),
-	DtString:   reflect.TypeOf((*string)(nil)).Elem(),
-	DtBytes:    reflect.TypeOf((*[]byte)(nil)).Elem(),
-	DtDecimal:  nil, // to be registered by driver
-	DtLob:      nil, // to be registered by driver
-	DtRows:     reflect.TypeOf((*sql.Rows)(nil)).Elem(),
+var scanTypes = []struct {
+	scanType     reflect.Type
+	scanNullType reflect.Type
+}{
+	DtUnknown:  {reflect.TypeFor[any](), reflect.TypeFor[any]()},
+	DtBoolean:  {reflect.TypeFor[bool](), reflect.TypeFor[sql.NullBool]()},
+	DtTinyint:  {reflect.TypeFor[uint8](), reflect.TypeFor[sql.NullByte]()},
+	DtSmallint: {reflect.TypeFor[int16](), reflect.TypeFor[sql.NullInt16]()},
+	DtInteger:  {reflect.TypeFor[int32](), reflect.TypeFor[sql.NullInt32]()},
+	DtBigint:   {reflect.TypeFor[int64](), reflect.TypeFor[sql.NullInt64]()},
+	DtReal:     {reflect.TypeFor[float32](), reflect.TypeFor[sql.NullFloat64]()},
+	DtDouble:   {reflect.TypeFor[float64](), reflect.TypeFor[sql.NullFloat64]()},
+	DtTime:     {reflect.TypeFor[time.Time](), reflect.TypeFor[sql.NullTime]()},
+	DtString:   {reflect.TypeFor[string](), reflect.TypeFor[sql.NullString]()},
+	DtBytes:    {nil, nil}, // to be registered by driver
+	DtDecimal:  {nil, nil}, // to be registered by driver
+	DtLob:      {nil, nil}, // to be registered by driver
+	DtRows:     {reflect.TypeFor[sql.Rows](), reflect.TypeFor[sql.Rows]()},
 }
 
 // ScanType return the scan type (reflect.Type) of the corresponding data type.
-func (dt DataType) ScanType() reflect.Type {
-	st := scanTypes[dt]
-	if st == nil {
-		panic(fmt.Sprintf("ScanType for DataType %s not registered", dt))
+func (dt DataType) ScanType(nullable bool) reflect.Type {
+	if nullable {
+		return scanTypes[dt].scanNullType
 	}
-	return st
+	return scanTypes[dt].scanType
 }

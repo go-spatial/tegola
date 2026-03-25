@@ -11,7 +11,6 @@ var gregorianDate = DayToTime(gregorianDay) // Start date of Gregorian Calendar 
 // TimeToDay returns the Julian Date Number of time's date components.
 // The algorithm is taken from https://en.wikipedia.org/wiki/Julian_day.
 func TimeToDay(t time.Time) int {
-
 	t = t.UTC()
 
 	month := int(t.Month())

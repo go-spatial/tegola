@@ -8,10 +8,10 @@ const (
 	pkNil                       PartKind = 0
 	PkCommand                   PartKind = 3
 	PkResultset                 PartKind = 5
-	PkError                     PartKind = 6
+	pkError                     PartKind = 6
 	PkStatementID               PartKind = 10
 	pkTransactionID             PartKind = 11
-	PkRowsAffected              PartKind = 12
+	pkRowsAffected              PartKind = 12
 	PkResultsetID               PartKind = 13
 	PkTopologyInformation       PartKind = 15
 	pkTableLocation             PartKind = 16

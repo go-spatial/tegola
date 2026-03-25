@@ -89,8 +89,8 @@ func isSrsRoundEarth(pool *connectionPoolCollector, srid uint64) bool {
 	return ret
 }
 
-func genGeomField(name string, providerType string) string {
-	return fmt.Sprintf(`%v.ST_AsBinary()  AS %[1]v`, quoteIdentifier(name))
+func genGeomField(name string) string {
+	return quoteIdentifier(name)
 }
 
 func getLayerSQL(tblname string) string {
@@ -175,9 +175,9 @@ func genSQL(l *Layer, tblName string, fieldNames []string, buffer bool, provider
 	}
 
 	if fgeom == -1 {
-		fieldNames = append(fieldNames, genGeomField(l.geomField, providerType))
+		fieldNames = append(fieldNames, genGeomField(l.geomField))
 	} else {
-		fieldNames[fgeom] = genGeomField(l.geomField, providerType)
+		fieldNames[fgeom] = genGeomField(l.geomField)
 	}
 
 	if fid == -1 && l.idField != "" {
