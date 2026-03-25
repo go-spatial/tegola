@@ -6,45 +6,36 @@ import (
 	"github.com/SAP/go-hdb/driver/internal/protocol/encoding"
 )
 
-// rows affected
+// rows affected.
 const (
+	raTBD             = -1
 	raSuccessNoInfo   = -2
-	RaExecutionFailed = -3
+	raExecutionFailed = -3
 )
 
-// RowsAffected represents a rows affected part.
-type RowsAffected []int32
-
-func (r RowsAffected) String() string {
-	return fmt.Sprintf("%v", []int32(r))
+// rowsAffected represents a rows affected part.
+type rowsAffected struct {
+	rows []int32
 }
 
-func (r *RowsAffected) reset(numArg int) {
-	if r == nil || numArg > cap(*r) {
-		*r = make(RowsAffected, numArg)
-	} else {
-		*r = (*r)[:numArg]
-	}
+func (r rowsAffected) String() string {
+	return fmt.Sprintf("%v", r.rows)
 }
 
-func (r *RowsAffected) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	r.reset(ph.numArg())
+func (r *rowsAffected) decodeNumArg(dec *encoding.Decoder, numArg int) error {
+	r.rows = resizeSlice(r.rows, numArg)
 
-	for i := 0; i < ph.numArg(); i++ {
-		(*r)[i] = dec.Int32()
+	for i := range numArg {
+		r.rows[i] = dec.Int32()
 	}
 	return dec.Error()
 }
 
 // Total return the total number of all affected rows.
-func (r RowsAffected) Total() int64 {
-	if r == nil {
-		return 0
-	}
-
+func (r rowsAffected) Total() int64 {
 	total := int64(0)
-	for _, rows := range r {
-		if rows > 0 {
+	for _, rows := range r.rows {
+		if rows > 0 { // add only positive number / negatives are status / error values (see above)
 			total += int64(rows)
 		}
 	}

@@ -8,8 +8,9 @@ import (
 	"time"
 )
 
-// DSN parameters. For parameter client locale see http://help.sap.com/hana/SAP_HANA_SQL_Command_Network_Protocol_Reference_en.pdf.
+// DSN parameters.
 const (
+	DSNDatabaseName  = "databaseName"  // Tenant database name.
 	DSNDefaultSchema = "defaultSchema" // Database default schema.
 	DSNTimeout       = "timeout"       // Driver side connection timeout in seconds.
 	DSNPingInterval  = "pingInterval"  // Connection ping interval in seconds.
@@ -42,19 +43,21 @@ A DSN represents a parsed DSN string. A DSN string is an URL string with the fol
 
 and optional query parameters (see DSN query parameters and DSN query default values).
 
-Example:
+Examples:
 
-	"hdb://myuser:mypassword@localhost:30015?timeout=60"
+	"hdb://myUser:myPassword@localhost:30015?databaseName=myTenantDatabaseName"
+	"hdb://myUser:myPassword@localhost:30015?timeout=60"
 
 Examples TLS connection:
 
-	"hdb://myuser:mypassword@localhost:39013?TLSRootCAFile=trust.pem"
-	"hdb://myuser:mypassword@localhost:39013?TLSRootCAFile=trust.pem&TLSServerName=hostname"
-	"hdb://myuser:mypassword@localhost:39013?TLSInsecureSkipVerify"
+	"hdb://myUser:myPassword@localhost:39013?TLSRootCAFile=trust.pem"
+	"hdb://myUser:myPassword@localhost:39013?TLSRootCAFile=trust.pem&TLSServerName=hostname"
+	"hdb://myUser:myPassword@localhost:39013?TLSInsecureSkipVerify"
 */
 type DSN struct {
 	host               string
 	username, password string
+	databaseName       string
 	defaultSchema      string
 	timeout            time.Duration
 	pingInterval       time.Duration
@@ -83,21 +86,21 @@ func (e ParseError) Cause() error { return e.err }
 func parameterNotSupportedError(k string) error {
 	return &ParseError{s: fmt.Sprintf("parameter %s is not supported", k)}
 }
-func invalidNumberOfParametersError(k string, act, exp int) error {
+func invalidNumberOfParametersError(k string, act, exp int) error { //nolint:unparam
 	return &ParseError{s: fmt.Sprintf("invalid number of parameters for %s %d - expected %d", k, act, exp)}
 }
-func invalidNumberOfParametersRangeError(k string, act, min, max int) error {
-	return &ParseError{s: fmt.Sprintf("invalid number of parameters for %s %d - expected %d - %d", k, act, min, max)}
+func invalidNumberOfParametersRangeError(k string, actPrm, minPrm, maxPrm int) error {
+	return &ParseError{s: fmt.Sprintf("invalid number of parameters for %s %d - expected %d - %d", k, actPrm, minPrm, maxPrm)}
 }
-func invalidNumberOfParametersMinError(k string, act, min int) error {
-	return &ParseError{s: fmt.Sprintf("invalid number of parameters for %s %d - expected at least %d", k, act, min)}
+func invalidNumberOfParametersMinError(k string, actPrm, minPrm int) error {
+	return &ParseError{s: fmt.Sprintf("invalid number of parameters for %s %d - expected at least %d", k, actPrm, minPrm)}
 }
 func parseError(k, v string) error {
 	return &ParseError{s: fmt.Sprintf("failed to parse %s: %s", k, v)}
 }
 
-// parseDSN parses a DSN string into a DSN structure.
-func parseDSN(s string) (*DSN, error) {
+// ParseDSN parses a DSN string into a DSN structure.
+func ParseDSN(s string) (*DSN, error) {
 	if s == "" {
 		return nil, &ParseError{s: "invalid parameter - DSN is empty"}
 	}
@@ -119,6 +122,12 @@ func parseDSN(s string) (*DSN, error) {
 
 		default:
 			return nil, parameterNotSupportedError(k)
+
+		case DSNDatabaseName:
+			if len(v) != 1 {
+				return nil, invalidNumberOfParametersError(k, len(v), 1)
+			}
+			dsn.databaseName = v[0]
 
 		case DSNDefaultSchema:
 			if len(v) != 1 {
@@ -187,6 +196,9 @@ func parseDSN(s string) (*DSN, error) {
 // String reassembles the DSN into a valid DSN string.
 func (dsn *DSN) String() string {
 	values := url.Values{}
+	if dsn.databaseName != "" {
+		values.Set(DSNDatabaseName, dsn.databaseName)
+	}
 	if dsn.defaultSchema != "" {
 		values.Set(DSNDefaultSchema, dsn.defaultSchema)
 	}

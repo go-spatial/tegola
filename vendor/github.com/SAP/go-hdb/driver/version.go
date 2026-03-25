@@ -15,23 +15,25 @@ const (
 	versionCount
 )
 
-// versionNumber holds the information of a hdb semantic version.
-//
-// u.vv.wwx.yy.zzzzzzzzzz
-//
-// u.vv:       hdb version (major.minor)
-// ww:         SPS number
-// wwx:        revision number
-// yy:         patch number
-// zzzzzzzzzz: build id
-//
-// Example: 2.00.045.00.1575639312
-//
-// hdb version:     2.00
-// SPS number:      04
-// revision number: 045
-// patch number:    0
-// build id:        1575639312
+/*
+versionNumber holds the information of a hdb semantic version.
+
+u.vv.wwx.yy.zzzzzzzzzz
+
+u.vv:       hdb version (major.minor)
+ww:         SPS number
+wwx:        revision number
+yy:         patch number
+zzzzzzzzzz: build id
+
+Example: 2.00.045.00.1575639312
+
+	hdb version:     2.00
+	SPS number:      04
+	revision number: 045
+	patch number:    0
+	build id:        1575639312
+*/
 type versionNumber []uint64 // assumption: all fields are numeric
 
 func (vn versionNumber) String() string {
@@ -51,8 +53,8 @@ func parseVersionNumber(s string) versionNumber {
 	vn := make([]uint64, versionCount)
 
 	parts := strings.SplitN(s, ".", versionCount)
-	for i := 0; i < len(parts); i++ {
-		vn[i], _ = strconv.ParseUint(parts[i], 10, 64)
+	for i, part := range parts {
+		vn[i], _ = strconv.ParseUint(part, 10, 64)
 	}
 	return vn
 }
@@ -90,7 +92,7 @@ func compareUint64(u1, u2 uint64) int {
 //
 //	1 in case version v has higher precedence than c2.
 func (vn versionNumber) compare(vn2 versionNumber) int {
-	for i := 0; i < (versionCount - 1); i++ { // ignore buildID - might not be ordered}
+	for i := range versionCount - 1 { // ignore buildID - might not be ordered}
 		if r := compareUint64(vn[i], vn2[i]); r != 0 {
 			return r
 		}

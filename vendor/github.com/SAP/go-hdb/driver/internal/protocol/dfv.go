@@ -14,7 +14,7 @@ const (
 )
 
 var (
-	defaultDfvs   = []int{DfvLevel8}
+	defaultDfv    = DfvLevel8
 	supportedDfvs = []int{DfvLevel1, DfvLevel4, DfvLevel6, DfvLevel8}
 )
 
@@ -23,7 +23,7 @@ var (
 // all supported dfv values are returned.
 func SupportedDfvs(defaultOnly bool) []int {
 	if defaultOnly {
-		return defaultDfvs
+		return []int{defaultDfv}
 	}
 	return supportedDfvs
 }

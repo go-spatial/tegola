@@ -12,13 +12,26 @@ const (
 	CESUMax = 6
 )
 
+// Copied from unicode utf8.
+const (
+	tx = 0b10000000
+	t3 = 0b11100000
+
+	maskx = 0b00111111
+	mask3 = 0b00001111
+
+	rune1Max = 1<<7 - 1
+	rune2Max = 1<<11 - 1
+	rune3Max = 1<<16 - 1
+)
+
 // Size returns the amount of bytes needed to encode an UTF-8 byte slice to CESU-8.
 func Size(p []byte) int {
 	n := 0
-	for i := 0; i < len(p); {
-		r, size, _ := decodeRune(p[i:])
-		i += size
+	for len(p) > 0 {
+		r, size := DecodeRune(p)
 		n += RuneLen(r)
+		p = p[size:]
 	}
 	return n
 }
@@ -35,38 +48,42 @@ func StringSize(s string) int {
 // EncodeRune writes into p (which must be large enough) the CESU-8 encoding of the rune. It returns the number of bytes written.
 func EncodeRune(p []byte, r rune) int {
 	if r <= rune3Max {
-		return encodeRune(p, r)
+		return utf8.EncodeRune(p, r)
 	}
 	high, low := utf16.EncodeRune(r)
-	n := encodeRune(p, high)
-	n += encodeRune(p[n:], low)
-	return n
+	_ = p[5] // eliminate bounds checks
+	p[0] = t3 | byte(high>>12)
+	p[1] = tx | byte(high>>6)&maskx
+	p[2] = tx | byte(high)&maskx
+	p[3] = t3 | byte(low>>12)
+	p[4] = tx | byte(low>>6)&maskx
+	p[5] = tx | byte(low)&maskx
+	return CESUMax
 }
 
 // FullRune reports whether the bytes in p begin with a full CESU-8 encoding of a rune.
 func FullRune(p []byte) bool {
-	high, n, short := decodeRune(p)
-	if short {
-		return false
+	if isSurrogate(p) {
+		return isSurrogate(p[3:])
 	}
-	if !utf16.IsSurrogate(high) {
-		return true
+	return utf8.FullRune(p)
+}
+
+func decodeSurrogates(p []byte) (rune, int) {
+	high := decodeCheckedSurrogate(p)
+	low, ok := decodeSurrogate(p[3:])
+	if !ok {
+		return utf8.RuneError, 3
 	}
-	_, _, short = decodeRune(p[n:])
-	return !short
+	return utf16.DecodeRune(high, low), CESUMax
 }
 
 // DecodeRune unpacks the first CESU-8 encoding in p and returns the rune and its width in bytes.
 func DecodeRune(p []byte) (rune, int) {
-	high, n1, _ := decodeRune(p)
-	if !utf16.IsSurrogate(high) {
-		return high, n1
+	if !isSurrogate(p) {
+		return utf8.DecodeRune(p)
 	}
-	low, n2, _ := decodeRune(p[n1:])
-	if low == utf8.RuneError {
-		return low, n1 + n2
-	}
-	return utf16.DecodeRune(high, low), n1 + n2
+	return decodeSurrogates(p)
 }
 
 // RuneLen returns the number of bytes required to encode the rune.
@@ -82,144 +99,44 @@ func RuneLen(r rune) int {
 		return 3
 	case r <= utf8.MaxRune:
 		return CESUMax
+	default:
+		return -1
 	}
-	return -1
 }
-
-// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-// Copied from unicode utf8
-// - allow utf8 encoding of utf16 surrogate values
-// - see (*) for code changes
-
-// Code points in the surrogate range are not valid for UTF-8.
-// (*) const not needed
-// const (
-// 	surrogateMin = 0xD800
-// 	surrogateMax = 0xDFFF
-// )
 
 const (
-	t1 = 0x00 // 0000 0000
-	tx = 0x80 // 1000 0000
-	t2 = 0xC0 // 1100 0000
-	t3 = 0xE0 // 1110 0000
-	t4 = 0xF0 // 1111 0000
-	t5 = 0xF8 // 1111 1000
-
-	maskx = 0x3F // 0011 1111
-	mask2 = 0x1F // 0001 1111
-	mask3 = 0x0F // 0000 1111
-	mask4 = 0x07 // 0000 0111
-
-	rune1Max = 1<<7 - 1
-	rune2Max = 1<<11 - 1
-	rune3Max = 1<<16 - 1
+	sp0    = 0xed
+	sb1Min = 0xa0
+	sb1Max = 0xbf
 )
 
-func encodeRune(p []byte, r rune) int {
-	// Negative values are erroneous.  Making it unsigned addresses the problem.
-	switch i := uint32(r); {
-	case i <= rune1Max:
-		p[0] = byte(r)
-		return 1
-	case i <= rune2Max:
-		p[0] = t2 | byte(r>>6)
-		p[1] = tx | byte(r)&maskx
-		return 2
-	// case i > MaxRune, surrogateMin <= i && i <= surrogateMax: // replaced (*)
-	case i > utf8.MaxRune: // (*)
-		r = utf8.RuneError
-		fallthrough
-	case i <= rune3Max:
-		p[0] = t3 | byte(r>>12)
-		p[1] = tx | byte(r>>6)&maskx
-		p[2] = tx | byte(r)&maskx
-		return 3
-	default:
-		p[0] = t4 | byte(r>>18)
-		p[1] = tx | byte(r>>12)&maskx
-		p[2] = tx | byte(r>>6)&maskx
-		p[3] = tx | byte(r)&maskx
-		return 4
+func decodeSurrogate(p []byte) (rune, bool) {
+	if len(p) < 3 {
+		return utf8.RuneError, false
 	}
+	p0 := p[0]
+	if p0 != sp0 {
+		return utf8.RuneError, false
+	}
+	b1 := p[1]
+	if b1 < sb1Min || b1 > sb1Max {
+		return utf8.RuneError, false
+	}
+	b2 := p[2]
+	return rune(p0&mask3)<<12 | rune(b1&maskx)<<6 | rune(b2&maskx), true
 }
 
-func decodeRune(p []byte) (r rune, size int, short bool) {
-	n := len(p)
-	if n < 1 {
-		return utf8.RuneError, 0, true
-	}
-	c0 := p[0]
+func decodeCheckedSurrogate(p []byte) rune {
+	return rune(p[0]&mask3)<<12 | rune(p[1]&maskx)<<6 | rune(p[2]&maskx)
+}
 
-	// 1-byte, 7-bit sequence?
-	if c0 < tx {
-		return rune(c0), 1, false
+func isSurrogate(p []byte) bool {
+	if len(p) < 3 {
+		return false
 	}
-
-	// unexpected continuation byte?
-	if c0 < t2 {
-		return utf8.RuneError, 1, false
+	b1 := p[1]
+	if p[0] != sp0 || b1 < sb1Min || b1 > sb1Max {
+		return false
 	}
-
-	// need first continuation byte
-	if n < 2 {
-		return utf8.RuneError, 1, true
-	}
-	c1 := p[1]
-	if c1 < tx || t2 <= c1 {
-		return utf8.RuneError, 1, false
-	}
-
-	// 2-byte, 11-bit sequence?
-	if c0 < t3 {
-		r = rune(c0&mask2)<<6 | rune(c1&maskx)
-		if r <= rune1Max {
-			return utf8.RuneError, 1, false
-		}
-		return r, 2, false
-	}
-
-	// need second continuation byte
-	if n < 3 {
-		return utf8.RuneError, 1, true
-	}
-	c2 := p[2]
-	if c2 < tx || t2 <= c2 {
-		return utf8.RuneError, 1, false
-	}
-
-	// 3-byte, 16-bit sequence?
-	if c0 < t4 {
-		r = rune(c0&mask3)<<12 | rune(c1&maskx)<<6 | rune(c2&maskx)
-		if r <= rune2Max {
-			return utf8.RuneError, 1, false
-		}
-		// do not throw error on surrogates // (*)
-		// if surrogateMin <= r && r <= surrogateMax {
-		//	 return RuneError, 1, false
-		//}
-		return r, 3, false
-	}
-
-	// need third continuation byte
-	if n < 4 {
-		return utf8.RuneError, 1, true
-	}
-	c3 := p[3]
-	if c3 < tx || t2 <= c3 {
-		return utf8.RuneError, 1, false
-	}
-
-	// 4-byte, 21-bit sequence?
-	if c0 < t5 {
-		r = rune(c0&mask4)<<18 | rune(c1&maskx)<<12 | rune(c2&maskx)<<6 | rune(c3&maskx)
-		if r <= rune3Max || utf8.MaxRune < r {
-			return utf8.RuneError, 1, false
-		}
-		return r, 4, false
-	}
-
-	// error
-	return utf8.RuneError, 1, false
+	return true
 }

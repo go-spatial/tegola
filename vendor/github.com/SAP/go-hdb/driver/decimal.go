@@ -42,10 +42,10 @@ func (n *NullDecimal) Scan(value any) error {
 	if !ok {
 		return fmt.Errorf("decimal: invalid data type %T", value)
 	}
-	if n.Decimal == nil {
-		return fmt.Errorf("invalid decimal value %v", n.Decimal)
-	}
 	n.Valid = true
+	if n.Decimal == nil {
+		n.Decimal = &Decimal{}
+	}
 	(*big.Rat)(n.Decimal).Set(r)
 	return nil
 }

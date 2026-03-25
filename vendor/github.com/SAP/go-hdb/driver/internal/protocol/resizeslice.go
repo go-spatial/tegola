@@ -5,7 +5,7 @@ func resizeSlice[S ~[]E, E any](s S, n int) S {
 	case s == nil:
 		s = make(S, n)
 	case n > cap(s):
-		s = append(s, make(S, n-cap(s))...)
+		s = append(s, make(S, n-len(s))...)
 	}
 	return s[:n]
 }

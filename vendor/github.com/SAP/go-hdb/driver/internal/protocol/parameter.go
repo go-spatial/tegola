@@ -17,21 +17,24 @@ const (
 	poDefault   parameterOptions = 0x04
 )
 
-var parameterOptionsText = map[parameterOptions]string{
-	poMandatory: "mandatory",
-	poOptional:  "optional",
-	poDefault:   "default",
-}
+const (
+	poMandatoryText = "mandatory"
+	poOptionalText  = "optional"
+	poDefaultText   = "default"
+)
 
 func (k parameterOptions) String() string {
-	t := make([]string, 0, len(parameterOptionsText))
-
-	for option, text := range parameterOptionsText {
-		if (k & option) != 0 {
-			t = append(t, text)
-		}
+	var s []string
+	if k&poMandatory != 0 {
+		s = append(s, poMandatoryText)
 	}
-	return fmt.Sprintf("%v", t)
+	if k&poOptional != 0 {
+		s = append(s, poOptionalText)
+	}
+	if k&poDefault != 0 {
+		s = append(s, poDefaultText)
+	}
+	return fmt.Sprintf("%v", s)
 }
 
 // ParameterMode represents the parameter mode set.
@@ -39,70 +42,65 @@ type ParameterMode int8
 
 // ParameterMode constants.
 const (
-	PmIn    ParameterMode = 0x01
+	pmIn    ParameterMode = 0x01
 	pmInout ParameterMode = 0x02
-	PmOut   ParameterMode = 0x04
+	pmOut   ParameterMode = 0x04
 )
 
-var parameterModeText = []string{
-	PmIn:    "in",
-	pmInout: "inout",
-	PmOut:   "out",
-}
+const (
+	pmInText    = "in"
+	pmInoutText = "inout"
+	pmOutText   = "out"
+)
 
 func (k ParameterMode) String() string {
-	t := make([]string, 0, len(parameterModeText))
-
-	for mode, text := range parameterModeText {
-		if (k & ParameterMode(mode)) != 0 {
-			t = append(t, text)
-		}
+	var s []string
+	if k&pmIn != 0 {
+		s = append(s, pmInText)
 	}
-	return fmt.Sprintf("%v", t)
-}
-
-func newParameterFields(size int) []*ParameterField {
-	return make([]*ParameterField, size)
+	if k&pmInout != 0 {
+		s = append(s, pmInoutText)
+	}
+	if k&pmOut != 0 {
+		s = append(s, pmOutText)
+	}
+	return fmt.Sprintf("%v", s)
 }
 
 // ParameterField contains database field attributes for parameters.
 type ParameterField struct {
 	names            *fieldNames
-	ft               fieldType // avoid tc.fieldType() calls in Converter (e.g. bulk insert)
-	ofs              int       // field name offset & used for index in case of tableRef or tableRows type
-	length           int16
-	fraction         int16
+	ofs              int // field name offset & used for index in case of tableRef or tableRows type
+	prec             int // length
+	scale            int // fraction
 	parameterOptions parameterOptions
 	tc               typeCode
 	mode             ParameterMode
 }
 
-// NewTableRefParameterField returns a ParameterField representing a table reference.
-func NewTableRefParameterField(idx int) *ParameterField {
-	return &ParameterField{ofs: idx, tc: TcTableRef, mode: PmOut}
-}
-
 // NewTableRowsParameterField returns a ParameterField representing table rows.
 func NewTableRowsParameterField(idx int) *ParameterField {
-	return &ParameterField{ofs: idx, tc: TcTableRows, mode: PmOut}
+	return &ParameterField{ofs: idx, tc: TcTableRows, mode: pmOut}
 }
 
 func (f *ParameterField) fieldName() string {
 	switch f.tc {
-	case TcTableRef, TcTableRows:
+	case TcTableRows:
 		return fmt.Sprintf("table %d", f.ofs)
 	default:
-		return f.names.name(uint32(f.ofs))
+		return f.names.name(uint32(f.ofs)) //nolint: gosec
 	}
 }
 
+func (f *ParameterField) isNullable() bool { return f.parameterOptions == poOptional }
+
 func (f *ParameterField) String() string {
-	return fmt.Sprintf("parameterOptions %s typeCode %s mode %s fraction %d length %d name %s",
+	return fmt.Sprintf("parameterOptions %s typeCode %s mode %s precision %d scale %d name %s",
 		f.parameterOptions,
 		f.tc,
 		f.mode,
-		f.fraction,
-		f.length,
+		f.prec,
+		f.scale,
 		f.fieldName(),
 	)
 }
@@ -111,79 +109,124 @@ func (f *ParameterField) String() string {
 func (f *ParameterField) IsLob() bool { return f.tc.isLob() }
 
 // Convert returns the result of the fieldType conversion.
-func (f *ParameterField) Convert(t transform.Transformer, v any) (any, error) {
-	switch ft := f.ft.(type) {
-	case fieldConverter:
-		return ft.convert(v)
-	case cesu8FieldConverter:
-		return ft.convertCESU8(t, v)
-	default:
-		panic(fmt.Sprintf("field type %v does not implement converter", ft)) // should never happen
+func (f *ParameterField) Convert(v any, cesu8Encoder transform.Transformer) (any, error) {
+	cv, err := convertField(f.tc, v, cesu8Encoder)
+	if err != nil {
+		return nil, fmt.Errorf("field %[1]s type code %[2]s type %[3]T value %[3]v coversion error %[4]w", f.fieldName(), f.tc, v, err)
 	}
+	return cv, nil
 }
 
-// TypeName returns the type name of the field.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeDatabaseTypeName
-func (f *ParameterField) TypeName() string { return f.tc.typeName() }
+// DatabaseTypeName returns the type name of the field.
+// It implements the go-hdb driver ColumnType interface.
+func (f *ParameterField) DatabaseTypeName() string { return f.tc.typeName() }
 
-// ScanType returns the scan type of the field.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeScanType
-func (f *ParameterField) ScanType() reflect.Type { return f.tc.dataType().ScanType() }
-
-// TypeLength returns the type length of the field.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeLength
-func (f *ParameterField) TypeLength() (int64, bool) {
-	if f.tc.isVariableLength() {
-		return int64(f.length), true
-	}
-	return 0, false
-}
-
-// TypePrecisionScale returns the type precision and scale (decimal types) of the field.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypePrecisionScale
-func (f *ParameterField) TypePrecisionScale() (int64, int64, bool) {
+// DecimalSize returns the type precision and scale of the field.
+// It implements the go-hdb driver ColumnType interface.
+func (f *ParameterField) DecimalSize() (int64, int64, bool) {
 	if f.tc.isDecimalType() {
-		return int64(f.length), int64(f.fraction), true
+		return int64(f.prec), int64(f.scale), true
 	}
 	return 0, 0, false
 }
 
-// Nullable returns true if the field may be null, false otherwise.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeNullable
-func (f *ParameterField) Nullable() bool { return f.parameterOptions == poOptional }
-
-// In returns true if the parameter field is an input field.
-func (f *ParameterField) In() bool { return f.mode == pmInout || f.mode == PmIn }
-
-// Out returns true if the parameter field is an output field.
-func (f *ParameterField) Out() bool { return f.mode == pmInout || f.mode == PmOut }
-
-// InOut returns true if the parameter field is an in,- output field.
-func (f *ParameterField) InOut() bool { return f.mode == pmInout }
+// Length returns the type length of the field.
+// It implements the go-hdb driver ColumnType interface.
+func (f *ParameterField) Length() (int64, bool) {
+	if f.tc.isVariableLength() {
+		return int64(f.prec), true
+	}
+	return 0, false
+}
 
 // Name returns the parameter field name.
+// It implements the go-hdb driver ColumnType interface.
 func (f *ParameterField) Name() string { return f.fieldName() }
+
+// Nullable returns true if the field may be null, false otherwise.
+// It implements the go-hdb driver ColumnType interface.
+func (f *ParameterField) Nullable() (bool, bool) { return f.isNullable(), true }
+
+// ScanType returns the scan type of the field.
+// It implements the go-hdb driver ColumnType interface.
+func (f *ParameterField) ScanType() reflect.Type { return f.tc.dataType().ScanType(f.isNullable()) }
+
+// In returns true if the parameter field is an input field.
+// It implements the go-hdb driver ParameterType interface.
+func (f *ParameterField) In() bool { return f.mode == pmInout || f.mode == pmIn }
+
+// Out returns true if the parameter field is an output field.
+// It implements the go-hdb driver ParameterType interface.
+func (f *ParameterField) Out() bool { return f.mode == pmInout || f.mode == pmOut }
+
+// InOut returns true if the parameter field is an in,- output field.
+// It implements the go-hdb driver ParameterType interface.
+func (f *ParameterField) InOut() bool { return f.mode == pmInout }
 
 func (f *ParameterField) decode(dec *encoding.Decoder) {
 	f.parameterOptions = parameterOptions(dec.Int8())
 	f.tc = typeCode(dec.Int8())
 	f.mode = ParameterMode(dec.Int8())
-	dec.Skip(1) //filler
+	dec.Skip(1) // filler
 	f.ofs = int(dec.Uint32())
-	f.length = dec.Int16()
-	f.fraction = dec.Int16()
-	dec.Skip(4) //filler
-
-	f.names.insert(uint32(f.ofs))
-
-	f.ft = f.tc.fieldType(int(f.length), int(f.fraction))
+	f.prec = int(dec.Int16())
+	f.scale = int(dec.Int16())
+	dec.Skip(4)                      // filler
+	f.names.insertOfs(uint32(f.ofs)) //nolint: gosec
 }
 
 func (f *ParameterField) prmSize(v any) int {
 	if v == nil && f.tc.supportNullValue() {
 		return 0
 	}
-	return f.ft.prmSize(v)
+	switch f.tc {
+	case tcBoolean:
+		return encoding.BooleanFieldSize
+	case tcTinyint:
+		return encoding.TinyintFieldSize
+	case tcSmallint:
+		return encoding.SmallintFieldSize
+	case tcInteger:
+		return encoding.IntegerFieldSize
+	case tcBigint:
+		return encoding.BigintFieldSize
+	case tcReal:
+		return encoding.RealFieldSize
+	case tcDouble:
+		return encoding.DoubleFieldSize
+	case tcDate:
+		return encoding.DateFieldSize
+	case tcTime:
+		return encoding.TimeFieldSize
+	case tcTimestamp:
+		return encoding.TimestampFieldSize
+	case tcLongdate:
+		return encoding.LongdateFieldSize
+	case tcSeconddate:
+		return encoding.SeconddateFieldSize
+	case tcDaydate:
+		return encoding.DaydateFieldSize
+	case tcSecondtime:
+		return encoding.SecondtimeFieldSize
+	case tcDecimal:
+		return encoding.DecimalFieldSize
+	case tcFixed8:
+		return encoding.Fixed8FieldSize
+	case tcFixed12:
+		return encoding.Fixed12FieldSize
+	case tcFixed16:
+		return encoding.Fixed16FieldSize
+	case tcChar, tcVarchar, tcString, tcBstring, tcAlphanum, tcBinary, tcVarbinary:
+		return encoding.VarFieldSize(v)
+	case tcNchar, tcNvarchar, tcNstring, tcShorttext:
+		return encoding.Cesu8FieldSize(v)
+	case tcStPoint, tcStGeometry:
+		return encoding.HexFieldSize(v)
+	case tcBlob, tcClob, tcLocator, tcNclob, tcText, tcNlocator, tcBintext:
+		return encoding.LobInputParametersSize
+	default:
+		panic(fmt.Errorf("invalid type code %[1]d %[1]s", f.tc)) // should never happen
+	}
 }
 
 func (f *ParameterField) encodePrm(enc *encoding.Encoder, v any) error {
@@ -193,24 +236,80 @@ func (f *ParameterField) encodePrm(enc *encoding.Encoder, v any) error {
 		return nil
 	}
 	enc.Byte(byte(encTc)) // type code
-	return f.ft.encodePrm(enc, v)
+	switch f.tc {
+	case tcBoolean:
+		return enc.BooleanField(v)
+	case tcTinyint:
+		return enc.TinyintField(v)
+	case tcSmallint:
+		return enc.SmallintField(v)
+	case tcInteger:
+		return enc.IntegerField(v)
+	case tcBigint:
+		return enc.BigintField(v)
+	case tcReal:
+		return enc.RealField(v)
+	case tcDouble:
+		return enc.DoubleField(v)
+	case tcDate:
+		return enc.DateField(v)
+	case tcTime:
+		return enc.TimeField(v)
+	case tcTimestamp:
+		return enc.TimestampField(v)
+	case tcLongdate:
+		return enc.LongdateField(v)
+	case tcSeconddate:
+		return enc.SeconddateField(v)
+	case tcDaydate:
+		return enc.DaydateField(v)
+	case tcSecondtime:
+		return enc.SecondtimeField(v)
+	case tcDecimal:
+		return enc.DecimalField(v)
+	case tcFixed8:
+		return enc.Fixed8Field(v, f.prec, f.scale)
+	case tcFixed12:
+		return enc.Fixed12Field(v, f.prec, f.scale)
+	case tcFixed16:
+		return enc.Fixed16Field(v, f.prec, f.scale)
+	case tcChar, tcVarchar, tcString, tcBstring, tcAlphanum, tcBinary, tcVarbinary:
+		return enc.VarField(v)
+	case tcNchar, tcNvarchar, tcNstring, tcShorttext:
+		return enc.Cesu8Field(v)
+	case tcStPoint, tcStGeometry:
+		return enc.HexField(v)
+	case tcBlob, tcClob, tcLocator, tcNclob, tcText, tcNlocator, tcBintext:
+		descr, ok := v.(*LobInDescr)
+		if !ok {
+			panic("invalid lob value") // should never happen
+		}
+		enc.Byte(byte(descr.opt))
+		enc.Int32(int32(descr.size())) //nolint: gosec
+		enc.Int32(int32(descr.pos))    //nolint: gosec
+		return nil
+	default:
+		panic(fmt.Errorf("invalid type code %[1]d %[1]s", f.tc)) // should never happen
+	}
 }
 
-func (f *ParameterField) decodeRes(dec *encoding.Decoder) (any, error) {
-	return f.ft.decodeRes(dec)
+func (f *ParameterField) decodeResult(dec *encoding.Decoder, tr transform.Transformer, lobReader LobReader, lobChunkSize int) (any, error) {
+	return decodeResult(f.tc, dec, tr, lobReader, lobChunkSize, f.scale)
 }
 
 /*
 decode parameter
 - currently not used
-- type code is first byte (see encodePrm)
+- type code is first byte (see encodePrm).
 */
-func (f *ParameterField) decodePrm(dec *encoding.Decoder) (any, error) {
+var _ = (*ParameterField)(nil).decodeParameter // mark decodeParameter as used
+
+func (f *ParameterField) decodeParameter(dec *encoding.Decoder) (any, error) {
 	tc := typeCode(dec.Byte())
 	if tc&0x80 != 0 { // high bit set -> null value
 		return nil, nil
 	}
-	return f.ft.decodePrm(dec)
+	return decodeParameter(f.tc, dec, f.scale)
 }
 
 // ParameterMetadata represents the metadata of a parameter.
@@ -222,15 +321,17 @@ func (m *ParameterMetadata) String() string {
 	return fmt.Sprintf("parameter %v", m.ParameterFields)
 }
 
-func (m *ParameterMetadata) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	m.ParameterFields = newParameterFields(ph.numArg())
+func (m *ParameterMetadata) decodeNumArg(dec *encoding.Decoder, numArg int) error {
+	m.ParameterFields = make([]*ParameterField, numArg)
 	names := &fieldNames{}
-	for i := 0; i < len(m.ParameterFields); i++ {
+	for i := range len(m.ParameterFields) {
 		f := &ParameterField{names: names}
 		f.decode(dec)
 		m.ParameterFields[i] = f
 	}
-	names.decode(dec)
+	if err := names.decode(dec); err != nil {
+		return err
+	}
 	return dec.Error()
 }
 
@@ -238,12 +339,11 @@ func (m *ParameterMetadata) decode(dec *encoding.Decoder, ph *PartHeader) error 
 type InputParameters struct {
 	InputFields []*ParameterField
 	nvargs      []driver.NamedValue
-	hasLob      bool
 }
 
 // NewInputParameters returns a InputParameters instance.
-func NewInputParameters(inputFields []*ParameterField, nvargs []driver.NamedValue, hasLob bool) (*InputParameters, error) {
-	return &InputParameters{InputFields: inputFields, nvargs: nvargs, hasLob: hasLob}, nil
+func NewInputParameters(inputFields []*ParameterField, nvargs []driver.NamedValue) (*InputParameters, error) {
+	return &InputParameters{InputFields: inputFields, nvargs: nvargs}, nil
 }
 
 func (p *InputParameters) String() string {
@@ -257,18 +357,22 @@ func (p *InputParameters) size() int {
 		return 0
 	}
 
-	for i := 0; i < len(p.nvargs)/numColumns; i++ { // row-by-row
-
+	for i := range len(p.nvargs) / numColumns { // row-by-row
 		size += numColumns
 
-		for j := 0; j < numColumns; j++ {
+		hasInLob := false
+
+		for j := range numColumns {
 			f := p.InputFields[j]
 			size += f.prmSize(p.nvargs[i*numColumns+j].Value)
+			if f.IsLob() && f.In() {
+				hasInLob = true
+			}
 		}
 
 		// lob input parameter: set offset position of lob data
-		if p.hasLob {
-			for j := 0; j < numColumns; j++ {
+		if hasInLob {
+			for j := range numColumns {
 				if lobInDescr, ok := p.nvargs[i*numColumns+j].Value.(*LobInDescr); ok {
 					lobInDescr.setPos(size)
 					size += lobInDescr.size()
@@ -287,9 +391,9 @@ func (p *InputParameters) numArg() int {
 	return len(p.nvargs) / numColumns
 }
 
-func (p *InputParameters) decode(dec *encoding.Decoder, ph *PartHeader) error {
+func (p *InputParameters) decodeNumArg(dec *encoding.Decoder, numArg int) error {
 	// TODO Sniffer
-	//return fmt.Errorf("not implemented")
+	// return fmt.Errorf("not implemented")
 	return nil
 }
 
@@ -299,17 +403,22 @@ func (p *InputParameters) encode(enc *encoding.Encoder) error {
 		return nil
 	}
 
-	for i := 0; i < len(p.nvargs)/numColumns; i++ { // row-by-row
-		for j := 0; j < numColumns; j++ {
-			//mass insert
+	for i := range len(p.nvargs) / numColumns { // row-by-row
+		hasInLob := false
+
+		for j := range numColumns {
+			// mass insert
 			f := p.InputFields[j]
 			if err := f.encodePrm(enc, p.nvargs[i*numColumns+j].Value); err != nil {
 				return err
 			}
+			if f.IsLob() && f.In() {
+				hasInLob = true
+			}
 		}
 		// lob input parameter: write first data chunk
-		if p.hasLob {
-			for j := 0; j < numColumns; j++ {
+		if hasInLob {
+			for j := range numColumns {
 				if lobInDescr, ok := p.nvargs[i*numColumns+j].Value.(*LobInDescr); ok {
 					lobInDescr.writeFirst(enc)
 				}
@@ -330,16 +439,15 @@ func (p *OutputParameters) String() string {
 	return fmt.Sprintf("fields %v values %v", p.OutputFields, p.FieldValues)
 }
 
-func (p *OutputParameters) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	numArg := ph.numArg()
+func (p *OutputParameters) decodeResult(dec *encoding.Decoder, tr transform.Transformer, numArg int, lobReader LobReader, lobChunkSize int) error {
 	cols := len(p.OutputFields)
 	p.FieldValues = resizeSlice(p.FieldValues, numArg*cols)
 
-	for i := 0; i < numArg; i++ {
+	for i := range numArg {
 		for j, f := range p.OutputFields {
 			var err error
-			if p.FieldValues[i*cols+j], err = f.decodeRes(dec); err != nil {
-				p.DecodeErrors = append(p.DecodeErrors, &DecodeError{row: i, fieldName: f.Name(), s: err.Error()}) // collect decode / conversion errors
+			if p.FieldValues[i*cols+j], err = f.decodeResult(dec, tr, lobReader, lobChunkSize); err != nil {
+				p.DecodeErrors = append(p.DecodeErrors, &DecodeError{row: i, fieldName: f.Name(), err: err}) // collect decode / conversion errors
 			}
 		}
 	}

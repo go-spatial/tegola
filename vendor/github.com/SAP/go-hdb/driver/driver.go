@@ -10,7 +10,7 @@ import (
 )
 
 // DriverVersion is the version number of the hdb driver.
-const DriverVersion = "0.111.9"
+const DriverVersion = "1.16.2"
 
 // DriverName is the driver name to use with sql.Open for hdb databases.
 const DriverName = "hdb"
@@ -24,27 +24,36 @@ var clientID = func() string {
 
 // clientType is the information provided to HDB identifying the driver.
 // Previously the driver.DriverName "hdb" was used but we should be more specific in providing a unique client type to HANA backend.
-const clientType = "go-hdb"
+// Define as var (not const) to enable ldflags var setting at build/link time.
+var clientType = "go-hdb"
 
 var defaultApplicationName, _ = os.Executable()
 
-// driver singleton instance (do not use directly - use getDriver() instead)
+// driver singleton instance.
 var stdHdbDriver *hdbDriver
 
-func init() {
+func init() { register() }
+
+func register() {
 	// load stats configuration
 	if err := loadStatsCfg(); err != nil {
 		panic(err) // invalid configuration file
 	}
 	// create driver
-	stdHdbDriver = &hdbDriver{metrics: newMetrics(nil, statsCfg.TimeUpperBounds)}
+	stdHdbDriver = &hdbDriver{metrics: newMetrics(nil, statsCfg.TimeUnit, statsCfg.TimeUpperBounds)}
 	// register driver
 	sql.Register(DriverName, stdHdbDriver)
 }
 
+// Unregister unregisters the go-hdb driver and frees all allocated ressources.
+// After calling any go-hdb access might panic.
+func Unregister() error {
+	return stdHdbDriver.shutdown()
+}
+
 // driver
 
-// check if driver implements all required interfaces
+// check if driver implements all required interfaces.
 var (
 	_ driver.Driver        = (*hdbDriver)(nil)
 	_ driver.DriverContext = (*hdbDriver)(nil)
@@ -61,6 +70,11 @@ type Driver interface {
 // hdbDriver represents the go sql driver implementation for hdb.
 type hdbDriver struct {
 	metrics *metrics
+}
+
+func (d hdbDriver) shutdown() error {
+	d.metrics.close()
+	return nil
 }
 
 // Open implements the driver.Driver interface.
@@ -89,30 +103,26 @@ func (d *hdbDriver) Stats() *Stats { return d.metrics.stats() }
 type DB struct {
 	// The embedded sql.DB instance. Please use only the methods of the wrapper (driver.DB).
 	// The field is exported to support use cases where a sql.DB object is requested, but please
-	// use with care as some of the sql.DB methods (e.g. Close) are redefined in driver.DB.
+	// use with care as some of the sql.DB methods (e.g. Close) might be redefined in driver.DB.
 	*sql.DB
 	metrics *metrics
 }
 
 // OpenDB opens and returns a database. It also calls the OpenDB method of the sql package and stores an embedded *sql.DB object.
 func OpenDB(c *Connector) *DB {
-	metrics := newMetrics(stdHdbDriver.metrics, statsCfg.TimeUpperBounds)
-	nc := &Connector{
-		connAttrs: c.connAttrs,
-		authAttrs: c.authAttrs,
-		newConn: func(ctx context.Context, connAttrs *connAttrs, authAttrs *authAttrs) (driver.Conn, error) {
-			return newConn(ctx, metrics, connAttrs, authAttrs) // use db specific metrics
-		},
-	}
+	metrics := newMetrics(stdHdbDriver.metrics, statsCfg.TimeUnit, statsCfg.TimeUpperBounds)
+	nc := c.clone()
+	nc.metrics = metrics
 	return &DB{
-		metrics: metrics,
 		DB:      sql.OpenDB(nc),
+		metrics: metrics,
 	}
 }
 
-// Close closes the DB. It also calls the Close method of the embedded sql.DB.
+// Close closes the database. It also calls the Close method of the sql package and returns its error.
 func (db *DB) Close() error {
 	err := db.DB.Close()
+	// close metrics only after db is closed.
 	db.metrics.close()
 	return err
 }

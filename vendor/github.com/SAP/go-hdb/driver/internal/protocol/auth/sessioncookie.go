@@ -2,6 +2,8 @@ package auth
 
 import (
 	"fmt"
+
+	"github.com/SAP/go-hdb/driver/internal/protocol/encoding"
 )
 
 // SessionCookie implements session cookie authentication.
@@ -20,10 +22,10 @@ func (a *SessionCookie) String() string {
 	return fmt.Sprintf("method type %s cookie %v", a.Typ(), a.cookie)
 }
 
-// Typ implements the CookieGetter interface.
+// Typ implements the Mthod interface.
 func (a *SessionCookie) Typ() string { return MtSessionCookie }
 
-// Order implements the CookieGetter interface.
+// Order implements the Method interface.
 func (a *SessionCookie) Order() byte { return MoSessionCookie }
 
 // PrepareInitReq implements the Method interface.
@@ -34,7 +36,7 @@ func (a *SessionCookie) PrepareInitReq(prms *Prms) error {
 }
 
 // InitRepDecode implements the Method interface.
-func (a *SessionCookie) InitRepDecode(d *Decoder) error {
+func (a *SessionCookie) InitRepDecode(d *encoding.Decoder) error {
 	return nil
 }
 
@@ -47,14 +49,14 @@ func (a *SessionCookie) PrepareFinalReq(prms *Prms) error {
 }
 
 // FinalRepDecode implements the Method interface.
-func (a *SessionCookie) FinalRepDecode(d *Decoder) error {
-	if err := d.NumPrm(2); err != nil {
+func (a *SessionCookie) FinalRepDecode(d *encoding.Decoder) error {
+	if err := DecodeAndCheckNumPrm(d, 2); err != nil {
 		return err
 	}
-	mt := d.String()
+	mt := d.AuthString()
 	if err := checkAuthMethodType(mt, a.Typ()); err != nil {
 		return err
 	}
-	d.bytes() // second parameter seems to be empty
+	d.AuthBytes() // second parameter seems to be empty
 	return nil
 }

@@ -45,17 +45,17 @@ func (r *initRequest) String() string {
 }
 
 func (r *initRequest) decode(dec *encoding.Decoder) error {
-	dec.Skip(initRequestFillerSize) //filler
+	dec.Skip(initRequestFillerSize) // filler
 	r.product.major = dec.Int8()
 	r.product.minor = dec.Int16()
 	r.protocol.major = dec.Int8()
 	r.protocol.minor = dec.Int16()
-	dec.Skip(1) //reserved filler
+	dec.Skip(1) // reserved filler
 	r.numOptions = dec.Int8()
 
 	switch r.numOptions {
 	default:
-		panic(fmt.Sprintf("invalid number of options %d", r.numOptions))
+		panic("invalid number of options")
 
 	case 0:
 		dec.Skip(2)
@@ -63,7 +63,7 @@ func (r *initRequest) decode(dec *encoding.Decoder) error {
 	case 1:
 		cnt := dec.Int8()
 		if cnt != 1 {
-			panic(fmt.Sprintf("invalid number of options %d - 1 expected", cnt))
+			panic("invalid number of options - 1 expected")
 		}
 		r.endianess = endianess(dec.Int8())
 	}
@@ -79,7 +79,7 @@ func (r *initRequest) encode(enc *encoding.Encoder) error {
 
 	switch r.numOptions {
 	default:
-		panic(fmt.Sprintf("invalid number of options %d", r.numOptions))
+		panic("invalid number of options")
 
 	case 0:
 		enc.Zeroes(4)
@@ -108,6 +108,6 @@ func (r *initReply) decode(dec *encoding.Decoder) error {
 	r.product.minor = dec.Int16()
 	r.protocol.major = dec.Int8()
 	r.protocol.minor = dec.Int16()
-	dec.Skip(2) //commitInitReplySize
+	dec.Skip(2) // commitInitReplySize
 	return dec.Error()
 }

@@ -1,47 +1,57 @@
 package protocol
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"slices"
+	"sync"
+	"unicode/utf8"
 
 	"github.com/SAP/go-hdb/driver/internal/protocol/encoding"
+	"github.com/SAP/go-hdb/driver/internal/unsafe"
+	"golang.org/x/text/transform"
 )
 
 const (
 	writeLobRequestSize = 21
 )
 
-// LobOptions represents a lob option set.
-type LobOptions int8
+// lobOptions represents a lob option set.
+type lobOptions int8
 
 const (
-	loNullindicator LobOptions = 0x01
-	loDataincluded  LobOptions = 0x02
-	loLastdata      LobOptions = 0x04
+	loNullindicator lobOptions = 0x01
+	loDataincluded  lobOptions = 0x02
+	loLastdata      lobOptions = 0x04
 )
 
-var lobOptionsText = map[LobOptions]string{
-	loNullindicator: "null indicator",
-	loDataincluded:  "data included",
-	loLastdata:      "last data",
-}
+const (
+	loNullindicatorText = "null indicator"
+	loDataincludedText  = "data included"
+	loLastdataText      = "last data"
+)
 
-func (o LobOptions) String() string {
-	t := make([]string, 0, len(lobOptionsText))
-
-	for option, text := range lobOptionsText {
-		if (o & option) != 0 {
-			t = append(t, text)
-		}
+func (o lobOptions) String() string {
+	var s []string
+	if o&loNullindicator != 0 {
+		s = append(s, loNullindicatorText)
 	}
-	return fmt.Sprintf("%v", t)
+	if o&loDataincluded != 0 {
+		s = append(s, loDataincludedText)
+	}
+	if o&loLastdata != 0 {
+		s = append(s, loLastdataText)
+	}
+	return fmt.Sprintf("%v", s)
 }
 
 // IsLastData return true if the last data package was read, false otherwise.
-func (o LobOptions) IsLastData() bool { return (o & loLastdata) != 0 }
-func (o LobOptions) isNull() bool     { return (o & loNullindicator) != 0 }
+func (o lobOptions) isLastData() bool { return (o & loLastdata) != 0 }
+func (o lobOptions) isNull() bool     { return (o & loNullindicator) != 0 }
 
-// lob typecode
+// lob typecode.
 type lobTypecode int8
 
 const (
@@ -66,21 +76,14 @@ type LobScanner interface {
 	Scan(w io.Writer) error
 }
 
-// LobDecoderSetter is the interface wrapping the setDecoder method for Lob reading.
-type LobDecoderSetter interface {
-	SetDecoder(fn func(descr *LobOutDescr, wr io.Writer) error)
-}
-
-var _ LobScanner = (*LobOutDescr)(nil)
-var _ LobDecoderSetter = (*LobOutDescr)(nil)
+var _ LobScanner = (*lobOutDescr)(nil)
 
 // LobInDescr represents a lob input descriptor.
 type LobInDescr struct {
-	rd    io.Reader
-	opt   LobOptions
-	_size int
-	pos   int
-	b     []byte
+	rd  io.Reader
+	opt lobOptions
+	pos int
+	buf bytes.Buffer
 }
 
 func newLobInDescr(rd io.Reader) *LobInDescr {
@@ -89,73 +92,179 @@ func newLobInDescr(rd io.Reader) *LobInDescr {
 
 func (d *LobInDescr) String() string {
 	// restrict output size
-	b := d.b
-	if len(b) >= 25 {
-		b = d.b[:25]
-	}
-	return fmt.Sprintf("options %s size %d pos %d bytes %v", d.opt, d._size, d.pos, b)
+	return fmt.Sprintf("options %s size %d pos %d bytes %v", d.opt, d.buf.Len(), d.pos, d.buf.Bytes()[:min(d.buf.Len(), 25)])
 }
 
-// FetchNext fetches the next lob chunk.
-func (d *LobInDescr) FetchNext(chunkSize int) (bool, error) {
-	if cap(d.b) < chunkSize {
-		d.b = make([]byte, chunkSize)
-	}
-	d.b = d.b[:chunkSize]
+// IsLastData returns true in case of last data package read, false otherwise.
+func (d *LobInDescr) IsLastData() bool { return d.opt.isLastData() }
 
-	var err error
+// FetchNext fetches the next lob chunk.
+func (d *LobInDescr) FetchNext(chunkSize int) error {
 	/*
 		We need to guarantee, that a max amount of data is read to prevent
 		piece wise LOB writing when avoidable
-		--> ReadFull
+		--> copy up to chunkSize
 	*/
-	d._size, err = io.ReadFull(d.rd, d.b)
-	d.b = d.b[:d._size]
-
+	d.buf.Reset()
+	_, err := io.CopyN(&d.buf, d.rd, int64(chunkSize))
 	d.opt = loDataincluded
-	if err != io.EOF && err != io.ErrUnexpectedEOF {
-		return false, err
+	if !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return err
 	}
 	d.opt |= loLastdata
-	return true, nil
+	return nil
 }
 
 func (d *LobInDescr) setPos(pos int) { d.pos = pos }
 
-func (d *LobInDescr) size() int { return d._size }
+func (d *LobInDescr) size() int { return d.buf.Len() }
 
-func (d *LobInDescr) writeFirst(enc *encoding.Encoder) {
-	enc.Bytes(d.b)
+func (d *LobInDescr) writeFirst(enc *encoding.Encoder) { enc.Bytes(d.buf.Bytes()) }
+
+// LocatorID represents a locotor id.
+type LocatorID uint64 // byte[locatorIdSize]
+
+// LobReader is the interface for reading lob streams.
+type LobReader interface {
+	ReadLob(request *ReadLobRequest, reply *ReadLobReply) error
 }
 
-// LobOutDescr represents a lob output descriptor.
-type LobOutDescr struct {
-	decoder     func(descr *LobOutDescr, wr io.Writer) error
-	IsCharBased bool
+var lobOutDescrPool = sync.Pool{New: func() any { return new(lobOutDescr) }}
+
+// lobOutDescr represents a lob output descriptor.
+type lobOutDescr struct {
+	// if set -> char based
+	tr transform.Transformer
+	/*
+	   readFn is set by decode if additional data packages need to be read (not last data)
+	*/
+	lobReader LobReader
+	chunkSize int
 	/*
 		HDB does not return lob type code but undefined only
 		--> ltc is always ltcUndefined
 		--> use isCharBased instead of type code check
 	*/
 	ltc     lobTypecode
-	Opt     LobOptions
-	NumChar int64
+	opt     lobOptions
+	numChar int64
 	numByte int64
-	ID      LocatorID
-	B       []byte
+	id      LocatorID
+	b       []byte
+
+	// scan attributes.
+	wr         io.Writer
+	lobRequest *ReadLobRequest
+	lobReply   *ReadLobReply
 }
 
-func (d *LobOutDescr) String() string {
-	return fmt.Sprintf("typecode %s options %s numChar %d numByte %d id %d bytes %v", d.ltc, d.Opt, d.NumChar, d.numByte, d.ID, d.B)
+func newLobOutDescr(tr transform.Transformer, lobReader LobReader, chunkSize int) *lobOutDescr {
+	descr := lobOutDescrPool.Get().(*lobOutDescr)
+	descr.tr = tr
+	descr.lobReader = lobReader
+	descr.chunkSize = chunkSize
+	return descr
 }
 
-// SetDecoder implements the LobDecoderSetter interface.
-func (d *LobOutDescr) SetDecoder(decoder func(descr *LobOutDescr, wr io.Writer) error) {
-	d.decoder = decoder
+func (d *lobOutDescr) String() string {
+	return fmt.Sprintf("typecode %s options %s numChar %d numByte %d id %d bytes %v", d.ltc, d.opt, d.numChar, d.numByte, d.id, d.b)
+}
+
+func (d *lobOutDescr) decode(dec *encoding.Decoder) bool {
+	d.ltc = lobTypecode(dec.Int8())
+	d.opt = lobOptions(dec.Int8())
+	if d.opt.isNull() {
+		return true
+	}
+	dec.Skip(2)
+	d.numChar = dec.Int64()
+	d.numByte = dec.Int64()
+	d.id = LocatorID(dec.Uint64())
+	size := int(dec.Int32())
+	d.b = slices.Grow(d.b, size)[:size]
+	dec.Bytes(d.b)
+	return false
+}
+
+func (d *lobOutDescr) write(b []byte) (int, error) {
+	if d.tr == nil {
+		if _, err := d.wr.Write(b); err != nil {
+			return len(b), err
+		}
+		return len(b), nil
+	}
+	d.tr.Reset()
+	// cesu8 -> utf8 (always enough space)
+	nDst, _, err := d.tr.Transform(b, b, false)
+	if err != nil && err != transform.ErrShortSrc { //nolint: errorlint
+		return nDst, err
+	}
+
+	// inline count runes
+	numChar := 0
+	for _, r := range unsafe.ByteSlice2String(b[:nDst]) {
+		numChar++
+		if utf8.RuneLen(r) == 4 {
+			numChar++ // caution: hdb counts 2 chars in case of surrogate pair
+		}
+	}
+
+	if _, err := d.wr.Write(b[:nDst]); err != nil {
+		return numChar, err
+	}
+	return numChar, nil
+}
+
+func (d *lobOutDescr) scan(wr io.Writer) error {
+	d.wr = wr
+
+	numChar, err := d.write(d.b)
+	if err != nil {
+		return err
+	}
+
+	if d.opt.isLastData() {
+		return nil
+	}
+
+	if d.lobRequest == nil {
+		d.lobRequest = new(ReadLobRequest)
+	}
+	if d.lobReply == nil {
+		d.lobReply = &ReadLobReply{lobOutDescr: d}
+	}
+	d.lobRequest.id = d.id
+	d.lobRequest.ofs = int64(numChar)
+	d.lobRequest.chunkSize = d.chunkSize
+	return d.lobReader.ReadLob(d.lobRequest, d.lobReply)
 }
 
 // Scan implements the LobScanner interface.
-func (d *LobOutDescr) Scan(wr io.Writer) error { return d.decoder(d, wr) }
+func (d *lobOutDescr) Scan(wr io.Writer) error {
+	err := d.scan(wr)
+	// if the writer is a pipe-end -> close at the end
+	if pwr, ok := wr.(*io.PipeWriter); ok {
+		if err != nil {
+			pwr.CloseWithError(err)
+		} else {
+			pwr.Close()
+		}
+	}
+	lobOutDescrPool.Put(d)
+	return err
+}
+
+func (d *lobOutDescr) Write() (int, error) {
+	n, err := d.write(d.b)
+	if err != nil {
+		return n, err
+	}
+	if d.opt.isLastData() {
+		return n, io.EOF
+	}
+	d.lobRequest.ofs += int64(n)
+	return n, nil
+}
 
 /*
 write lobs:
@@ -169,30 +278,33 @@ write lobs:
 type WriteLobDescr struct {
 	LobInDescr *LobInDescr
 	ID         LocatorID
-	Opt        LobOptions
+	opt        lobOptions
 	ofs        int64
 	b          []byte
 }
 
 func (d WriteLobDescr) String() string {
-	return fmt.Sprintf("id %d options %s offset %d bytes %v", d.ID, d.Opt, d.ofs, d.b)
+	return fmt.Sprintf("id %d options %s offset %d bytes %v", d.ID, d.opt, d.ofs, d.b)
 }
+
+// IsLastData returns true in case of last data package read, false otherwise.
+func (d *WriteLobDescr) IsLastData() bool { return d.opt.isLastData() }
 
 // FetchNext fetches the next lob chunk.
 func (d *WriteLobDescr) FetchNext(chunkSize int) error {
-	if _, err := d.LobInDescr.FetchNext(chunkSize); err != nil {
+	if err := d.LobInDescr.FetchNext(chunkSize); err != nil {
 		return err
 	}
-	d.Opt = d.LobInDescr.opt
-	d.ofs = -1 //offset (-1 := append)
-	d.b = d.LobInDescr.b
+	d.opt = d.LobInDescr.opt
+	d.ofs = -1 // offset (-1 := append)
+	d.b = d.LobInDescr.buf.Bytes()
 	return nil
 }
 
-// sniffer
+// sniffer.
 func (d *WriteLobDescr) decode(dec *encoding.Decoder) error {
 	d.ID = LocatorID(dec.Uint64())
-	d.Opt = LobOptions(dec.Int8())
+	d.opt = lobOptions(dec.Int8())
 	d.ofs = dec.Int64()
 	size := dec.Int32()
 	d.b = make([]byte, size)
@@ -200,12 +312,12 @@ func (d *WriteLobDescr) decode(dec *encoding.Decoder) error {
 	return nil
 }
 
-// write chunk to db
+// write chunk to db.
 func (d *WriteLobDescr) encode(enc *encoding.Encoder) error {
 	enc.Uint64(uint64(d.ID))
-	enc.Int8(int8(d.Opt))
+	enc.Int8(int8(d.opt))
 	enc.Int64(d.ofs)
-	enc.Int32(int32(len(d.b)))
+	enc.Int32(int32(len(d.b))) //nolint: gosec
 	enc.Bytes(d.b)
 	return nil
 }
@@ -227,11 +339,10 @@ func (r *WriteLobRequest) size() int {
 
 func (r *WriteLobRequest) numArg() int { return len(r.Descrs) }
 
-// sniffer
-func (r *WriteLobRequest) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	numArg := ph.numArg()
+// sniffer.
+func (r *WriteLobRequest) decodeNumArg(dec *encoding.Decoder, numArg int) error {
 	r.Descrs = make([]*WriteLobDescr, numArg)
-	for i := 0; i < numArg; i++ {
+	for i := range numArg {
 		r.Descrs[i] = &WriteLobDescr{}
 		if err := r.Descrs[i].decode(dec); err != nil {
 			return err
@@ -258,19 +369,10 @@ type WriteLobReply struct {
 
 func (r *WriteLobReply) String() string { return fmt.Sprintf("ids %v", r.IDs) }
 
-func (r *WriteLobReply) reset(numArg int) {
-	if r.IDs == nil || cap(r.IDs) < numArg {
-		r.IDs = make([]LocatorID, numArg)
-	} else {
-		r.IDs = r.IDs[:numArg]
-	}
-}
+func (r *WriteLobReply) decodeNumArg(dec *encoding.Decoder, numArg int) error {
+	r.IDs = resizeSlice(r.IDs, numArg)
 
-func (r *WriteLobReply) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	numArg := ph.numArg()
-	r.reset(numArg)
-
-	for i := 0; i < numArg; i++ {
+	for i := range numArg {
 		r.IDs[i] = LocatorID(dec.Uint64())
 	}
 	return dec.Error()
@@ -289,60 +391,58 @@ type ReadLobRequest struct {
 	     seems like readLobreply returns only a result for one lob - even if more then one is requested
 	     --> read single lobs
 	*/
-	ID        LocatorID
-	Ofs       int64
-	ChunkSize int32
+	id        LocatorID
+	ofs       int64
+	chunkSize int
 }
 
 func (r *ReadLobRequest) String() string {
-	return fmt.Sprintf("id %d offset %d size %d", r.ID, r.Ofs, r.ChunkSize)
+	return fmt.Sprintf("id %d offset %d size %d", r.id, r.ofs, r.chunkSize)
 }
 
-// sniffer
-func (r *ReadLobRequest) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	r.ID = LocatorID(dec.Uint64())
-	r.Ofs = dec.Int64()
-	r.ChunkSize = dec.Int32()
+// sniffer.
+func (r *ReadLobRequest) decode(dec *encoding.Decoder) error {
+	r.id = LocatorID(dec.Uint64())
+	r.ofs = dec.Int64()
+	r.chunkSize = int(dec.Int32())
 	dec.Skip(4)
 	return nil
 }
 
 func (r *ReadLobRequest) encode(enc *encoding.Encoder) error {
-	enc.Uint64(uint64(r.ID))
-	enc.Int64(r.Ofs + 1) //1-based
-	enc.Int32(r.ChunkSize)
+	enc.Uint64(uint64(r.id))
+	enc.Int64(r.ofs + 1)          // 1-based
+	enc.Int32(int32(r.chunkSize)) //nolint: gosec
 	enc.Zeroes(4)
 	return nil
 }
 
 // ReadLobReply represents a lob read reply part.
 type ReadLobReply struct {
-	ID  LocatorID
-	Opt LobOptions
-	B   []byte
+	*lobOutDescr
 }
 
 func (r *ReadLobReply) String() string {
-	return fmt.Sprintf("id %d options %s bytes %v", r.ID, r.Opt, r.B)
+	return fmt.Sprintf("id %d options %s bytes %v", r.id, r.opt, r.b)
 }
 
-func (r *ReadLobReply) resize(size int) {
-	if r.B == nil || size > cap(r.B) {
-		r.B = make([]byte, size)
-	} else {
-		r.B = r.B[:size]
-	}
+// needed if instantiated generically (e.g.sniffer).
+func (r *ReadLobReply) init() {
+	r.lobOutDescr = new(lobOutDescr)
 }
 
-func (r *ReadLobReply) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	if ph.numArg() != 1 {
+func (r *ReadLobReply) decodeNumArg(dec *encoding.Decoder, numArg int) error {
+	if numArg != 1 {
 		panic("numArg == 1 expected")
 	}
-	r.ID = LocatorID(dec.Uint64())
-	r.Opt = LobOptions(dec.Int8())
+	id := LocatorID(dec.Uint64())
+	if id != r.id {
+		return fmt.Errorf("invalid locator id %d - expected %d", id, r.id)
+	}
+	r.opt = lobOptions(dec.Int8())
 	size := int(dec.Int32())
 	dec.Skip(3)
-	r.resize(size)
-	dec.Bytes(r.B)
+	r.b = slices.Grow(r.b, size)[:size]
+	dec.Bytes(r.b)
 	return nil
 }

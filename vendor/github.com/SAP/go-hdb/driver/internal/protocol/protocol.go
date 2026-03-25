@@ -2,16 +2,32 @@ package protocol
 
 import (
 	"bufio"
+	"context"
+	"errors"
 	"fmt"
-	"io"
+	"log/slog"
 	"math"
+	"reflect"
 
 	"github.com/SAP/go-hdb/driver/internal/protocol/encoding"
-	"github.com/SAP/go-hdb/driver/sqltrace"
 	"golang.org/x/text/transform"
 )
 
-// padding
+const (
+	traceMsg = "PROT"
+
+	prefixDB     = "←"
+	prefixClient = "→"
+
+	textIni    = "INI"
+	textMsgHdr = "MSH"
+	textSegHdr = "SGH"
+	textParHdr = "PRH"
+	textPar    = "PRT"
+	textSkip   = "*skipped"
+)
+
+// padding.
 const padding = 8
 
 func padBytes(size int) int {
@@ -21,311 +37,331 @@ func padBytes(size int) int {
 	return 0
 }
 
+type partCache map[PartKind]Part
+
+func (c *partCache) get(kind PartKind) (Part, bool) {
+	if part, ok := (*c)[kind]; ok {
+		return part, true
+	}
+	if kind == PkAuthentication {
+		return nil, false // cannot instantiate generically
+	}
+	pt, ok := genPartTypeMap[kind]
+	if !ok {
+		// whether part cannot be instantiated generically or
+		// part is not (yet) known to the driver
+		return nil, false
+	}
+	// create instance
+	part, ok := reflect.TypeAssert[Part](reflect.New(pt))
+	if !ok {
+		panic("part kind does not implement part reader interface") // should never happen
+	}
+	if part, ok := part.(initer); ok {
+		part.init()
+	}
+	(*c)[kind] = part
+	return part, true
+}
+
 // Reader represents a protocol reader.
 type Reader struct {
-	upStream bool
-	tracer   func(up bool, v any) // performance
-	traceOn  bool
-
-	step int // authentication
-
 	dec *encoding.Decoder
+	tr  transform.Transformer
+
+	protTrace bool
+	logger    *slog.Logger
+
+	lobChunkSize int
+
+	readFromDB bool
+	prefix     string
 
 	mh *messageHeader
 	sh *segmentHeader
-	ph *PartHeader
+	ph *partHeader
 
-	readBytes int64
-	numPart   int
-	cntPart   int
-	partRead  bool
+	partCache partCache
 
-	partReaderCache map[PartKind]partReader
-
-	lastErrors       *HdbErrors
-	lastRowsAffected *RowsAffected
-
-	// partReader read errors could be
-	// - read buffer errors -> buffer Error() and ResetError()
-	// - plus other errors (which cannot be ignored, e.g. Lob reader)
-	err error
+	hdbErrors    *HdbErrors
+	rowsAffected *rowsAffected
 }
 
-// NewReader returns an instance of a protocol reader.
-func NewReader(upStream bool, rd io.Reader, decoder func() transform.Transformer) *Reader {
-	tracer, on := newTracer()
+func newReader(dec *encoding.Decoder, tr transform.Transformer, protTrace bool, logger *slog.Logger, lobChunkSize int, readFromDB bool, prefix string) *Reader {
 	return &Reader{
-		upStream:        upStream,
-		tracer:          tracer,
-		traceOn:         on,
-		dec:             encoding.NewDecoder(rd, decoder),
-		partReaderCache: map[PartKind]partReader{},
-		mh:              &messageHeader{},
-		sh:              &segmentHeader{},
-		ph:              &PartHeader{},
+		dec:          dec,
+		tr:           tr,
+		protTrace:    protTrace,
+		logger:       logger,
+		lobChunkSize: lobChunkSize,
+		readFromDB:   readFromDB,
+		prefix:       prefix,
+		partCache:    partCache{},
+		mh:           &messageHeader{},
+		sh:           &segmentHeader{},
+		ph:           &partHeader{},
+		hdbErrors:    &HdbErrors{},
+		rowsAffected: &rowsAffected{},
 	}
 }
 
-// SetDfv sets the data format version fpr the protocol reader.
-func (r *Reader) SetDfv(dfv int) { r.dec.SetDfv(dfv) }
+// NewDBReader returns an instance of a database protocol reader.
+func NewDBReader(dec *encoding.Decoder, tr transform.Transformer, protTrace bool, logger *slog.Logger, lobChunkSize int) *Reader {
+	return newReader(dec, tr, protTrace, logger, lobChunkSize, true, prefixDB)
+}
 
-// ReadSkip reads the server reply without returning the results.
-func (r *Reader) ReadSkip() error { return r.IterateParts(nil) }
+// NewClientReader returns an instance of a client protocol reader.
+func NewClientReader(dec *encoding.Decoder, tr transform.Transformer, protTrace bool, logger *slog.Logger, lobChunkSize int) *Reader {
+	return newReader(dec, tr, protTrace, logger, lobChunkSize, false, prefixClient)
+}
 
-// SessionID returns the message header session id.
+// SkipParts reads and discards all protocol parts.
+func (r *Reader) SkipParts(ctx context.Context) error {
+	_, err := r.IterateParts(ctx, 0, nil)
+	return err
+}
+
+// SessionID returns the session ID.
 func (r *Reader) SessionID() int64 { return r.mh.sessionID }
 
-// FunctionCode returns the segment header function code.
+// FunctionCode returns the function code of the protocol.
 func (r *Reader) FunctionCode() FunctionCode { return r.sh.functionCode }
 
-func (r *Reader) readInitRequest() error {
+// ReadProlog reads the protocol prolog.
+func (r *Reader) ReadProlog(ctx context.Context) error {
+	if r.readFromDB {
+		rep := &initReply{}
+		if err := rep.decode(r.dec); err != nil {
+			return err
+		}
+		if r.protTrace {
+			r.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(r.prefix+textIni, rep.String()))
+		}
+		return nil
+	}
 	req := &initRequest{}
 	if err := req.decode(r.dec); err != nil {
 		return err
 	}
-	r.tracer(r.upStream, req)
+	if r.protTrace {
+		r.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(r.prefix+textIni, req.String()))
+	}
 	return nil
 }
 
-func (r *Reader) readInitReply() error {
-	rep := &initReply{}
-	if err := rep.decode(r.dec); err != nil {
-		return err
-	}
-	r.tracer(r.upStream, rep)
-	return nil
-}
-
-// ReadProlog reads the protocol prolog.
-func (r *Reader) ReadProlog() error {
-	if r.upStream {
-		return r.readInitRequest()
-	}
-	return r.readInitReply()
-}
-
-func (r *Reader) checkError() error {
-	defer func() { // init readFlags
-		r.lastErrors = nil
-		r.lastRowsAffected = nil
-		r.err = nil
-		r.dec.ResetError()
-	}()
-
-	if r.err != nil {
-		return r.err
-	}
-
-	if err := r.dec.Error(); err != nil {
-		return err
-	}
-
-	if r.lastErrors == nil {
-		return nil
-	}
-
-	if r.lastRowsAffected != nil { // link statement to error
-		j := 0
-		for i, rows := range *r.lastRowsAffected {
-			if rows == RaExecutionFailed {
-				r.lastErrors.SetStmtNo(j, i)
-				j++
-			}
-		}
-	}
-
-	if r.lastErrors.HasWarnings() {
-		r.lastErrors.ErrorsFunc(func(err error) {
-			sqltrace.Trace.Println(err)
-		})
-		return nil
-	}
-
-	return r.lastErrors
-}
-
-func (r *Reader) Read(part partReader) error {
-	r.partRead = true
-
-	err := r.readPart(part)
-	if err != nil {
-		r.err = err
-	}
-
-	switch part := part.(type) {
-	case *HdbErrors:
-		r.lastErrors = part
-	case *RowsAffected:
-		r.lastRowsAffected = part
-	}
-	return err
-}
-
-func (r *Reader) authPart() partReader {
-	defer func() { r.step++ }()
-
-	switch {
-	case r.upStream && r.step == 0:
-		return &AuthInitRequest{}
-	case r.upStream:
-		return &AuthFinalRequest{}
-	case !r.upStream && r.step == 0:
-		return &AuthInitReply{}
-	case !r.upStream:
-		return &AuthFinalReply{}
-	default:
-		panic(fmt.Errorf("invalid auth step in protocol reader %d", r.step))
-	}
-}
-
-func (r *Reader) skip() error {
-	pk := r.ph.PartKind
-
-	// if trace is on or mandatory parts need to be read we cannot skip
-	if !(r.traceOn || pk == PkError || pk == PkRowsAffected) {
-		return r.skipPart()
-	}
-
-	if pk == PkAuthentication {
-		return r.Read(r.authPart())
-	}
-
-	// check part cache
-	if part, ok := r.partReaderCache[pk]; ok {
-		return r.Read(part)
-	}
-
-	part, ok := newGenPartReader(pk)
-	if !ok { // part is not yet supported -> skip
-		return r.skipPart()
-	}
-
-	// cache part
-	r.partReaderCache[pk] = part
-
-	return r.Read(part)
-}
-
-func (r *Reader) skipPadding() int64 {
-	if r.cntPart != r.numPart { // padding if not last part
-		padBytes := padBytes(int(r.ph.bufferLength))
-		r.dec.Skip(padBytes)
-		return int64(padBytes)
-	}
-
-	// last part:
-	// skip difference between real read bytes and message header var part length
-	padBytes := int64(r.mh.varPartLength) - r.readBytes
-	switch {
-	case padBytes < 0:
-		panic(fmt.Errorf("protocol error: bytes read %d > variable part length %d", r.readBytes, r.mh.varPartLength))
-	case padBytes > 0:
-		r.dec.Skip(int(padBytes))
-	}
+func (r *Reader) skipPadding() int {
+	padBytes := padBytes(int(r.ph.bufferLength))
+	r.dec.Skip(padBytes)
 	return padBytes
 }
 
-func (r *Reader) skipPart() error {
-	r.dec.ResetCnt()
-	r.dec.Skip(int(r.ph.bufferLength))
-	r.tracer(r.upStream, "*skipped")
-
-	r.readBytes += int64(r.dec.Cnt())
-	r.readBytes += r.skipPadding()
-	return nil
+func (r *Reader) skipPaddingLastPart(numReadByte int64) {
+	// last part:
+	// skip difference between real read bytes and message header var part length
+	padBytes := int64(r.mh.varPartLength) - numReadByte
+	switch {
+	case padBytes < 0:
+		panic(fmt.Sprintf("protocol error: bytes read %d > variable part length %d", numReadByte, r.mh.varPartLength))
+	case padBytes > 0:
+		r.dec.Skip(int(padBytes))
+	}
 }
 
-func (r *Reader) readPart(part partReader) error {
-	r.dec.ResetCnt()
-	err := part.decode(r.dec, r.ph) // do not return here in case of error -> read stream would be broken
-	cnt := r.dec.Cnt()
-	r.tracer(r.upStream, part)
+// ReadPart reads a one protocol part.
+func (r *Reader) ReadPart(ctx context.Context, part Part, lobReader LobReader) (err error) {
+	cntBefore := r.dec.Cnt()
+
+	switch part := part.(type) {
+	// do not return here in case of error -> read stream would be broken
+	case partDecoder:
+		err = part.decode(r.dec)
+	case bufLenPartDecoder:
+		err = part.decodeBufLen(r.dec, r.ph.bufLen())
+	case numArgPartDecoder:
+		err = part.decodeNumArg(r.dec, r.ph.numArg())
+	case resultPartDecoder:
+		if lobReader == nil {
+			panic("missing lob reader") // should never happen
+		}
+		err = part.decodeResult(r.dec, r.tr, r.ph.numArg(), lobReader, r.lobChunkSize)
+	default:
+		panic("invalid part decoder") // should never happen
+	}
+	// do not return here in case of error -> read stream would be broken
+
+	cnt := r.dec.Cnt() - cntBefore
+
+	if r.protTrace {
+		r.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(r.prefix+textPar, part.String()))
+	}
 
 	bufferLen := int(r.ph.bufferLength)
 	switch {
 	case cnt < bufferLen: // protocol buffer length > read bytes -> skip the unread bytes
 		r.dec.Skip(bufferLen - cnt)
 	case cnt > bufferLen: // read bytes > protocol buffer length -> should never happen
-		panic(fmt.Errorf("protocol error: read bytes %d > buffer length %d", cnt, bufferLen))
+		panic(fmt.Sprintf("protocol error: read bytes %d > buffer length %d", cnt, bufferLen))
 	}
-
-	r.readBytes += int64(r.dec.Cnt())
-	r.readBytes += r.skipPadding()
 	return err
 }
 
-// IterateParts is iterating over the parts returned by the server.
-func (r *Reader) IterateParts(partFn func(ph *PartHeader)) error {
+// ErrSkipped is used by the caller of the iterator to indicate that no read was executed.
+var ErrSkipped = errors.New("perts iterator: skipped read")
+
+// IterateParts iterates through all protocol parts.
+func (r *Reader) IterateParts(ctx context.Context, offset int, fn func(kind PartKind, attrs PartAttributes) error) (int64, error) {
+	var hdbErrors *HdbErrors
+	var rowsAffected *rowsAffected
+
 	if err := r.mh.decode(r.dec); err != nil {
-		return err
+		return 0, err
 	}
-	r.readBytes = 0 // header bytes are not calculated in header varPartBytes: start with zero
 
-	r.tracer(r.upStream, r.mh)
+	var numReadByte int64 = 0 // header bytes are not calculated in header varPartBytes: start with zero
+	if r.protTrace {
+		r.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(r.prefix+textMsgHdr, r.mh.String()))
+	}
 
-	for i := 0; i < int(r.mh.noOfSegm); i++ {
+	for range int(r.mh.noOfSegm) {
 		if err := r.sh.decode(r.dec); err != nil {
-			return err
+			return 0, err
 		}
 
-		r.readBytes += segmentHeaderSize
+		numReadByte += segmentHeaderSize
 
-		r.tracer(r.upStream, r.sh)
+		if r.protTrace {
+			r.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(r.prefix+textSegHdr, r.sh.String()))
+		}
 
-		r.numPart = int(r.sh.noOfParts)
-		r.cntPart = 0
-
-		for j := 0; j < int(r.sh.noOfParts); j++ {
-
+		lastPart := int(r.sh.noOfParts) - 1
+		for j := range lastPart + 1 { // <=
 			if err := r.ph.decode(r.dec); err != nil {
-				return err
+				return 0, err
+			}
+			kind := r.ph.partKind
+
+			numReadByte += partHeaderSize
+
+			if r.protTrace {
+				r.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(r.prefix+textParHdr, r.ph.String()))
 			}
 
-			r.readBytes += partHeaderSize
+			cntBefore := r.dec.Cnt()
 
-			r.tracer(r.upStream, r.ph)
-
-			r.cntPart++
-
-			r.partRead = false
-			if partFn != nil {
-				partFn(r.ph)
+			switch kind {
+			case pkRowsAffected:
+				if err := r.ReadPart(ctx, r.rowsAffected, nil); err != nil {
+					return 0, err
+				}
+				rowsAffected = r.rowsAffected
+			case pkError:
+				if err := r.ReadPart(ctx, r.hdbErrors, nil); err != nil {
+					return 0, err
+				}
+				hdbErrors = r.hdbErrors
+			default:
+				err := ErrSkipped
+				// caller must not handle hdb errors and rows affected.
+				if fn != nil {
+					if err = fn(kind, r.ph.partAttributes); err != nil && err != ErrSkipped { //nolint:errorlint
+						return 0, err
+					}
+				}
+				if err == ErrSkipped { //nolint:errorlint
+					// if trace is on or mandatory parts need to be read we cannot skip
+					if r.protTrace {
+						if part, ok := r.partCache.get(kind); ok {
+							if err := r.ReadPart(ctx, part, nil); err != nil {
+								return 0, err
+							}
+						} else {
+							r.dec.Skip(int(r.ph.bufferLength))
+							r.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(r.prefix+textSkip, kind.String()))
+						}
+					} else {
+						r.dec.Skip(int(r.ph.bufferLength))
+					}
+				}
 			}
-			if !r.partRead {
-				r.skip()
+
+			numReadByte += int64(r.dec.Cnt()) - int64(cntBefore)
+
+			if j != lastPart { // not last part
+				numReadByte += int64(r.skipPadding())
+			}
+
+		}
+	}
+
+	r.skipPaddingLastPart(numReadByte)
+
+	if err := r.dec.Error(); err != nil {
+		r.dec.ResetError()
+		return 0, err
+	}
+
+	var numRow int64
+	if rowsAffected != nil {
+		numRow = rowsAffected.Total()
+	}
+
+	if hdbErrors == nil {
+		return numRow, nil
+	}
+
+	if rowsAffected != nil { // link statement to error
+		j := 0
+		for i, rows := range rowsAffected.rows {
+			if rows == raExecutionFailed {
+				hdbErrors.setStmtNo(j, offset+i)
+				j++
 			}
 		}
 	}
-	return r.checkError()
+	if hdbErrors.onlyWarnings {
+		for _, err := range hdbErrors.errs {
+			r.logger.LogAttrs(ctx, slog.LevelWarn, err.Error())
+		}
+		return numRow, nil
+	}
+	return numRow, hdbErrors
 }
+
+const defaultSessionID = -1
 
 // Writer represents a protocol writer.
 type Writer struct {
-	tracer func(up bool, v any) // performance
-
 	wr  *bufio.Writer
 	enc *encoding.Encoder
+
+	protTrace bool
+	logger    *slog.Logger
 
 	sv     map[string]string
 	svSent bool
 
+	sessionID int64
+
 	// reuse header
 	mh *messageHeader
 	sh *segmentHeader
-	ph *PartHeader
+	ph *partHeader
+
+	hasError bool
 }
 
 // NewWriter returns an instance of a protocol writer.
-func NewWriter(wr *bufio.Writer, encoder func() transform.Transformer, sv map[string]string) *Writer {
-	tracer, _ := newTracer()
+func NewWriter(wr *bufio.Writer, enc *encoding.Encoder, protTrace bool, logger *slog.Logger, sv map[string]string) *Writer {
 	return &Writer{
-		tracer: tracer,
-		wr:     wr,
-		sv:     sv,
-		enc:    encoding.NewEncoder(wr, encoder),
-		mh:     new(messageHeader),
-		sh:     new(segmentHeader),
-		ph:     new(PartHeader),
+		wr:        wr,
+		enc:       enc,
+		protTrace: protTrace,
+		logger:    logger,
+		sv:        sv,
+		sessionID: defaultSessionID,
+		mh:        new(messageHeader),
+		sh:        new(segmentHeader),
+		ph:        new(partHeader),
 	}
 }
 
@@ -336,8 +372,11 @@ const (
 	protocolVersionMinor = 1
 )
 
+// HasError returns true if writing raised an error, false otherwise.
+func (w *Writer) HasError() bool { return w.hasError }
+
 // WriteProlog writes the protocol prolog.
-func (w *Writer) WriteProlog() error {
+func (w *Writer) WriteProlog(ctx context.Context) error {
 	req := &initRequest{}
 	req.product.major = productVersionMajor
 	req.product.minor = productVersionMinor
@@ -348,42 +387,57 @@ func (w *Writer) WriteProlog() error {
 	if err := req.encode(w.enc); err != nil {
 		return err
 	}
-	w.tracer(true, req)
+	if w.protTrace {
+		w.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(prefixClient+textIni, req.String()))
+	}
 	return w.wr.Flush()
 }
 
-func (w *Writer) Write(sessionID int64, messageType MessageType, commit bool, writers ...partWriter) error {
+// SetSessionID sets the session ID after a successful authentication.
+func (w *Writer) SetSessionID(sessionID int64) { w.sessionID = sessionID }
+
+func (w *Writer) Write(ctx context.Context, messageType MessageType, commit bool, parts ...PartEncoder) error {
+	err := w._write(ctx, messageType, commit, parts...)
+	if err != nil {
+		w.hasError = true
+	}
+	return err
+}
+
+func (w *Writer) _write(ctx context.Context, messageType MessageType, commit bool, parts ...PartEncoder) error {
 	// check on session variables to be send as ClientInfo
 	if w.sv != nil && !w.svSent && messageType.ClientInfoSupported() {
-		writers = append([]partWriter{clientInfo(w.sv)}, writers...)
+		parts = append([]PartEncoder{(*clientInfo)(&w.sv)}, parts...)
 		w.svSent = true
 	}
 
-	numWriters := len(writers)
-	partSize := make([]int, numWriters)
-	size := int64(segmentHeaderSize + numWriters*partHeaderSize) //int64 to hold MaxUInt32 in 32bit OS
+	numPart := len(parts)
+	partSize := make([]int, numPart)
+	size := int64(segmentHeaderSize + numPart*partHeaderSize) // int64 to hold MaxUInt32 in 32bit OS
 
-	for i, part := range writers {
+	for i, part := range parts {
 		s := part.size()
 		size += int64(s + padBytes(s))
 		partSize[i] = s // buffer size (expensive calculation)
 	}
 
 	if size > math.MaxUint32 {
-		return fmt.Errorf("message size %d exceeds maximum message header value %d", size, int64(math.MaxUint32)) //int64: without cast overflow error in 32bit OS
+		return fmt.Errorf("message size %d exceeds maximum message header value %d", size, int64(math.MaxUint32)) // int64: without cast overflow error in 32bit OS
 	}
 
 	bufferSize := size
 
-	w.mh.sessionID = sessionID
-	w.mh.varPartLength = uint32(size)
-	w.mh.varPartSize = uint32(bufferSize)
+	w.mh.sessionID = w.sessionID
+	w.mh.varPartLength = uint32(size)     //nolint: gosec
+	w.mh.varPartSize = uint32(bufferSize) //nolint: gosec
 	w.mh.noOfSegm = 1
 
 	if err := w.mh.encode(w.enc); err != nil {
 		return err
 	}
-	w.tracer(true, w.mh)
+	if w.protTrace {
+		w.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(prefixClient+textMsgHdr, w.mh.String()))
+	}
 
 	if size > math.MaxInt32 {
 		return fmt.Errorf("message size %d exceeds maximum part header value %d", size, math.MaxInt32)
@@ -392,39 +446,44 @@ func (w *Writer) Write(sessionID int64, messageType MessageType, commit bool, wr
 	w.sh.messageType = messageType
 	w.sh.commit = commit
 	w.sh.segmentKind = skRequest
-	w.sh.segmentLength = int32(size)
+	w.sh.segmentLength = int32(size) //nolint: gosec
 	w.sh.segmentOfs = 0
-	w.sh.noOfParts = int16(numWriters)
+	w.sh.noOfParts = int16(numPart) //nolint: gosec
 	w.sh.segmentNo = 1
 
 	if err := w.sh.encode(w.enc); err != nil {
 		return err
 	}
-	w.tracer(true, w.sh)
+	if w.protTrace {
+		w.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(prefixClient+textSegHdr, w.sh.String()))
+	}
 
 	bufferSize -= segmentHeaderSize
 
-	for i, part := range writers {
-
+	for i, part := range parts {
 		size := partSize[i]
 		pad := padBytes(size)
 
-		w.ph.PartKind = part.kind()
+		w.ph.partKind = part.kind()
 		if err := w.ph.setNumArg(part.numArg()); err != nil {
 			return err
 		}
-		w.ph.bufferLength = int32(size)
-		w.ph.bufferSize = int32(bufferSize)
+		w.ph.bufferLength = int32(size)     //nolint: gosec
+		w.ph.bufferSize = int32(bufferSize) //nolint: gosec
 
 		if err := w.ph.encode(w.enc); err != nil {
 			return err
 		}
-		w.tracer(true, w.ph)
+		if w.protTrace {
+			w.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(prefixClient+textParHdr, w.ph.String()))
+		}
 
 		if err := part.encode(w.enc); err != nil {
 			return err
 		}
-		w.tracer(true, part)
+		if w.protTrace {
+			w.logger.LogAttrs(ctx, slog.LevelInfo, traceMsg, slog.String(prefixClient+textPar, part.String()))
+		}
 
 		w.enc.Zeroes(pad)
 

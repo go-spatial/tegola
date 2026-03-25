@@ -12,8 +12,8 @@ type ClientID []byte
 
 func (id ClientID) String() string { return string(id) }
 func (id ClientID) size() int      { return len(id) }
-func (id *ClientID) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	*id = resizeSlice(*id, int(ph.bufferLength))
+func (id *ClientID) decodeBufLen(dec *encoding.Decoder, bufLen int) error {
+	*id = resizeSlice(*id, bufLen)
 	dec.Bytes(*id)
 	return dec.Error()
 }
@@ -24,8 +24,8 @@ type Command []byte
 
 func (c Command) String() string { return string(c) }
 func (c Command) size() int      { return cesu8.Size(c) }
-func (c *Command) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	*c = resizeSlice(*c, int(ph.bufferLength))
+func (c *Command) decodeBufLen(dec *encoding.Decoder, bufLen int) error {
+	*c = resizeSlice(*c, bufLen)
 	var err error
 	*c, err = dec.CESU8Bytes(len(*c))
 	if err != nil {
@@ -39,7 +39,7 @@ func (c Command) encode(enc *encoding.Encoder) error { _, err := enc.CESU8Bytes(
 type Fetchsize int32
 
 func (s Fetchsize) String() string { return fmt.Sprintf("fetchsize %d", s) }
-func (s *Fetchsize) decode(dec *encoding.Decoder, ph *PartHeader) error {
+func (s *Fetchsize) decode(dec *encoding.Decoder) error {
 	*s = Fetchsize(dec.Int32())
 	return dec.Error()
 }
@@ -51,7 +51,7 @@ type StatementID uint64
 func (id StatementID) String() string { return fmt.Sprintf("%d", id) }
 
 // Decode implements the partDecoder interface.
-func (id *StatementID) decode(dec *encoding.Decoder, ph *PartHeader) error {
+func (id *StatementID) decode(dec *encoding.Decoder) error {
 	*id = StatementID(dec.Uint64())
 	return dec.Error()
 }
