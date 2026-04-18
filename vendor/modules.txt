@@ -190,8 +190,8 @@ github.com/jackc/pgservicefile
 # github.com/jackc/pgx-gofrs-uuid v0.0.0-20230224015001-1d428863c2e2
 ## explicit; go 1.17
 github.com/jackc/pgx-gofrs-uuid
-# github.com/jackc/pgx/v5 v5.7.6
-## explicit; go 1.23.0
+# github.com/jackc/pgx/v5 v5.9.0
+## explicit; go 1.25.0
 github.com/jackc/pgx/v5
 github.com/jackc/pgx/v5/internal/iobufpool
 github.com/jackc/pgx/v5/internal/pgio
