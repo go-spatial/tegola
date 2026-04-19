@@ -9,9 +9,11 @@ import (
 
 var (
 	// ErrCanceled is returned when cancel was requested
-	ErrCanceled    = fmt.Errorf("provider: %v", context.Canceled)
-	ErrUnsupported = errors.New("provider: unsupported")
-	ErrNilInitFunc = errors.New("init function can not be nil")
+	ErrCanceled                = fmt.Errorf("provider: %v", context.Canceled)
+	ErrUnsupported             = errors.New("provider: unsupported")
+	ErrNilInitFunc             = errors.New("init function can not be nil")
+	ErrNotTileJSONV3Compatible = errors.New("provider is not TileJSON version 3 compatible")
+	ErrNoProvider              = errors.New("no provider provided")
 )
 
 type ErrUnableToConvertFeatureID struct {
