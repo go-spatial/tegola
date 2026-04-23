@@ -18,7 +18,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/golang/protobuf v1.5.3
 	github.com/jackc/pgx-gofrs-uuid v0.0.0-20230224015001-1d428863c2e2
-	github.com/jackc/pgx/v5 v5.9.0
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mattn/goveralls v0.0.5
 	github.com/pborman/uuid v1.2.0
