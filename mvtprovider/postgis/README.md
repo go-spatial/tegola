@@ -24,6 +24,10 @@ else:
     mode = uri, either uri controls it all, or we can enrich with config values
 ```
 
+> [!WARNING]
+> Configuring multiple postgis providers in the same application requires the 
+> use of a a connection string.
+
 ## Connection Properties
 
 Establishing a connection via connection string (`uri`) will become the default
