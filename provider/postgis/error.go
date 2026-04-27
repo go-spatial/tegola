@@ -5,9 +5,30 @@ import (
 	"fmt"
 )
 
-var (
-	ErrNilLayer = errors.New("layer is nil")
-)
+var ErrNilLayer = errors.New("layer is nil")
+
+// ErrEnvIncomplete is returned when environment mode is selected
+// but the resolved connection configuration is structurally incomplete.
+type ErrEnvIncomplete struct {
+	Triggers      []string
+	MissingFields []string
+	URIWasIgnored bool
+}
+
+// Error returns a descriptive message explaining that environment
+// mode was selected and the resolved connection configuration is
+// incomplete.
+func (e ErrEnvIncomplete) Error() string {
+	triggerStr := buildBuffer(e.Triggers)
+	mFieldsStr := buildBuffer(e.MissingFields)
+	errMsg := "environment mode selected due to " + triggerStr + " but resolved connection is incomplete: missing " + mFieldsStr + "."
+
+	if !e.URIWasIgnored {
+		return errMsg
+	}
+
+	return errMsg + " a URI was provided in config but ignored because env mode has precedence."
+}
 
 type ErrLayerNotFound struct {
 	LayerName string

@@ -1,6 +1,7 @@
 package postgis
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -17,6 +18,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/tracelog"
 )
+
+// buildBuffer joins the provided values slice using a comma delimiter.
+func buildBuffer(vals []string) string {
+	if len(vals) == 0 {
+		return "[]"
+	}
+	size := len(vals) - 1 // n-1 times ","
+	for _, v := range vals {
+		size += len(v)
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, size))
+	for i, v := range vals {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteString(v)
+	}
+	return buf.String()
+}
 
 // isMVT will return true if the provider is MVT based
 func isMVT(providerType string) bool {

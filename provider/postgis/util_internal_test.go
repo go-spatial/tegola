@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/ttools"
 	"github.com/go-spatial/tegola/provider"
 )
@@ -116,32 +115,26 @@ func TestUppercaseTokens(t *testing.T) {
 func TestDecipherFields(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
 
+	ctx := t.Context()
+
 	type tcase struct {
 		sql              string
 		expectedRowCount int
 		expectedTags     map[string]any
 	}
 
-	uri := ttools.GetEnvDefault("PGURI", "postgres://postgres:postgres@localhost:5432/tegola")
-	dbconfig, err := BuildDBConfig(
-		&DBConfigOptions{
-			Uri:                        uri,
-			DefaultTransactionReadOnly: "TRUE",
-			ApplicationName:            "tegola",
-		})
-	if err != nil {
-		t.Fatalf("unable to build db config: %v", err)
-	}
+	uri := "postgres://postgres:postgres@localhost:5432/tegola?sslmode=disable"
+	c := newDefaultConnector(dict.Dict{"uri": uri})
 
-	conn, err := pgxpool.NewWithConfig(context.Background(), dbconfig)
+	pool, _, _, err := c.Connect(ctx)
 	if err != nil {
-		t.Fatalf("unable to connect to database: %v", err)
+		t.Fatalf("unable to connect: %s", err)
 	}
-	defer conn.Close()
+	defer pool.Close()
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			rows, err := conn.Query(context.Background(), tc.sql)
+			rows, err := pool.Query(context.Background(), tc.sql)
 			if err != nil {
 				t.Errorf("Error performing query: %v", err)
 				return

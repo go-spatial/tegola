@@ -8,8 +8,25 @@ The connection between tegola and PostGIS is configured in a `tegola.toml` file.
 [[providers]]
 name = "test_postgis"       # provider name is referenced from map layers (required)
 type = "mvt_postgis"        # the type of data provider must be "mvt_postgis" for this data provider (required)
-uri = "postgres://postgres:postgres@localhost:5432/tegola"          # PostGIS database uri (required)
+uri = "postgres://postgres:postgres@localhost:5432/tegola"          # PostGIS database uri (optional)
 ```
+### env mode vs uri mode
+
+Connection related environment variables take full precedence over `uri` when any trigger (PGHOST,PGPASSWORD,PGUSER,PGDATABASE,PGPORT) is present 
+in the environment. With this we follow [libpq environment variables](https://www.postgresql.org/docs/current/libpq-envars.html) and allow users to configure they're connection entirely through the environment.
+
+```
+if env trigger variables present:
+    mode = env
+    ignore uri, uses env vars to establish connection
+    can be enriched with config values
+else:
+    mode = uri, either uri controls it all, or we can enrich with config values
+```
+
+> [!WARNING]
+> Configuring multiple postgis providers in the same application requires the 
+> use of a a connection string.
 
 ## Connection Properties
 
