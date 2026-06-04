@@ -99,6 +99,15 @@ func (e ErrInvalidProviderForMap) Error() string {
 	return fmt.Sprintf("config: map %s references unknown provider %s", e.MapName, e.ProviderName)
 }
 
+type ErrUnsupportedTileSRID struct {
+	MapName  string
+	TileSRID int
+}
+
+func (e ErrUnsupportedTileSRID) Error() string {
+	return fmt.Sprintf("config: map %s has unsupported tile_srid %d; supported values are 3857 and 4326", e.MapName, e.TileSRID)
+}
+
 type ErrInvalidProviderLayerName struct {
 	ProviderLayerName string
 }

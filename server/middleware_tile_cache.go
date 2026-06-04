@@ -34,8 +34,17 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 			return
 		}
 
+		keyPath := strings.TrimPrefix(r.URL.Path, path.Join(URIPrefix, "maps"))
+		mapName := cacheKeyMapName(keyPath)
+		m, err := a.Map(mapName)
+		if err != nil {
+			log.Errorf("cache middleware: map lookup err: %v", err)
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// parse our URI into a cache key structure (remove any configured URIPrefix + "maps/" )
-		key, err := cache.ParseKey(strings.TrimPrefix(r.URL.Path, path.Join(URIPrefix, "maps")))
+		key, err := cache.ParseKeyForTileSRID(keyPath, m.TileGridSRID())
 		if err != nil {
 			log.Errorf("cache middleware: ParseKey err: %v", err)
 			next.ServeHTTP(w, r)
@@ -86,6 +95,14 @@ func TileCacheHandler(a *atlas.Atlas, next http.Handler) http.Handler {
 		w.Write(cachedTile)
 		return
 	})
+}
+
+func cacheKeyMapName(keyPath string) string {
+	keyParts := strings.Split(strings.TrimLeft(keyPath, "/"), "/")
+	if len(keyParts) == 0 {
+		return ""
+	}
+	return keyParts[0]
 }
 
 func newTileCacheResponseWriter(resp http.ResponseWriter, w io.Writer) http.ResponseWriter {

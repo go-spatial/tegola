@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 )
@@ -77,10 +78,14 @@ func (pf providerFilter) Is(ps ...providerType) bool {
 type tile_t struct {
 	slippy.Tile
 	buffer uint
+	srid   uint
 }
 
 // NewTile creates a new slippy tile with a Buffer
 func NewTile(z slippy.Zoom, x uint, y uint, buf, srid uint) Tile {
+	if srid == 0 {
+		srid = tegola.WebMercator
+	}
 	return &tile_t{
 		Tile: slippy.Tile{
 			Z: z,
@@ -88,25 +93,38 @@ func NewTile(z slippy.Zoom, x uint, y uint, buf, srid uint) Tile {
 			Y: y,
 		},
 		buffer: buf,
+		srid:   srid,
 	}
 }
 
 // Extent returns the extent of the tile
 func (tile *tile_t) Extent() (ext *geom.Extent, srid uint64) {
 	var err error
-	ext, err = slippy.Extent(webmercatorGrid, tile.Tile)
+	switch tile.srid {
+	case tegola.WGS84:
+		ext, err = tegola.WorldCRS84QuadExtent(tile.Tile)
+	case tegola.WebMercator:
+		ext, err = slippy.Extent(webmercatorGrid, tile.Tile)
+	default:
+		log.Error("Unsupported tile SRID.", tile.srid)
+		return &geom.Extent{}, uint64(tile.srid)
+	}
 	if err != nil {
 		log.Error("Could not generate valid extent for tile.", tile, err)
-		return &geom.Extent{}, 3857
+		return &geom.Extent{}, uint64(tile.srid)
 	}
-	return ext, 3857
+	return ext, uint64(tile.srid)
 
 }
 
 // BufferedExtent returns an extent of the tile, with the define buffer
 func (tile *tile_t) BufferedExtent() (ext *geom.Extent, srid uint64) {
 	ext, _ = tile.Extent()
-	return ext.ExpandBy(slippy.MvtPixelRationForZoom(webmercatorGrid, tile.Z) * float64(tile.buffer)), 3857
+	ratio := slippy.MvtPixelRationForZoom(webmercatorGrid, tile.Z)
+	if tile.srid == tegola.WGS84 {
+		ratio = ext.XSpan() / slippy.MvtTileDim
+	}
+	return ext.ExpandBy(ratio * float64(tile.buffer)), uint64(tile.srid)
 }
 
 // Tile is an interface used by Tiler, it is an unnecessary abstraction and is

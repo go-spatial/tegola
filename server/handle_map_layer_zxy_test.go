@@ -152,6 +152,45 @@ func TestHandleMapLayerZXY(t *testing.T) {
 			expectedCode: http.StatusOK,
 			method:       "OPTIONS",
 		},
+		"world crs84 z0 east tile valid": {
+			uri: "/maps/test-map/test-layer/0/1/0.pbf",
+			atlas: newTestMapWithTileSRID(4326, atlas.Layer{
+				Name:              "test-layer",
+				ProviderLayerName: "test-layer-1",
+				MinZoom:           0,
+				MaxZoom:           1,
+				Provider:          testLayer1.Provider,
+				GeomType:          testLayer1.GeomType,
+			}),
+			expectedCode:   http.StatusOK,
+			expectedLayers: []string{"test-layer"},
+		},
+		"world crs84 z0 invalid x": {
+			uri: "/maps/test-map/test-layer/0/2/0.pbf",
+			atlas: newTestMapWithTileSRID(4326, atlas.Layer{
+				Name:              "test-layer",
+				ProviderLayerName: "test-layer-1",
+				MinZoom:           0,
+				MaxZoom:           1,
+				Provider:          testLayer1.Provider,
+				GeomType:          testLayer1.GeomType,
+			}),
+			expectedCode: http.StatusBadRequest,
+			expectedBody: "invalid X value (2)",
+		},
+		"world crs84 z0 invalid y": {
+			uri: "/maps/test-map/test-layer/0/0/1.pbf",
+			atlas: newTestMapWithTileSRID(4326, atlas.Layer{
+				Name:              "test-layer",
+				ProviderLayerName: "test-layer-1",
+				MinZoom:           0,
+				MaxZoom:           1,
+				Provider:          testLayer1.Provider,
+				GeomType:          testLayer1.GeomType,
+			}),
+			expectedCode: http.StatusBadRequest,
+			expectedBody: "invalid Y value (1)",
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, MapHandlerTester(tc))

@@ -96,6 +96,19 @@ func newTestMapWithBounds(minx, miny, maxx, maxy float64) *atlas.Atlas {
 	return a
 }
 
+func newTestMapWithTileSRID(tileSRID uint64, layers ...atlas.Layer) *atlas.Atlas {
+	testMap := atlas.NewWebMercatorMap(testMapName)
+	testMap.TileSRID = tileSRID
+	testMap.Attribution = testMapAttribution
+	testMap.Center = testMapCenter
+	testMap.Layers = append(testMap.Layers, layers...)
+
+	a := &atlas.Atlas{}
+	a.AddMap(testMap)
+
+	return a
+}
+
 func doRequest(t *testing.T, a *atlas.Atlas, method string, uri string, body io.Reader) (*httptest.ResponseRecorder, *httptreemux.TreeMux, error) {
 	t.Helper()
 

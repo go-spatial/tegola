@@ -35,6 +35,7 @@ func NewWebMercatorMap(name string) Map {
 		Bounds:     tegola.WGS84Bounds,
 		Layers:     []Layer{},
 		SRID:       tegola.WebMercator,
+		TileSRID:   tegola.WebMercator,
 		TileExtent: 4096,
 		TileBuffer: uint64(tegola.DefaultTileBuffer),
 	}
@@ -57,7 +58,8 @@ type Map struct {
 	// Params holds configured query parameters
 	Params []provider.QueryParameter
 
-	SRID uint64
+	SRID     uint64
+	TileSRID uint64
 	// MVT output values
 	TileExtent uint64
 	TileBuffer uint64
@@ -66,6 +68,13 @@ type Map struct {
 	mvtProvider     provider.MVTTiler
 
 	observer observability.Interface
+}
+
+func (m Map) TileGridSRID() uint64 {
+	if m.TileSRID == 0 {
+		return tegola.WebMercator
+	}
+	return m.TileSRID
 }
 
 // HasMVTProvider indicates if map is a mvt provider based map
@@ -184,7 +193,8 @@ func (m Map) FilterLayersByName(names ...string) Map {
 
 func (m Map) encodeMVTProviderTile(ctx context.Context, tile slippy.Tile, params provider.Params) ([]byte, error) {
 	// get the list of our layers
-	ptile := provider.NewTile(tile.Z, tile.X, tile.Y, uint(m.TileBuffer), uint(m.SRID))
+	tileSRID := m.TileGridSRID()
+	ptile := provider.NewTile(tile.Z, tile.X, tile.Y, uint(m.TileBuffer), uint(tileSRID))
 
 	layers := make([]provider.Layer, len(m.Layers))
 	for i := range m.Layers {
@@ -224,8 +234,9 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 			// on completion let the wait group know
 			defer wg.Done()
 
+			tileSRID := m.TileGridSRID()
 			ptile := provider.NewTile(tile.Z, tile.X, tile.Y,
-				uint(m.TileBuffer), uint(m.SRID))
+				uint(m.TileBuffer), uint(tileSRID))
 
 			// fetch layer from data provider
 			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, params, func(f *provider.Feature) error {
@@ -237,12 +248,11 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 
 				geo := f.Geometry
 
-				// check if the feature SRID and map SRID are different. If they are then reprojected
-				if f.SRID != m.SRID {
-					// TODO(arolek): support for additional projections
-					g, err := basic.ToWebMercator(f.SRID, geo)
+				// check if the feature SRID and tile SRID are different. If they are then reproject.
+				if f.SRID != tileSRID {
+					g, err := basic.Transform(f.SRID, tileSRID, geo)
 					if err != nil {
-						return fmt.Errorf("unable to transform geometry to webmercator from SRID (%v) for feature %v due to error: %w", f.SRID, f.ID, err)
+						return fmt.Errorf("unable to transform geometry from SRID (%v) to tile SRID (%v) for feature %v due to error: %w", f.SRID, tileSRID, f.ID, err)
 					}
 					geo = g
 				}

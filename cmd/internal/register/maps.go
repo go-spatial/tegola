@@ -31,6 +31,9 @@ func webMercatorMapFromConfigMap(cfg provider.Map) (newMap atlas.Map) {
 	if cfg.TileBuffer != nil {
 		newMap.TileBuffer = uint64(*cfg.TileBuffer)
 	}
+	if cfg.TileSRID != nil {
+		newMap.TileSRID = uint64(*cfg.TileSRID)
+	}
 	return newMap
 
 }

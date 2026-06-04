@@ -13,6 +13,7 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 	type tcase struct {
 		uri       string
 		uriPrefix string
+		tileSRID  uint64
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
@@ -26,6 +27,12 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 			}
 
 			a := newTestMapWithLayers(testLayer1, testLayer2, testLayer3)
+			if tc.tileSRID == 4326 {
+				layer := testLayer1
+				layer.MinZoom = 0
+				layer.MaxZoom = 20
+				a = newTestMapWithTileSRID(4326, layer)
+			}
 			cacher, _ := memory.New(nil)
 			a.SetCache(cacher)
 
@@ -72,6 +79,10 @@ func TestMiddlewareTileCacheHandler(t *testing.T) {
 		"map layer and uri prefix": {
 			uri:       "/tegola/maps/test-map/test-layer/4/2/3.pbf",
 			uriPrefix: "/tegola",
+		},
+		"world crs84 high x": {
+			uri:      "/maps/test-map/test-layer/16/78212/21154.pbf",
+			tileSRID: 4326,
 		},
 	}
 

@@ -119,8 +119,9 @@ func genSQL(
 // !GEOM_TYPE! - the geom field type if defined otherwise ""
 func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) (string, error) {
 	var (
-		extent  *geom.Extent
-		geoType string
+		extent   *geom.Extent
+		geoType  string
+		tileSRID uint64
 	)
 
 	if lyr == nil {
@@ -129,19 +130,17 @@ func replaceTokens(sql string, lyr *Layer, tile provider.Tile, withBuffer bool) 
 	srid := lyr.SRID()
 
 	if withBuffer {
-		extent, _ = tile.BufferedExtent()
+		extent, tileSRID = tile.BufferedExtent()
 	} else {
-		extent, _ = tile.Extent()
+		extent, tileSRID = tile.Extent()
 	}
 
-	// TODO: leverage helper functions for minx / miny to make this easier to follow
-	// TODO: it's currently assumed the tile will always be in WebMercator. Need to support different projections
-	minGeo, err := basic.FromWebMercator(srid, geom.Point{extent.MinX(), extent.MinY()})
+	minGeo, err := basic.Transform(tileSRID, srid, geom.Point{extent.MinX(), extent.MinY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %w ", err)
 	}
 
-	maxGeo, err := basic.FromWebMercator(srid, geom.Point{extent.MaxX(), extent.MaxY()})
+	maxGeo, err := basic.Transform(tileSRID, srid, geom.Point{extent.MaxX(), extent.MaxY()})
 	if err != nil {
 		return "", fmt.Errorf("Error trying to convert tile point: %w ", err)
 	}

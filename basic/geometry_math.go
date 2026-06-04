@@ -232,6 +232,20 @@ func FromWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error)
 	}
 }
 
+// Transform converts geometry between the SRIDs supported by tegola.
+func Transform(fromSRID, toSRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
+	if fromSRID == toSRID {
+		return CloneGeometry(geometry)
+	}
+
+	wm, err := ToWebMercator(fromSRID, geometry)
+	if err != nil {
+		return nil, err
+	}
+
+	return FromWebMercator(toSRID, wm)
+}
+
 func interfaceAsFloatslice(v interface{}) (vals []float64, err error) {
 	vs, ok := v.([]interface{})
 	if !ok {

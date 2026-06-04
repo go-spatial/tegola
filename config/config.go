@@ -200,6 +200,9 @@ func (c *Config) Validate() error {
 	// maps with configured parameters for logging
 	mapsWithCustomParams := []string{}
 	for mapKey, m := range c.Maps {
+		if m.TileSRID != nil && !tegola.IsSupportedTileSRID(uint64(*m.TileSRID)) {
+			return ErrUnsupportedTileSRID{MapName: string(m.Name), TileSRID: int(*m.TileSRID)}
+		}
 
 		// validate any declared query parameters
 		if err := ValidateAndRegisterParams(string(m.Name), m.Parameters); err != nil {

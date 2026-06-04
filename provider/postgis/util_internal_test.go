@@ -41,6 +41,12 @@ func TestReplaceTokens(t *testing.T) {
 			tile:     provider.NewTile(2, 1, 1, 64, tegola.WebMercator),
 			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-10175297.20532266,-156543.03392804,156543.03392804,10175297.20532266,3857)",
 		},
+		"replace BBOX for WorldCRS84Quad tile": {
+			sql:      "SELECT * FROM foo WHERE geom && !BBOX!",
+			layer:    Layer{srid: tegola.WGS84},
+			tile:     provider.NewTile(0, 1, 0, 64, tegola.WGS84),
+			expected: "SELECT * FROM foo WHERE geom && ST_MakeEnvelope(-2.81250000,-92.81250000,182.81250000,92.81250000,4326)",
+		},
 		"replace BBOX with != in query": {
 			sql:      "SELECT * FROM foo WHERE geom && !BBOX! AND bar != 42",
 			layer:    Layer{srid: tegola.WebMercator},

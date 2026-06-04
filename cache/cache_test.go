@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 )
 
@@ -52,5 +53,23 @@ func TestParseKey(t *testing.T) {
 			t.Errorf("testcase (%v) failed. expected (%+v) does not match output (%+v)", i, tc.expected, output)
 			continue
 		}
+	}
+}
+
+func TestParseKeyForTileSRIDWorldCRS84Quad(t *testing.T) {
+	key, err := cache.ParseKeyForTileSRID("/zoning/roads/16/78212/21154.pbf", tegola.WGS84)
+	if err != nil {
+		t.Fatalf("ParseKeyForTileSRID: %v", err)
+	}
+
+	expected := &cache.Key{
+		MapName:   "zoning",
+		LayerName: "roads",
+		Z:         16,
+		X:         78212,
+		Y:         21154,
+	}
+	if !reflect.DeepEqual(expected, key) {
+		t.Fatalf("key, expected %+v got %+v", expected, key)
 	}
 }

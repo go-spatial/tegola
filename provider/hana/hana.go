@@ -49,8 +49,8 @@ func (c connectionPoolCollector) QueryContext(ctx context.Context, query string)
 	return c.pool.QueryContext(ctx, query)
 }
 
-func (c connectionPoolCollector) QueryContextWithBBox(ctx context.Context, query string, extent *geom.Extent, srid uint64, hasTileBounds bool) (*sql.Rows, error) {
-	ll, ur, err := getBBoxCoordinates(extent, srid)
+func (c connectionPoolCollector) QueryContextWithBBox(ctx context.Context, query string, extent *geom.Extent, tileSRID uint64, srid uint64, hasTileBounds bool) (*sql.Rows, error) {
+	ll, ur, err := getBBoxCoordinates(extent, tileSRID, srid)
 	if err != nil {
 		return nil, err
 	}
@@ -773,9 +773,9 @@ func (p Provider) TileFeatures(ctx context.Context, layer string, tile provider.
 
 	now := time.Now()
 
-	extent, _ := getTileExtent(tile, true)
+	extent, tileSRID := getTileExtent(tile, true)
 	srid := plyr.SRID()
-	rows, err := p.pool.QueryContextWithBBox(ctx, sqlQuery, extent, srid, false)
+	rows, err := p.pool.QueryContextWithBBox(ctx, sqlQuery, extent, tileSRID, srid, false)
 
 	if err := ctxErr(ctx, err); err != nil {
 		return fmt.Errorf("error running layer (%v) SQL (%v): %w", layer, sqlQuery, err)
@@ -903,9 +903,9 @@ func (p Provider) MVTForLayers(ctx context.Context, tile provider.Tile, params p
 
 		now := time.Now()
 
-		extent, _ := getTileExtent(tile, false)
+		extent, tileSRID := getTileExtent(tile, false)
 		srid := l.SRID()
-		rows, err := p.pool.QueryContextWithBBox(ctx, sqlQuery, extent, srid, true)
+		rows, err := p.pool.QueryContextWithBBox(ctx, sqlQuery, extent, tileSRID, srid, true)
 
 		if err := ctxErr(ctx, err); err != nil {
 			return []byte{}, err

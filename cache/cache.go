@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-spatial/geom/slippy"
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/maths"
 )
 
 // Interface defines a cache back end
@@ -30,6 +30,11 @@ type Wrapped interface {
 // ParseKey will parse a string in the format /:map/:layer/:z/:x/:y into a Key struct. The :layer value is optional
 // ParseKey also supports other OS delimiters (i.e. Windows - "\")
 func ParseKey(str string) (*Key, error) {
+	return ParseKeyForTileSRID(str, tegola.WebMercator)
+}
+
+// ParseKeyForTileSRID will parse a key and validate z/x/y against the tile grid for tileSRID.
+func ParseKeyForTileSRID(str string, tileSRID uint64) (*Key, error) {
 	var err error
 	var key Key
 
@@ -80,10 +85,15 @@ func ParseKey(str string) (*Key, error) {
 	}
 
 	key.Z = uint(placeholder)
-	maxXYatZ := maths.Exp2(placeholder) - 1
+	gridWidth, gridHeight, err := tegola.TileGridSize(tileSRID, slippy.Zoom(key.Z))
+	if err != nil {
+		return nil, err
+	}
+	maxXatZ := uint64(gridWidth - 1)
+	maxYatZ := uint64(gridHeight - 1)
 
 	placeholder, err = strconv.ParseUint(zxy[1], 10, 32)
-	if err != nil || placeholder > maxXYatZ {
+	if err != nil || placeholder > maxXatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "X",
@@ -99,7 +109,7 @@ func ParseKey(str string) (*Key, error) {
 	// trim the extension if it exists
 	yParts := strings.Split(zxy[2], ".")
 	placeholder, err = strconv.ParseUint(yParts[0], 10, 64)
-	if err != nil || placeholder > maxXYatZ {
+	if err != nil || placeholder > maxYatZ {
 		err = ErrInvalidFileKey{
 			path: str,
 			key:  "Y",

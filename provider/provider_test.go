@@ -3,6 +3,7 @@ package provider_test
 import (
 	"testing"
 
+	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/provider"
 	"github.com/go-spatial/tegola/provider/test"
 )
@@ -33,5 +34,16 @@ func TestProviderInterface(t *testing.T) {
 	provider.Cleanup()
 	if test.MVTCount != 0 {
 		t.Errorf(" expected count , expected 0 got %v", test.MVTCount)
+	}
+}
+
+func TestNewTileWorldCRS84QuadExtent(t *testing.T) {
+	tile := provider.NewTile(0, 1, 0, 64, tegola.WGS84)
+	ext, srid := tile.Extent()
+	if srid != tegola.WGS84 {
+		t.Fatalf("srid, expected %d got %d", tegola.WGS84, srid)
+	}
+	if got, expected := ext.Extent(), [4]float64{0, -90, 180, 90}; got != expected {
+		t.Fatalf("extent, expected %v got %v", expected, got)
 	}
 }

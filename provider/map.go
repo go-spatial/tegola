@@ -11,4 +11,5 @@ type Map struct {
 	Layers      []MapLayer       `toml:"layers"`
 	Parameters  []QueryParameter `toml:"params"`
 	TileBuffer  *env.Int         `toml:"tile_buffer"`
+	TileSRID    *env.Int         `toml:"tile_srid"`
 }
