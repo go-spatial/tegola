@@ -1,5 +1,14 @@
 # Self-Hosted Proposal Map Data
 
+> **Development pilot:** proposal maps use the versioned R2 manifest at
+> `https://maps-dev.meistercrm.com/v1/current.json` by default. The release
+> workflow publishes the grouped basemap, country packs, glyphs and sprites
+> under immutable release keys. Browser traffic should go through the Worker;
+> it must not use the Railway Router, `/map-assets`, or `/tegola`.
+
+The local commands below are retained for troubleshooting and break-glass
+fallback only. They do not build or publish the R2 pilot release.
+
 This directory contains the reproducible local/prod setup for the free map stack:
 
 - `east-africa.pmtiles` is generated from Protomaps/OpenStreetMap and served as a static file.
@@ -8,15 +17,14 @@ This directory contains the reproducible local/prod setup for the free map stack
 
 Generated map data is ignored by git.
 
-## Local Basemap
+## Legacy local fallback: basemap assets
 
 ```sh
-cd /home/alexb/code/tegola
+cd /c/Users/alexb/code/tegola
 ./deploy/maps/build-east-africa-pmtiles.sh
-./deploy/maps/serve-map-assets.sh
 ```
 
-This serves:
+The generated files are served by the legacy local `map-assets` container at:
 
 ```text
 http://localhost:8088/map-assets/east-africa.pmtiles
@@ -25,37 +33,46 @@ http://localhost:8088/map-assets/protomaps-assets/sprites/v4/light.json
 http://localhost:8088/map-assets/protomaps-assets/sprites/v4/light.png
 ```
 
-## Local Protected Areas
+Use the shared local Docker stack to serve the generated files:
 
-With the local PostGIS container published on `localhost:55432`:
+```powershell
+cd C:\Users\alexb\code\local-dev
+docker compose --profile all up map-assets
+```
 
-```sh
-cd /home/alexb/code/tegola
-./deploy/maps/import-protected-areas.sh
+## Legacy local fallback: Tegola protected areas
+
+Start the local map database and run the Compose-networked importer:
+
+```powershell
+cd C:\Users\alexb\code\local-dev
+docker compose up -d maps-postgis
+docker compose --profile maps-import run --rm maps-importer
 ```
 
 For faster local iteration you can limit the import to selected countries:
 
-```sh
-OSM_COUNTRIES="tanzania kenya" ./deploy/maps/import-protected-areas.sh
+```powershell
+$env:OSM_COUNTRIES = "tanzania kenya"
+docker compose --profile maps-import run --rm maps-importer
+Remove-Item Env:\OSM_COUNTRIES
 ```
 
 By default the script drops osm2pgsql middle tables after the final country to keep the
 database smaller. Set `OSM2PGSQL_DROP_MIDDLE_TABLES=false` if you need to keep them.
 
-Then start Tegola with:
+Then start Tegola through local Compose:
 
-```sh
-POSTGIS_URI='postgres://postgres:postgres@127.0.0.1:55432/gis?sslmode=disable' \
-TEGOLA_CONFIG="$PWD/deploy/maps/tegola.protected_areas.toml" \
-PORT=9090 \
-TEGOLA_BIND_HOST=0.0.0.0 \
-./deploy/railway/start.sh
+```powershell
+docker compose --profile all up tegola
 ```
 
-The public router path remains `/tegola`; locally the direct service is:
+The `/tegola` route and Router-backed map volume are legacy fallback paths in
+development. Locally there is no `global-router`; frontends can call the direct
+services when deliberately testing the fallback:
 
 ```text
+http://localhost:8088/map-assets/east-africa.pmtiles
 http://localhost:9090/capabilities
 http://localhost:9090/capabilities/protected_areas.json
 http://localhost:9090/maps/protected_areas/5/19/16.pbf

@@ -1,5 +1,15 @@
 # Safari Expert Railway Deployment
 
+> **Development map delivery:** the active pilot is static PMTiles served by
+> `maps-worker-dev` from private R2. Frontends read
+> `https://maps-dev.meistercrm.com/v1/current.json`; they do not use the
+> Railway Router, `/map-assets`, or `/tegola` for normal proposal maps.
+
+The Railway instructions below are retained for the legacy Tegola fallback and
+break-glass rollback only. Do not add Southern or East pilot archives to the
+Router volume. To roll back the pilot, intentionally unset
+`VITE_MAP_MANIFEST_URL` in the development frontend build before redeploying.
+
 This repo tracks upstream Tegola, so Safari Expert deployment files are kept in separate `railway.*` and `deploy/railway/*` files to reduce fork-sync conflicts.
 
 ## Runtime
@@ -19,11 +29,13 @@ Set these Tegola service variables in Railway:
 
 If using a mounted config file, mount it at `/opt/tegola_config/config.toml` or set `TEGOLA_CONFIG` to the mounted path.
 
-For the self-hosted map POC, the Tegola config should expose the `protected_areas` map from `deploy/maps/tegola.protected_areas.toml`. The Protomaps PMTiles basemap is served separately as a static asset through `global-router` at `/map-assets/east-africa.pmtiles`.
+For the legacy self-hosted map fallback, the Tegola config exposes the
+`protected_areas` map from `deploy/maps/tegola.protected_areas.toml`. The pilot
+basemap and country overlays are no longer served from this service.
 
-## Router
+## Legacy Router fallback
 
-The public browser path is the global router, not the Tegola service domain:
+The old browser path is the global router, not the Tegola service domain:
 
 ```text
 https://dev.meistercrm.com/tegola
@@ -37,13 +49,14 @@ TEGOLA_URL=http://tegola.railway.internal:8080
 
 The router strips `/tegola/` before proxying. It also maps `/tegola/maps/{mapName}` to Tegola's native `/capabilities/{mapName}.json` endpoint so frontend clients can use the POC TileJSON path consistently.
 
-The router also serves self-hosted basemap assets from:
+The router may still serve self-hosted basemap assets for rollback diagnostics:
 
 ```text
 https://dev.meistercrm.com/map-assets
 ```
 
-Mount the generated map asset directory into `global-router` and set:
+If the fallback is explicitly enabled, mount the generated map asset directory
+into `global-router` and set:
 
 ```text
 MAP_ASSETS_ROOT=/opt/map-assets
@@ -63,7 +76,7 @@ Optional GitHub variable:
 
 - `RAILWAY_ENVIRONMENT`, defaulting to `development`
 
-## Smoke Checks
+## Legacy fallback smoke checks
 
 After deploying Tegola and global-router, these should pass:
 
