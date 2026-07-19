@@ -6,31 +6,34 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/cache"
 	"github.com/go-spatial/tegola/dict"
 )
 
-var (
-	ErrMissingBasepath = errors.New("filecache: missing required param 'basepath'")
-)
+var ErrMissingBasepath = errors.New("filecache: missing required param 'basepath'")
 
 const CacheType = "file"
 
 const (
 	ConfigKeyBasepath = "basepath"
 	ConfigKeyMaxZoom  = "max_zoom"
+	ConfigKeyTTL      = "ttl"
 )
 
+var defaultTTL = 0
+
 func init() {
-	cache.Register(CacheType, New)
+	cache.Register(CacheType, New) //nolint:errcheck
 }
 
 // New instantiates a Cache. The config expects the following params:
 //
 //	basepath (string): a path to where the cache will be written
 //	max_zoom (int): max zoom to use the cache. beyond this zoom cache Set() calls will be ignored
+//	ttl (int): lazy expiration ttl, if not set defaults to 0 = no ttl
 func New(config dict.Dicter) (cache.Interface, error) {
 	var err error
 
@@ -48,6 +51,12 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, ErrMissingBasepath
 	}
 
+	ttl, err := config.Int(ConfigKeyTTL, &defaultTTL)
+	if err != nil {
+		return nil, err
+	}
+	fc.Expiration = time.Duration(ttl) * time.Second
+
 	if fc.Basepath == "" {
 		return nil, ErrMissingBasepath
 	}
@@ -61,11 +70,19 @@ func New(config dict.Dicter) (cache.Interface, error) {
 }
 
 type Cache struct {
+	// a location on the file system to write the cached tiles to.
 	Basepath string
 	// MaxZoom determines the max zoom the cache to persist. Beyond this
 	// zoom, cache Set() calls will be ignored. This is useful if the cache
 	// should not be leveraged for higher zooms when data changes often.
 	MaxZoom uint
+	// time to live in seconds for cached tiles. Defaults to 0 (never expires). TTL is evaluated lazily on Get() operations - expired tiles are deleted when accessed but may remain on disk if never requested.
+	Expiration time.Duration
+}
+
+func isExpired(mtime time.Time, ttl time.Duration) bool {
+	expiresAt := mtime.Add(ttl)
+	return time.Now().After(expiresAt)
 }
 
 //	Get reads a z,x,y entry from the cache and returns the contents
@@ -83,7 +100,22 @@ func (fc *Cache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) 
 
 		return nil, false, err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
+
+	if fc.Expiration > 0 { // don't bother with this path if there's no ttl
+		s, err := f.Stat()
+		if err != nil {
+			return nil, false, err
+		}
+
+		if isExpired(s.ModTime(), fc.Expiration) {
+			pErr := fc.Purge(ctx, key)
+			if pErr != nil {
+				return nil, false, err
+			}
+			return nil, false, nil
+		}
+	}
 
 	if err := ctx.Err(); err != nil {
 		return nil, false, err
@@ -131,7 +163,7 @@ func (fc *Cache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 	_, err = f.Write(val)
 	if err != nil {
 		// close the file, can't use 'defer f.Close()'' otherwise rename wont happen
-		f.Close()
+		f.Close() //nolint:errcheck
 		return err
 	}
 
