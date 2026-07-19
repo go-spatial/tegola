@@ -8,6 +8,7 @@ import (
 	"github.com/go-spatial/tegola/cmd/internal/register"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/env"
+	"github.com/go-spatial/tegola/mapbox/tilejson"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -39,7 +40,6 @@ func TestMaps(t *testing.T) {
 			if !errors.Is(err, tc.expectedErr) {
 				t.Errorf("invalid error, expected %v got %v", tc.expectedErr, err)
 			}
-			return
 		}
 	}
 
@@ -124,6 +124,26 @@ func TestMaps(t *testing.T) {
 					"type": "debug",
 				},
 			},
+		},
+		"fails when map requires TileJSON v3 but provider does not implement": {
+			maps: []provider.Map{
+				{
+					Name:            "test",
+					TileJSONVersion: tilejson.Version3,
+					Layers: []provider.MapLayer{
+						{
+							ProviderLayer: "foo.bar",
+						},
+					},
+				},
+			},
+			providers: []dict.Dict{
+				{
+					"name": "foo",
+					"type": "debug",
+				},
+			},
+			expectedErr: provider.ErrNotTileJSONV3Compatible,
 		},
 		"success": {
 			maps: []provider.Map{},

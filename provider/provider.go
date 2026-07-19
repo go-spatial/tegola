@@ -29,9 +29,7 @@ const (
 	TypeAll = TypeStd & TypeMvt
 )
 
-var (
-	webmercatorGrid = slippy.NewGrid(3857, 0)
-)
+var webmercatorGrid = slippy.NewGrid(3857, 0)
 
 func (pt providerType) Prefix() string {
 	if pt == TypeMvt {
@@ -100,7 +98,6 @@ func (tile *tile_t) Extent() (ext *geom.Extent, srid uint64) {
 		return &geom.Extent{}, 3857
 	}
 	return ext, 3857
-
 }
 
 // BufferedExtent returns an extent of the tile, with the define buffer
@@ -132,6 +129,14 @@ type Tiler interface {
 	TileFeatures(ctx context.Context, layer string, t Tile, params Params, fn func(f *Feature) error) error
 }
 
+// LayerFielder is an optional interface that providers can implement to expose
+// field information for their layers. This is used to populate the "fields"
+// property in TileJSON 3.0.0 capabilities.
+type LayerFielder interface {
+	// LayerFields returns a map of field names to their type descriptions for the given layer
+	LayerFields(ctx context.Context, layerName string) (map[string]any, error)
+}
+
 // TilerUnion represents either a Std Tiler or and MVTTiler; only one should be not nil.
 type TilerUnion struct {
 	Std Tiler
@@ -148,6 +153,23 @@ func (tu TilerUnion) Layers() ([]LayerInfo, error) {
 		return tu.Mvt.Layers()
 	}
 	return nil, ErrNilInitFunc
+}
+
+func (tu TilerUnion) IsTileJSONV3Compatible() (bool, error) {
+	if tu.Std != nil {
+		if _, ok := tu.Std.(LayerFielder); !ok {
+			return false, ErrNotTileJSONV3Compatible
+		}
+		return true, nil
+	}
+	if tu.Mvt != nil {
+		if _, ok := tu.Std.(LayerFielder); !ok {
+			return false, ErrNotTileJSONV3Compatible
+		}
+		return true, nil
+	}
+
+	return false, ErrNoProvider
 }
 
 // InitFunc initialize a provider given a config map. The init function should validate the config map, and report any errors. This is called by the For function.
@@ -237,7 +259,7 @@ func Drivers(types ...providerType) (l []string) {
 				continue
 			}
 		case std:
-			if v.init == nil { //not of type std
+			if v.init == nil { // not of type std
 				continue
 			}
 		default:
@@ -253,9 +275,7 @@ func Drivers(types ...providerType) (l []string) {
 // a std provider. The correct entry in TilerUnion will not be nil. If there is an error both entries
 // will be nil.
 func For(name string, config dict.Dicter, maps []Map) (val TilerUnion, err error) {
-	var (
-		driversList = Drivers()
-	)
+	driversList := Drivers()
 	if providers == nil {
 		return val, ErrUnknownProvider{KnownProviders: driversList}
 	}

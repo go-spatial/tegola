@@ -64,8 +64,6 @@ type Map struct {
 
 	mvtProviderName string
 	mvtProvider     provider.MVTTiler
-
-	observer observability.Interface
 }
 
 // HasMVTProvider indicates if map is a mvt provider based map
@@ -194,13 +192,11 @@ func (m Map) encodeMVTProviderTile(ctx context.Context, tile slippy.Tile, params
 		}
 	}
 	return m.mvtProvider.MVTForLayers(ctx, ptile, params, layers)
-
 }
 
 // encodeMVTTile will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
 func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provider.Params) ([]byte, error) {
-
 	// tile container
 	var mvtTile mvt.Tile
 	// wait group for concurrent layer fetching
@@ -214,7 +210,6 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 
 	// iterate our layers
 	for i, layer := range m.Layers {
-
 		// go routine for fetching the layer concurrently
 		go func(i int, l Layer) {
 			mvtLayer := mvt.Layer{

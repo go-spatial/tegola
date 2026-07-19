@@ -1,6 +1,7 @@
 package register
 
 import (
+	"fmt"
 	"html"
 	"regexp"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/config"
+	"github.com/go-spatial/tegola/mapbox/tilejson"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -32,7 +34,6 @@ func webMercatorMapFromConfigMap(cfg provider.Map) (newMap atlas.Map) {
 		newMap.TileBuffer = uint64(*cfg.TileBuffer)
 	}
 	return newMap
-
 }
 
 func layerInfosFindByName(infos []provider.LayerInfo, name string) provider.LayerInfo {
@@ -48,10 +49,8 @@ func layerInfosFindByName(infos []provider.LayerInfo, name string) provider.Laye
 }
 
 func atlasLayerFromConfigLayer(cfg *provider.MapLayer, mapName string, layerProvider provider.Layerer) (layer atlas.Layer, err error) {
-	var (
-		// providerLayer is primary used for error reporting.
-		providerLayer = string(cfg.ProviderLayer)
-	)
+	// providerLayer is primary used for error reporting.
+	providerLayer := string(cfg.ProviderLayer)
 	// read the provider's layer names
 	// don't care about the error.
 	providerName, layerName, _ := cfg.ProviderLayerName()
@@ -123,12 +122,9 @@ func selectProvider(name string, mapName string, newMap *atlas.Map, providers ma
 	return nil, ErrProviderNotFound{name}
 }
 
-// Maps registers maps with with atlas
+// Maps registers maps with with atlas.
 func Maps(a *atlas.Atlas, maps []provider.Map, providers map[string]provider.TilerUnion) error {
-
-	var (
-		layerer provider.Layerer
-	)
+	var layerer provider.Layerer
 
 	// iterate our maps
 	for _, m := range maps {
@@ -141,6 +137,17 @@ func Maps(a *atlas.Atlas, maps []provider.Map, providers map[string]provider.Til
 				return ErrProviderLayerInvalid{
 					ProviderLayer: string(l.ProviderLayer),
 					Map:           string(m.Name),
+				}
+			}
+
+			// if our map requests TileJSON v3 specifically
+			// we have to validate that the provider supports it.
+			// if m.TileJSONVersion is not being provided tegola determines
+			// the TileJSON version for the user.
+			if m.TileJSONVersion == tilejson.Version3 {
+				p := providers[providerName]
+				if ok, err := p.IsTileJSONV3Compatible(); !ok {
+					return fmt.Errorf("%w: %s", err, providerName)
 				}
 			}
 
