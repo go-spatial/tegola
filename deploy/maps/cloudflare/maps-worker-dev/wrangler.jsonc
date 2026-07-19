@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "maps-worker-dev",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-19",
+  "workers_dev": true,
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "maps-dev"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "maps-dev.meistercrm.com",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGINS": "*",
+    "IMMUTABLE_CACHE_CONTROL": "public, max-age=31536000, immutable",
+    "MANIFEST_CACHE_CONTROL": "public, max-age=60"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  }
+}

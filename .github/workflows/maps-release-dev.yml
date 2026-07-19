@@ -1,0 +1,131 @@
+name: Maps release (development)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: Optional immutable release ID; defaults to YYYYMMDD-<protomaps-key>-<gitsha7>.
+        required: false
+        type: string
+
+concurrency:
+  group: maps-release-dev
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish development map release
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    env:
+      MAP_PUBLIC_BASE_URL: https://maps-dev.meistercrm.com
+      MAP_RELEASE_OUTPUT_DIR: ${{ github.workspace }}/.maps-release
+      AWS_ACCESS_KEY_ID: ${{ secrets.MAPS_DEV_R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MAPS_DEV_R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Resolve immutable release ID
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          key="$(jq -r '.protomaps.buildKey | rtrimstr(".pmtiles")' deploy/maps/pilot/release-inputs.lock.json)"
+          release_id="${{ inputs.release_id }}"
+          if [ -z "$release_id" ]; then
+            release_id="$(date -u +%Y%m%d)-${key}-${GITHUB_SHA::7}"
+          fi
+          [[ "$release_id" =~ ^[0-9]{8}-[a-zA-Z0-9._-]+-[0-9a-f]{7}$ ]]
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+
+      - name: Verify deployment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$AWS_ACCESS_KEY_ID"
+          test -n "$AWS_SECRET_ACCESS_KEY"
+          test -n "$R2_ACCOUNT_ID"
+          aws --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            s3api head-bucket --bucket maps-dev
+
+      - name: Build and verify immutable archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash deploy/maps/pilot/build-release.sh \
+            --release-id "${{ steps.release.outputs.release_id }}" \
+            --output-dir "$MAP_RELEASE_OUTPUT_DIR"
+
+      - name: Upload immutable R2 release objects
+        id: upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          release_id="${{ steps.release.outputs.release_id }}"
+          release_dir="${MAP_RELEASE_OUTPUT_DIR}/${release_id}"
+
+          upload_immutable() {
+            local file="$1"
+            local key="$2"
+            local cache_control="$3"
+            if aws --endpoint-url "$endpoint" s3api head-object --bucket maps-dev --key "$key" >/dev/null 2>&1; then
+              echo "refusing to overwrite immutable object: $key" >&2
+              exit 73
+            fi
+            aws --endpoint-url "$endpoint" s3 cp "$file" "s3://maps-dev/$key" \
+              --cache-control "$cache_control" \
+              --only-show-errors
+          }
+
+          upload_immutable "$release_dir/basemap/safari-mainland-pilot.pmtiles" \
+            "releases/$release_id/basemap/safari-mainland-pilot.pmtiles" \
+            'public, max-age=31536000, immutable'
+          for file in "$release_dir"/protected-areas/*.pmtiles; do
+            upload_immutable "$file" "releases/$release_id/protected-areas/$(basename "$file")" \
+              'public, max-age=31536000, immutable'
+          done
+          while IFS= read -r -d '' file; do
+            relative="${file#${release_dir}/}"
+            upload_immutable "$file" "releases/$release_id/$relative" \
+              'public, max-age=31536000, immutable'
+          done < <(find "$release_dir/assets" -type f -print0)
+          upload_immutable "$release_dir/manifest.json" "releases/$release_id/manifest.json" \
+            'public, max-age=31536000, immutable'
+          upload_immutable "$release_dir/release.lock.json" "releases/$release_id/release.lock.json" \
+            'public, max-age=31536000, immutable'
+
+      - name: Smoke test visible tile delivery and edge cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_id="${{ steps.release.outputs.release_id }}"
+          base="https://maps-dev.meistercrm.com/releases/${release_id}"
+          urls=(
+            "$base/basemap/safari-mainland-pilot/0/0/0.mvt"
+            "$base/protected-areas/UG/4/0/0.mvt"
+            "$base/protected-areas/ZA/4/0/0.mvt"
+          )
+          for url in "${urls[@]}"; do
+            headers="$(mktemp)"
+            curl --fail --silent --show-error --dump-header "$headers" --output /dev/null "$url?smoke=${release_id}"
+            curl --fail --silent --show-error --dump-header "$headers" --output /dev/null "$url?smoke=${release_id}"
+            grep -qi '^x-map-edge-cache: hit' "$headers"
+          done
+
+      - name: Atomically point the manifest to the verified release
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          release_id="${{ steps.release.outputs.release_id }}"
+          aws --endpoint-url "$endpoint" s3 cp \
+            "${MAP_RELEASE_OUTPUT_DIR}/${release_id}/manifest.json" \
+            's3://maps-dev/v1/current.json' \
+            --cache-control 'public, max-age=60' \
+            --only-show-errors

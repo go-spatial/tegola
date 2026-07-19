@@ -1,0 +1,18 @@
+{
+  "name": "maps-worker-dev",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "pmtiles": "4.4.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260718.1",
+    "typescript": "5.8.3",
+    "wrangler": "4.112.0"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "coverage": {
+    "basemapCountries": ["BW", "BI", "KE", "LS", "MW", "MZ", "NA", "RW", "SZ", "TZ", "UG", "ZA", "ZM", "ZW"],
+    "protectedAreaCountries": ["BW", "KE", "LS", "MW", "MZ", "NA", "RW", "SZ", "TZ", "UG", "ZA", "ZM", "ZW"],
+    "deferredCountries": ["ET", "MG", "MU", "RE", "SC"]
+  },
+  "protomaps": {
+    "buildKey": "20260718.pmtiles",
+    "version": "4.14.11",
+    "url": "https://build.protomaps.com/20260718.pmtiles",
+    "contentLength": 136825421437,
+    "etag": "712d4c059147d20d4ed0c9db5d9636d7-510",
+    "md5Base64": "fY+VX83Nv5GLh02AAQX3EA==",
+    "blake3": "f35cbed268fc8244f6930dbb6088dba81ff1d15767954d2fe153dd9b51906e01",
+    "pmtilesCliImage": "protomaps/go-pmtiles:v1.31.1"
+  },
+  "countryBoundaries": {
+    "name": "Natural Earth Admin 0 Countries",
+    "version": "5.1.1",
+    "url": "https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_0_countries.zip",
+    "sha256": "ce1ac7036499a0edd641fbc093cd209a98f96a49d2eca8480aaacad35138a7f6",
+    "bufferDegrees": 0.25,
+    "gdalImage": "ghcr.io/osgeo/gdal:ubuntu-small-3.10.3"
+  },
+  "protomapsAssets": {
+    "commit": "028c18f713baecad011301ff7a69acc39bcc2ae7",
+    "url": "https://github.com/protomaps/basemaps-assets/archive/028c18f713baecad011301ff7a69acc39bcc2ae7.tar.gz",
+    "sha256": "57e40e8c512bd8042d0a3a251f19d0d1c8523ad963c666c3c6643bada4dc92d0"
+  },
+  "tools": {
+    "osm2pgsqlImage": "iboates/osm2pgsql:2.3.1",
+    "postgisImage": "postgis/postgis:16-3.5-alpine"
+  },
+  "geofabrik": {
+    "baseUrl": "https://download.geofabrik.de/africa",
+    "inputs": {
+      "BI": {"slug": "burundi", "md5": "982270dbcf963695b0ae541d82f617dc"},
+      "BW": {"slug": "botswana", "md5": "e4cc25349cfdc503f29a1a0a8336603f"},
+      "KE": {"slug": "kenya", "md5": "f3e26f9ab383332576f5eb898d359275"},
+      "LS": {"slug": "lesotho", "md5": "78a48ee9d6374f2ec8c980f533909d5c"},
+      "MW": {"slug": "malawi", "md5": "7a1094a40235abc946213c74a6b54acd"},
+      "MZ": {"slug": "mozambique", "md5": "0a5f6ba1009fc9989b3ad04900ff13bc"},
+      "NA": {"slug": "namibia", "md5": "d72afd2f7bb73a4ec08e778892294248"},
+      "RW": {"slug": "rwanda", "md5": "98c3bd5fd982cb68b2fe9e80572c1056"},
+      "SZ": {"slug": "swaziland", "md5": "863395b1e361069c86bf1835be5cb24a"},
+      "TZ": {"slug": "tanzania", "md5": "650be5e20e31fca37d5655d62524db49"},
+      "UG": {"slug": "uganda", "md5": "d21c821be3a33f4b7cdceaf52b525d5d"},
+      "ZA": {"slug": "south-africa", "md5": "739c2def37b57387f1b8781bdf555e9b"},
+      "ZM": {"slug": "zambia", "md5": "ba5a497599e682a07f9321261c10f3a2"},
+      "ZW": {"slug": "zimbabwe", "md5": "5b407a1659390339bc41815bdc8a38f3"}
+    }
+  }
+}

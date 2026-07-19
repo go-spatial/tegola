@@ -1,0 +1,19 @@
+{
+  "BW": {"name": "Botswana", "parkPattern": "Chobe"},
+  "KE": {"name": "Kenya", "parkPattern": "Mara"},
+  "LS": {"name": "Lesotho", "parkPattern": "Sehlabathebe"},
+  "MW": {"name": "Malawi", "parkPattern": "Liwonde"},
+  "MZ": {"name": "Mozambique", "parkPattern": "Gorongosa"},
+  "NA": {"name": "Namibia", "parkPattern": "Etosha"},
+  "RW": {"name": "Rwanda", "parkPattern": "Akagera"},
+  "SZ": {"name": "Eswatini", "parkPattern": "Hlane"},
+  "TZ": {"name": "Tanzania", "parkPattern": "Serengeti"},
+  "UG": {
+    "name": "Uganda",
+    "parkPattern": "Bwindi",
+    "oneOfParkPattern": "Murchison Falls|Queen Elizabeth|Kidepo"
+  },
+  "ZA": {"name": "South Africa", "parkPattern": "Kruger"},
+  "ZM": {"name": "Zambia", "parkPattern": "South Luangwa"},
+  "ZW": {"name": "Zimbabwe", "parkPattern": "Hwange"}
+}
