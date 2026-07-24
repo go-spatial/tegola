@@ -17,6 +17,12 @@ This directory contains the reproducible local/prod setup for the free map stack
 
 Generated map data is ignored by git.
 
+Development release operations are split by cost: `Maps data build/upload
+(development)` performs the one-off source downloads and archive build, while
+`Maps release promotion (development)` verifies a complete immutable R2
+release and only updates `v1/current.json`. Routine promotion therefore does
+not redownload Protomaps or Geofabrik data.
+
 ## Legacy local fallback: basemap assets
 
 ```sh

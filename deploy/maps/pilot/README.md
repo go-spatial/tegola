@@ -60,10 +60,15 @@ The basemap is built at zooms 0–12. MapLibre overzooms above that range.
 
 ## Publishing and rollback
 
-Run the manual `Maps release (development)` workflow. It verifies every
-archive, uploads only new R2 keys, smoke-tests versioned Z/X/Y endpoints and
-their Worker cache, then replaces `v1/current.json` last. `maps-dev` stays
-private; `maps-worker-dev` is the only browser-serving path.
+The expensive build is intentionally a one-off data operation. Run the manual
+`Maps data build/upload (development)` workflow only when creating a new
+immutable release; it downloads the pinned inputs, verifies every PMTiles
+archive, and uploads the release objects to R2 without overwriting existing
+keys. Normal development releases use the fast `Maps release promotion
+(development)` workflow: provide an already-uploaded release ID, let it verify
+the manifest, lock checksums, archive objects, and representative Worker
+tiles, then replace `v1/current.json` last. `maps-dev` stays private;
+`maps-worker-dev` is the only browser-serving path.
 
 To roll back map data, copy a previous immutable
 `releases/<release>/manifest.json` to `v1/current.json`. To roll back the

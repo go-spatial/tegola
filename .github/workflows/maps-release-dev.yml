@@ -1,4 +1,4 @@
-name: Maps release (development)
+name: Maps data build/upload (development)
 
 on:
   workflow_dispatch:
@@ -9,12 +9,12 @@ on:
         type: string
 
 concurrency:
-  group: maps-release-dev
+  group: maps-build-upload-dev
   cancel-in-progress: false
 
 jobs:
   release:
-    name: Build and publish development map release
+    name: Build and upload immutable development map data
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -24,7 +24,9 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.MAPS_DEV_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MAPS_DEV_R2_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: auto
-      R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Cloudflare account IDs are public identifiers, not credentials. Keeping
+      # this alongside the bucket name avoids a redundant Actions secret.
+      R2_ACCOUNT_ID: 15b31715f1b7949154098f81496ae54e
 
     steps:
       - name: Check out release source

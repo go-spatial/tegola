@@ -56,7 +56,7 @@ assets_sha256="$(lock '.protomapsAssets.sha256')"
 
 header_file="${release_dir}/protomaps.headers"
 curl --fail --silent --show-error --head "${protomaps_url}" >"${header_file}"
-actual_etag="$(awk -F': *' 'tolower($1) == "etag" {gsub(/\"/, "", $2); gsub(/\r/, "", $2); print $2}' "${header_file}" | tail -n 1)"
+actual_etag="$(awk -F': *' 'tolower($1) == "etag" {gsub(/"/, "", $2); gsub(/\r/, "", $2); print $2}' "${header_file}" | tail -n 1)"
 actual_length="$(awk -F': *' 'tolower($1) == "content-length" {gsub(/\r/, "", $2); print $2}' "${header_file}" | tail -n 1)"
 if [ "${actual_etag}" != "${protomaps_etag}" ] || [ "${actual_length}" != "${protomaps_length}" ]; then
   echo "locked Protomaps source changed; refresh the lock deliberately before building" >&2
@@ -116,12 +116,12 @@ cp -R "${assets_root}/sprites" "${release_dir}/assets/protomaps-assets/sprites"
 
 basemap_header="$(docker run --rm -v "${release_dir}:/work" "${pmtiles_image}" \
   show /work/basemap/safari-mainland-pilot.pmtiles --header-json)"
-bounds="$(printf '%s' "${basemap_header}" | jq -ce '[
-  ((.min_lon_e7 // .minLonE7) / 10000000),
-  ((.min_lat_e7 // .minLatE7) / 10000000),
-  ((.max_lon_e7 // .maxLonE7) / 10000000),
-  ((.max_lat_e7 // .maxLatE7) / 10000000)
-]')"
+bounds="$(printf '%s' "${basemap_header}" | jq -ce '
+  .bounds
+  | if type == "array" and length == 4 and all(.[]; type == "number") then .
+    else error("PMTiles header did not provide numeric bounds")
+    end
+')"
 sha256="$(sha256sum "${basemap_file}" | awk '{print $1}')"
 
 jq -n \

@@ -9,12 +9,34 @@ bbox="${SAFARI_EAST_AFRICA_BBOX:-28.0,-12.5,42.5,5.5}"
 maxzoom="${PMTILES_MAXZOOM:-14}"
 threads="${PMTILES_DOWNLOAD_THREADS:-8}"
 protomaps_build_key="${PROTOMAPS_BUILD_KEY:-}"
+docker_run_mode="${SAFARI_DOCKER_RUN_MODE:-run}"
 
 mkdir -p "${map_assets_dir}/protomaps-assets"
 
+docker_run() {
+  if [ "${docker_run_mode}" != "create-start" ]; then
+    docker run --rm "$@"
+    return
+  fi
+
+  local container_id
+  container_id="$(docker create "$@")"
+  local exit_code
+  if docker start -a "${container_id}"; then
+    exit_code="$(docker inspect "${container_id}" --format '{{.State.ExitCode}}' 2>/dev/null || echo 1)"
+  else
+    exit_code="$(docker inspect "${container_id}" --format '{{.State.ExitCode}}' 2>/dev/null || echo 1)"
+  fi
+  docker rm "${container_id}" >/dev/null || true
+  if [ -z "${exit_code}" ]; then
+    exit_code=1
+  fi
+  return "${exit_code}"
+}
+
 if [ -z "${protomaps_build_key}" ]; then
   protomaps_build_key="$(
-    docker run --rm alpine:3.20 sh -eu -c \
+    docker_run alpine:3.20 sh -eu -c \
       "apk add --no-cache curl jq >/dev/null && curl -fsSL https://build-metadata.protomaps.dev/builds.json | jq -r 'sort_by(.key) | last.key'"
   )"
 fi
@@ -26,7 +48,7 @@ fi
 
 source_url="${PROTOMAPS_SOURCE_URL:-https://build.protomaps.com/${protomaps_build_key}}"
 echo "Extracting ${source_url} -> ${output}"
-docker run --rm \
+docker_run \
   -v "${map_assets_dir}:/data" \
   protomaps/go-pmtiles:latest \
   extract "${source_url}" /data/east-africa.pmtiles \
@@ -34,7 +56,7 @@ docker run --rm \
   --maxzoom="${maxzoom}" \
   --download-threads="${threads}"
 
-docker run --rm \
+docker_run \
   -v "${map_assets_dir}:/data" \
   protomaps/go-pmtiles:latest \
   verify /data/east-africa.pmtiles

@@ -1,0 +1,111 @@
+name: Maps release promotion (development)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: Existing immutable R2 release ID to promote to v1/current.json.
+        required: true
+        type: string
+
+concurrency:
+  group: maps-release-promotion-dev
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Verify and promote an immutable map release
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    env:
+      MAP_PUBLIC_BASE_URL: https://maps-dev.meistercrm.com
+      AWS_ACCESS_KEY_ID: ${{ secrets.MAPS_DEV_R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MAPS_DEV_R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      # Account IDs are public identifiers; the R2 access keys remain secrets.
+      R2_ACCOUNT_ID: 15b31715f1b7949154098f81496ae54e
+      RELEASE_ID: ${{ inputs.release_id }}
+
+    steps:
+      - name: Validate release ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_ID" =~ ^[0-9]{8}-[a-zA-Z0-9._-]+-[0-9a-f]{7}$ ]]
+
+      - name: Verify R2 credentials and immutable release objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$AWS_ACCESS_KEY_ID"
+          test -n "$AWS_SECRET_ACCESS_KEY"
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          aws --endpoint-url "$endpoint" s3api head-bucket --bucket maps-dev
+
+          manifest="$(mktemp)"
+          lock="$(mktemp)"
+          aws --endpoint-url "$endpoint" s3 cp \
+            "s3://maps-dev/releases/${RELEASE_ID}/manifest.json" "$manifest" --only-show-errors
+          aws --endpoint-url "$endpoint" s3 cp \
+            "s3://maps-dev/releases/${RELEASE_ID}/release.lock.json" "$lock" --only-show-errors
+
+          jq -e --arg release_id "$RELEASE_ID" '
+            .version == 1 and .releaseId == $release_id and
+            (.basemap.tiles | length == 1) and
+            (.basemap.bounds | length == 4) and
+            .basemap.minZoom == 0 and .basemap.maxZoom == 12 and
+            (.protectedAreas | type == "object" and length == 13) and
+            (.protectedAreas.ZA != null) and
+            (all(.protectedAreas[]; (.tiles | length == 1) and
+              (.bounds | length == 4) and .minZoom == 4 and .maxZoom == 14))
+          ' "$manifest" >/dev/null
+          jq -e --arg release_id "$RELEASE_ID" '
+            .releaseId == $release_id and
+            (.artifacts.basemap.sha256 | type == "string" and length == 64) and
+            (.artifacts.protectedAreas | type == "array" and length == 13) and
+            (all(.artifacts.protectedAreas[]; .sha256 | type == "string" and length == 64))
+          ' "$lock" >/dev/null
+
+          aws --endpoint-url "$endpoint" s3api head-object --bucket maps-dev \
+            --key "releases/${RELEASE_ID}/basemap/safari-mainland-pilot.pmtiles"
+          for iso2 in BW KE LS MW MZ NA RW SZ TZ UG ZA ZM ZW; do
+            aws --endpoint-url "$endpoint" s3api head-object --bucket maps-dev \
+              --key "releases/${RELEASE_ID}/protected-areas/${iso2}.pmtiles" >/dev/null
+          done
+
+      - name: Smoke-test visible tiles and edge cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${MAP_PUBLIC_BASE_URL}/releases/${RELEASE_ID}"
+          for url in \
+            "$base/basemap/safari-mainland-pilot/0/0/0.mvt" \
+            "$base/protected-areas/UG/4/0/0.mvt" \
+            "$base/protected-areas/ZA/4/0/0.mvt"; do
+            headers="$(mktemp)"
+            curl --fail --silent --show-error --dump-header "$headers" --output /dev/null \
+              "$url?smoke=${RELEASE_ID}"
+            curl --fail --silent --show-error --dump-header "$headers" --output /dev/null \
+              "$url?smoke=${RELEASE_ID}"
+            grep -qi '^x-map-edge-cache: hit' "$headers"
+          done
+
+      - name: Atomically promote the verified manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          manifest="$(mktemp)"
+          aws --endpoint-url "$endpoint" s3 cp \
+            "s3://maps-dev/releases/${RELEASE_ID}/manifest.json" "$manifest" --only-show-errors
+          aws --endpoint-url "$endpoint" s3 cp "$manifest" \
+            's3://maps-dev/v1/current.json' \
+            --cache-control 'public, max-age=60' --only-show-errors
+
+      - name: Confirm current manifest points at the promoted release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error "${MAP_PUBLIC_BASE_URL}/v1/current.json?verify=${RELEASE_ID}" \
+            | jq -e --arg release_id "$RELEASE_ID" '.releaseId == $release_id' >/dev/null
