@@ -92,7 +92,7 @@ type ClientStream interface {
 	// calling RecvMsg on the same stream at the same time, but it is not safe
 	// to call SendMsg on the same stream in different goroutines. It is also
 	// not safe to call CloseSend concurrently with SendMsg.
-	SendMsg(m interface{}) error
+	SendMsg(m any) error
 	// RecvMsg blocks until it receives a message into m or the stream is
 	// done. It returns io.EOF when the stream completes successfully. On
 	// any other error, the stream is aborted and the error contains the RPC
@@ -101,20 +101,33 @@ type ClientStream interface {
 	// It is safe to have a goroutine calling SendMsg and another goroutine
 	// calling RecvMsg on the same stream at the same time, but it is not
 	// safe to call RecvMsg on the same stream in different goroutines.
-	RecvMsg(m interface{}) error
+	RecvMsg(m any) error
 }
 
 // ClientInterceptor is an interceptor for gRPC client streams.
 type ClientInterceptor interface {
-	// NewStream produces a ClientStream for an RPC which may optionally use
-	// the provided function to produce a stream for delegation.  Note:
-	// RPCInfo.Context should not be used (will be nil).
+	// NewStream creates a ClientStream for an RPC.
 	//
-	// done is invoked when the RPC is finished using its connection, or could
-	// not be assigned a connection.  RPC operations may still occur on
-	// ClientStream after done is called, since the interceptor is invoked by
-	// application-layer operations.  done must never be nil when called.
+	// Implementations must delegate stream creation to the provided newStream
+	// function. To intercept or override stream behavior, implementations
+	// may wrap the ClientStream returned by the delegate.
+	//
+	// Note: RPCInfo.Context is currently unused and will be nil.
+	//
+	// The done function is invoked when the RPC has finished using its
+	// underlying connection or if a connection could not be assigned. Because
+	// interceptors operate at the application layer, RPC operations may
+	// continue on the ClientStream even after done has been called. The
+	// caller must ensure done is non-nil.
+	//
+	// To ensure RPC completion notifications propagate through the entire
+	// interceptor chain, implementations must ensure that the done function
+	// passed to the delegate newStream invokes the done function passed to
+	// NewStream.
 	NewStream(ctx context.Context, ri RPCInfo, done func(), newStream func(ctx context.Context, done func()) (ClientStream, error)) (ClientStream, error)
+	// Close closes the interceptor. Once called, no new calls to NewStream are
+	// accepted. Ongoing calls to NewStream are allowed to complete.
+	Close()
 }
 
 // ServerInterceptor is an interceptor for incoming RPC's on gRPC server side.
@@ -123,6 +136,9 @@ type ServerInterceptor interface {
 	// information about connection RPC was received on, and HTTP Headers. This
 	// information will be piped into context.
 	AllowRPC(ctx context.Context) error // TODO: Make this a real interceptor for filters such as rate limiting.
+	// Close closes the interceptor. Once called, no new calls to NewStream are
+	// accepted. Ongoing calls to NewStream are allowed to complete.
+	Close()
 }
 
 type csKeyType string
