@@ -36,6 +36,10 @@ type HandleMapCapabilities struct {
 	extension string
 }
 
+func cacheKey(mapName string, r *http.Request) string {
+	return mapName + ":" + URLRoot(r).String() + ":" + r.URL.Query().Encode()
+}
+
 // ServeHTTP returns details about a map according to the
 // tileJSON spec (https://github.com/mapbox/tilejson-spec/tree/master/3.0.0)
 //
@@ -54,12 +58,13 @@ func (req HandleMapCapabilities) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		req.extension = "json"
 	}
 
-	cacheKey := req.mapName + ":" + URLRoot(r).String() + ":" + r.URL.Query().Encode()
+	cacheKey := cacheKey(req.mapName, r)
 	value, _ := capabilitiesCache.LoadOrStore(cacheKey, &cacheEntry{})
 	entry, ok := value.(*cacheEntry)
 	if !ok || entry == nil {
 		http.Error(w, "internal cache error", http.StatusInternalServerError)
 		log.Errorf("cache entry for map (%v) is invalid", req.mapName)
+		return
 	}
 	entry.once.Do(func() {
 		entry.tileJSON, entry.err = req.buildTileJSON(r)
@@ -196,7 +201,7 @@ func (req HandleMapCapabilities) buildTileJSON(r *http.Request) (tilejson.TileJS
 		// in TileJSON 3.0.0, fields is REQUIRED (must be present, even if empty).
 		// in TileJSON 2.0.0, fields was already optional and harmless to include.
 		// this ensures spec compliance in both cases.
-		layer.Fields = make(map[string]interface{})
+		layer.Fields = make(map[string]any)
 
 		// try to populate field information from the provider if it supports LayerFielder
 		// ony providers that implement LayerFielder will have their fields populated
