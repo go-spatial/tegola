@@ -156,10 +156,13 @@ func (r *httpRetryer) Retry(err error) (time.Duration, bool) {
 	return 0, false
 }
 
-// Backoff implements exponential backoff. The wait time between retries is a
-// random value between 0 and the "retry period" - the time between retries. The
-// retry period starts at Initial and increases by the factor of Multiplier
-// every retry, but is capped at Max.
+// Backoff implements backoff logic for retries. The configuration for retries
+// is described in https://google.aip.dev/client-libraries/4221. The current
+// retry limit starts at Initial and increases by a factor of Multiplier every
+// retry, but is capped at Max. The actual wait time between retries is a
+// random value between 1ns and the current retry limit. The purpose of this
+// random jitter is explained in
+// https://www.awsarchitectureblog.com/2015/03/backoff.html.
 //
 // Note: MaxNumRetries / RPCDeadline is specifically not provided. These should
 // be built on top of Backoff.
@@ -218,6 +221,14 @@ func (p pathOpt) Resolve(s *CallSettings) {
 	s.Path = p.p
 }
 
+type timeoutOpt struct {
+	t time.Duration
+}
+
+func (t timeoutOpt) Resolve(s *CallSettings) {
+	s.timeout = t.t
+}
+
 // WithPath applies a Path override to the HTTP-based APICall.
 //
 // This is for internal use only.
@@ -228,6 +239,31 @@ func WithPath(p string) CallOption {
 // WithGRPCOptions allows passing gRPC call options during client creation.
 func WithGRPCOptions(opt ...grpc.CallOption) CallOption {
 	return grpcOpt(append([]grpc.CallOption(nil), opt...))
+}
+
+// WithTimeout is a convenience option for setting a context.WithTimeout on the
+// singular context.Context used for **all** APICall attempts. Calculated from
+// the start of the first APICall attempt.
+// If the context.Context provided to Invoke already has a Deadline set, that
+// will always be respected over the deadline calculated using this option.
+func WithTimeout(t time.Duration) CallOption {
+	return &timeoutOpt{t: t}
+}
+
+type clientMetricsOpt struct {
+	cm *ClientMetrics
+}
+
+// Resolve applies the ClientMetrics to the CallSettings.
+func (o clientMetricsOpt) Resolve(s *CallSettings) {
+	s.clientMetrics = o.cm
+}
+
+// WithClientMetrics applies metrics instrumentation to the CallSettings.
+//
+// This is for internal use only.
+func WithClientMetrics(cm *ClientMetrics) CallOption {
+	return clientMetricsOpt{cm: cm}
 }
 
 // CallSettings allow fine-grained control over how calls are made.
@@ -241,4 +277,12 @@ type CallSettings struct {
 
 	// Path is an HTTP override for an APICall.
 	Path string
+
+	// Timeout defines the amount of time that Invoke has to complete.
+	// Unexported so it cannot be changed by the code in an APICall.
+	timeout time.Duration
+
+	// clientMetrics holds the pre-allocated OpenTelemetry metrics instruments
+	// to use for this call.
+	clientMetrics *ClientMetrics
 }
