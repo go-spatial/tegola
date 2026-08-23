@@ -1,10 +1,21 @@
+<!-- Staging and development map release guidance explains immutable R2 publication, Worker delivery, environment-specific manifests, validation, promotion, rollback, and retired local runtime dependencies for operators safely. -->
 # Self-Hosted Proposal Map Data
 
-> **Development pilot:** proposal maps use the versioned R2 manifest at
-> `https://maps-dev.meistercrm.com/v1/current.json` by default. The release
-> workflow publishes the grouped basemap, country packs, glyphs and sprites
-> under immutable release keys. Browser traffic should go through the Worker;
-> it must not use the Railway Router, `/map-assets`, or `/tegola`.
+Proposal maps use versioned R2 manifests. The release workflows publish the
+grouped basemap, country packs, glyphs and sprites under immutable release
+keys. Browser traffic goes through the Maps Worker; it must not use the Railway
+Router, `/map-assets`, or `/tegola`.
+
+## Environment targets
+
+- Development: `https://maps-dev.meistercrm.com/v1/current.json`, served by
+  `maps-worker-dev` from the private `maps-dev` bucket.
+- Staging: `https://maps-staging.meistercrm.com/v1/current.json`, served by
+  `maps-worker-staging` from the private `maps-staging` bucket.
+
+Staging is hydrated by copying a verified immutable development release into
+`maps-staging`, rewriting its manifest URLs for the staging host, and only
+then publishing `v1/current.json`. It does not rebuild the source data.
 
 The local commands below are retained for troubleshooting and break-glass
 fallback only. They do not build or publish the R2 pilot release.
@@ -21,7 +32,8 @@ Development release operations are split by cost: `Maps data build/upload
 (development)` performs the one-off source downloads and archive build, while
 `Maps release promotion (development)` verifies a complete immutable R2
 release and only updates `v1/current.json`. Routine promotion therefore does
-not redownload Protomaps or Geofabrik data.
+not redownload Protomaps or Geofabrik data. Staging copies a verified
+development release instead of rebuilding it.
 
 ## Legacy local fallback: basemap assets
 

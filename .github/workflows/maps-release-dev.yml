@@ -71,6 +71,7 @@ jobs:
           endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
           release_id="${{ steps.release.outputs.release_id }}"
           release_dir="${MAP_RELEASE_OUTPUT_DIR}/${release_id}"
+          basemap_path="$(jq -er '.path' "$release_dir/basemap/metadata.json")"
 
           upload_immutable() {
             local file="$1"
@@ -85,8 +86,8 @@ jobs:
               --only-show-errors
           }
 
-          upload_immutable "$release_dir/basemap/safari-mainland-pilot.pmtiles" \
-            "releases/$release_id/basemap/safari-mainland-pilot.pmtiles" \
+          upload_immutable "$release_dir/$basemap_path" \
+            "releases/$release_id/$basemap_path" \
             'public, max-age=31536000, immutable'
           for file in "$release_dir"/protected-areas/*.pmtiles; do
             upload_immutable "$file" "releases/$release_id/protected-areas/$(basename "$file")" \
@@ -108,11 +109,9 @@ jobs:
           set -euo pipefail
           release_id="${{ steps.release.outputs.release_id }}"
           base="https://maps-dev.meistercrm.com/releases/${release_id}"
-          urls=(
-            "$base/basemap/safari-mainland-pilot/0/0/0.mvt"
-            "$base/protected-areas/UG/4/0/0.mvt"
-            "$base/protected-areas/ZA/4/0/0.mvt"
-          )
+          basemap_path="$(jq -er '.artifacts.basemap.path' "$MAP_RELEASE_OUTPUT_DIR/$release_id/release.lock.json" | sed 's/\.pmtiles$//')"
+          urls=("$base/$basemap_path/0/0/0.mvt")
+          while IFS= read -r iso2; do urls+=("$base/protected-areas/$iso2/4/0/0.mvt"); done < <(jq -er '.coverage.protectedAreaCountries[0:2][]' deploy/maps/pilot/release-inputs.lock.json)
           for url in "${urls[@]}"; do
             headers="$(mktemp)"
             curl --fail --silent --show-error --dump-header "$headers" --output /dev/null "$url?smoke=${release_id}"

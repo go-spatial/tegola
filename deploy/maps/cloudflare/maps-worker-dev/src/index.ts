@@ -1,6 +1,4 @@
-// Adapted from the official PMTiles Cloudflare Worker pattern. It resolves a
-// private R2 archive through byte ranges and exposes only TileJSON/Z/X/Y to
-// browsers, never a public raw PMTiles URL.
+// This Worker serves versioned private R2 map releases as manifests, vector tiles, glyphs, and sprites through custom domains with caching and controlled browser access safely.
 import {
   Compression,
   EtagMismatch,
@@ -17,6 +15,8 @@ interface Env {
   BUCKET: R2Bucket;
   IMMUTABLE_CACHE_CONTROL?: string;
   MANIFEST_CACHE_CONTROL?: string;
+  MAP_UPLOAD_TOKEN?: string;
+  MAP_UPLOAD_PREFIX?: string;
 }
 
 class KeyNotFoundError extends Error {}
@@ -114,6 +114,63 @@ const withCors = (response: Response, origin: string | null): Response => {
   return new Response(response.body, { headers, status: response.status });
 };
 
+const uploadAuthorized = (request: Request, env: Env): boolean => {
+  const token = env.MAP_UPLOAD_TOKEN?.trim();
+  return Boolean(token && request.headers.get("Authorization") === `Bearer ${token}`);
+};
+
+const uploadKey = (request: Request, env: Env): string | null => {
+  const key = new URL(request.url).searchParams.get("key");
+  const prefix = env.MAP_UPLOAD_PREFIX?.trim();
+  return key && prefix && key.startsWith(prefix) ? key : null;
+};
+
+const handleTemporaryMultipartUpload = async (
+  request: Request,
+  env: Env,
+  segments: string[],
+): Promise<Response> => {
+  if (!uploadAuthorized(request, env)) return new Response("not found", { status: 404 });
+  const key = uploadKey(request, env);
+  if (!key) return new Response("invalid upload key", { status: 400 });
+
+  if (request.method === "POST" && segments[1] === "init") {
+    const upload = await env.BUCKET.createMultipartUpload(key, {
+      httpMetadata: { contentType: request.headers.get("Content-Type") ?? "application/octet-stream" },
+    });
+    return Response.json({ uploadId: upload.uploadId, key });
+  }
+
+  const uploadId = segments[1];
+  if (!uploadId) return new Response("invalid upload id", { status: 400 });
+  const upload = env.BUCKET.resumeMultipartUpload(key, uploadId);
+
+  if (request.method === "DELETE" && segments[2] === "abort") {
+    await upload.abort();
+    return new Response(null, { status: 204 });
+  }
+
+  if (request.method === "PUT" && segments[2] === "part") {
+    const partNumber = Number(segments[3]);
+    if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000 || !request.body) {
+      return new Response("invalid part", { status: 400 });
+    }
+    const part = await upload.uploadPart(partNumber, request.body);
+    return Response.json({ partNumber: part.partNumber, etag: part.etag });
+  }
+
+  if (request.method === "POST" && segments[2] === "complete") {
+    const payload = (await request.json()) as { parts?: Array<{ partNumber: number; etag: string }> };
+    if (!Array.isArray(payload.parts) || payload.parts.length === 0) {
+      return new Response("invalid parts", { status: 400 });
+    }
+    const completed = await upload.complete(payload.parts);
+    return Response.json({ etag: completed.etag, key });
+  }
+
+  return new Response("not found", { status: 404 });
+};
+
 const contentTypeForPath = (path: string): string | undefined => {
   if (path.endsWith(".pbf") || path.endsWith(".mvt")) {
     return "application/vnd.mapbox-vector-tile";
@@ -157,9 +214,12 @@ async function serveStaticObject(
   ctx: ExecutionContext,
   key: string,
   cacheControl: string,
+  useEdgeCache = true,
 ): Promise<Response> {
-  const cached = await edgeCache().match(cacheKeyFor(url));
-  if (cached) return markCache(cached, "hit");
+  if (useEdgeCache) {
+    const cached = await edgeCache().match(cacheKeyFor(url));
+    if (cached) return markCache(cached, "hit");
+  }
 
   const object = await env.BUCKET.get(key);
   if (!object) return new Response("not found", { status: 404 });
@@ -173,6 +233,9 @@ async function serveStaticObject(
   if (!headers.get("Content-Type")) {
     const contentType = contentTypeForPath(key);
     if (contentType) headers.set("Content-Type", contentType);
+  }
+  if (!useEdgeCache) {
+    return new Response(request.method === "HEAD" ? null : object.body, { headers, status: 200 });
   }
   return cacheResponse(request, url, ctx, headers, object.body);
 }
@@ -263,27 +326,29 @@ async function servePmtiles(
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const origin = allowedOrigin(request, env);
-    if (request.method === "OPTIONS") {
-      return withCors(new Response(null, { status: 204 }), origin);
-    }
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      return withCors(new Response("method not allowed", { status: 405 }), origin);
-    }
-
     try {
       const url = new URL(request.url);
       const segments = decodePath(url.pathname);
+      if (segments[0] === "__upload") {
+        return await handleTemporaryMultipartUpload(request, env, segments);
+      }
+      if (request.method === "OPTIONS") {
+        return withCors(new Response(null, { status: 204 }), origin);
+      }
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return withCors(new Response("method not allowed", { status: 405 }), origin);
+      }
       let response: Response;
       if (segments.join("/") === "v1/current.json") {
-        response = await serveStaticObject(request, url, env, ctx, "v1/current.json", manifestCacheControl(env));
+        response = await serveStaticObject(request, url, env, ctx, "v1/current.json", manifestCacheControl(env), false);
+      } else if (segments[0] === "releases" && segments.includes("assets")) {
+        response = await serveStaticObject(request, url, env, ctx, segments.join("/"), immutableCacheControl(env));
+      } else if (segments[0] === "releases" && ["manifest.json", "release.lock.json"].includes(segments.at(-1) ?? "")) {
+        response = await serveStaticObject(request, url, env, ctx, segments.join("/"), immutableCacheControl(env));
       } else {
         const tileRequest = parseTileRequest(segments);
         if (tileRequest) {
           response = await servePmtiles(request, url, env, ctx, tileRequest);
-        } else if (segments[0] === "releases" && segments.includes("assets")) {
-          response = await serveStaticObject(request, url, env, ctx, segments.join("/"), immutableCacheControl(env));
-        } else if (segments[0] === "releases" && ["manifest.json", "release.lock.json"].includes(segments.at(-1) ?? "")) {
-          response = await serveStaticObject(request, url, env, ctx, segments.join("/"), immutableCacheControl(env));
         } else {
           response = new Response("not found", { status: 404 });
         }

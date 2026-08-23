@@ -55,21 +55,21 @@ jobs:
             (.basemap.tiles | length == 1) and
             (.basemap.bounds | length == 4) and
             .basemap.minZoom == 0 and .basemap.maxZoom == 12 and
-            (.protectedAreas | type == "object" and length == 13) and
-            (.protectedAreas.ZA != null) and
+            (.protectedAreas | type == "object" and length > 0) and
             (all(.protectedAreas[]; (.tiles | length == 1) and
               (.bounds | length == 4) and .minZoom == 4 and .maxZoom == 14))
           ' "$manifest" >/dev/null
           jq -e --arg release_id "$RELEASE_ID" '
             .releaseId == $release_id and
             (.artifacts.basemap.sha256 | type == "string" and length == 64) and
-            (.artifacts.protectedAreas | type == "array" and length == 13) and
+            (.artifacts.protectedAreas | type == "array" and length > 0) and
             (all(.artifacts.protectedAreas[]; .sha256 | type == "string" and length == 64))
           ' "$lock" >/dev/null
 
+          basemap_path="$(jq -er '.artifacts.basemap.path' "$lock")"
           aws --endpoint-url "$endpoint" s3api head-object --bucket maps-dev \
-            --key "releases/${RELEASE_ID}/basemap/safari-mainland-pilot.pmtiles"
-          for iso2 in BW KE LS MW MZ NA RW SZ TZ UG ZA ZM ZW; do
+            --key "releases/${RELEASE_ID}/${basemap_path}"
+          for iso2 in $(jq -er '.artifacts.protectedAreas[].iso2' "$lock"); do
             aws --endpoint-url "$endpoint" s3api head-object --bucket maps-dev \
               --key "releases/${RELEASE_ID}/protected-areas/${iso2}.pmtiles" >/dev/null
           done
@@ -79,10 +79,11 @@ jobs:
         run: |
           set -euo pipefail
           base="${MAP_PUBLIC_BASE_URL}/releases/${RELEASE_ID}"
+          basemap_path="$(curl --fail --silent --show-error "${base}/release.lock.json?verify=${RELEASE_ID}" | jq -er '.artifacts.basemap.path' | sed 's/\.pmtiles$//')"
           for url in \
-            "$base/basemap/safari-mainland-pilot/0/0/0.mvt" \
-            "$base/protected-areas/UG/4/0/0.mvt" \
-            "$base/protected-areas/ZA/4/0/0.mvt"; do
+            "$base/$basemap_path/0/0/0.mvt" \
+            "$base/protected-areas/RE/4/0/0.mvt" \
+            "$base/protected-areas/PF/4/0/0.mvt"; do
             headers="$(mktemp)"
             curl --fail --silent --show-error --dump-header "$headers" --output /dev/null \
               "$url?smoke=${RELEASE_ID}"

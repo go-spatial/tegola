@@ -50,11 +50,22 @@ releases/<release>/release.lock.json
 ```
 
 Each country is imported into a new temporary PostGIS schema, exported with
-GDAL's PMTiles driver at zooms 4–14, checked for a non-empty polygon layer and
+GDAL's PMTiles driver at zooms 4–12, checked for a non-empty polygon layer and
 the listed known park, and written with two layers:
 
 - `protected_areas`
 - `protected_area_labels` (one `ST_PointOnSurface` label point per named area)
+- `tourism_areas`, `tourism_pois`
+- `heritage_areas`, `heritage_pois`
+- `outdoor_routes` (named hiking, walking, and mountain-bike route relations)
+- `water_sport_pois` (named dive, snorkelling, surfing, kayaking, and rafting sites)
+
+The exporter performs name cleanup and identity de-duplication before writing
+the archive. Every pack receives quality metadata including published/dropped
+counts, route and heritage counts, de-duplication drops, bounds, and checksums.
+Run `performance-report.sh` against a local release to record archive-size and
+feature-density metrics. No R2 upload or manifest activation is part of a local
+pilot run.
 
 The basemap is built at zooms 0–12. MapLibre overzooms above that range.
 
