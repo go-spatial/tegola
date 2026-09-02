@@ -10,15 +10,17 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/go-spatial/tegola"
 	conf "github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/observability"
 	"github.com/go-spatial/tegola/provider"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 const Name = "postgis"
@@ -329,6 +331,70 @@ func (p Provider) TileFeatures(
 	}
 
 	return rows.Err()
+}
+
+// LayerFields returns a map of field names to their types for a given layer.
+// It executes a sample query (LIMIT 0) to get column information without fetching data.
+func (p Provider) LayerFields(ctx context.Context, layerName string) (map[string]any, error) {
+	plyr, ok := p.Layer(layerName)
+	if !ok {
+		return nil, ErrLayerNotFound{layerName}
+	}
+
+	// Use a dummy tile to replace tokens in the SQL
+	dummyTile := provider.NewTile(0, 0, 0, 256, 3857)
+	sql, err := replaceTokens(plyr.sql, &plyr, dummyTile, true)
+	if err != nil {
+		return nil, fmt.Errorf("error replacing layer tokens for layer (%s): %w", layerName, err)
+	}
+
+	// Wrap the query to get column information without fetching rows
+	sql = fmt.Sprintf("SELECT * FROM (%s) AS subquery LIMIT 0", sql)
+
+	rows, err := p.pool.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("error querying fields for layer (%s): %w", layerName, err)
+	}
+	defer rows.Close()
+
+	fields := make(map[string]any)
+	fdescs := rows.FieldDescriptions()
+
+	for _, desc := range fdescs {
+		fieldName := desc.Name
+
+		// Skip geometry and ID fields as they're not attributes
+		if fieldName == plyr.GeomFieldName() || fieldName == plyr.IDFieldName() {
+			continue
+		}
+
+		// Map PostgreSQL OID types to simple type names
+		fieldType := postgresTypeToString(desc.DataTypeOID)
+		fields[fieldName] = fieldType
+	}
+
+	return fields, nil
+}
+
+// postgresTypeToString converts PostgreSQL OID types to simple type strings
+func postgresTypeToString(oid uint32) string {
+	// Common PostgreSQL type OIDs using pgtype constants
+	switch oid {
+	case pgtype.BoolOID:
+		return "Boolean"
+	case pgtype.Int8OID, pgtype.Int2OID, pgtype.Int4OID, pgtype.OIDOID:
+		return "Number"
+	case pgtype.Float4OID, pgtype.Float8OID, pgtype.NumericOID:
+		return "Number"
+	case pgtype.QCharOID, pgtype.NameOID, pgtype.TextOID, pgtype.BPCharOID, pgtype.VarcharOID:
+		return "String"
+	case pgtype.TimestampOID, pgtype.TimestamptzOID:
+		return "String"
+	case pgtype.JSONOID, pgtype.JSONBOID:
+		return "String"
+	default:
+		return "String"
+	}
 }
 
 func (p Provider) MVTForLayers(

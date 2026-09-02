@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-spatial/tegola/config"
 	"github.com/go-spatial/tegola/internal/env"
+	"github.com/go-spatial/tegola/mapbox/tilejson"
 	"github.com/go-spatial/tegola/provider"
 	_ "github.com/go-spatial/tegola/provider/debug"
 	_ "github.com/go-spatial/tegola/provider/postgis"
@@ -61,7 +62,6 @@ func TestParse(t *testing.T) {
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-
 			f, err := os.Open(tc.configPath)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
@@ -388,7 +388,6 @@ func TestParse(t *testing.T) {
 }
 
 func TestValidateMutateZoom(t *testing.T) {
-
 	type tcase struct {
 		config          *config.Config
 		expectedMinZoom int
@@ -511,7 +510,6 @@ func TestValidateMutateZoom(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
 	}
-
 }
 
 func TestValidate(t *testing.T) {
@@ -1318,12 +1316,56 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
+		"invalid tilejson version": {
+			expectedErr: config.ErrUnknownTileJSONVersion,
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "some_provider",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []provider.Map{
+					{
+						Name:            "some_map",
+						Attribution:     "Test Attribution",
+						TileJSONVersion: "foobar",
+						Layers: []provider.MapLayer{
+							{
+								ProviderLayer: "some_provider.some_layer",
+							},
+						},
+					},
+				},
+			},
+		},
+		"valid tilejson version": {
+			config: config.Config{
+				Providers: []env.Dict{
+					{
+						"name": "some_provider",
+						"type": "mvt_test",
+					},
+				},
+				Maps: []provider.Map{
+					{
+						Name:            "some_map",
+						Attribution:     "Test Attribution",
+						TileJSONVersion: tilejson.Version3,
+						Layers: []provider.MapLayer{
+							{
+								ProviderLayer: "some_provider.some_layer",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
 	}
-
 }
 
 func TestConfigureTileBuffers(t *testing.T) {

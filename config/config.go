@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/internal/env"
 	"github.com/go-spatial/tegola/internal/log"
+	"github.com/go-spatial/tegola/mapbox/tilejson"
 	"github.com/go-spatial/tegola/provider"
 )
 
@@ -157,7 +159,6 @@ func ValidateAndRegisterParams(mapName string, params []provider.QueryParameter)
 
 // Validate checks the config for issues
 func (c *Config) Validate() error {
-
 	var knownTypes []string
 	drivers := make(map[string]int)
 	for _, name := range provider.Drivers(provider.TypeStd) {
@@ -200,7 +201,6 @@ func (c *Config) Validate() error {
 	// maps with configured parameters for logging
 	mapsWithCustomParams := []string{}
 	for mapKey, m := range c.Maps {
-
 		// validate any declared query parameters
 		if err := ValidateAndRegisterParams(string(m.Name), m.Parameters); err != nil {
 			return err
@@ -212,6 +212,14 @@ func (c *Config) Validate() error {
 
 		if _, ok := mapLayers[string(m.Name)]; !ok {
 			mapLayers[string(m.Name)] = map[string]provider.MapLayer{}
+		}
+
+		if m.TileJSONVersion != "" &&
+			!slices.Contains(
+				[]string{tilejson.Version3, tilejson.Version2},
+				m.TileJSONVersion,
+			) {
+			return ErrUnknownTileJSONVersion
 		}
 
 		// Set current provider to empty, for MVT providers
@@ -387,7 +395,7 @@ func Load(location string) (conf Config, err error) {
 		log.Infof("loading remote config (%v)", location)
 
 		// setup http client with a timeout
-		var httpClient = &http.Client{
+		httpClient := &http.Client{
 			Timeout: time.Second * 10,
 		}
 
