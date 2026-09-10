@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
 	"time"
 
 	"github.com/go-spatial/geom/slippy"
@@ -85,10 +84,6 @@ func seedWorker(overwrite bool, logThresholdMs int64) func(ctx context.Context, 
 				Err:  err,
 			}
 		}
-
-		//	TODO: this is a hack to get around large arrays not being garbage collected
-		//	https://github.com/golang/go/issues/14045 - should be addressed in Go 1.11
-		runtime.GC()
 
 		durationMs := time.Now().Sub(t).Nanoseconds() / 1000000
 		if durationMs >= logThresholdMs {
