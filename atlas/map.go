@@ -316,6 +316,19 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 			// on completion let the wait group know
 			defer wg.Done()
 
+			// This goroutine runs outside of the net/http request goroutine, so
+			// net/http's per-connection panic recovery does not apply here: an
+			// unrecovered panic (e.g. from a malformed/degenerate geometry deep
+			// in the provider, reprojection, or clip/simplify pipeline) would
+			// otherwise crash the entire server process, taking down every other
+			// in-flight tile request along with it. Recover and log instead so a
+			// single bad feature only fails its own layer/tile.
+			defer func() {
+				if r := recover(); r != nil {
+					log.Errorf("recovered from panic while fetching layer %v for tile (%v): %v", l.MVTName(), tile, r)
+				}
+			}()
+
 			ptile := provider.NewTile(tile.Z, tile.X, tile.Y,
 				uint(m.TileBuffer), uint(m.SRID))
 
