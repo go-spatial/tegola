@@ -252,6 +252,13 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 		return nil, err
 	}
 
+	// track whether the user explicitly configured a provider-level SRID. When they did,
+	// that value must take precedence over any SRID inferred from the GPKG itself
+	// (gpkg_contents.srs_id or the per-row WKB header), since that inferred data is not
+	// always reliable (e.g. GPKGs produced by third-party conversion tools such as DWG
+	// exporters commonly leave those fields at 0 or set them to a non-standard code).
+	_, providerSRIDExplicit := config.Interface(ConfigKeySRID)
+
 	srid := DefaultSRID
 	if srid, err = config.Int(ConfigKeySRID, &srid); err != nil {
 		return nil, err
@@ -331,8 +338,11 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 				return nil, fmt.Errorf("table %q does not exist", tablename)
 			}
 
+			// an explicit provider-level srid always wins over the value inferred from
+			// gpkg_contents.srs_id; the inferred value is only used as a fallback when
+			// the user did not configure anything explicitly.
 			layerSRID := p.srid
-			if d.srid > 0 {
+			if !providerSRIDExplicit && d.srid > 0 {
 				layerSRID = d.srid
 			}
 
@@ -403,8 +413,11 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 				return nil, err
 			}
 
+			// as above: an explicit provider-level srid always wins over the value
+			// decoded from the sampled row's WKB header, which is frequently 0 or
+			// otherwise unreliable for GPKGs produced by third-party tooling.
 			layerSRID := p.srid
-			if h.SRSId() > 0 {
+			if !providerSRIDExplicit && h.SRSId() > 0 {
 				layerSRID = uint64(h.SRSId())
 			}
 
