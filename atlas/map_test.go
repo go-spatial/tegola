@@ -15,6 +15,7 @@ import (
 	"github.com/go-spatial/tegola/atlas"
 	"github.com/go-spatial/tegola/internal/p"
 	"github.com/go-spatial/tegola/provider/test"
+	"github.com/go-spatial/tegola/provider/test/collection"
 	"github.com/go-spatial/tegola/provider/test/emptycollection"
 )
 
@@ -441,5 +442,53 @@ func TestEncode(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
+	}
+}
+
+// TestEncodeGeometryCollectionSplitsIntoMultipleFeatures verifies that a
+// feature whose geometry is a non-empty GEOMETRYCOLLECTION (as returned by
+// the gpkg provider for CAD-derived data) is split into one MVT feature per
+// member geometry, since the MVT/vector tile spec has no "collection"
+// feature type and can only encode Point/LineString/Polygon (and Multi
+// variants) as a single feature.
+func TestEncodeGeometryCollectionSplitsIntoMultipleFeatures(t *testing.T) {
+	grid := atlas.Map{
+		Layers: []atlas.Layer{
+			{
+				Name:     "geom_collection",
+				MinZoom:  0,
+				MaxZoom:  20,
+				Provider: &collection.TileProvider{},
+			},
+		},
+	}
+
+	out, err := grid.Encode(context.Background(), slippy.Tile{Z: 2, X: 3, Y: 3}, nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	var buf bytes.Buffer
+	r, err := gzip.NewReader(bytes.NewReader(out))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if _, err = io.Copy(&buf, r); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	var tile vectorTile.Tile
+	if err = proto.Unmarshal(buf.Bytes(), &tile); err != nil {
+		t.Fatalf("error unmarshalling output: %v", err)
+	}
+
+	if len(tile.Layers) != 1 {
+		t.Fatalf("expected 1 layer, got %v", len(tile.Layers))
+	}
+
+	// the single GEOMETRYCOLLECTION feature (1 point + 1 line string) must
+	// have been split into 2 separate MVT features.
+	if got := len(tile.Layers[0].Features); got != 2 {
+		t.Fatalf("expected 2 features (collection split into members), got %v", got)
 	}
 }

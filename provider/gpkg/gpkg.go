@@ -274,6 +274,8 @@ func geomNameToGeom(name string) (geom.Geometry, error) {
 		return geom.MultiLineString{}, nil
 	case "MULTIPOLYGON":
 		return geom.MultiPolygon{}, nil
+	case "GEOMETRYCOLLECTION":
+		return geom.Collection{}, nil
 	case "GEOMETRY":
 		return nil, nil
 	}

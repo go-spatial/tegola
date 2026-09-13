@@ -194,6 +194,103 @@ func (m Map) encodeMVTProviderTile(ctx context.Context, tile slippy.Tile, params
 	return m.mvtProvider.MVTForLayers(ctx, ptile, params, layers)
 }
 
+// flattenGeometryCollections recursively expands geom.Collection values into
+// their leaf (non-collection) member geometries. The MVT/vector tile format
+// has no "collection" feature type - only Point/LineString/Polygon (and Multi
+// variants) can be encoded as a single feature - so a GEOMETRYCOLLECTION row
+// must become multiple MVT features rather than one. Non-collection input is
+// returned as a single-element slice unchanged.
+func flattenGeometryCollections(geo geom.Geometry) []geom.Geometry {
+	coll, ok := geo.(geom.Collection)
+	if !ok {
+		return []geom.Geometry{geo}
+	}
+
+	geometries := coll.Geometries()
+	out := make([]geom.Geometry, 0, len(geometries))
+	for _, sub := range geometries {
+		out = append(out, flattenGeometryCollections(sub)...)
+	}
+	return out
+}
+
+// encodeMVTFeature runs a single (non-collection) geometry through the
+// simplify/clip/prepare/clean pipeline and, if it survives, adds it as a new
+// feature on mvtLayer using f's ID and Tags.
+func (m Map) encodeMVTFeature(ctx context.Context, l Layer, tile slippy.Tile, ptile provider.Tile, mvtLayer *mvt.Layer, f *provider.Feature, geo geom.Geometry) error {
+	// TODO: remove this geom conversion step once the simplify function uses geom types
+	tegolaGeo, err := convert.ToTegola(geo)
+	if err != nil {
+		return err
+	}
+
+	// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
+	tegolaTile := tegola.TileFromSlippyTile(tile)
+
+	sg := tegolaGeo
+	// multiple ways to turn off simplification. check the atlas init() function
+	// for how the second two conditions are set
+	if !l.DontSimplify && simplifyGeometries && tile.Z < slippy.Zoom(simplificationMaxZoom) {
+		sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+	}
+
+	// check if we need to clip and if we do build the clip region (tile extent)
+	var clipRegion *geom.Extent
+	if !l.DontClip {
+		// CleanGeometry is expecting to operate in pixel coordinates so the clipRegion
+		// will need to be in this same coordinate system. this will change when the new
+		// make valid routing is implemented
+		pbb, err := tegolaTile.PixelBufferedBounds()
+		if err != nil {
+			return fmt.Errorf("err calculating tile pixel buffer bounds: %w", err)
+		}
+
+		clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+	}
+
+	// TODO: remove this geom conversion step once the simplify function uses geom types
+	geo, err = convert.ToGeom(sg)
+	if err != nil {
+		return err
+	}
+
+	// TODO(arolek): currently the validate.CleanGeometry method does not operate
+	// well on geometries that are not scaled to tile coordinate space. this will change
+	// with the adoption of the new make valid routine. once implemented, the clipRegion
+	// calculation will need to be in the same coordinate space as the geometry the
+	// make valid function will be operating on.
+	ext, _ := ptile.Extent()
+	geo = mvt.PrepareGeo(geo, ext, float64(mvt.DefaultExtent))
+
+	// TODO: remove this geom conversion step once the validate function uses geom types
+	sg, err = convert.ToTegola(geo)
+	if err != nil {
+		return err
+	}
+
+	if !l.DontClean {
+		tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
+		if err != nil {
+			return fmt.Errorf("err making geometry valid: %w", err)
+		}
+	} else {
+		tegolaGeo = sg
+	}
+
+	geo, err = convert.ToGeom(tegolaGeo)
+	if err != nil {
+		return nil
+	}
+
+	mvtLayer.AddFeatures(mvt.Feature{
+		ID:       &f.ID,
+		Tags:     f.Tags,
+		Geometry: geo,
+	})
+
+	return nil
+}
+
 // encodeMVTTile will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
 func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provider.Params) ([]byte, error) {
@@ -242,12 +339,6 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 					geo = g
 				}
 
-				// TODO: remove this geom conversion step once the simplify function uses geom types
-				tegolaGeo, err := convert.ToTegola(geo)
-				if err != nil {
-					return err
-				}
-
 				// add default tags, but don't overwrite a tag that already exists
 				for k, v := range l.DefaultTags {
 					if _, ok := f.Tags[k]; !ok {
@@ -255,69 +346,19 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 					}
 				}
 
-				// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-				tegolaTile := tegola.TileFromSlippyTile(tile)
-
-				sg := tegolaGeo
-				// multiple ways to turn off simplification. check the atlas init() function
-				// for how the second two conditions are set
-				if !l.DontSimplify && simplifyGeometries && tile.Z < slippy.Zoom(simplificationMaxZoom) {
-					sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
-				}
-
-				// check if we need to clip and if we do build the clip region (tile extent)
-				var clipRegion *geom.Extent
-				if !l.DontClip {
-					// CleanGeometry is expecting to operate in pixel coordinates so the clipRegion
-					// will need to be in this same coordinate system. this will change when the new
-					// make valid routing is implemented
-					pbb, err := tegolaTile.PixelBufferedBounds()
-					if err != nil {
-						return fmt.Errorf("err calculating tile pixel buffer bounds: %w", err)
+				// MVT (and the vector tile spec) has no "geometry collection" feature type -
+				// only Point/LineString/Polygon (and their Multi variants) can be encoded as a
+				// single feature. GEOMETRYCOLLECTION rows (common in GPKGs converted from CAD
+				// formats such as DWG) must therefore be split into one MVT feature per member
+				// geometry, all sharing the same id/tags, rather than carried through the
+				// pipeline as a single geom.Collection - which downstream helpers such as
+				// mvt.PrepareGeo do not support and would otherwise cause the whole tile fetch
+				// to fail.
+				for _, subGeo := range flattenGeometryCollections(geo) {
+					if err := m.encodeMVTFeature(ctx, l, tile, ptile, &mvtLayer, f, subGeo); err != nil {
+						return err
 					}
-
-					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 				}
-
-				// TODO: remove this geom conversion step once the simplify function uses geom types
-				geo, err = convert.ToGeom(sg)
-				if err != nil {
-					return err
-				}
-
-				// TODO(arolek): currently the validate.CleanGeometry method does not operate
-				// well on geometries that are not scaled to tile coordinate space. this will change
-				// with the adoption of the new make valid routine. once implemented, the clipRegion
-				// calculation will need to be in the same coordinate space as the geometry the
-				// make valid function will be operating on.
-				ext, _ := ptile.Extent()
-				geo = mvt.PrepareGeo(geo, ext, float64(mvt.DefaultExtent))
-
-				// TODO: remove this geom conversion step once the validate function uses geom types
-				sg, err = convert.ToTegola(geo)
-				if err != nil {
-					return err
-				}
-
-				if !l.DontClean {
-					tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
-					if err != nil {
-						return fmt.Errorf("err making geometry valid: %w", err)
-					}
-				} else {
-					tegolaGeo = sg
-				}
-
-				geo, err = convert.ToGeom(tegolaGeo)
-				if err != nil {
-					return nil
-				}
-
-				mvtLayer.AddFeatures(mvt.Feature{
-					ID:       &f.ID,
-					Tags:     f.Tags,
-					Geometry: geo,
-				})
 
 				return nil
 			})
