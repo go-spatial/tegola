@@ -27,6 +27,7 @@ const (
 // config keys
 const (
 	ConfigKeyFilePath    = "filepath"
+	ConfigKeySRID        = "srid"
 	ConfigKeyLayers      = "layers"
 	ConfigKeyLayerName   = "name"
 	ConfigKeyTableName   = "tablename"
@@ -58,6 +59,8 @@ type Provider struct {
 	layers map[string]Layer
 	// reference to the database connection
 	db *sql.DB
+	// default SRID for the provider
+	srid uint64
 }
 
 func (p *Provider) Layers() ([]provider.LayerInfo, error) {
@@ -190,7 +193,15 @@ func (p *Provider) TileFeatures(ctx context.Context, layer string, tile provider
 					return err
 				}
 
-				feature.SRID = uint64(h.SRSId())
+				if pLayer.srid != 0 {
+					feature.SRID = pLayer.srid
+				} else if h.SRSId() > 0 {
+					feature.SRID = uint64(h.SRSId())
+				} else if p.srid != 0 {
+					feature.SRID = p.srid
+				} else {
+					feature.SRID = DefaultSRID
+				}
 				feature.Geometry = geo
 
 			case "minx", "miny", "maxx", "maxy", "min_zoom", "max_zoom":
@@ -263,6 +274,8 @@ func geomNameToGeom(name string) (geom.Geometry, error) {
 		return geom.MultiLineString{}, nil
 	case "MULTIPOLYGON":
 		return geom.MultiPolygon{}, nil
+	case "GEOMETRYCOLLECTION":
+		return geom.Collection{}, nil
 	case "GEOMETRY":
 		return nil, nil
 	}

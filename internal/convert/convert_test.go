@@ -74,10 +74,13 @@ func TestToTegolaToGeom(t *testing.T) {
 				},
 			},
 		},
-		/*
-			// Collection support is broken. :(
-			"Collection Empty":      tcase{geom: geom.Collection{}},
-		*/
+		"Collection Empty": {geom: geom.Collection{}},
+		"Collection": {
+			geom: geom.Collection{
+				geom.Point{10, 10},
+				geom.LineString{{10, 10}, {90, 90}, {20, 30}},
+			},
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, fn(tc))

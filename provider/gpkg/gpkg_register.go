@@ -17,7 +17,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
 	"github.com/go-spatial/tegola/dict"
 	"github.com/go-spatial/tegola/internal/log"
 	"github.com/go-spatial/tegola/provider"
@@ -204,6 +203,11 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 			[2]float64{maxX.Float64, maxY.Float64},
 		)
 
+		var sridVal uint64
+		if srid.Valid && srid.Int64 > 0 {
+			sridVal = uint64(srid.Int64)
+		}
+
 		colNames, pkCol := extractColsAndPKFromSQL(tableSql.String)
 
 		geomTableDetails[tablename.String] = featureTableDetails{
@@ -211,7 +215,7 @@ func featureTableMetaData(gpkg *sql.DB) (map[string]featureTableDetails, error) 
 			idFieldname:   pkCol,
 			geomFieldname: geomCol.String,
 			geomType:      tg,
-			srid:          uint64(srid.Int64),
+			srid:          sridVal,
 			// the extent of the layer's features
 			//bbox: geom.BoundingBox{minX.Float64, minY.Float64, maxX.Float64, maxY.Float64},
 			bbox: bbox,
@@ -248,10 +252,23 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 		return nil, err
 	}
 
+	// track whether the user explicitly configured a provider-level SRID. When they did,
+	// that value must take precedence over any SRID inferred from the GPKG itself
+	// (gpkg_contents.srs_id or the per-row WKB header), since that inferred data is not
+	// always reliable (e.g. GPKGs produced by third-party conversion tools such as DWG
+	// exporters commonly leave those fields at 0 or set them to a non-standard code).
+	_, providerSRIDExplicit := config.Interface(ConfigKeySRID)
+
+	srid := DefaultSRID
+	if srid, err = config.Int(ConfigKeySRID, &srid); err != nil {
+		return nil, err
+	}
+
 	p := Provider{
 		Filepath: filepath,
 		layers:   make(map[string]Layer),
 		db:       db,
+		srid:     uint64(srid),
 	}
 
 	layers, err := config.MapSlice(ConfigKeyLayers)
@@ -321,12 +338,25 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 				return nil, fmt.Errorf("table %q does not exist", tablename)
 			}
 
+			// an explicit provider-level srid always wins over the value inferred from
+			// gpkg_contents.srs_id; the inferred value is only used as a fallback when
+			// the user did not configure anything explicitly.
+			layerSRID := p.srid
+			if !providerSRIDExplicit && d.srid > 0 {
+				layerSRID = d.srid
+			}
+
+			var lsrid int = int(layerSRID)
+			if lsrid, err = layerConf.Int(ConfigKeySRID, &lsrid); err != nil {
+				return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
+			}
+
 			layer.tablename = tablename
 			layer.tagFieldnames = tagFieldnames
 			layer.geomFieldname = d.geomFieldname
 			layer.geomType = d.geomType
 			layer.idFieldname = idFieldname
-			layer.srid = d.srid
+			layer.srid = uint64(lsrid)
 			layer.bbox = *d.bbox
 
 		} else { // layerConf[ConfigKeySQL] exists
@@ -358,17 +388,15 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 				">"+conf.ZoomToken, allZoomsSQL,
 				"< "+conf.ZoomToken, allZoomsSQL,
 				"<"+conf.ZoomToken, allZoomsSQL,
+				conf.BboxToken, "1=1",
+				"!BOX!", "1=1",
+				"!bbox!", "1=1",
 			)
 
-			customSQL = tokenReplacer.Replace(customSQL)
-
-			// Set bounds & zoom params to include all layers
-			// Bounds checks need params: maxx, minx, maxy, miny
-			// TODO(arolek): this assumes WGS84. should be more flexible
-			customSQL = replaceTokens(customSQL, 0, tegola.WGS84Bounds)
+			inspectionSQL := tokenReplacer.Replace(customSQL)
 
 			// Get geometry type & srid from geometry of first row.
-			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", customSQL)
+			qtext := fmt.Sprintf("SELECT geom FROM (%v) LIMIT 1;", inspectionSQL)
 
 			log.Debugf("qtext: %v", qtext)
 
@@ -385,8 +413,21 @@ func NewTileProvider(config dict.Dicter, maps []provider.Map) (provider.Tiler, e
 				return nil, err
 			}
 
+			// as above: an explicit provider-level srid always wins over the value
+			// decoded from the sampled row's WKB header, which is frequently 0 or
+			// otherwise unreliable for GPKGs produced by third-party tooling.
+			layerSRID := p.srid
+			if !providerSRIDExplicit && h.SRSId() > 0 {
+				layerSRID = uint64(h.SRSId())
+			}
+
+			var lsrid int = int(layerSRID)
+			if lsrid, err = layerConf.Int(ConfigKeySRID, &lsrid); err != nil {
+				return nil, fmt.Errorf("for layer (%v) %v : %v", i, layerName, err)
+			}
+
 			layer.geomType = geo
-			layer.srid = uint64(h.SRSId())
+			layer.srid = uint64(lsrid)
 			layer.geomFieldname = DefaultGeomFieldName
 			layer.idFieldname = DefaultIDFieldName
 		}

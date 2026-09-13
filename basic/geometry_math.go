@@ -115,6 +115,19 @@ func ApplyToPoints(geometry geom.Geometry, f func(coords ...float64) ([]float64,
 			mpoly[i] = polyv
 		}
 		return mpoly, nil
+
+	case geom.Collection:
+		coll := make(geom.Collection, len(geo))
+
+		for i, g := range geo {
+			// getting a geometry interface back
+			gi, err := ApplyToPoints(g, f)
+			if err != nil {
+				return nil, fmt.Errorf("got error converting geometry(%v) of collection: %v", i, err)
+			}
+			coll[i] = gi
+		}
+		return coll, nil
 	}
 }
 
@@ -197,6 +210,18 @@ func CloneGeometry(geometry geom.Geometry) (geom.Geometry, error) {
 			mpoly[i] = polyv
 		}
 		return mpoly, nil
+
+	case geom.Collection:
+		coll := make(geom.Collection, len(geo))
+		for i, g := range geo {
+			// getting a geometry interface back
+			gi, err := CloneGeometry(g)
+			if err != nil {
+				return nil, fmt.Errorf("got error cloning geometry(%v) of collection: %v", i, err)
+			}
+			coll[i] = gi
+		}
+		return coll, nil
 	}
 }
 

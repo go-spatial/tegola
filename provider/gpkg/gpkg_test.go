@@ -623,3 +623,69 @@ func TestOpenNonExistantFile(t *testing.T) {
 	}
 
 }
+
+func TestSRIDConfigAndFeatureSRID(t *testing.T) {
+	config := dict.Dict{
+		"filepath": GPKGAthensFilePath,
+		"srid":     4326,
+		"layers": []map[string]interface{}{
+			{
+				"name":      "rd_lines",
+				"tablename": "roads_lines",
+			},
+			{
+				"name":      "rl_lines",
+				"tablename": "rail_lines",
+				"srid":      3857,
+			},
+			{
+				"name": "a_points_sql",
+				"sql":  "SELECT fid, geom, amenity FROM amenities_points WHERE !BBOX!",
+				"srid": 4326,
+			},
+		},
+	}
+
+	p, err := gpkg.NewTileProvider(config, nil)
+	if err != nil {
+		t.Fatalf("err creating NewTileProvider: %v", err)
+	}
+
+	layers, err := p.Layers()
+	if err != nil {
+		t.Fatalf("err getting layers: %v", err)
+	}
+
+	for _, l := range layers {
+		if l.Name() == "rd_lines" && l.SRID() != 4326 {
+			t.Errorf("expected layer rd_lines SRID to be 4326, got %v", l.SRID())
+		}
+		if l.Name() == "rl_lines" && l.SRID() != 3857 {
+			t.Errorf("expected layer rl_lines SRID override to be 3857, got %v", l.SRID())
+		}
+		if l.Name() == "a_points_sql" && l.SRID() != 4326 {
+			t.Errorf("expected custom SQL layer a_points_sql SRID to be 4326, got %v", l.SRID())
+		}
+	}
+
+	tile := MockTile{
+		srid: tegola.WebMercator,
+		bufferedExtent: geom.NewExtent(
+			[2]float64{-20026376.39, -20048966.10},
+			[2]float64{20026376.39, 20048966.10},
+		),
+	}
+
+	var featureSRID uint64
+	err = p.TileFeatures(context.TODO(), "rd_lines", &tile, nil, func(f *provider.Feature) error {
+		featureSRID = f.SRID
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("err fetching features: %v", err)
+	}
+
+	if featureSRID != 4326 {
+		t.Errorf("expected feature SRID to be 4326, got %v", featureSRID)
+	}
+}

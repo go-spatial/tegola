@@ -27,10 +27,13 @@ func replaceTokens(qtext string, zoom uint, extent *geom.Extent) string {
 		}
 	*/
 
+	bboxSQL := fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY())
 	tokenReplacer := strings.NewReplacer(
 		// The BBOX token requires parameters ordered as [maxx, minx, maxy, miny] and checks for overlap.
 		// 	Until support for named parameters, we'll only support one BBOX token per query.
-		config.BboxToken, fmt.Sprintf("minx <= %v AND maxx >= %v AND miny <= %v AND maxy >= %v", extent.MaxX(), extent.MinX(), extent.MaxY(), extent.MinY()),
+		config.BboxToken, bboxSQL,
+		"!BOX!", bboxSQL,
+		"!bbox!", bboxSQL,
 		config.ZoomToken, strconv.FormatUint(uint64(zoom), 10),
 	)
 
