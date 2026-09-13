@@ -313,6 +313,13 @@ func encodeGeometry(ctx context.Context, geometry geom.Geometry) (g []uint32, vt
 
 	case geom.LineString:
 		points := t.Vertices()
+		// A degenerate LineString (e.g. produced by clipping/simplify) may
+		// have fewer than 2 points and cannot be encoded as a MVT
+		// linestring. Skip it (empty geometry, no error) instead of
+		// panicking on the points[0] index below.
+		if len(points) < 2 {
+			return nil, vectorTile.Tile_UNKNOWN, nil
+		}
 		g = append(g, c.MoveTo(points[0])...)
 		g = append(g, c.LineTo(points[1:]...)...)
 		return g, vectorTile.Tile_LINESTRING, nil
@@ -321,8 +328,16 @@ func encodeGeometry(ctx context.Context, geometry geom.Geometry) (g []uint32, vt
 		lines := t.LineStrings()
 		for _, l := range lines {
 			points := geom.LineString(l).Vertices()
+			// Skip degenerate lines with fewer than 2 points instead of
+			// panicking on the points[0] index below.
+			if len(points) < 2 {
+				continue
+			}
 			g = append(g, c.MoveTo(points[0])...)
 			g = append(g, c.LineTo(points[1:]...)...)
+		}
+		if len(g) == 0 {
+			return nil, vectorTile.Tile_UNKNOWN, nil
 		}
 		return g, vectorTile.Tile_LINESTRING, nil
 
