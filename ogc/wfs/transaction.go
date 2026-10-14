@@ -36,10 +36,11 @@ type wfsTransaction struct {
 }
 
 type wfsActionInner struct {
-	XMLName  xml.Name
-	Handle   string `xml:"handle,attr"`
-	TypeName string `xml:"typeName,attr"`
-	Inner    string `xml:",innerxml"`
+	XMLName   xml.Name
+	Handle    string `xml:"handle,attr"`
+	TypeName  string `xml:"typeName,attr"`  // WFS 1.1 singular
+	TypeNames string `xml:"typeNames,attr"` // WFS 2.0 plural
+	Inner     string `xml:",innerxml"`
 }
 
 // UnmarshalXML preserves resolved namespace names when extracting action contents.
@@ -56,6 +57,8 @@ func (a *wfsActionInner) UnmarshalXML(dec *xml.Decoder, start xml.StartElement) 
 			a.Handle = attr.Value
 		case "typeName":
 			a.TypeName = attr.Value
+		case "typeNames":
+			a.TypeNames = attr.Value
 		}
 	}
 	var inner strings.Builder
@@ -70,10 +73,19 @@ func (a *wfsActionInner) UnmarshalXML(dec *xml.Decoder, start xml.StartElement) 
 	return nil
 }
 
+// actionTypeName resolves the action's target layer: WFS 1.1 uses the
+// singular typeName attribute, WFS 2.0 the plural typeNames. Without the
+// fallback, Update/Delete with typeNames parsed to an empty TypeName and
+// the R11 fid-belongs-to-type check failed every plural-form request.
+func actionTypeName(a wfsActionInner) string {
+	if a.TypeName != "" {
+		return stripPrefix(a.TypeName)
+	}
+	return stripPrefix(a.TypeNames)
+}
+
 // ParseTransaction parses a WFS Transaction document (1.1 or 2.0).
 // Structural XML limits are enforced by the HTTP layer before calling.
-// ParseTransaction parses a WFS Transaction. Returns actions, lockId,
-// releaseAction ("ALL" default), and error.
 func ParseTransaction(v Version, body []byte) ([]TransactionAction, string, string, error) {
 	normalized, err := normalizeTransactionQNames(body)
 	if err != nil {
@@ -109,10 +121,10 @@ func ParseTransaction(v Version, body []byte) ([]TransactionAction, string, stri
 			act.Op = provider.MutationInsert
 		case "Update":
 			act.Op = provider.MutationUpdate
-			act.TypeName = stripPrefix(a.TypeName)
+			act.TypeName = actionTypeName(a)
 		case "Delete":
 			act.Op = provider.MutationDelete
-			act.TypeName = stripPrefix(a.TypeName)
+			act.TypeName = actionTypeName(a)
 		case "Replace":
 			if v == V110 {
 				return nil, "", "ALL", fmt.Errorf("Replace is not a WFS 1.1 action")

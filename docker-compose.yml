@@ -4,7 +4,7 @@ services:
     image: redis:7.4
     container_name: redis
     ports:
-    - 6379:6379
+    - 127.0.0.1:6379:6379
 
   postgis:
     image: postgis/postgis:16-3.5-alpine
@@ -19,7 +19,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     ports:
-    - 5432:5432
+    - 127.0.0.1:5432:5432
 
   migration:
     image: postgis/postgis:16-3.5-alpine
@@ -55,7 +55,7 @@ services:
     volumes:
     - ./testdata/mysql/ci-grants.sql:/docker-entrypoint-initdb.d/ci-grants.sql:ro
     ports:
-    - 3306:3306
+    - 127.0.0.1:3306:3306
 
   # NOTE: useful for debugging
   # does not run by default, only when you run with:
@@ -68,6 +68,6 @@ services:
       PGADMIN_DEFAULT_EMAIL: "admin@tegola.io"
       PGADMIN_DEFAULT_PASSWORD: "admin"
     ports:
-    - "5555:80"
+    - "127.0.0.1:5555:80"
     profiles:
     - pgadmin
