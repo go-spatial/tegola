@@ -276,6 +276,78 @@ func TestWFSTransaction(t *testing.T) {
 	}
 }
 
+// WFS 2.0 clients send the plural typeNames attribute on Update/Delete.
+// Regression: the parser only read the WFS 1.1 singular typeName, so
+// plural-form Deletes failed the R11 fid-belongs-to-type check with
+// `feature ID ... does not belong to typeName ""`.
+func TestWFSTransactionPluralTypeNames(t *testing.T) {
+	_, router := wfsHandler(t, wfsService(t))
+	insertXML := `<wfs:Transaction version="2.0.0" service="WFS" xmlns:wfs="http://www.opengis.net/wfs/2.0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:t="http://example.com/tegola/wfs_sites">
+  <wfs:Insert>
+    <t:wfs_sites>
+      <t:name>wfs-plural</t:name>
+      <t:seats>9</t:seats>
+      <t:geom><gml:Point srsName="urn:ogc:def:crs:EPSG::4326"><gml:pos>51 61</gml:pos></gml:Point></t:geom>
+    </t:wfs_sites>
+  </wfs:Insert>
+</wfs:Transaction>`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/wfs", strings.NewReader(insertXML))
+	req.Header.Set("Content-Type", "application/xml")
+	router.ServeHTTP(rec, req)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "totalInserted>1") {
+		t.Fatalf("Transaction Insert failed: %d %s", rec.Code, rec.Body.String())
+	}
+	fid := extractFID(t, rec.Body.String())
+
+	// Delete with the WFS 2.0 plural typeNames attribute.
+	deleteXML := `<wfs:Transaction version="2.0.0" service="WFS" xmlns:wfs="http://www.opengis.net/wfs/2.0" xmlns:fes="http://www.opengis.net/fes/2.0">
+  <wfs:Delete typeNames="wfs_sites">
+    <fes:Filter><fes:ResourceId rid="` + fid + `"/></fes:Filter>
+  </wfs:Delete>
+</wfs:Transaction>`
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/wfs", strings.NewReader(deleteXML))
+	req.Header.Set("Content-Type", "application/xml")
+	router.ServeHTTP(rec, req)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "totalDeleted>1") {
+		t.Fatalf("Transaction Delete with plural typeNames failed: %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Same for Update: plural typeNames must resolve the target layer.
+	updateXML := `<wfs:Transaction version="2.0.0" service="WFS" xmlns:wfs="http://www.opengis.net/wfs/2.0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:t="http://example.com/tegola/wfs_sites">
+  <wfs:Insert>
+    <t:wfs_sites>
+      <t:name>wfs-plural-upd</t:name>
+      <t:seats>10</t:seats>
+      <t:geom><gml:Point srsName="urn:ogc:def:crs:EPSG::4326"><gml:pos>52 62</gml:pos></gml:Point></t:geom>
+    </t:wfs_sites>
+  </wfs:Insert>
+</wfs:Transaction>`
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/wfs", strings.NewReader(updateXML))
+	req.Header.Set("Content-Type", "application/xml")
+	router.ServeHTTP(rec, req)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "totalInserted>1") {
+		t.Fatalf("second Transaction Insert failed: %d %s", rec.Code, rec.Body.String())
+	}
+	fid2 := extractFID(t, rec.Body.String())
+
+	updatePluralXML := `<wfs:Transaction version="2.0.0" service="WFS" xmlns:wfs="http://www.opengis.net/wfs/2.0" xmlns:fes="http://www.opengis.net/fes/2.0">
+  <wfs:Update typeNames="wfs_sites">
+    <wfs:Property><wfs:ValueReference>seats</wfs:ValueReference><wfs:Value>11</wfs:Value></wfs:Property>
+    <fes:Filter><fes:ResourceId rid="` + fid2 + `"/></fes:Filter>
+  </wfs:Update>
+</wfs:Transaction>`
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/wfs", strings.NewReader(updatePluralXML))
+	req.Header.Set("Content-Type", "application/xml")
+	router.ServeHTTP(rec, req)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "totalUpdated>1") {
+		t.Fatalf("Transaction Update with plural typeNames failed: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func extractFID(t *testing.T, body string) string {
 	t.Helper()
 	i := strings.Index(body, `rid="`)
