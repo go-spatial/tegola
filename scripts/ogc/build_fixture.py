@@ -16,11 +16,11 @@ def build(output):
         raise ValueError("Build directory must not traverse a symlink")
     output.mkdir(parents=True, exist_ok=False)
     environment = os.environ.copy()
-    environment.update(GOTOOLCHAIN="go1.26.7", GOWORK="off", GOFLAGS="", CGO_ENABLED="1")
+    environment.update(GOTOOLCHAIN="go1.26.9", GOWORK="off", GOFLAGS="", CGO_ENABLED="1")
     sources = source_manifest(root)
     revision = git(root, "rev-parse", "HEAD").decode().strip()
     compiler = subprocess.check_output(["go", "version"], env=environment, cwd=root).decode().strip()
-    if "go1.26.7 " not in compiler:
+    if "go1.26.9 " not in compiler:
         raise ValueError("Unexpected Go compiler")
     settings = json.loads(subprocess.check_output(["go", "env", "-json", "GOOS", "GOARCH", "CC", "CXX", "CGO_CFLAGS", "CGO_CPPFLAGS", "CGO_CXXFLAGS", "CGO_LDFLAGS", "GOTOOLCHAIN", "GOWORK", "GOFLAGS", "CGO_ENABLED"], env=environment, cwd=root))
     binary = output / ("tegola.exe" if os.name == "nt" else "tegola")

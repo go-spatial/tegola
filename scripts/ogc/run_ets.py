@@ -137,8 +137,8 @@ def verify_build(receipt, binary, sources, revision):
             receipt.get("sources") != sources or receipt.get("revision") != revision or \
             receipt.get("binary") != str(binary) or \
             receipt.get("binary_sha256") != hashlib.sha256(binary.read_bytes()).hexdigest() or \
-            "go1.26.7 " not in receipt.get("compiler", "") or \
-            any(settings.get(key) != value for key, value in {"GOTOOLCHAIN": "go1.26.7", "GOWORK": "off", "GOFLAGS": "", "CGO_ENABLED": "1"}.items()) or \
+            "go1.26.9 " not in receipt.get("compiler", "") or \
+            any(settings.get(key) != value for key, value in {"GOTOOLCHAIN": "go1.26.9", "GOWORK": "off", "GOFLAGS": "", "CGO_ENABLED": "1"}.items()) or \
             receipt.get("command") != ["go", "build", "-mod=vendor", "-trimpath", "-o", str(binary), "./cmd/tegola"]:
         raise ValueError("CLI build receipt does not bind the current candidate")
 
