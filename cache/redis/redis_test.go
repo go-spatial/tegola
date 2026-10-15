@@ -3,31 +3,38 @@ package redis_test
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"os"
 	"reflect"
+	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	goredis "github.com/redis/go-redis/v9"
 
-	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/cache/redis"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/ttools"
+	"github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/cache/redis"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/ttools"
 )
 
-// TESTENV is the environment variable that must be set to "yes" to run the redis tests.
+// TESTENV is the environment variable that must be set to "yes" to run the
+// redis tests that require a live redis instance on 127.0.0.1:6379. The
+// config parsing and rejection tests run unconditionally.
 const TESTENV = "RUN_REDIS_TESTS"
 
+// testURI connects to the local redis used by the gated integration tests.
+const testURI = "redis://127.0.0.1:6379/0"
+
+// TestCreateOptions tests parsing of the uri based connection config.
 func TestCreateOptions(t *testing.T) {
-	ttools.ShouldSkip(t, TESTENV)
+	t.Parallel()
 
 	type tcase struct {
-		name        string
-		config      dict.Dict
-		expected    *goredis.Options
-		expectedErr error
+		config   dict.Dict
+		expected *goredis.Options
 	}
 
 	fn := func(tc tcase) func(*testing.T) {
@@ -35,178 +42,97 @@ func TestCreateOptions(t *testing.T) {
 			t.Parallel()
 
 			actual, err := redis.CreateOptions(tc.config)
-			if tc.expectedErr == nil && err != nil {
+			if err != nil {
 				t.Fatalf("unexpected error: %q", err)
-				return
-			}
-			if tc.expectedErr != nil && err != nil {
-				if reflect.TypeOf(err) != reflect.TypeOf(tc.expectedErr) {
-					t.Errorf("invalid error type. expected %T, got %T", tc.expectedErr, err)
-					return
-				}
-				return
 			}
 			compareOptions(t, actual, tc.expected)
 		}
 	}
 
 	tests := map[string]tcase{
-		"test complete config": {
+		"uri with password and db": {
 			config: map[string]any{
-				"network":  "tcp",
-				"address":  "127.0.0.1:6379",
-				"password": "test",
-				"db":       0,
-				"max_zoom": uint(10),
-				"ssl":      false,
+				"uri": "redis://:secret@127.0.0.1:6379/3",
 			},
 			expected: &goredis.Options{
 				Network:  "tcp",
-				DB:       0,
 				Addr:     "127.0.0.1:6379",
-				Password: "test",
+				Password: "secret",
+				DB:       3,
 			},
 		},
-		"test with uri no ssl": {
+		"uri with username and password": {
 			config: map[string]any{
-				"uri": "redis://user:test@127.0.0.1:6379/0",
+				"uri": "redis://alice:secret@example.org:6380/1",
 			},
 			expected: &goredis.Options{
 				Network:  "tcp",
-				DB:       0,
-				Addr:     "127.0.0.1:6379",
-				Password: "test",
+				Addr:     "example.org:6380",
+				Username: "alice",
+				Password: "secret",
+				DB:       1,
 			},
 		},
-		"test with uri with ssl": {
+		"uri without credentials": {
 			config: map[string]any{
-				"uri": "rediss://user:test@127.0.0.1:6379/0",
+				"uri": "redis://example.org",
+			},
+			expected: &goredis.Options{
+				Network: "tcp",
+				Addr:    "example.org:6379",
+			},
+		},
+		"uri uses host and port defaults": {
+			config: map[string]any{
+				"uri": "redis://",
+			},
+			expected: &goredis.Options{
+				Network: "tcp",
+				Addr:    "localhost:6379",
+			},
+		},
+		"rediss scheme enables tls": {
+			config: map[string]any{
+				"uri": "rediss://:secret@example.org:6379/2",
 			},
 			expected: &goredis.Options{
 				Network:   "tcp",
-				DB:        0,
-				Addr:      "127.0.0.1:6379",
-				Password:  "test",
+				Addr:      "example.org:6379",
+				Password:  "secret",
+				DB:        2,
 				TLSConfig: &tls.Config{ /* no deep comparison */ },
 			},
 		},
-		"test empty config": {
-			config: map[string]any{},
-			expected: &goredis.Options{
-				Network:  "tcp",
-				DB:       0,
-				Addr:     "127.0.0.1:6379",
-				Password: "",
-			},
-		},
-		"test ssl config": {
-			name: "test test ssl config",
+		"unix socket with db query parameter": {
 			config: map[string]any{
-				"network":  "tcp",
-				"address":  "127.0.0.1:6379",
-				"password": "test",
-				"db":       0,
-				"max_zoom": uint(10),
-				"ssl":      true,
+				"uri": "unix://:secret@/var/run/redis.sock?db=4",
 			},
 			expected: &goredis.Options{
-				Network:   "tcp",
-				DB:        0,
-				Addr:      "127.0.0.1:6379",
-				Password:  "test",
-				TLSConfig: &tls.Config{ /* no deep comparison */ },
+				Network:  "unix",
+				Addr:     "/var/run/redis.sock",
+				Password: "secret",
+				DB:       4,
 			},
 		},
-		"test bad address": {
-			name: "test test ssl config",
+		"db query parameter wins over path": {
 			config: map[string]any{
-				"network":  "tcp",
-				"address":  2,
-				"password": "test",
-				"db":       0,
+				"uri": "redis://127.0.0.1:6379/3?db=5",
 			},
-			expectedErr: dict.ErrKeyType{
-				Key:   "addr",
-				Value: 2,
-				T:     reflect.TypeOf(""),
+			expected: &goredis.Options{
+				Network: "tcp",
+				Addr:    "127.0.0.1:6379",
+				DB:      5,
 			},
 		},
-		"test bad host": {
-			name: "test test ssl config",
+		"pool and dial options as query parameters": {
 			config: map[string]any{
-				"network": "tcp",
-				"address": "::8080",
-				"db":      0,
+				"uri": "redis://127.0.0.1:6379/0?pool_size=2&dial_timeout=3s",
 			},
-			expectedErr: &net.AddrError{ /* no deep comparison */ },
-		},
-		"test missing host": {
-			name: "test test ssl config",
-			config: map[string]any{
-				"network": "tcp",
-				"address": ":8080",
-				"db":      0,
-			},
-			expectedErr: &redis.ErrHostMissing{},
-		},
-		"test missing port": {
-			name: "test test ssl config",
-			config: map[string]any{
-				"network": "tcp",
-				"address": "localhost",
-				"db":      0,
-			},
-			expectedErr: &net.AddrError{ /* no deep comparison */ },
-		},
-		"test bad db": {
-			name: "test test ssl config",
-			config: map[string]any{
-				"network": "tcp",
-				"address": "127.0.0.1:6379",
-				"db":      "fails",
-			},
-			expectedErr: dict.ErrKeyType{
-				Key:   "db",
-				Value: "fails",
-				T:     reflect.TypeOf(1),
-			},
-		},
-		"test bad password": {
-			name: "test test ssl config",
-			config: map[string]any{
-				"network":  "tcp",
-				"address":  "127.0.0.1:6379",
-				"password": 0,
-			},
-			expectedErr: dict.ErrKeyType{
-				Key:   "password",
-				Value: 0,
-				T:     reflect.TypeOf(""),
-			},
-		},
-		"test bad network": {
-			name: "test test ssl config",
-			config: map[string]any{
-				"network": 0,
-				"address": "127.0.0.1:6379",
-			},
-			expectedErr: dict.ErrKeyType{
-				Key:   "network",
-				Value: 0,
-				T:     reflect.TypeOf(1),
-			},
-		},
-		"test bad ssl": {
-			name: "test test ssl config",
-			config: map[string]any{
-				"network": "tcp",
-				"address": "127.0.0.1:6379",
-				"ssl":     0,
-			},
-			expectedErr: dict.ErrKeyType{
-				Key:   "ssl",
-				Value: 0,
-				T:     reflect.TypeOf(true),
+			expected: &goredis.Options{
+				Network:     "tcp",
+				Addr:        "127.0.0.1:6379",
+				PoolSize:    2,
+				DialTimeout: 3 * time.Second,
 			},
 		},
 	}
@@ -216,14 +142,316 @@ func TestCreateOptions(t *testing.T) {
 	}
 }
 
+// TestCreateOptionsRejectsLegacyConfig asserts that configs still setting the
+// removed connection keys fail with a migration hint.
+func TestCreateOptionsRejectsLegacyConfig(t *testing.T) {
+	t.Parallel()
+
+	singleKeyMsg := `cache/redis: the 'address' key is no longer supported; replace it with uri = "redis://:<password>@<host>:<port>/<db>", e.g. before: address = "127.0.0.1:6379", password = "secret", db = 3, ssl = false. after: uri = "redis://:secret@127.0.0.1:6379/3" (schemes: redis://, rediss://, unix://; see cache/redis/README.md)`
+	allKeysMsg := `cache/redis: the 'network', 'address', 'password', 'db', 'ssl' keys are no longer supported; replace them with uri = "redis://:<password>@<host>:<port>/<db>", e.g. before: address = "127.0.0.1:6379", password = "secret", db = 3, ssl = false. after: uri = "redis://:secret@127.0.0.1:6379/3" (schemes: redis://, rediss://, unix://; see cache/redis/README.md)`
+
+	type tcase struct {
+		config       dict.Dict
+		expectedKeys []string
+		// expectedMsg pins the exact error message when set
+		expectedMsg string
+	}
+
+	tests := map[string]tcase{
+		"network is rejected": {
+			config:       map[string]any{"network": "tcp"},
+			expectedKeys: []string{"network"},
+		},
+		"address is rejected": {
+			config:       map[string]any{"address": "127.0.0.1:6379"},
+			expectedKeys: []string{"address"},
+			expectedMsg:  singleKeyMsg,
+		},
+		"password is rejected": {
+			config:       map[string]any{"password": "secret"},
+			expectedKeys: []string{"password"},
+		},
+		"db is rejected": {
+			config:       map[string]any{"db": 0},
+			expectedKeys: []string{"db"},
+		},
+		"ssl is rejected": {
+			config:       map[string]any{"ssl": true},
+			expectedKeys: []string{"ssl"},
+		},
+		"legacy keys are listed in canonical order": {
+			config: map[string]any{
+				"db":       0,
+				"ssl":      true,
+				"address":  "127.0.0.1:6379",
+				"network":  "tcp",
+				"password": "secret",
+			},
+			expectedKeys: []string{"network", "address", "password", "db", "ssl"},
+			expectedMsg:  allKeysMsg,
+		},
+		"legacy key beside a valid uri is still rejected": {
+			config: map[string]any{
+				"uri":     testURI,
+				"address": "127.0.0.1:6379",
+			},
+			expectedKeys: []string{"address"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := redis.CreateOptions(tc.config)
+			if err == nil {
+				t.Fatal("expected err, got nil")
+			}
+
+			var unsupportedErr *redis.ErrUnsupportedConfigKeys
+			if !errors.As(err, &unsupportedErr) {
+				t.Fatalf("invalid error type. expected %T, got %T: %v", &redis.ErrUnsupportedConfigKeys{}, err, err)
+			}
+			if !reflect.DeepEqual(unsupportedErr.Keys, tc.expectedKeys) {
+				t.Errorf("Keys: got %v, expected %v", unsupportedErr.Keys, tc.expectedKeys)
+			}
+			if tc.expectedMsg != "" && err.Error() != tc.expectedMsg {
+				t.Errorf("message:\n got %q\nwant %q", err.Error(), tc.expectedMsg)
+			}
+		})
+	}
+}
+
+// TestCreateOptionsRequiresURI asserts that a missing or empty uri fails
+// instead of silently falling back to defaults.
+func TestCreateOptionsRequiresURI(t *testing.T) {
+	t.Parallel()
+
+	expectedMsg := `cache/redis: the 'uri' config key is required and must not be empty, e.g. uri = "redis://127.0.0.1:6379/0" (schemes: redis://, rediss://, unix://; see cache/redis/README.md)`
+
+	configs := map[string]dict.Dict{
+		"empty config":   {},
+		"empty uri":      {"uri": ""},
+		"whitespace uri": {"uri": "   "},
+	}
+
+	for name, config := range configs {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := redis.CreateOptions(config)
+			var missingErr *redis.ErrURIMissing
+			if !errors.As(err, &missingErr) {
+				t.Fatalf("invalid error type. expected %T, got %T: %v", &redis.ErrURIMissing{}, err, err)
+			}
+			if err.Error() != expectedMsg {
+				t.Errorf("message:\n got %q\nwant %q", err.Error(), expectedMsg)
+			}
+		})
+	}
+
+	t.Run("non-string uri is a type error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := redis.CreateOptions(dict.Dict{"uri": 1})
+		var typeErr dict.ErrType
+		if !errors.As(err, &typeErr) {
+			t.Fatalf("invalid error type. expected %T, got %T: %v", dict.ErrType{}, err, err)
+		}
+		if typeErr.Key != "uri" {
+			t.Errorf("Key: got %q, expected %q", typeErr.Key, "uri")
+		}
+	})
+}
+
+// TestCreateOptionsRejectsMalformedURI asserts that malformed URIs are
+// rejected at startup with the parse cause in the error.
+func TestCreateOptionsRejectsMalformedURI(t *testing.T) {
+	t.Parallel()
+
+	type tcase struct {
+		uri string
+		// expectedPart is contained in the resulting error message
+		expectedPart string
+	}
+
+	tests := map[string]tcase{
+		"unsupported scheme": {
+			uri:          "http://127.0.0.1:6379",
+			expectedPart: "redis: invalid URL scheme: http",
+		},
+		"invalid db index": {
+			uri:          "redis://127.0.0.1:6379/notadb",
+			expectedPart: `redis: invalid database number: "notadb"`,
+		},
+		"unix socket without path": {
+			uri:          "unix://",
+			expectedPart: "redis: empty unix socket path",
+		},
+		"unexpected query parameter": {
+			uri:          "redis://127.0.0.1:6379/0?nope=1",
+			expectedPart: "redis: unexpected option: nope",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := redis.CreateOptions(dict.Dict{"uri": tc.uri})
+			var invalidErr *redis.ErrInvalidURI
+			if !errors.As(err, &invalidErr) {
+				t.Fatalf("invalid error type. expected %T, got %T: %v", &redis.ErrInvalidURI{}, err, err)
+			}
+			msg := err.Error()
+			if !strings.HasPrefix(msg, "cache/redis: could not parse the 'uri' config key (") {
+				t.Errorf("message %q misses the 'could not parse' prefix", msg)
+			}
+			if !strings.Contains(msg, tc.expectedPart) {
+				t.Errorf("message %q does not contain %q", msg, tc.expectedPart)
+			}
+		})
+	}
+
+	t.Run("error never echoes credentials from the uri", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := redis.CreateOptions(dict.Dict{"uri": "redis://:supersecret@127.0.0.1:6379/%zz"})
+		var invalidErr *redis.ErrInvalidURI
+		if !errors.As(err, &invalidErr) {
+			t.Fatalf("invalid error type. expected %T, got %T: %v", &redis.ErrInvalidURI{}, err, err)
+		}
+		msg := err.Error()
+		if strings.Contains(msg, "supersecret") {
+			t.Errorf("message %q leaks the uri password", msg)
+		}
+		if !strings.Contains(msg, "invalid URL escape") {
+			t.Errorf("message %q does not contain the parse cause", msg)
+		}
+	})
+}
+
+// TestNewConfigValidation asserts that configuration mistakes fail before the
+// cache dials redis, so bad configs are reported at startup, not as
+// connection errors.
+func TestNewConfigValidation(t *testing.T) {
+	t.Parallel()
+
+	type tcase struct {
+		config      dict.Dict
+		expectedErr error
+	}
+
+	tests := map[string]tcase{
+		"missing uri": {
+			config:      map[string]any{},
+			expectedErr: &redis.ErrURIMissing{},
+		},
+		"legacy config": {
+			config:      map[string]any{"address": "127.0.0.1:6379"},
+			expectedErr: &redis.ErrUnsupportedConfigKeys{Keys: []string{"address"}},
+		},
+		"bad config uri": {
+			config: map[string]any{"uri": 1},
+			expectedErr: dict.ErrType{
+				Key:   "uri",
+				Value: 1,
+				T:     reflect.TypeOf(""),
+			},
+		},
+		"bad config ttl": {
+			config: map[string]any{"uri": testURI, "ttl": "fails"},
+			expectedErr: dict.ErrType{
+				Key:   "ttl",
+				Value: "fails",
+				T:     reflect.TypeOf(1),
+			},
+		},
+		"bad max_zoom": {
+			config: map[string]any{"uri": testURI, "max_zoom": "2"},
+			expectedErr: dict.ErrType{
+				Key:   "max_zoom",
+				Value: "2",
+				T:     reflect.TypeOf(uint(0)),
+			},
+		},
+		"bad max_zoom 2": {
+			config: map[string]any{"uri": testURI, "max_zoom": -2},
+			expectedErr: dict.ErrType{
+				Key:   "max_zoom",
+				Value: -2,
+				T:     reflect.TypeOf(uint(0)),
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := redis.New(tc.config)
+			if err == nil {
+				t.Fatalf("expected err %v, got nil", tc.expectedErr)
+			}
+			if !reflect.DeepEqual(err, tc.expectedErr) {
+				t.Errorf("invalid error. expected %v, got %v", tc.expectedErr, err)
+			}
+		})
+	}
+}
+
+// TestNoLegacyFallbackInSource is a grep-level guarantee that none of the
+// removed legacy connection keys have a code path left in cache/redis.
+func TestNoLegacyFallbackInSource(t *testing.T) {
+	t.Parallel()
+
+	forbidden := []string{
+		"ConfigKeyNetwork",
+		"ConfigKeyAddress",
+		"ConfigKeyPassword",
+		"ConfigKeyDB",
+		"ConfigKeySSL",
+		"defaultNetwork",
+		"defaultAddress",
+		"defaultPassword",
+		"defaultDB",
+		"defaultSSL",
+		"defaultURI",
+		"ErrHostMissing",
+		"SplitHostPort",
+		"is deprecated",
+	}
+
+	for _, file := range []string{"redis.go", "errors.go"} {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("could not read %s: %v", file, err)
+		}
+		for _, marker := range forbidden {
+			if strings.Contains(string(content), marker) {
+				t.Errorf("%s still contains legacy fallback marker %q", file, marker)
+			}
+		}
+	}
+}
+
 func compareOptions(t *testing.T, actual, expected *goredis.Options) {
 	t.Helper()
 
+	if actual.Network != expected.Network {
+		t.Errorf("Network: got %q, want %q", actual.Network, expected.Network)
+	}
 	if actual.Addr != expected.Addr {
-		t.Errorf("got %q, want %q", actual.Addr, expected.Addr)
+		t.Errorf("Addr: got %q, want %q", actual.Addr, expected.Addr)
+	}
+	if actual.Username != expected.Username {
+		t.Errorf("Username: got %q, want %q", actual.Username, expected.Username)
+	}
+	if actual.Password != expected.Password {
+		t.Errorf("Password: got %q, want %q", actual.Password, expected.Password)
 	}
 	if actual.DB != expected.DB {
-		t.Errorf("DB: got %d, expected %d", actual.DB, expected.DB)
+		t.Errorf("DB: got %d, want %d", actual.DB, expected.DB)
 	}
 	if actual.TLSConfig == nil && expected.TLSConfig != nil {
 		t.Errorf("got nil TLSConfig, expected a TLSConfig")
@@ -231,12 +459,15 @@ func compareOptions(t *testing.T, actual, expected *goredis.Options) {
 	if actual.TLSConfig != nil && expected.TLSConfig == nil {
 		t.Errorf("got TLSConfig, expected no TLSConfig")
 	}
-	if actual.Password != expected.Password {
-		t.Errorf("Password: got %q, expected %q", actual.Password, expected.Password)
+	if expected.PoolSize != 0 && actual.PoolSize != expected.PoolSize {
+		t.Errorf("PoolSize: got %d, want %d", actual.PoolSize, expected.PoolSize)
+	}
+	if expected.DialTimeout != 0 && actual.DialTimeout != expected.DialTimeout {
+		t.Errorf("DialTimeout: got %s, want %s", actual.DialTimeout, expected.DialTimeout)
 	}
 }
 
-// TestNew will run tests against a local redis instance
+// TestNew will run tests against a live redis instance
 // on 127.0.0.1:6379
 func TestNew(t *testing.T) {
 	ttools.ShouldSkip(t, TESTENV)
@@ -289,51 +520,15 @@ func TestNew(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
-		"explicit config": {
-			config: map[string]any{
-				"network":  "tcp",
-				"address":  "127.0.0.1:6379",
-				"password": "",
-				"db":       0,
-				"max_zoom": uint(10),
-				"ssl":      false,
-			},
-		},
 		"explicit config with uri": {
 			config: map[string]any{
-				"uri": "redis://127.0.0.1:6379/0",
-			},
-		},
-		"implicit config": {
-			config: map[string]any{},
-		},
-		"bad config address": {
-			config: map[string]any{"address": 0},
-			expectedErr: dict.ErrKeyType{
-				Key:   "address",
-				Value: 0,
-				T:     reflect.TypeOf(""),
-			},
-		},
-		"bad config uri": {
-			config: map[string]any{"uri": 1},
-			expectedErr: dict.ErrKeyType{
-				Key:   "uri",
-				Value: 1,
-				T:     reflect.TypeOf(""),
-			},
-		},
-		"bad config ttl": {
-			config: map[string]any{"ttl": "fails"},
-			expectedErr: dict.ErrKeyType{
-				Key:   "ttl",
-				Value: "fails",
-				T:     reflect.TypeOf(1),
+				"uri":      testURI,
+				"max_zoom": uint(10),
 			},
 		},
 		"bad address": {
 			config: map[string]any{
-				"address": "127.0.0.1:6000",
+				"uri": "redis://127.0.0.1:6000/0",
 			},
 			expectedErr: &net.OpError{
 				Op:  "dial",
@@ -345,26 +540,6 @@ func TestNew(t *testing.T) {
 				Err: &os.SyscallError{
 					Err: syscall.ECONNREFUSED,
 				},
-			},
-		},
-		"bad max_zoom": {
-			config: map[string]any{
-				"max_zoom": "2",
-			},
-			expectedErr: dict.ErrKeyType{
-				Key:   "max_zoom",
-				Value: "2",
-				T:     reflect.TypeOf(uint(0)),
-			},
-		},
-		"bad max_zoom 2": {
-			config: map[string]any{
-				"max_zoom": -2,
-			},
-			expectedErr: dict.ErrKeyType{
-				Key:   "max_zoom",
-				Value: -2,
-				T:     reflect.TypeOf(uint(0)),
 			},
 		},
 	}
@@ -431,7 +606,7 @@ func TestSetGetPurge(t *testing.T) {
 
 	testcases := map[string]tcase{
 		"redis cache hit": {
-			config: map[string]any{},
+			config: map[string]any{"uri": testURI},
 			key: cache.Key{
 				Z: 0,
 				X: 1,
@@ -441,7 +616,7 @@ func TestSetGetPurge(t *testing.T) {
 			expectedHit:  true,
 		},
 		"redis cache miss": {
-			config: map[string]any{},
+			config: map[string]any{"uri": testURI},
 			key: cache.Key{
 				Z: 0,
 				X: 0,
@@ -516,7 +691,7 @@ func TestSetOverwrite(t *testing.T) {
 
 	testcases := map[string]tcase{
 		"redis overwrite": {
-			config: map[string]any{},
+			config: map[string]any{"uri": testURI},
 			key: cache.Key{
 				Z: 0,
 				X: 1,
@@ -583,6 +758,7 @@ func TestMaxZoom(t *testing.T) {
 	tests := map[string]tcase{
 		"over max zoom": {
 			config: map[string]any{
+				"uri":      testURI,
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{
@@ -595,6 +771,7 @@ func TestMaxZoom(t *testing.T) {
 		},
 		"under max zoom": {
 			config: map[string]any{
+				"uri":      testURI,
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{
@@ -607,6 +784,7 @@ func TestMaxZoom(t *testing.T) {
 		},
 		"equals max zoom": {
 			config: map[string]any{
+				"uri":      testURI,
 				"max_zoom": uint(10),
 			},
 			key: cache.Key{

@@ -73,6 +73,16 @@ func (err ErrInvalidProviderType) Error() string {
 	return errStr.String()
 }
 
+// ErrInvalidProviderLayerName is returned when a map layer's provider_layer
+// is not in the required provider.layer form.
+type ErrInvalidProviderLayerName struct {
+	ProviderLayerName string
+}
+
+func (err ErrInvalidProviderLayerName) Error() string {
+	return fmt.Sprintf("config: invalid provider layer name (%v)", err.ProviderLayerName)
+}
+
 // ErrInvalidRegisteredProvider is returned when something went wrong with the
 // provider registration. This should never happen, in normal usage, and if it does it's an issue
 // with the provider plugin.

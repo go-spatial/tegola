@@ -277,7 +277,6 @@ func (l *List) FindElementsBetween(start, end Elementer, finder func(e Elementer
 			return nil
 		}
 	}
-	return nil
 }
 
 // ForEach call fn for each element in the list. Return false stops the iteration.

@@ -3,8 +3,8 @@ package region
 import (
 	"testing"
 
+	"github.com/alexeydott/tegola/maths"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/maths"
 )
 
 func TestAxis_Intersect(t *testing.T) {
@@ -14,196 +14,196 @@ func TestAxis_Intersect(t *testing.T) {
 		pt            [4]maths.Pt
 	}
 
-	r := New(maths.Clockwise, maths.Pt{0, 0}, maths.Pt{100, 100})
+	r := New(maths.Clockwise, maths.Pt{X: 0, Y: 0}, maths.Pt{X: 100, Y: 100})
 
 	test := tbltest.Cases(
 		testcase{ // 0
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{50, 0}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 50, Y: 0}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 1
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{100, 0}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 100, Y: 0}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 2
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{150, 0}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 150, Y: 0}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 3
-			line:          maths.Line{maths.Pt{50, 0}, maths.Pt{100, 0}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 0}, maths.Pt{X: 100, Y: 0}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 4
-			line:          maths.Line{maths.Pt{50, 0}, maths.Pt{150, 0}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 0}, maths.Pt{X: 150, Y: 0}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 5
-			line:          maths.Line{maths.Pt{100, 0}, maths.Pt{150, 0}},
+			line:          maths.Line{maths.Pt{X: 100, Y: 0}, maths.Pt{X: 150, Y: 0}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 6
-			line:          maths.Line{maths.Pt{0, 50}, maths.Pt{50, 50}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 50}, maths.Pt{X: 50, Y: 50}},
 			doesIntersect: [4]bool{true, false, false, false},
-			pt:            [4]maths.Pt{{0, 50}, {}, {}, {}},
+			pt:            [4]maths.Pt{{X: 0, Y: 50}, {}, {}, {}},
 		},
 		testcase{ // 7
-			line:          maths.Line{maths.Pt{0, 50}, maths.Pt{100, 50}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 50}, maths.Pt{X: 100, Y: 50}},
 			doesIntersect: [4]bool{true, false, true, false},
-			pt:            [4]maths.Pt{{0, 50}, {}, {100, 50}, {}},
+			pt:            [4]maths.Pt{{X: 0, Y: 50}, {}, {X: 100, Y: 50}, {}},
 		},
 		testcase{ // 8
-			line:          maths.Line{maths.Pt{0, 50}, maths.Pt{150, 50}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 50}, maths.Pt{X: 150, Y: 50}},
 			doesIntersect: [4]bool{true, false, true, false},
-			pt:            [4]maths.Pt{{0, 50}, {}, {100, 50}, {}},
+			pt:            [4]maths.Pt{{X: 0, Y: 50}, {}, {X: 100, Y: 50}, {}},
 		},
 
 		testcase{ // 9
-			line:          maths.Line{maths.Pt{50, 50}, maths.Pt{100, 50}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 50}, maths.Pt{X: 100, Y: 50}},
 			doesIntersect: [4]bool{false, false, true, false},
-			pt:            [4]maths.Pt{{}, {}, {100, 50}, {}},
+			pt:            [4]maths.Pt{{}, {}, {X: 100, Y: 50}, {}},
 		},
 		testcase{ // 10
-			line:          maths.Line{maths.Pt{50, 50}, maths.Pt{150, 50}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 50}, maths.Pt{X: 150, Y: 50}},
 			doesIntersect: [4]bool{false, false, true, false},
-			pt:            [4]maths.Pt{{}, {}, {100, 50}, {}},
+			pt:            [4]maths.Pt{{}, {}, {X: 100, Y: 50}, {}},
 		},
 
 		testcase{ // 11
-			line:          maths.Line{maths.Pt{100, 50}, maths.Pt{150, 50}},
+			line:          maths.Line{maths.Pt{X: 100, Y: 50}, maths.Pt{X: 150, Y: 50}},
 			doesIntersect: [4]bool{false, false, true, false},
-			pt:            [4]maths.Pt{{}, {}, {100, 50}, {}},
+			pt:            [4]maths.Pt{{}, {}, {X: 100, Y: 50}, {}},
 		},
 
 		testcase{ // 12
-			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{50, 100}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 100}, maths.Pt{X: 50, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 13
-			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{100, 100}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 100}, maths.Pt{X: 100, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 14
-			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{150, 100}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 100}, maths.Pt{X: 150, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 15
-			line:          maths.Line{maths.Pt{50, 100}, maths.Pt{100, 100}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 100}, maths.Pt{X: 100, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 16
-			line:          maths.Line{maths.Pt{100, 100}, maths.Pt{150, 100}},
+			line:          maths.Line{maths.Pt{X: 100, Y: 100}, maths.Pt{X: 150, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 17
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{0, 50}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 50}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 18
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{0, 100}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 19
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{0, 150}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 150}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 20
-			line:          maths.Line{maths.Pt{0, 50}, maths.Pt{0, 100}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 50}, maths.Pt{X: 0, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 21
-			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{0, 150}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 100}, maths.Pt{X: 0, Y: 150}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 22
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{0, 50}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 50}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 23
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{0, 100}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 24
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{0, 150}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 150}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 25
-			line:          maths.Line{maths.Pt{0, 50}, maths.Pt{0, 100}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 50}, maths.Pt{X: 0, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 		testcase{ // 26
-			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{0, 150}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 100}, maths.Pt{X: 0, Y: 150}},
 			doesIntersect: [4]bool{false, false, false, false},
 		},
 
 		testcase{ // 27
-			line:          maths.Line{maths.Pt{50, 0}, maths.Pt{50, 50}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 0}, maths.Pt{X: 50, Y: 50}},
 			doesIntersect: [4]bool{false, true, false, false},
-			pt:            [4]maths.Pt{{}, {50, 0}, {}, {}},
+			pt:            [4]maths.Pt{{}, {X: 50, Y: 0}, {}, {}},
 		},
 		testcase{ // 28
-			line:          maths.Line{maths.Pt{50, 0}, maths.Pt{50, 100}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 0}, maths.Pt{X: 50, Y: 100}},
 			doesIntersect: [4]bool{false, true, false, true},
-			pt:            [4]maths.Pt{{}, {50, 0}, {}, {50, 100}},
+			pt:            [4]maths.Pt{{}, {X: 50, Y: 0}, {}, {X: 50, Y: 100}},
 		},
 		testcase{ // 29
-			line:          maths.Line{maths.Pt{50, 0}, maths.Pt{50, 150}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 0}, maths.Pt{X: 50, Y: 150}},
 			doesIntersect: [4]bool{false, true, false, true},
-			pt:            [4]maths.Pt{{}, {50, 0}, {}, {50, 100}},
+			pt:            [4]maths.Pt{{}, {X: 50, Y: 0}, {}, {X: 50, Y: 100}},
 		},
 
 		testcase{ // 30
-			line:          maths.Line{maths.Pt{50, 50}, maths.Pt{50, 100}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 50}, maths.Pt{X: 50, Y: 100}},
 			doesIntersect: [4]bool{false, false, false, true},
-			pt:            [4]maths.Pt{{}, {}, {}, {50, 100}},
+			pt:            [4]maths.Pt{{}, {}, {}, {X: 50, Y: 100}},
 		},
 		testcase{ // 31
-			line:          maths.Line{maths.Pt{50, 100}, maths.Pt{50, 150}},
+			line:          maths.Line{maths.Pt{X: 50, Y: 100}, maths.Pt{X: 50, Y: 150}},
 			doesIntersect: [4]bool{false, false, false, true},
-			pt:            [4]maths.Pt{{}, {}, {}, {50, 100}},
+			pt:            [4]maths.Pt{{}, {}, {}, {X: 50, Y: 100}},
 		},
 
 		// diagonals
 		// top left to bottom right.
 		testcase{ // 32
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{50, 50}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 50, Y: 50}},
 			doesIntersect: [4]bool{true, true, false, false},
-			pt:            [4]maths.Pt{{0, 0}, {0, 0}, {}, {}},
+			pt:            [4]maths.Pt{{X: 0, Y: 0}, {X: 0, Y: 0}, {}, {}},
 		},
 
 		testcase{ // 33
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{100, 100}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 100, Y: 100}},
 			doesIntersect: [4]bool{true, true, true, true},
-			pt:            [4]maths.Pt{{0, 0}, {0, 0}, {100, 100}, {100, 100}},
+			pt:            [4]maths.Pt{{X: 0, Y: 0}, {X: 0, Y: 0}, {X: 100, Y: 100}, {X: 100, Y: 100}},
 		},
 		testcase{ // 34
-			line:          maths.Line{maths.Pt{0, 0}, maths.Pt{150, 150}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 150, Y: 150}},
 			doesIntersect: [4]bool{true, true, true, true},
-			pt:            [4]maths.Pt{{0, 0}, {0, 0}, {100, 100}, {100, 100}},
+			pt:            [4]maths.Pt{{X: 0, Y: 0}, {X: 0, Y: 0}, {X: 100, Y: 100}, {X: 100, Y: 100}},
 		},
 		// bottom left to top right.
 		testcase{ // 35
-			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{50, 50}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 100}, maths.Pt{X: 50, Y: 50}},
 			doesIntersect: [4]bool{true, false, false, true},
-			pt:            [4]maths.Pt{{0, 100}, {}, {}, {0, 100}},
+			pt:            [4]maths.Pt{{X: 0, Y: 100}, {}, {}, {X: 0, Y: 100}},
 		},
 
 		testcase{ // 36
-			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{100, 0}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 100}, maths.Pt{X: 100, Y: 0}},
 			doesIntersect: [4]bool{true, true, true, true},
-			pt:            [4]maths.Pt{{0, 100}, {100, 0}, {100, 0}, {0, 100}},
+			pt:            [4]maths.Pt{{X: 0, Y: 100}, {X: 100, Y: 0}, {X: 100, Y: 0}, {X: 0, Y: 100}},
 		},
 		testcase{ // 37
-			line:          maths.Line{maths.Pt{0, 100}, maths.Pt{150, -50}},
+			line:          maths.Line{maths.Pt{X: 0, Y: 100}, maths.Pt{X: 150, Y: -50}},
 			doesIntersect: [4]bool{true, true, true, true},
-			pt:            [4]maths.Pt{{0, 100}, {100, 0}, {100, 0}, {0, 100}},
+			pt:            [4]maths.Pt{{X: 0, Y: 100}, {X: 100, Y: 0}, {X: 100, Y: 0}, {X: 0, Y: 100}},
 		},
 	)
 	//test.RunOrder = "32"
@@ -230,47 +230,47 @@ func TestAxis_IsInward(t *testing.T) {
 
 	test := tbltest.Cases(
 		testcase{ // 0
-			line:   maths.Line{maths.Pt{-50, 0}, maths.Pt{50, 0}},
+			line:   maths.Line{maths.Pt{X: -50, Y: 0}, maths.Pt{X: 50, Y: 0}},
 			inward: [4]bool{true, false, false, false},
 			err:    [4]error{nil, ErrNoDirection, nil, ErrNoDirection},
 		},
 		testcase{ // 1
-			line:   maths.Line{maths.Pt{0, 0}, maths.Pt{50, 0}},
+			line:   maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 50, Y: 0}},
 			inward: [4]bool{true, false, false, false},
 			err:    [4]error{nil, ErrNoDirection, nil, ErrNoDirection},
 		},
 		testcase{ // 2
-			line:   maths.Line{maths.Pt{0, 0}, maths.Pt{100, 0}},
+			line:   maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 100, Y: 0}},
 			inward: [4]bool{true, false, false, false},
 			err:    [4]error{nil, ErrNoDirection, nil, ErrNoDirection},
 		},
 		testcase{ // 3
-			line:   maths.Line{maths.Pt{0, 0}, maths.Pt{150, 0}},
+			line:   maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 150, Y: 0}},
 			inward: [4]bool{true, false, false, false},
 			err:    [4]error{nil, ErrNoDirection, nil, ErrNoDirection},
 		},
 
 		// going the other way.
 		testcase{ // 4
-			line:    maths.Line{maths.Pt{50, 0}, maths.Pt{-50, 0}},
+			line:    maths.Line{maths.Pt{X: 50, Y: 0}, maths.Pt{X: -50, Y: 0}},
 			inward:  [4]bool{false, false, true, false},
 			err:     [4]error{nil, ErrNoDirection, nil, ErrNoDirection},
 			winding: maths.CounterClockwise,
 		},
 		testcase{ // 5
-			line:    maths.Line{maths.Pt{50, 0}, maths.Pt{0, 0}},
+			line:    maths.Line{maths.Pt{X: 50, Y: 0}, maths.Pt{X: 0, Y: 0}},
 			inward:  [4]bool{false, false, true, false},
 			err:     [4]error{nil, ErrNoDirection, nil, ErrNoDirection},
 			winding: maths.CounterClockwise,
 		},
 		testcase{ // 6
-			line:    maths.Line{maths.Pt{100, 0}, maths.Pt{0, 0}},
+			line:    maths.Line{maths.Pt{X: 100, Y: 0}, maths.Pt{X: 0, Y: 0}},
 			inward:  [4]bool{false, false, true, false},
 			err:     [4]error{nil, ErrNoDirection, nil, ErrNoDirection},
 			winding: maths.CounterClockwise,
 		},
 		testcase{ // 7
-			line:    maths.Line{maths.Pt{150, 0}, maths.Pt{0, 0}},
+			line:    maths.Line{maths.Pt{X: 150, Y: 0}, maths.Pt{X: 0, Y: 0}},
 			inward:  [4]bool{false, false, true, false},
 			err:     [4]error{nil, ErrNoDirection, nil, ErrNoDirection},
 			winding: maths.CounterClockwise,
@@ -278,36 +278,36 @@ func TestAxis_IsInward(t *testing.T) {
 
 		// Vertical
 		testcase{ // 8
-			line:   maths.Line{maths.Pt{0, -50}, maths.Pt{0, 0}},
+			line:   maths.Line{maths.Pt{X: 0, Y: -50}, maths.Pt{X: 0, Y: 0}},
 			inward: [4]bool{false, true, false, false},
 			err:    [4]error{ErrNoDirection, nil, ErrNoDirection, nil},
 		},
 		testcase{ // 9
-			line:   maths.Line{maths.Pt{0, 0}, maths.Pt{0, 50}},
+			line:   maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 50}},
 			inward: [4]bool{false, true, false, false},
 			err:    [4]error{ErrNoDirection, nil, ErrNoDirection, nil},
 		},
 		testcase{ // 10
-			line:   maths.Line{maths.Pt{0, 0}, maths.Pt{0, 100}},
+			line:   maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 100}},
 			inward: [4]bool{false, true, false, false},
 			err:    [4]error{ErrNoDirection, nil, ErrNoDirection, nil},
 		},
 		testcase{ // 11
-			line:   maths.Line{maths.Pt{0, 0}, maths.Pt{0, 150}},
+			line:   maths.Line{maths.Pt{X: 0, Y: 0}, maths.Pt{X: 0, Y: 150}},
 			inward: [4]bool{false, true, false, false},
 			err:    [4]error{ErrNoDirection, nil, ErrNoDirection, nil},
 		},
 
 		// going the other way.
 		testcase{ // 12
-			line:    maths.Line{maths.Pt{0, 150}, maths.Pt{0, -50}},
+			line:    maths.Line{maths.Pt{X: 0, Y: 150}, maths.Pt{X: 0, Y: -50}},
 			inward:  [4]bool{false, true, false, false},
 			err:     [4]error{ErrNoDirection, nil, ErrNoDirection, nil},
 			winding: maths.CounterClockwise,
 		},
 	)
 	test.Run(func(idx int, tc testcase) {
-		r := New(tc.winding, maths.Pt{0, 0}, maths.Pt{100, 100})
+		r := New(tc.winding, maths.Pt{X: 0, Y: 0}, maths.Pt{X: 100, Y: 100})
 		for a, i := r.FirstAxis(), 0; a != nil; a, i = a.Next(), i+1 {
 			inward, err := a.IsInward(tc.line)
 

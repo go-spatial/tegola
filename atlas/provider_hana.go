@@ -1,3 +1,4 @@
+//go:build !noHanaProvider
 // +build !noHanaProvider
 
 package atlas
@@ -8,5 +9,5 @@ package atlas
 //
 // go build -tags 'noHanaProvider'
 import (
-	_ "github.com/go-spatial/tegola/provider/hana"
+	_ "github.com/alexeydott/tegola/provider/hana"
 )

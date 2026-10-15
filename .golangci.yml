@@ -1,0 +1,48 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  # correctness-oriented set; keep conservative to stay meaningful on legacy code
+  default: none
+  enable:
+  - govet
+  - errcheck
+  - staticcheck
+  - sqlclosecheck
+  - rowserrcheck
+  settings:
+    staticcheck:
+      checks:
+      - all
+      # ST* are style-only churn on legacy code;
+      # QF* are editor quickfix suggestions, not correctness checks
+      - -ST*
+      - -QF*
+      # SA1019 (deprecated API usage: github.com/golang/protobuf, io/ioutil)
+      # is a cross-cutting migration tracked separately
+      - -SA1019
+    errcheck:
+      # deferred/unchecked Close on read-only paths is an accepted legacy pattern;
+      # new code should check Close explicitly.
+      # (*database/sql.Rows).Close is the concrete DB-row equivalent of (io.Closer).Close
+      # above (errcheck matches the concrete method, not the interface, so the interface
+      # exclusion does not cover it). All row Close/Err hygiene in the provider and
+      # server trees has been refactored to checked defer-closes (audit part12
+      # N10/N19), so the exclusion now only covers future uninteresting
+      # test/probe cleanup error paths. This exclusion is recorded in UPSTREAM.md.
+      # sqlclosecheck and rowserrcheck are enabled
+      # alongside errcheck to still cover the class: they flag rows that are never closed
+      # and iteration without a final rows.Err() check, which the errcheck exclusion hides.
+      # Note the honest limitation documented in UPSTREAM.md:
+      # errcheck only catches *ignored* errors, not the "error checked then swallowed as a
+      # cache miss" bug class (see cache/gcs) -- that is caught by regression tests instead.
+      exclude-functions:
+      - (io.Closer).Close
+      - (*database/sql.Rows).Close
+  exclusions:
+    paths:
+    # vendored Go helper inside the npm package, not part of the module builds
+    - ui/node_modules/

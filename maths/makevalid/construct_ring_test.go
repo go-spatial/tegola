@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/alexeydott/tegola/maths"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/maths"
 )
 
 func TestConstuctRing(t *testing.T) {
@@ -18,9 +18,9 @@ func TestConstuctRing(t *testing.T) {
 
 	tests := tbltest.Cases(
 		testcase{
-			start:    []maths.Pt{{25, 19}, {29, 14}},
-			pts:      []maths.Pt{{25, 19}, {29, 23}},
-			expected: []maths.Pt{{29, 23}, {25, 19}, {29, 14}},
+			start:    []maths.Pt{{X: 25, Y: 19}, {X: 29, Y: 14}},
+			pts:      []maths.Pt{{X: 25, Y: 19}, {X: 29, Y: 23}},
+			expected: []maths.Pt{{X: 29, Y: 23}, {X: 25, Y: 19}, {X: 29, Y: 14}},
 			added:    true,
 		},
 	)

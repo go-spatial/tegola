@@ -11,12 +11,13 @@ const (
 )
 
 type Layer struct {
-	ID          string       `json:"id"`
-	Source      string       `json:"source,omitempty"`
-	SourceLayer string       `json:"source-layer,omitempty"`
-	Type        string       `json:"type,omitempty"`
-	Layout      *LayerLayout `json:"layout"`
-	Paint       *LayerPaint  `json:"paint"`
+	ID          string        `json:"id"`
+	Source      string        `json:"source,omitempty"`
+	SourceLayer string        `json:"source-layer,omitempty"`
+	Type        string        `json:"type,omitempty"`
+	Filter      []interface{} `json:"filter,omitempty"`
+	Layout      *LayerLayout  `json:"layout"`
+	Paint       *LayerPaint   `json:"paint"`
 }
 
 type LayerPaint struct {

@@ -3,8 +3,8 @@ package basic_test
 import (
 	"testing"
 
+	"github.com/alexeydott/tegola/basic"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/basic"
 )
 
 func TestLineContainsPoint(t *testing.T) {

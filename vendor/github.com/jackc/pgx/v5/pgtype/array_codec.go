@@ -2,7 +2,6 @@ package pgtype
 
 import (
 	"database/sql/driver"
-	"encoding/binary"
 	"fmt"
 	"reflect"
 
@@ -39,6 +38,16 @@ type ArraySetter interface {
 // ArrayCodec is a codec for any array type.
 type ArrayCodec struct {
 	ElementType *Type
+	// Delimiter is the character PostgreSQL uses to separate array elements for this type.
+	// If unset, "," is used.
+	Delimiter byte
+}
+
+func (c *ArrayCodec) delimiter() byte {
+	if c.Delimiter == 0 {
+		return ','
+	}
+	return c.Delimiter
 }
 
 func (c *ArrayCodec) FormatSupported(format int16) bool {
@@ -118,9 +127,10 @@ func (p *encodePlanArrayCodecText) Encode(value any, buf []byte) (newBuf []byte,
 	var encodePlan EncodePlan
 	var lastElemType reflect.Type
 	inElemBuf := make([]byte, 0, 32)
+	delimiter := p.ac.delimiter()
 	for i := range elementCount {
 		if i > 0 {
-			buf = append(buf, ',')
+			buf = append(buf, delimiter)
 		}
 
 		for _, dec := range dimElemCounts {
@@ -131,7 +141,8 @@ func (p *encodePlanArrayCodecText) Encode(value any, buf []byte) (newBuf []byte,
 
 		elem := array.Index(i)
 		var elemBuf []byte
-		if isNil, _ := isNilDriverValuer(elem); !isNil {
+		isNil, callNilDriverValuer := isNilDriverValuer(elem)
+		if !isNil {
 			elemType := reflect.TypeOf(elem)
 			if lastElemType != elemType {
 				lastElemType = elemType
@@ -144,12 +155,17 @@ func (p *encodePlanArrayCodecText) Encode(value any, buf []byte) (newBuf []byte,
 			if err != nil {
 				return nil, err
 			}
+		} else if callNilDriverValuer {
+			elemBuf, err = (&encodePlanDriverValuer{m: p.m, oid: p.ac.ElementType.OID, formatCode: TextFormatCode}).Encode(elem, inElemBuf)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if elemBuf == nil {
 			buf = append(buf, `NULL`...)
 		} else {
-			buf = append(buf, quoteArrayElementIfNeeded(string(elemBuf))...)
+			buf = append(buf, quoteArrayElementIfNeeded(string(elemBuf), delimiter)...)
 		}
 
 		for _, dec := range dimElemCounts {
@@ -195,7 +211,8 @@ func (p *encodePlanArrayCodecBinary) Encode(value any, buf []byte) (newBuf []byt
 
 		elem := array.Index(i)
 		var elemBuf []byte
-		if isNil, _ := isNilDriverValuer(elem); !isNil {
+		isNil, callNilDriverValuer := isNilDriverValuer(elem)
+		if !isNil {
 			elemType := reflect.TypeOf(elem)
 			if lastElemType != elemType {
 				lastElemType = elemType
@@ -205,6 +222,11 @@ func (p *encodePlanArrayCodecBinary) Encode(value any, buf []byte) (newBuf []byt
 				}
 			}
 			elemBuf, err = encodePlan.Encode(elem, buf)
+			if err != nil {
+				return nil, err
+			}
+		} else if callNilDriverValuer {
+			elemBuf, err = (&encodePlanDriverValuer{m: p.m, oid: p.ac.ElementType.OID, formatCode: BinaryFormatCode}).Encode(elem, buf)
 			if err != nil {
 				return nil, err
 			}
@@ -249,10 +271,19 @@ func (c *ArrayCodec) PlanScan(m *Map, oid uint32, format int16, target any) Scan
 }
 
 func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array ArraySetter) error {
+	r := pgio.NewReader(src)
 	var arrayHeader arrayHeader
-	rp, err := arrayHeader.DecodeBinary(m, src)
+	err := arrayHeader.DecodeBinary(r)
 	if err != nil {
 		return err
+	}
+
+	elementCount := cardinality(arrayHeader.Dimensions)
+	// Each element carries at minimum a 4-byte length header, so elementCount cannot exceed the
+	// remaining bytes / 4. This bounds the allocation in SetDimensions and the loop below against a
+	// malicious server claiming huge dimensions in a small message.
+	if maxElements := r.Remaining() / 4; elementCount > maxElements {
+		return fmt.Errorf("array claims %d elements but only %d bytes remain", elementCount, r.Remaining())
 	}
 
 	err = array.SetDimensions(arrayHeader.Dimensions)
@@ -260,9 +291,8 @@ func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array Arr
 		return err
 	}
 
-	elementCount := cardinality(arrayHeader.Dimensions)
 	if elementCount == 0 {
-		return nil
+		return r.Finish()
 	}
 
 	elementScanPlan := c.ElementType.Codec.PlanScan(m, c.ElementType.OID, BinaryFormatCode, array.ScanIndex(0))
@@ -272,12 +302,9 @@ func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array Arr
 
 	for i := range elementCount {
 		elem := array.ScanIndex(i)
-		elemLen := int(int32(binary.BigEndian.Uint32(src[rp:])))
-		rp += 4
-		var elemSrc []byte
-		if elemLen >= 0 {
-			elemSrc = src[rp : rp+elemLen]
-			rp += elemLen
+		elemSrc, _ := r.Value()
+		if err := r.Err(); err != nil {
+			return fmt.Errorf("array element %d: %w", i, err)
 		}
 		err = elementScanPlan.Scan(elemSrc, elem)
 		if err != nil {
@@ -285,13 +312,19 @@ func (c *ArrayCodec) decodeBinary(m *Map, arrayOID uint32, src []byte, array Arr
 		}
 	}
 
-	return nil
+	return r.Finish()
 }
 
 func (c *ArrayCodec) decodeText(m *Map, arrayOID uint32, src []byte, array ArraySetter) error {
-	uta, err := parseUntypedTextArray(string(src))
+	uta, err := parseUntypedTextArray(string(src), c.delimiter())
 	if err != nil {
 		return err
+	}
+
+	// The element loop below indexes the value sized by SetDimensions, so the
+	// dimensions and the parsed elements must agree.
+	if elementCount := cardinality(uta.Dimensions); elementCount != len(uta.Elements) {
+		return fmt.Errorf("array dimensions describe %d elements but %d were parsed", elementCount, len(uta.Elements))
 	}
 
 	err = array.SetDimensions(uta.Dimensions)
@@ -391,10 +424,8 @@ func isRagged(slice reflect.Value) bool {
 	for i := range sliceLen {
 		if i == 0 {
 			innerLen = slice.Index(i).Len()
-		} else {
-			if slice.Index(i).Len() != innerLen {
-				return true
-			}
+		} else if slice.Index(i).Len() != innerLen {
+			return true
 		}
 		if isRagged(slice.Index(i)) {
 			return true

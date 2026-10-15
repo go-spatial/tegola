@@ -1,222 +1,203 @@
 package driver
 
-// TODO Sniffer
-/*
-sniffer:
-- complete for go-hdb: especially call with table parameters
-- delete caches for statement and result
-- don't ignore part read error
-  - example: read scramsha256InitialReply got silently stuck because methodname check failed
-- test with python client and handle surprises
-  - analyze for not ignoring part read errors
-*/
-
 import (
-	"bufio"
+	"context"
+	"errors"
 	"io"
+	"log/slog"
 	"net"
-	"sync"
 
 	p "github.com/SAP/go-hdb/driver/internal/protocol"
+	"github.com/SAP/go-hdb/driver/internal/protocol/auth"
 	"github.com/SAP/go-hdb/driver/unicode/cesu8"
 )
 
 // A Sniffer is a simple proxy for logging hdb protocol requests and responses.
 type Sniffer struct {
+	logger *slog.Logger
 	conn   net.Conn
 	dbConn net.Conn
-
-	//client
-	clRd *bufio.Reader
-	clWr *bufio.Writer
-	//database
-	dbRd *bufio.Reader
-	dbWr *bufio.Writer
-
-	// reader
-	upRd   *sniffUpReader
-	downRd *sniffDownReader
 }
 
 // NewSniffer creates a new sniffer instance. The conn parameter is the net.Conn connection, where the Sniffer
-// is listening for hdb protocol calls. The dbAddr is the hdb host port address in "host:port" format.
+// is listening for hdb protocol calls. The dbConn is the hdb connection to the database.
 func NewSniffer(conn net.Conn, dbConn net.Conn) *Sniffer {
-
-	//TODO - review setting values here
-	//protocolTraceFlag.Set("true")
-
-	s := &Sniffer{
+	return &Sniffer{
+		logger: slog.Default().With(slog.String("conn", conn.RemoteAddr().String())),
 		conn:   conn,
 		dbConn: dbConn,
-		// buffered write to client
-		clWr: bufio.NewWriter(conn),
-		// buffered write to db
-		dbWr: bufio.NewWriter(dbConn),
 	}
-
-	//read from client connection and write to db buffer
-	s.clRd = bufio.NewReader(io.TeeReader(conn, s.dbWr))
-	//read from db and write to client connection buffer
-	s.dbRd = bufio.NewReader(io.TeeReader(dbConn, s.clWr))
-
-	s.upRd = newSniffUpReader(s.clRd)
-	s.downRd = newSniffDownReader(s.dbRd)
-
-	return s
 }
 
-// Run starts the protocol request and response logging.
-func (s *Sniffer) Run() error {
-	defer s.dbConn.Close()
-	defer s.conn.Close()
+type snifferReaderState struct {
+	resultFields    []*p.ResultField
+	parameterFields []*p.ParameterField
+	connectOptions  *p.ConnectOptions
+	isClient        bool
+	authCount       int
+	authMethod      auth.Method // selected auth method
+}
 
-	if err := s.upRd.pr.ReadProlog(); err != nil {
-		return err
-	}
-	if err := s.dbWr.Flush(); err != nil {
-		return err
-	}
-	if err := s.downRd.pr.ReadProlog(); err != nil {
-		return err
-	}
-	if err := s.clWr.Flush(); err != nil {
-		return err
-	}
-
-	for {
-		//up stream
-		if err := s.upRd.readMsg(); err != nil {
-			return err // err == io.EOF: connection closed by client
+func filterFields(fields []*p.ParameterField, out bool) []*p.ParameterField {
+	rv := make([]*p.ParameterField, 0, len(fields))
+	for _, f := range fields {
+		if (out && f.Out()) || (!out && f.In()) {
+			rv = append(rv, f)
 		}
-		if err := s.dbWr.Flush(); err != nil {
+	}
+	return rv
+}
+
+func readMsg(ctx context.Context, prd *p.Reader, state *snifferReaderState, params map[p.StatementID][]*p.ParameterField, lob *lobLocator) error {
+	var stmtID p.StatementID // statement id of the current message, if present
+	for pi, err := range prd.Parts(ctx) {
+		if err != nil {
 			return err
 		}
-		//down stream
-		if err := s.downRd.readMsg(); err != nil {
-			if _, ok := err.(*p.HdbErrors); !ok { //if hdbErrors continue
-				return err
-			}
-		}
-		if err := s.clWr.Flush(); err != nil {
-			return err
-		}
-	}
-}
-
-type sniffReader struct {
-	pr *p.Reader
-}
-
-func newSniffReader(upStream bool, rd *bufio.Reader) *sniffReader {
-	return &sniffReader{pr: p.NewReader(upStream, rd, cesu8.DefaultDecoder)}
-}
-
-type sniffUpReader struct{ *sniffReader }
-
-func newSniffUpReader(rd *bufio.Reader) *sniffUpReader {
-	return &sniffUpReader{sniffReader: newSniffReader(true, rd)}
-}
-
-type resMetaCache struct {
-	mu    sync.RWMutex
-	cache map[uint64]*p.ResultMetadata
-}
-
-func newResMetaCache() *resMetaCache {
-	return &resMetaCache{cache: make(map[uint64]*p.ResultMetadata)}
-}
-
-func (c *resMetaCache) put(stmtID uint64, resMeta *p.ResultMetadata) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cache[stmtID] = resMeta
-}
-
-type prmMetaCache struct {
-	mu    sync.RWMutex
-	cache map[uint64]*p.ParameterMetadata
-}
-
-func newPrmMetaCache() *prmMetaCache {
-	return &prmMetaCache{cache: make(map[uint64]*p.ParameterMetadata)}
-}
-
-func (c *prmMetaCache) put(stmtID uint64, prmMeta *p.ParameterMetadata) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cache[stmtID] = prmMeta
-}
-
-func (c *prmMetaCache) get(stmtID uint64) *p.ParameterMetadata {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.cache[stmtID]
-}
-
-var _resMetaCache = newResMetaCache()
-var _prmMetaCache = newPrmMetaCache()
-
-func (r *sniffUpReader) readMsg() error {
-	var stmtID uint64
-
-	return r.pr.IterateParts(func(ph *p.PartHeader) {
-		switch ph.PartKind {
-		case p.PkStatementID:
-			r.pr.Read((*p.StatementID)(&stmtID))
-		// case pkResultMetadata:
-		// 	r.pr.read(resMeta)
-		case p.PkParameters:
-			prmMeta := _prmMetaCache.get(stmtID)
-			prms := &p.InputParameters{InputFields: prmMeta.ParameterFields} // TODO only input parameters
-			r.pr.Read(prms)
-		}
-	})
-}
-
-type sniffDownReader struct {
-	*sniffReader
-	resMeta *p.ResultMetadata
-	prmMeta *p.ParameterMetadata
-}
-
-func newSniffDownReader(rd *bufio.Reader) *sniffDownReader {
-	return &sniffDownReader{
-		sniffReader: newSniffReader(false, rd),
-		resMeta:     &p.ResultMetadata{},
-		prmMeta:     &p.ParameterMetadata{},
-	}
-}
-
-func (r *sniffDownReader) readMsg() error {
-	var stmtID uint64
-	//resMeta := &resultMetadata{}
-	//prmMeta := &parameterMetadata{}
-
-	if err := r.pr.IterateParts(func(ph *p.PartHeader) {
-		switch ph.PartKind {
-		case p.PkStatementID:
-			r.pr.Read((*p.StatementID)(&stmtID))
-		case p.PkResultMetadata:
-			r.pr.Read(r.resMeta)
-		case p.PkParameterMetadata:
-			r.pr.Read(r.prmMeta)
-		case p.PkOutputParameters:
-			outFields := []*p.ParameterField{}
-			for _, f := range r.prmMeta.ParameterFields {
-				if f.Out() {
-					outFields = append(outFields, f)
+		switch pi.Header.Kind() {
+		case p.PkError:
+			err = pi.ReadHDBErrors(ctx)
+			if err != nil {
+				// HdbErrors result must not abort, a real decode error must.
+				if _, ok := errors.AsType[*p.HdbErrors](err); ok {
+					err = nil
 				}
 			}
-			outPrms := &p.OutputParameters{OutputFields: outFields}
-			r.pr.Read(outPrms)
+		case p.PkStatementID:
+			err = pi.ReadPart(ctx, &stmtID)
+		case p.PkResultMetadata:
+			meta := new(p.ResultMetadata)
+			if err = pi.ReadPart(ctx, meta); err == nil {
+				state.resultFields = meta.ResultFields
+			}
 		case p.PkResultset:
-			resSet := &p.Resultset{ResultFields: r.resMeta.ResultFields}
-			r.pr.Read(resSet)
+			err = snifferReadResultPart(ctx, pi, &p.Resultset{ResultFields: state.resultFields})
+		case p.PkParameterMetadata:
+			meta := new(p.ParameterMetadata)
+			if err = pi.ReadPart(ctx, meta); err == nil {
+				state.parameterFields = meta.ParameterFields
+				params[stmtID] = meta.ParameterFields
+			}
+		case p.PkConnectOptions:
+			co := new(p.ConnectOptions)
+			if err = pi.ReadPart(ctx, co); err == nil {
+				state.connectOptions = co // negotiate compression and data format version
+			}
+		case p.PkOutputParameters:
+			err = snifferReadResultPart(ctx, pi, &p.OutputParameters{OutputFields: filterFields(state.parameterFields, true)})
+		case p.PkParameters:
+			if fields, ok := params[stmtID]; ok && len(fields) != 0 {
+				err = pi.ReadPart(ctx, &p.InputParameters{InputFields: filterFields(fields, false)})
+			} else {
+				err = pi.SkipPart(ctx) // no metadata -> cannot decode
+			}
+		case p.PkReadLobRequest:
+			req := new(p.ReadLobRequest)
+			if err = pi.ReadPart(ctx, req); err == nil {
+				lob.id, lob.set = req.ID, true
+			}
+		case p.PkReadLobReply:
+			if lob.set {
+				err = pi.ReadPart(ctx, p.NewReadLobReply(lob.id))
+			} else {
+				err = pi.SkipPart(ctx) // no request -> cannot decode
+			}
+		case p.PkAuthentication:
+			state.authCount++
+			switch {
+			case state.isClient && state.authCount == 1:
+				err = pi.ReadPart(ctx, new(p.AuthInitRequest))
+			case state.isClient && state.authCount == 2:
+				err = pi.ReadPart(ctx, new(p.AuthFinalRequest))
+			case !state.isClient && state.authCount == 1:
+				rep := new(p.AuthInitReply)
+				if err = pi.ReadPart(ctx, rep); err == nil {
+					state.authMethod = rep.Method // selected method, decodes the final reply
+				}
+			case !state.isClient && state.authCount == 2 && state.authMethod != nil:
+				err = pi.ReadPart(ctx, &p.AuthFinalReply{Method: state.authMethod})
+			default:
+				err = pi.SkipPart(ctx)
+			}
+			// Verification errors (ErrAuthVerifyFailed) must not abort, a real decode error must.
+			if err != nil && errors.Is(err, auth.ErrAuthVerifyFailed) {
+				err = nil
+			}
+		default:
+			err = pi.SkipPart(ctx)
 		}
-	}); err != nil {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// bridge forwards the remaining messages of both directions without tracing.
+// It is used once compression is negotiated as compressed packets cannot be traced.
+func (s *Sniffer) bridge(clientRd, dbRd *p.Reader) error {
+	s.logger.Info("connection compression negotiated - bridged mode, tracing disabled")
+	for {
+		if err := clientRd.SkipMessage(); err != nil {
+			return err
+		}
+		if err := dbRd.SkipMessage(); err != nil {
+			return err
+		}
+	}
+}
+
+type lobLocator struct {
+	id  p.LocatorID
+	set bool
+}
+
+// Run starts the sniffer.
+// Both directions are processed sequentially in a single routine, mirroring
+// the server's strict request-reply cycle.
+func (s *Sniffer) Run() error {
+	ctx := context.Background()
+	readerAttrs := p.NewReaderAttrs(true, s.logger, cesu8.DefaultDecoder, defaultLobChunkSize, false, nil)
+
+	c2d := io.TeeReader(s.conn, s.dbConn) // client request -> database
+	d2c := io.TeeReader(s.dbConn, s.conn) // database reply -> client
+
+	clientRd := p.NewClientReader(c2d, readerAttrs)
+	dbRd := p.NewDBReader(d2c, readerAttrs)
+
+	clientState := &snifferReaderState{isClient: true}
+	dbState := &snifferReaderState{}
+	params := make(map[p.StatementID][]*p.ParameterField)
+	lob := &lobLocator{}
+
+	if err := clientRd.ReadProlog(ctx); err != nil {
 		return err
 	}
-	_resMetaCache.put(stmtID, r.resMeta)
-	_prmMetaCache.put(stmtID, r.prmMeta)
-	return nil
+	if err := dbRd.ReadProlog(ctx); err != nil {
+		return err
+	}
+
+	compression := false
+	for {
+		if err := readMsg(ctx, clientRd, clientState, params, lob); err != nil {
+			return err
+		}
+		if co := clientState.connectOptions; co != nil {
+			compression = compression || co.CompressionLevelAndFlagsOrZero()&p.CoCompressionLZ4Supported != 0
+			clientState.connectOptions = nil
+		}
+		if err := readMsg(ctx, dbRd, dbState, params, lob); err != nil {
+			return err
+		}
+		if co := dbState.connectOptions; co != nil {
+			if co.DataFormatVersion2OrZero() == p.DfvLevel1 {
+				readerAttrs.SetAlphanumDfv1(true)
+			}
+			compression = compression || co.CompressionLevelAndFlagsOrZero()&p.CoCompressionLZ4Supported != 0
+			dbState.connectOptions = nil
+		}
+		if compression {
+			return s.bridge(clientRd, dbRd)
+		}
+	}
 }

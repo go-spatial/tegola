@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/provider"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/provider"
 )
 
 const Name = "debug"
@@ -22,7 +22,7 @@ const (
 )
 
 func init() {
-	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, nil)
+	_ = provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, nil)
 }
 
 // NewProvider Setups a debug provider. there are not currently any config params supported

@@ -8,11 +8,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/alexeydott/geom/slippy"
+	gdcmd "github.com/alexeydott/tegola/internal/cmd"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/provider"
 	"github.com/go-spatial/cobra"
-	"github.com/go-spatial/geom/slippy"
-	gdcmd "github.com/go-spatial/tegola/internal/cmd"
-	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/provider"
 )
 
 var (
@@ -85,10 +85,10 @@ func tileListCommand(cmd *cobra.Command, args []string) (err error) {
 	var in io.Reader = os.Stdin
 	if tileListFile != nil {
 		in = tileListFile
-		defer tileListFile.Close()
+		defer func() { _ = tileListFile.Close() }()
 	}
 
-	log.Info("zoom list: ", zooms)
+	log.Infof("zoom list: %v", zooms)
 
 	tilechannel := generateTilesForTileList(ctx, in, explicit, zooms, format)
 

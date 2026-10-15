@@ -1,5 +1,4 @@
 //go:build cgo
-// +build cgo
 
 package gpkg
 
@@ -9,9 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/geom/cmp"
+	"github.com/alexeydott/tegola/dict"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -23,21 +22,41 @@ var (
 	GPKGApeldoornFilePath    = "testdata/apeldoorn.gpkg"
 )
 
-func TestExtractColsAndPKFromSQL(t *testing.T) {
+func TestTableColumnsAndPK(t *testing.T) {
 	type tcase struct {
-		sqlFrom      string
-		sql          string
+		tableName    string
+		createSQL    string
 		expectedCols []string
 		expectedPK   string
+		expectErr    bool
 	}
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-			cols, pk := extractColsAndPKFromSQL(tc.sql)
+			db, err := sql.Open("sqlite3", ":memory:")
+			if err != nil {
+				t.Fatalf("problem opening in-memory db: %v", err)
+			}
+			defer func() { _ = db.Close() }()
+
+			if _, err := db.Exec(tc.createSQL); err != nil {
+				t.Fatalf("problem creating table: %v", err)
+			}
+
+			cols, pk, err := tableColumnsAndPK(db, tc.tableName)
+			if tc.expectErr {
+				if err == nil {
+					t.Fatalf("tableColumnsAndPK: expected error got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("tableColumnsAndPK: expected nil got %v", err)
+			}
 			if !reflect.DeepEqual(cols, tc.expectedCols) {
 				t.Errorf("extract col, expected %v got %v", tc.expectedCols, cols)
 			}
-			if pk != tc.expectedPK {
+			if len(pk) != 1 || pk[0] != tc.expectedPK {
 				t.Errorf("extract PK, expected %v got %v", tc.expectedPK, pk)
 			}
 		}
@@ -45,111 +64,17 @@ func TestExtractColsAndPKFromSQL(t *testing.T) {
 
 	tests := map[string]tcase{
 		"athens_boundary": {
-			sql: `CREATE TABLE 'boundary' ( "id" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON)`,
+			tableName: "boundary",
+			createSQL: `CREATE TABLE 'boundary' ( "id" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON)`,
 			expectedCols: []string{
 				"geom",
 				"id",
 			},
 			expectedPK: "id",
 		},
-		"athens_harbours_points": {
-			sql: `CREATE TABLE 'harbours_points' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" POINT, "osm_id" TEXT, "harbour" TEXT, "name" TEXT, "leisure" TEXT, "landuse" TEXT)`,
-			expectedCols: []string{
-				"fid",
-				"geom",
-				"harbour",
-				"landuse",
-				"leisure",
-				"name",
-				"osm_id",
-			},
-			expectedPK: "fid",
-		},
-		"athens_natural_polygons": {
-			sql: `CREATE TABLE 'natural_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "natural" TEXT, "name" TEXT, "hazard_prone" TEXT)`,
-			expectedCols: []string{
-				"fid",
-				"geom",
-				"hazard_prone",
-				"name",
-				"natural",
-				"osm_id",
-				"osm_way_id",
-			},
-			expectedPK: "fid",
-		},
-		"athens_leisure_polygons": {
-			sql: `CREATE TABLE 'leisure_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "leisure" TEXT, "name" TEXT)`,
-			expectedCols: []string{
-				"fid",
-				"geom",
-				"leisure",
-				"name",
-				"osm_id",
-				"osm_way_id",
-			},
-			expectedPK: "fid",
-		},
-		"athens_roads_lines": {
-			sql: `CREATE TABLE 'roads_lines' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTILINESTRING, "osm_id" TEXT, "highway" TEXT, "barrier" TEXT, "ford" TEXT, "hazard_prone" TEXT, "name" TEXT, "traffic_calming" TEXT, "tunnel" TEXT, "layer" TEXT, "bicycle_road" TEXT, "z_index" TEXT)`,
-			expectedCols: []string{
-				"barrier",
-				"bicycle_road",
-				"fid",
-				"ford",
-				"geom",
-				"hazard_prone",
-				"highway",
-				"layer",
-				"name",
-				"osm_id",
-				"traffic_calming",
-				"tunnel",
-				"z_index",
-			},
-			expectedPK: "fid",
-		},
-		"athens_aviation_polygons": {
-			sql: `CREATE TABLE 'aviation_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "aeroway" TEXT, "name" TEXT, "surface" TEXT, "source" TEXT, "building" TEXT, "icao" TEXT, "iata" TEXT, "type" TEXT)`,
-			expectedCols: []string{
-				"aeroway",
-				"building",
-				"fid",
-				"geom",
-				"iata",
-				"icao",
-				"name",
-				"osm_id",
-				"osm_way_id",
-				"source",
-				"surface",
-				"type",
-			},
-			expectedPK: "fid",
-		},
-		"athens_landuse_polygons": {
-			sql: `CREATE TABLE 'landuse_polygons' ( "fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" MULTIPOLYGON, "osm_id" TEXT, "osm_way_id" TEXT, "landuse" TEXT, "name" TEXT)`,
-			expectedCols: []string{
-				"fid",
-				"geom",
-				"landuse",
-				"name",
-				"osm_id",
-				"osm_way_id",
-			},
-			expectedPK: "fid",
-		},
-		"athens_land_polygons": {
-			sql: `CREATE TABLE 'land_polygons' ( "ogc_fid" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" POLYGON, "fid" INTEGER)`,
-			expectedCols: []string{
-				"fid",
-				"geom",
-				"ogc_fid",
-			},
-			expectedPK: "ogc_fid",
-		},
 		"column without quotes": {
-			sql: `CREATE TABLE tablename ( id INTEGER primary Key AUTOINCREMENT, "geom" BLOB, value REAL)`,
+			tableName: "tablename",
+			createSQL: `CREATE TABLE tablename ( id INTEGER primary Key AUTOINCREMENT, "geom" BLOB, value REAL)`,
 			expectedCols: []string{
 				"geom",
 				"id",
@@ -158,7 +83,8 @@ func TestExtractColsAndPKFromSQL(t *testing.T) {
 			expectedPK: "id",
 		},
 		"column with defaults": {
-			sql: `CREATE TABLE tablename ( "id" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" BLOB, timestamp DATE DEFAULT (datetime('now','localtime')) , value REAL)`,
+			tableName: "tablename2",
+			createSQL: `CREATE TABLE tablename2 ( "id" INTEGER PRIMARY KEY AUTOINCREMENT, "geom" BLOB, timestamp DATE DEFAULT (datetime('now','localtime')) , value REAL)`,
 			expectedCols: []string{
 				"geom",
 				"id",
@@ -168,12 +94,8 @@ func TestExtractColsAndPKFromSQL(t *testing.T) {
 			expectedPK: "id",
 		},
 		"multi_line": {
-			sql: `CREATE TABLE "gps_points" (
-  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  "geom" POINT,
-  "Lat" REAL,
-  "Lon" REAL
-)`,
+			tableName: "gps_points",
+			createSQL: "CREATE TABLE \"gps_points\" (\n  \"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\n  \"geom\" POINT,\n  \"Lat\" REAL,\n  \"Lon\" REAL\n)",
 			expectedCols: []string{
 				"Lat",
 				"Lon",
@@ -182,13 +104,17 @@ func TestExtractColsAndPKFromSQL(t *testing.T) {
 			},
 			expectedPK: "id",
 		},
+		"missing table": {
+			tableName: "does_not_exist",
+			createSQL: `CREATE TABLE tablename3 ( id INTEGER PRIMARY KEY, "geom" BLOB)`,
+			expectErr: true,
+		},
 	}
 
 	for testName, tc := range tests {
 		t.Run(testName, fn(tc))
 	}
 }
-
 func ftdEqual(tablename string, ftd, ftdExpected featureTableDetails) (bool, string) {
 	if !reflect.DeepEqual(ftdExpected.colNames, ftd.colNames) {
 		return false, fmt.Sprintf("%v colNames, expected %v got %v", tablename, ftdExpected.colNames, ftd.colNames)
@@ -224,20 +150,26 @@ func TestFeatureTableMetaData(t *testing.T) {
 			if err != nil {
 				panic(fmt.Sprintf("problem opening gpkg %v, err: %v", tc.gpkgPath, err))
 			}
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			ftmd, err := featureTableMetaData(db)
 			if err != nil {
 				t.Errorf("unexpected error, expected nil got %v", err)
 			}
 
-			for tname, ftd := range ftmd {
+			for tname, ftds := range ftmd {
 				expectedFtd, ok := tc.expectedFtd[tname]
 				if !ok {
 					t.Errorf(" %v in featureTableDetails, expected true got false", tname)
+					continue
 				}
-				if pass, errstr := ftdEqual(tname, ftd, expectedFtd); !pass {
-					t.Error(errstr)
+				if len(ftds) != 1 {
+					t.Errorf("%v geometry columns = %v, expected 1 (fixtures carry a single geometry column per table)", tname, len(ftds))
+				}
+				for _, ftd := range ftds {
+					if pass, errstr := ftdEqual(tname, ftd, expectedFtd); !pass {
+						t.Error(errstr)
+					}
 				}
 			}
 		}

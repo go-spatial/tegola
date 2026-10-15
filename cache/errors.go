@@ -21,6 +21,19 @@ func (e ErrInvalidFileKey) Error() string {
 	return fmt.Sprintf("cache: invalid fileKey (%v). unable to parse (%v) value (%v) into int", e.path, e.key, e.val)
 }
 
+// ErrInvalidKeyName is returned when a map or layer name component parsed from
+// a cache key path is empty or a path element ("." or ".."); joining such a
+// key would escape or silently collapse within the cache root (P5-17).
+type ErrInvalidKeyName struct {
+	path string
+	key  string
+	val  string
+}
+
+func (e ErrInvalidKeyName) Error() string {
+	return fmt.Sprintf("cache: invalid fileKey (%v). (%v) name (%q) must not be empty, %q or %q", e.path, e.key, e.val, ".", "..")
+}
+
 type ErrGettingFromCache struct {
 	Err       error
 	CacheType string

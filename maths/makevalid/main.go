@@ -4,16 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"runtime"
 	"sort"
 	"sync"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/hitmap"
-	"github.com/go-spatial/tegola/maths/makevalid/plyg"
-	"github.com/go-spatial/tegola/maths/points"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths"
+	"github.com/alexeydott/tegola/maths/hitmap"
+	"github.com/alexeydott/tegola/maths/makevalid/plyg"
+	"github.com/alexeydott/tegola/maths/points"
 )
 
 var numWorkers = 1
@@ -102,7 +102,7 @@ func logOutBuildRings(pt2maxy map[maths.Pt]int64, xs []float64, x2pts map[float6
 		output = fmt.Sprintf("xs := %#v\n", xs)
 		output += fmt.Sprintf("x2pts := %#v\n", x2pts)
 		output += fmt.Sprintf("Pt2MaxY := %#v\n", pt2maxy)
-		output += fmt.Sprintf("Cols := []struct{ idx int,  col1 []maths.Pt, col2 []maths.Pt}{")
+		output += "Cols := []struct{ idx int,  col1 []maths.Pt, col2 []maths.Pt}{"
 		for i := 0; i < len(xs)-1; i++ {
 			output += fmt.Sprintf("{idx: %[1]v, col1: %v, col2: %v}, ", i, x2pts[xs[i]], x2pts[xs[i+1]])
 		}
@@ -159,11 +159,14 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, p
 	if len(plygs) == 0 {
 		return nil, nil
 	}
+	if cpbx == nil {
+		cpbx = plygsToBoundingBox(plygs)
+	}
 	plygsbb := plygsToBoundingBox(plygs)
 	clipbox, intersect := cpbx.Intersect(plygsbb)
 	if !intersect {
 		if debug {
-			log.Println("clip area too small: Clipbox:", cpbx)
+			log.Debugf("clip area too small: Clipbox: %v", cpbx)
 		}
 		return nil, nil
 	}
@@ -175,14 +178,14 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, p
 
 	var lines []maths.Line
 	if debug {
-		log.Println("Destructure5 called.")
+		log.Debug("Destructure5 called.")
 		defer func() {
 			if debug {
-				log.Println("Destructure5 ended.")
+				log.Debug("Destructure5 ended.")
 			}
 		}()
-		log.Printf("segments /*(%v)*/ := %#v", len(segments), segments)
-		log.Printf("clipbox := %#v", clipbox)
+		log.Debugf("segments /*(%v)*/ := %#v", len(segments), segments)
+		log.Debugf("clipbox := %#v", clipbox)
 	}
 
 	flines, err := splitSegments(ctx, segments, clipbox)
@@ -191,13 +194,15 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, p
 	}
 
 	if debug {
-		log.Printf("flines := %#v", flines)
+		log.Debugf("flines := %#v", flines)
 	}
 
 	pts := allPointsForSegments(flines)
 	xs := sortUniqueF64(allCoordForPts(0, pts...))
 
-	// Add lines at each x going from the miny to maxy.
+	// Add lines at each x going from the miny to maxy. The cut lines are
+	// appended after the clipped input segments below.
+	numSegs := len(flines)
 	for i := range xs {
 		flines = append(flines, [2][2]float64{{xs[i], clipbox.MinY()}, {xs[i], clipbox.MaxY()}})
 	}
@@ -211,8 +216,23 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, p
 	// The split points should now include the columns. We need to associate
 	// each point with the value of their x, and the max y value to the next
 	// x.
-
-	colptmap := _NewColPtMap(splitPts, clipbox.MaxY())
+	//
+	colPts := make([][]maths.Pt, 0, len(splitPts))
+	for i, row := range splitPts {
+		// Clipbox edge segments are construction artifacts unless the
+		// original polygon actually contains that part of its boundary.
+		// Keep real polygon boundaries that happen to lie exactly on the
+		// clipping edge; dropping those changes the polygon topology.
+		if i < numSegs &&
+			isClipboxEdgeSegment(flines[i], clipbox) &&
+			!isOriginalClipboxEdgeSegment(flines[i], plygs) {
+			continue
+		}
+		if len(row) > 0 {
+			colPts = append(colPts, row)
+		}
+	}
+	colptmap := _NewColPtMap(colPts, clipbox.MaxY())
 
 	x2pts := colptmap.X2Pt
 	pt2MaxY := colptmap.Pt2MaxY
@@ -234,7 +254,7 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, p
 		logout := fmt.Sprintf("clipbox := %v\n", clipbox)
 		logout += fmt.Sprintf("plygs := %v\n", plygs)
 		logout += logOutBuildRings(pt2MaxY, xs, x2pts)
-		log.Println("Going to buld out rings:", logout)
+		log.Debugf("Going to buld out rings: %v", logout)
 	}
 
 	var worker = func(id int, ctx context.Context) {
@@ -252,15 +272,16 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, p
 					continue
 				}
 			}
-			ringCols[i], err = plyg.BuildRingCol(
+			ringCol, buildErr := plyg.BuildRingCol(
 				ctx,
 				hm,
 				x2pts[xs[i]],
 				x2pts[xs[i+1]],
 				pt2MaxY,
 			)
-			if err != nil {
-				switch err {
+			ringCols[i] = ringCol
+			if buildErr != nil {
+				switch buildErr {
 				case context.Canceled:
 					cancelled = true
 				default:
@@ -268,7 +289,7 @@ func destructure5(ctx context.Context, hm hitmap.Interface, cpbx *geom.Extent, p
 						logout := fmt.Sprintf("clipbox := %v\n", clipbox)
 						logout += fmt.Sprintf("plygs := %v\n", plygs)
 						logout += logOutBuildRings(pt2MaxY, xs, x2pts)
-						log.Println(logout+"For ", i, "Got error (", err, ") trying to process ")
+						log.Debugf("%vFor  %v Got error ( %v ) trying to process ", logout, i, buildErr)
 					}
 					//panic(err)
 				}
@@ -550,12 +571,12 @@ func constructPolygon(lns []maths.Line) (rpts [][]maths.Pt) {
 	for i := range lns {
 		lines[i] = maths.Line{
 			maths.Pt{
-				float64(int64(lns[i][0].X)),
-				float64(int64(lns[i][0].Y)),
+				X: float64(int64(lns[i][0].X)),
+				Y: float64(int64(lns[i][0].Y)),
 			},
 			maths.Pt{
-				float64(int64(lns[i][1].X)),
-				float64(int64(lns[i][1].Y)),
+				X: float64(int64(lns[i][1].X)),
+				Y: float64(int64(lns[i][1].Y)),
 			},
 		}
 	}
@@ -690,4 +711,42 @@ func fixup(pts [][]maths.Pt) {
 		}
 	}
 
+}
+
+// isClipboxEdgeSegment reports whether the segment lies exactly on one of
+// the clipbox's boundary edges (horizontal top/bottom or vertical
+// left/right).
+func isClipboxEdgeSegment(ln [2][2]float64, clipbox *geom.Extent) bool {
+	if ln[0][1] == ln[1][1] && (ln[0][1] == clipbox.MinY() || ln[0][1] == clipbox.MaxY()) {
+		return true
+	}
+	if ln[0][0] == ln[1][0] && (ln[0][0] == clipbox.MinX() || ln[0][0] == clipbox.MaxX()) {
+		return true
+	}
+	return false
+}
+
+// isOriginalClipboxEdgeSegment reports whether a segment on a clipbox edge
+// is covered by an input polygon boundary. The clipbox itself is added to the
+// segment set before splitting, so coordinate-only checks cannot distinguish
+// its synthetic edge from a real polygon edge.
+func isOriginalClipboxEdgeSegment(ln [2][2]float64, polygons [][]maths.Line) bool {
+	segment := maths.NewLineFloat64(ln)
+	for _, polygon := range polygons {
+		for _, boundary := range polygon {
+			if segment.IsHorizontal() && boundary.IsHorizontal() &&
+				segment[0].Y == boundary[0].Y &&
+				boundary.InBetween(segment[0]) &&
+				boundary.InBetween(segment[1]) {
+				return true
+			}
+			if segment.IsVertical() && boundary.IsVertical() &&
+				segment[0].X == boundary[0].X &&
+				boundary.InBetween(segment[0]) &&
+				boundary.InBetween(segment[1]) {
+				return true
+			}
+		}
+	}
+	return false
 }

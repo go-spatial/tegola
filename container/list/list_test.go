@@ -32,16 +32,12 @@ func checkListPointers(t *testing.T, desc string, l *List, es []*Element) {
 	// len(es) > 0
 
 	// check internal and external prev/ext connection
-	var ok bool
 	for i, e := range es {
 		prev := root
 		Prev := (Elementer)(nil)
 		if i > 0 {
 			prev = es[i-1]
-			Prev, ok = prev.(Elementer)
-			if !ok {
-				t.Errorf("%s: Unable to convert es[%d-1](%T) to type *Element, ", desc, i, prev)
-			}
+			Prev = prev
 		}
 
 		if p := e.Prev(); p != Prev {
@@ -52,10 +48,7 @@ func checkListPointers(t *testing.T, desc string, l *List, es []*Element) {
 		Next := (Elementer)(nil)
 		if i < len(es)-1 {
 			next = es[i+1]
-			Next, ok = next.(Elementer)
-			if !ok {
-				t.Errorf("%s: Unable to convert es[%d+1](%T) to type *Element, ", desc, i, next)
-			}
+			Next = next
 		}
 		if n := e.Next(); n != Next {
 			t.Errorf("%s: elt[%d](%p).Next() = %p, want %p", desc, i, e, n, next)
@@ -250,7 +243,7 @@ func TestMove(t *testing.T) {
 
 	l.MoveBefore(e2, e4)
 	checkListPointers(t, "Check 4 element list before e2,e4", l, []*Element{e1, e3, e2, e4})
-	e1, e2, e3, e4 = e1, e3, e2, e4
+	e2, e3 = e3, e2
 
 	l.MoveBefore(e4, e1)
 	checkListPointers(t, "Check 4 element list before e4,e1", l, []*Element{e4, e1, e2, e3})
@@ -258,11 +251,10 @@ func TestMove(t *testing.T) {
 
 	l.MoveAfter(e4, e1)
 	checkListPointers(t, "Check 4 element list after e4,e1", l, []*Element{e1, e4, e2, e3})
-	e1, e2, e3, e4 = e1, e4, e2, e3
+	e2, e3, e4 = e4, e2, e3
 
 	l.MoveAfter(e2, e3)
 	checkListPointers(t, "Check 4 element list after e2,e3", l, []*Element{e1, e3, e2, e4})
-	e1, e2, e3, e4 = e1, e3, e2, e4
 
 }
 

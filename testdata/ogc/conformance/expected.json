@@ -1,0 +1,12 @@
+{
+  "source": "Literal fixture.sql rows; independent membership values",
+  "xy_ids": [10, 20, 30, 40, 50, 60],
+  "xy_n_eq_1": [10],
+  "xy_n_is_null": [40],
+  "xy_datetime_epoch": [10, 30, 40, 50, 60],
+  "xy_no_temporal_datetime_future": [10, 20, 30, 40, 50, 60],
+  "xy_bbox_0_0_1_1": [40],
+  "xyz_height_23": [10, 20, 40],
+  "xyz_epsg4979_point10": [30, 15, 23],
+  "notes": "NULL spatial geometry matches bbox; NULL temporal geometry matches datetime. Exact CRS rectangle predicates remain in query coordinates. Expected IDs do not come from a provider/compiler."
+}

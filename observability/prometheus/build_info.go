@@ -1,9 +1,10 @@
 package prometheus
 
 import (
+	"errors"
 	"strings"
 
-	"github.com/go-spatial/tegola/internal/build"
+	"github.com/alexeydott/tegola/internal/build"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -34,7 +35,14 @@ func NewBuildInfo(registry prometheus.Registerer) {
 			},
 		)
 	}
-	registry.MustRegister(BuildInfo)
+	// registering the shared build info gauge into a registry that already
+	// has it is harmless; only genuine registration errors panic (P6-35)
+	if err := registry.Register(BuildInfo); err != nil {
+		var already prometheus.AlreadyRegisteredError
+		if !errors.As(err, &already) {
+			panic(err)
+		}
+	}
 }
 
 func PublishBuildInfo() {

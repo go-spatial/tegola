@@ -109,13 +109,11 @@ func (encodePlanInetCodecText) Encode(value any, buf []byte) (newBuf []byte, err
 func (InetCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan {
 	switch format {
 	case BinaryFormatCode:
-		switch target.(type) {
-		case NetipPrefixScanner:
+		if _, ok := target.(NetipPrefixScanner); ok {
 			return scanPlanBinaryInetToNetipPrefixScanner{}
 		}
 	case TextFormatCode:
-		switch target.(type) {
-		case NetipPrefixScanner:
+		if _, ok := target.(NetipPrefixScanner); ok {
 			return scanPlanTextAnyToNetipPrefixScanner{}
 		}
 	}
@@ -148,7 +146,7 @@ func (c InetCodec) DecodeValue(m *Map, oid uint32, format int16, src []byte) (an
 type scanPlanBinaryInetToNetipPrefixScanner struct{}
 
 func (scanPlanBinaryInetToNetipPrefixScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(NetipPrefixScanner)
+	scanner := dst.(NetipPrefixScanner)
 
 	if src == nil {
 		return scanner.ScanNetipPrefix(netip.Prefix{})
@@ -174,7 +172,7 @@ func (scanPlanBinaryInetToNetipPrefixScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToNetipPrefixScanner struct{}
 
 func (scanPlanTextAnyToNetipPrefixScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(NetipPrefixScanner)
+	scanner := dst.(NetipPrefixScanner)
 
 	if src == nil {
 		return scanner.ScanNetipPrefix(netip.Prefix{})

@@ -2,11 +2,11 @@ package intersect
 
 import (
 	"fmt"
-	"log"
 
-	"github.com/go-spatial/tegola/container/singlelist"
-	ptList "github.com/go-spatial/tegola/container/singlelist/point/list"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/container/singlelist"
+	ptList "github.com/alexeydott/tegola/container/singlelist/point/list"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths"
 )
 
 type Point struct {
@@ -41,9 +41,9 @@ func (p *Point) NextWalk() list.Elementer {
 }
 
 func (p *Point) PrintNeighbors() {
-	log.Println("Me:", p.String())
-	log.Println("\tRegion Neighbor. ->", p.region.Next())
-	log.Println("\tSubject Neighbor. ->", p.subject.Next())
+	log.Debugf("Me: %v", p.String())
+	log.Debugf("\tRegion Neighbor. -> %v", p.region.Next())
+	log.Debugf("\tSubject Neighbor. -> %v", p.subject.Next())
 }
 
 /*

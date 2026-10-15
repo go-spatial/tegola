@@ -1,5 +1,4 @@
 //go:build cgo
-// +build cgo
 
 package gpkg_test
 
@@ -12,12 +11,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/provider"
-	"github.com/go-spatial/tegola/provider/gpkg"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/provider"
+	"github.com/alexeydott/tegola/provider/gpkg"
+	"github.com/alexeydott/tegola/provider/test/fixture"
 )
 
 const (
@@ -230,6 +229,95 @@ func TestNewTileProvider(t *testing.T) {
 			},
 			expectedLayerCount: 3,
 		},
+		"custom sql with tile and layer metadata tokens": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name": "tokenized_points",
+						"sql": `SELECT fid, geom,
+							!X! AS tile_x, !Y! AS tile_y, !Z! AS tile_z, !ZOOM! AS tile_zoom,
+							!PIXEL_WIDTH! AS pixel_width, !PIXEL_HEIGHT! AS pixel_height,
+							!SCALE_DENOMINATOR! AS scale_denominator,
+							'!ID_FIELD!' AS id_field, '!GEOM_FIELD!' AS geom_field,
+							'!GEOM_TYPE!' AS geom_type
+							FROM amenities_points WHERE fid = 515`,
+					},
+				},
+			},
+			expectedLayerCount: 1,
+		},
+		"custom sql layer with 0 rows is registered": {
+			// A custom-SQL layer whose query currently matches no rows (e.g. an
+			// empty table, or filter criteria that exclude everything) must not
+			// prevent the provider - and therefore the whole server - from
+			// starting. Keep the layer registered without an inferred geometry
+			// type so it can begin serving if the query later returns data.
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "a_points", "tablename": "amenities_points"},
+					{"name": "empty_layer", "sql": "SELECT fid, geom FROM amenities_points WHERE fid = -1"},
+				},
+			},
+			expectedLayerCount: 2,
+		},
+		"all custom sql layers with 0 rows are registered": {
+			// No rows means geometry type inference is unavailable, but it is
+			// not itself a registration error for custom SQL.
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{"name": "empty_layer", "sql": "SELECT fid, geom FROM amenities_points WHERE fid = -1"},
+				},
+			},
+			expectedLayerCount: 1,
+		},
+		"custom sql keeps configured id fieldname": {
+			// Custom SQL layers must honor an explicit id_fieldname even after
+			// a successful geometry inspection; previously the inspected branch
+			// reset it back to the default 'fid'.
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":         "a_points",
+						"sql":          "SELECT osm_id, geom, amenity FROM amenities_points WHERE fid IN (515,359,273)",
+						"id_fieldname": "osm_id",
+					},
+				},
+			},
+			expectedLayerCount: 1,
+		},
+		"custom sql keeps default id fieldname when not configured": {
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name": "a_points",
+						"sql":  "SELECT fid, geom, amenity FROM amenities_points WHERE fid IN (515,359,273)",
+					},
+				},
+			},
+			expectedLayerCount: 1,
+		},
+		"custom sql with non-standard geometry column": {
+			// geometry_fieldname lets custom SQL use any geometry column name,
+			// matching the contract of the other standard providers. The layer
+			// here has no matching rows in the sample (the_geom does not exist
+			// in this test fixture), so it registers without inspection.
+			config: map[string]interface{}{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":               "a_points",
+						"sql":                "SELECT fid, geom, amenity FROM amenities_points WHERE fid IN (515,359,273)",
+						"geometry_fieldname": "geom",
+					},
+				},
+			},
+			expectedLayerCount: 1,
+		},
 	}
 
 	for name, tc := range tests {
@@ -237,27 +325,120 @@ func TestNewTileProvider(t *testing.T) {
 	}
 }
 
-type MockTile struct {
-	extent         *geom.Extent
-	bufferedExtent *geom.Extent
-	Z              slippy.Zoom
-	X, Y           uint
-	srid           uint64
+func TestCustomSQLLayerFieldnames(t *testing.T) {
+	// Verifies the layer's id/geometry fieldnames after registration for the
+	// three custom-SQL states: inspected, deferred, and empty result set.
+	// Uses the internal Layer accessors, which expose the configured fields.
+	fn := func(tc struct {
+		config              dict.Dict
+		expectedIDFieldname string
+		expectedGeomField   string
+	}) func(*testing.T) {
+		return func(t *testing.T) {
+			p, err := gpkg.NewProviderInternal(tc.config)
+			if err != nil {
+				t.Fatalf("err creating provider: %v", err)
+			}
+			layer, ok := p.LayerInternal("a_points")
+			if !ok {
+				t.Fatalf("layer a_points not registered")
+			}
+			if layer.IDFieldName() != tc.expectedIDFieldname {
+				t.Errorf("id fieldname: expected %v got %v", tc.expectedIDFieldname, layer.IDFieldName())
+			}
+			if layer.GeomFieldName() != tc.expectedGeomField {
+				t.Errorf("geom fieldname: expected %v got %v", tc.expectedGeomField, layer.GeomFieldName())
+			}
+		}
+	}
+
+	tests := map[string]struct {
+		config              dict.Dict
+		expectedIDFieldname string
+		expectedGeomField   string
+	}{
+		"inspected sql keeps configured id fieldname": {
+			config: dict.Dict{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":         "a_points",
+						"sql":          "SELECT osm_id, geom, amenity FROM amenities_points WHERE fid IN (515,359,273)",
+						"id_fieldname": "osm_id",
+					},
+				},
+			},
+			expectedIDFieldname: "osm_id",
+			expectedGeomField:   "geom",
+		},
+		"inspected sql default id fieldname": {
+			config: dict.Dict{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name": "a_points",
+						"sql":  "SELECT fid, geom, amenity FROM amenities_points WHERE fid IN (515,359,273)",
+					},
+				},
+			},
+			expectedIDFieldname: "fid",
+			expectedGeomField:   "geom",
+		},
+		"inspected sql honors geometry_fieldname": {
+			config: dict.Dict{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":               "a_points",
+						"sql":                "SELECT fid, geom, amenity FROM amenities_points WHERE fid IN (515,359,273)",
+						"geometry_fieldname": "geom",
+						"id_fieldname":       "fid",
+					},
+				},
+			},
+			expectedIDFieldname: "fid",
+			expectedGeomField:   "geom",
+		},
+		"deferred sql keeps configured id fieldname": {
+			config: dict.Dict{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":         "a_points",
+						"sql":          "SELECT osm_id, geom, amenity FROM amenities_points WHERE !ZOOM! >= 0",
+						"id_fieldname": "osm_id",
+					},
+				},
+			},
+			expectedIDFieldname: "osm_id",
+			expectedGeomField:   "geom",
+		},
+		"empty result sql keeps configured id fieldname": {
+			config: dict.Dict{
+				"filepath": GPKGAthensFilePath,
+				"layers": []map[string]interface{}{
+					{
+						"name":         "a_points",
+						"sql":          "SELECT osm_id, geom, amenity FROM amenities_points WHERE fid = -1",
+						"id_fieldname": "osm_id",
+					},
+				},
+			},
+			expectedIDFieldname: "osm_id",
+			expectedGeomField:   "geom",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
 }
-
-// TODO(arolek): Extent needs to return a geom.Extent
-func (t *MockTile) Extent() (*geom.Extent, uint64) { return t.extent, t.srid }
-
-// TODO(arolek): BufferedExtent needs to return a geom.Extent
-func (t *MockTile) BufferedExtent() (*geom.Extent, uint64) { return t.bufferedExtent, t.srid }
-
-func (t *MockTile) ZXY() (slippy.Zoom, uint, uint) { return t.Z, t.X, t.Y }
 
 func TestTileFeatures(t *testing.T) {
 	type tcase struct {
 		config               dict.Dict
 		layerName            string
-		tile                 MockTile
+		tile                 fixture.Tile
 		expectedFeatureCount int
 	}
 
@@ -298,9 +479,9 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "rd_lines",
-			tile: MockTile{
-				srid: tegola.WGS84,
-				bufferedExtent: geom.NewExtent(
+			tile: fixture.Tile{
+				SRID: tegola.WGS84,
+				BufferedBounds: geom.NewExtent(
 					[2]float64{20.0, 37.85},
 					[2]float64{23.6, 37.9431},
 				),
@@ -316,9 +497,9 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "rl_lines",
-			tile: MockTile{
-				srid: tegola.WGS84,
-				bufferedExtent: geom.NewExtent(
+			tile: fixture.Tile{
+				SRID: tegola.WGS84,
+				BufferedBounds: geom.NewExtent(
 					[2]float64{23.6, 37.8},
 					[2]float64{23.8, 38.0},
 				),
@@ -342,10 +523,10 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "land1",
-			tile: MockTile{
+			tile: fixture.Tile{
 				Z:    1,
-				srid: tegola.WebMercator,
-				bufferedExtent: geom.NewExtent(
+				SRID: tegola.WebMercator,
+				BufferedBounds: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
@@ -369,10 +550,10 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "land2",
-			tile: MockTile{
+			tile: fixture.Tile{
 				Z:    0,
-				srid: tegola.WebMercator,
-				bufferedExtent: geom.NewExtent(
+				SRID: tegola.WebMercator,
+				BufferedBounds: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
@@ -387,9 +568,9 @@ func TestTileFeatures(t *testing.T) {
 				},
 			},
 			layerName: "boundary",
-			tile: MockTile{
-				srid: tegola.WGS84,
-				bufferedExtent: geom.NewExtent(
+			tile: fixture.Tile{
+				SRID: tegola.WGS84,
+				BufferedBounds: geom.NewExtent(
 					[2]float64{20.0, 37.85},
 					[2]float64{23.6, 37.9431},
 				),
@@ -406,7 +587,7 @@ func TestTileFeatures(t *testing.T) {
 func TestConfigs(t *testing.T) {
 	type tcase struct {
 		config       dict.Dict
-		tile         MockTile
+		tile         fixture.Tile
 		layerName    string
 		expectedTags map[uint64]map[string]interface{}
 	}
@@ -459,12 +640,12 @@ func TestConfigs(t *testing.T) {
 					{"name": "rd_lines", "tablename": "roads_lines"},
 				},
 			},
-			tile: MockTile{
-				bufferedExtent: geom.NewExtent(
+			tile: fixture.Tile{
+				BufferedBounds: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
-				srid: tegola.WebMercator,
+				SRID: tegola.WebMercator,
 			},
 			layerName: "a_points",
 			expectedTags: map[uint64]map[string]interface{}{
@@ -491,12 +672,12 @@ func TestConfigs(t *testing.T) {
 					{"name": "rd_lines", "tablename": "roads_lines"},
 				},
 			},
-			tile: MockTile{
-				bufferedExtent: geom.NewExtent(
+			tile: fixture.Tile{
+				BufferedBounds: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
-				srid: tegola.WebMercator,
+				SRID: tegola.WebMercator,
 			},
 			layerName: "rd_lines",
 			expectedTags: map[uint64]map[string]interface{}{
@@ -513,12 +694,12 @@ func TestConfigs(t *testing.T) {
 					},
 				},
 			},
-			tile: MockTile{
-				bufferedExtent: geom.NewExtent(
+			tile: fixture.Tile{
+				BufferedBounds: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
-				srid: tegola.WebMercator,
+				SRID: tegola.WebMercator,
 			},
 			layerName: "a_points",
 			expectedTags: map[uint64]map[string]interface{}{
@@ -558,12 +739,12 @@ func TestConfigs(t *testing.T) {
 					},
 				},
 			},
-			tile: MockTile{
-				bufferedExtent: geom.NewExtent(
+			tile: fixture.Tile{
+				BufferedBounds: geom.NewExtent(
 					[2]float64{-20026376.39, -20048966.10},
 					[2]float64{20026376.39, 20048966.10},
 				),
-				srid: tegola.WebMercator,
+				SRID: tegola.WebMercator,
 			},
 			layerName: "a_p_points",
 			expectedTags: map[uint64]map[string]interface{}{
@@ -592,7 +773,7 @@ func TestOpenNonExistantFile(t *testing.T) {
 		NONEXISTANTFILE = "testdata/nonexistant.gpkg"
 	)
 
-	os.Remove(NONEXISTANTFILE)
+	_ = os.Remove(NONEXISTANTFILE)
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 			_, err := gpkg.NewTileProvider(tc.config, nil)
@@ -622,4 +803,159 @@ func TestOpenNonExistantFile(t *testing.T) {
 		t.Run(k, fn(tc))
 	}
 
+}
+
+func TestSRIDConfigAndFeatureSRID(t *testing.T) {
+	config := dict.Dict{
+		"filepath": GPKGAthensFilePath,
+		"srid":     4326,
+		"layers": []map[string]interface{}{
+			{
+				"name":      "rd_lines",
+				"tablename": "roads_lines",
+			},
+			{
+				"name":      "rl_lines",
+				"tablename": "rail_lines",
+				"srid":      3857,
+			},
+			{
+				"name": "a_points_sql",
+				"sql":  "SELECT fid, geom, amenity FROM amenities_points WHERE fid = 515",
+				"srid": 4326,
+			},
+		},
+	}
+
+	p, err := gpkg.NewTileProvider(config, nil)
+	if err != nil {
+		t.Fatalf("err creating NewTileProvider: %v", err)
+	}
+
+	layers, err := p.Layers()
+	if err != nil {
+		t.Fatalf("err getting layers: %v", err)
+	}
+
+	for _, l := range layers {
+		if l.Name() == "rd_lines" && l.SRID() != 4326 {
+			t.Errorf("expected layer rd_lines SRID to be 4326, got %v", l.SRID())
+		}
+		if l.Name() == "rl_lines" && l.SRID() != 3857 {
+			t.Errorf("expected layer rl_lines SRID override to be 3857, got %v", l.SRID())
+		}
+		if l.Name() == "a_points_sql" && l.SRID() != 4326 {
+			t.Errorf("expected custom SQL layer a_points_sql SRID to be 4326, got %v", l.SRID())
+		}
+	}
+
+	tile := fixture.Tile{
+		SRID: tegola.WebMercator,
+		BufferedBounds: geom.NewExtent(
+			[2]float64{-20026376.39, -20048966.10},
+			[2]float64{20026376.39, 20048966.10},
+		),
+	}
+
+	var featureSRID uint64
+	err = p.TileFeatures(context.TODO(), "rd_lines", &tile, nil, func(f *provider.Feature) error {
+		featureSRID = f.SRID
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("err fetching features: %v", err)
+	}
+
+	if featureSRID != 4326 {
+		t.Errorf("expected feature SRID to be 4326, got %v", featureSRID)
+	}
+}
+
+// TestExplicitGeometryType verifies the common geometry_type layer key
+// contract for GPKG (docs/provider-contract.md): the explicit value wins
+// over gpkg_contents metadata inference, it is validated at construction
+// time, and for custom SQL it removes the deferred startup inspection.
+func TestExplicitGeometryType(t *testing.T) {
+	baseConfig := func() dict.Dict {
+		return dict.Dict{
+			"name":     "explicit_geom_type",
+			"type":     "gpkg",
+			"filepath": GPKGAthensFilePath,
+			"layers": []map[string]interface{}{
+				{
+					"name":         "amenities_points",
+					"tablename":    "amenities_points",
+					"id_fieldname": "fid",
+				},
+			},
+		}
+	}
+
+	t.Run("explicit type wins over gpkg metadata", func(t *testing.T) {
+		config := baseConfig()
+		config["layers"].([]map[string]interface{})[0]["geometry_type"] = "LineString"
+
+		prov, err := gpkg.NewTileProvider(config, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		lyrs, err := prov.(provider.Layerer).Layers()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(lyrs) != 1 {
+			t.Fatalf("expected 1 layer, got %d", len(lyrs))
+		}
+		if _, ok := lyrs[0].GeomType().(geom.LineString); !ok {
+			t.Fatalf("expected explicit geom.LineString, got %T", lyrs[0].GeomType())
+		}
+	})
+
+	t.Run("metadata type retained by default", func(t *testing.T) {
+		prov, err := gpkg.NewTileProvider(baseConfig(), nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		lyrs, err := prov.(provider.Layerer).Layers()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if _, ok := lyrs[0].GeomType().(geom.Point); !ok {
+			t.Fatalf("expected metadata geom.Point, got %T", lyrs[0].GeomType())
+		}
+	})
+
+	t.Run("invalid type fails construction", func(t *testing.T) {
+		config := baseConfig()
+		config["layers"].([]map[string]interface{})[0]["geometry_type"] = "triangle"
+
+		if _, err := gpkg.NewTileProvider(config, nil); err == nil {
+			t.Fatal("expected error for unsupported geometry_type, got nil")
+		}
+	})
+
+	t.Run("custom sql with explicit type skips deferred inspection", func(t *testing.T) {
+		config := baseConfig()
+		config["layers"].([]map[string]interface{})[0] = map[string]interface{}{
+			"name":          "amenities_points",
+			"sql":           "SELECT fid, geom FROM amenities_points WHERE !ZOOM! > 0",
+			"id_fieldname":  "fid",
+			"geometry_type": "Point",
+		}
+
+		prov, err := gpkg.NewTileProvider(config, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		lyrs, err := prov.(provider.Layerer).Layers()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(lyrs) != 1 {
+			t.Fatalf("expected 1 layer, got %d", len(lyrs))
+		}
+		if _, ok := lyrs[0].GeomType().(geom.Point); !ok {
+			t.Fatalf("expected explicit geom.Point, got %T", lyrs[0].GeomType())
+		}
+	})
 }

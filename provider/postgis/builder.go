@@ -117,6 +117,35 @@ func (b *defaultBuilder) applyAfterConnectHook(cfg *pgxpool.Config) {
 // applyRunTimeParams adds adds runtime parameters to the pool config.
 func (b *defaultBuilder) applyRunTimeParams(cfg *pgxpool.Config, plan connPlan) {
 	cfg.ConnConfig.RuntimeParams = plan.RuntimeParams
+	b.applyPoolSettings(cfg, plan)
+}
+
+// applyPoolSettings moves resolved pool sizing inputs onto the pgxpool config.
+// These are client-side settings; they must never be sent to the server as
+// connection runtime parameters.
+func (b *defaultBuilder) applyPoolSettings(cfg *pgxpool.Config, plan connPlan) {
+	ps := plan.Pool
+	if ps.MinConns > 0 {
+		cfg.MinConns = ps.MinConns
+	}
+	if ps.MinIdleConns > 0 {
+		cfg.MinIdleConns = ps.MinIdleConns
+	}
+	if ps.MaxConns > 0 {
+		cfg.MaxConns = ps.MaxConns
+	}
+	if ps.MaxConnLifetime > 0 {
+		cfg.MaxConnLifetime = ps.MaxConnLifetime
+	}
+	if ps.MaxConnIdleTime > 0 {
+		cfg.MaxConnIdleTime = ps.MaxConnIdleTime
+	}
+	if ps.MaxConnLifetimeJitter > 0 {
+		cfg.MaxConnLifetimeJitter = ps.MaxConnLifetimeJitter
+	}
+	if ps.HealthCheckPeriod > 0 {
+		cfg.HealthCheckPeriod = ps.HealthCheckPeriod
+	}
 }
 
 // applyTLS applys the connection plan TLS configuration to the pool config.

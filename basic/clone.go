@@ -1,6 +1,6 @@
 package basic
 
-import "github.com/go-spatial/tegola"
+import "github.com/alexeydott/tegola"
 
 // ClonePoint will return a basic.Point for given tegola.Point.
 func ClonePoint(pt tegola.Point) Point {

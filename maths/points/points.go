@@ -3,7 +3,7 @@ package points
 import (
 	"math"
 
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/maths"
 )
 
 func SinArea(pts []maths.Pt) (a float64) {
@@ -39,7 +39,7 @@ func Centroid(pts []maths.Pt) (center maths.Pt) {
 
 	cx = cx / (3 * a)
 	cy = cy / (3 * a)
-	return maths.Pt{cx, cy}
+	return maths.Pt{X: cx, Y: cy}
 }
 
 func SlopeIntercept(pt1, pt2 maths.Pt) (m, b float64, defined bool) {

@@ -36,9 +36,10 @@ type ConnConfig struct {
 	DescriptionCacheCapacity int
 
 	// DefaultQueryExecMode controls the default mode for executing queries. By default pgx uses the extended protocol
-	// and automatically prepares and caches prepared statements. However, this may be incompatible with proxies such as
-	// PGBouncer. In this case it may be preferable to use [QueryExecModeExec] or [QueryExecModeSimpleProtocol]. The same
-	// functionality can be controlled on a per query basis by passing a [QueryExecMode] as the first query argument.
+	// and automatically prepares and caches prepared statements. This may be incompatible with proxies such as PgBouncer
+	// unless they are configured to support protocol-level prepared statements. In an incompatible configuration it may
+	// be preferable to use [QueryExecModeExec] or [QueryExecModeSimpleProtocol]. The same functionality can be controlled
+	// on a per query basis by passing a [QueryExecMode] as the first query argument.
 	DefaultQueryExecMode QueryExecMode
 
 	createdByParseConfig bool // Used to enforce created by ParseConfig rule.
@@ -358,8 +359,13 @@ func (c *Conn) Prepare(ctx context.Context, name, sql string) (sd *pgconn.Statem
 	sd, err = c.pgConn.Prepare(ctx, psName, sql, nil)
 	if err != nil {
 		var pErr *pgconn.PrepareError
-		if errors.As(err, &pErr) {
-			c.failedDescribeStatement = psKey
+		if errors.As(err, &pErr) && pErr.ParseComplete {
+			// The server-side statement was created under psName — the name sent in
+			// Parse. In the name == sql case psKey is the SQL text, and deallocating
+			// by it would close a nonexistent statement while leaking the real one.
+			// When Parse never completed no statement was created at all, so there
+			// is nothing to clean up.
+			c.failedDescribeStatement = psName
 		}
 		return nil, err
 	}
@@ -475,6 +481,9 @@ func (c *Conn) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.C
 	}
 
 	if err := c.deallocateInvalidatedCachedStatements(ctx); err != nil {
+		if c.queryTracer != nil {
+			c.queryTracer.TraceQueryEnd(ctx, c, TraceQueryEndData{Err: err})
+		}
 		return pgconn.CommandTag{}, err
 	}
 
@@ -742,7 +751,7 @@ type QueryRewriter interface {
 // collected before processing rather than processed while receiving each row. This avoids the possibility of the
 // application processing rows from a query that the server rejected. The CollectRows function is useful here.
 //
-// An implementor of QueryRewriter may be passed as the first element of args. It can rewrite the sql and change or
+// An implementer of QueryRewriter may be passed as the first element of args. It can rewrite the sql and change or
 // replace args. For example, NamedArgs is QueryRewriter that implements named arguments.
 //
 // For extra control over how the query is executed, the types QueryExecMode, QueryResultFormats, and
@@ -808,7 +817,8 @@ optionLoop:
 
 	var err error
 	sd, explicitPreparedStatement := c.preparedStatements[sql]
-	if sd != nil || mode == QueryExecModeCacheStatement || mode == QueryExecModeCacheDescribe || mode == QueryExecModeDescribeExec {
+	switch {
+	case sd != nil || mode == QueryExecModeCacheStatement || mode == QueryExecModeCacheDescribe || mode == QueryExecModeDescribeExec:
 		if sd == nil {
 			sd, err = c.getStatementDescription(ctx, mode, sql)
 			if err != nil {
@@ -833,7 +843,7 @@ optionLoop:
 		if resultFormatsByOID != nil {
 			resultFormats = make([]int16, len(sd.Fields))
 			for i := range resultFormats {
-				resultFormats[i] = resultFormatsByOID[uint32(sd.Fields[i].DataTypeOID)]
+				resultFormats[i] = resultFormatsByOID[sd.Fields[i].DataTypeOID]
 			}
 		}
 
@@ -846,7 +856,7 @@ optionLoop:
 		} else {
 			rows.resultReader = c.pgConn.ExecStatement(ctx, sd, c.eqb.ParamValues, c.eqb.ParamFormats, resultFormats)
 		}
-	} else if mode == QueryExecModeExec {
+	case mode == QueryExecModeExec:
 		err := c.eqb.Build(c.typeMap, nil, args)
 		if err != nil {
 			rows.fatal(err)
@@ -854,7 +864,7 @@ optionLoop:
 		}
 
 		rows.resultReader = c.pgConn.ExecParams(ctx, sql, c.eqb.ParamValues, nil, c.eqb.ParamFormats, c.eqb.ResultFormats)
-	} else if mode == QueryExecModeSimpleProtocol {
+	case mode == QueryExecModeSimpleProtocol:
 		sql, err = c.sanitizeForSimpleQuery(sql, args...)
 		if err != nil {
 			rows.fatal(err)
@@ -872,7 +882,7 @@ optionLoop:
 		}
 
 		return rows, nil
-	} else {
+	default:
 		err = fmt.Errorf("unknown QueryExecMode: %v", mode)
 		rows.fatal(err)
 		return rows, rows.err
@@ -1304,7 +1314,7 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 
 	switch typtype {
 	case "b": // array
-		elementOID, err := c.getArrayElementOID(ctx, oid)
+		elementOID, delimiter, err := c.getArrayElementOIDAndDelimiter(ctx, oid)
 		if err != nil {
 			return nil, err
 		}
@@ -1314,7 +1324,7 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 			return nil, errors.New("array element OID not registered")
 		}
 
-		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.ArrayCodec{ElementType: dt}}, nil
+		return &pgtype.Type{Name: typeName, OID: oid, Codec: &pgtype.ArrayCodec{ElementType: dt, Delimiter: delimiter}}, nil
 	case "c": // composite
 		fields, err := c.getCompositeFields(ctx, oid)
 		if err != nil {
@@ -1360,15 +1370,16 @@ func (c *Conn) LoadType(ctx context.Context, typeName string) (*pgtype.Type, err
 	}
 }
 
-func (c *Conn) getArrayElementOID(ctx context.Context, oid uint32) (uint32, error) {
+func (c *Conn) getArrayElementOIDAndDelimiter(ctx context.Context, oid uint32) (uint32, byte, error) {
 	var typelem uint32
+	var typdelim string
 
-	err := c.QueryRow(ctx, "select typelem from pg_type where oid=$1", oid).Scan(&typelem)
+	err := c.QueryRow(ctx, "select typelem, typdelim::text from pg_type where oid=$1", oid).Scan(&typelem, &typdelim)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return typelem, nil
+	return typelem, parseTypeDelimiter(typdelim), nil
 }
 
 func (c *Conn) getRangeElementOID(ctx context.Context, oid uint32) (uint32, error) {

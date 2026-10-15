@@ -1,16 +1,17 @@
-//!build
+// !build
 package main
 
 import (
 	"bytes"
-	"log"
+
+	"github.com/alexeydott/tegola/internal/log"
 
 	"context"
 
-	"github.com/go-spatial/geom/encoding/mvt"
-	"github.com/go-spatial/geom/encoding/wkb"
-	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/golang/protobuf/proto"
+	"github.com/alexeydott/geom/encoding/mvt"
+	"github.com/alexeydott/geom/encoding/wkb"
+	"github.com/alexeydott/tegola/internal/convert"
+	"google.golang.org/protobuf/encoding/prototext"
 )
 
 // TileExample is a quick example of how to use the interface to marshall a tile.
@@ -82,7 +83,7 @@ func TileExample() {
 		panic(err)
 	}
 	// Print out the Marshaled tile as a string.
-	log.Println(proto.MarshalTextString(vtile))
+	log.Info(prototext.Format(vtile))
 }
 
 func main() {

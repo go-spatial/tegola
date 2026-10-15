@@ -3,7 +3,7 @@ package cache
 import (
 	"testing"
 
-	"github.com/go-spatial/geom/slippy"
+	"github.com/alexeydott/geom/slippy"
 )
 
 func TestRangeFamilyAt(t *testing.T) {

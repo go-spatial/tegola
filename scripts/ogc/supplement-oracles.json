@@ -1,0 +1,228 @@
+{
+  "provenance": "Frozen literal EPSG:3857 constants independently calculated using spherical Mercator R=6378137, no product projection or decoder used; tolerance 1e-7 metres",
+  "default": {
+    "10": {
+      "type": "Point",
+      "coordinates": [
+        15,
+        30
+      ]
+    },
+    "30": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          14,
+          30
+        ],
+        [
+          16,
+          30
+        ]
+      ]
+    },
+    "40": null,
+    "50": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            14,
+            29
+          ],
+          [
+            16,
+            29
+          ],
+          [
+            16,
+            31
+          ],
+          [
+            14,
+            31
+          ],
+          [
+            14,
+            29
+          ]
+        ]
+      ]
+    },
+    "60": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Point",
+          "coordinates": [
+            15,
+            30
+          ]
+        },
+        {
+          "type": "LineString",
+          "coordinates": [
+            [
+              15,
+              30
+            ],
+            [
+              16,
+              31
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "4326": {
+    "10": {
+      "type": "Point",
+      "coordinates": [
+        30,
+        15
+      ]
+    },
+    "30": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          30,
+          14
+        ],
+        [
+          30,
+          16
+        ]
+      ]
+    },
+    "40": null,
+    "50": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            29,
+            14
+          ],
+          [
+            31,
+            14
+          ],
+          [
+            31,
+            16
+          ],
+          [
+            29,
+            16
+          ],
+          [
+            29,
+            14
+          ]
+        ]
+      ]
+    },
+    "60": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Point",
+          "coordinates": [
+            30,
+            15
+          ]
+        },
+        {
+          "type": "LineString",
+          "coordinates": [
+            [
+              30,
+              15
+            ],
+            [
+              31,
+              16
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "3857": {
+    "10": {
+      "type": "Point",
+      "coordinates": [
+        1669792.3618991035,
+        3503549.843504374
+      ]
+    },
+    "30": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          1558472.87110583,
+          3503549.843504374
+        ],
+        [
+          1781111.852692377,
+          3503549.843504374
+        ]
+      ]
+    },
+    "40": null,
+    "50": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            1558472.87110583,
+            3375646.03491931
+          ],
+          [
+            1781111.852692377,
+            3375646.03491931
+          ],
+          [
+            1781111.852692377,
+            3632749.143384427
+          ],
+          [
+            1558472.87110583,
+            3632749.143384427
+          ],
+          [
+            1558472.87110583,
+            3375646.03491931
+          ]
+        ]
+      ]
+    },
+    "60": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Point",
+          "coordinates": [
+            1669792.3618991035,
+            3503549.843504374
+          ]
+        },
+        {
+          "type": "LineString",
+          "coordinates": [
+            [
+              1669792.3618991035,
+              3503549.843504374
+            ],
+            [
+              1781111.852692377,
+              3632749.143384427
+            ]
+          ]
+        }
+      ]
+    }
+  }
+}

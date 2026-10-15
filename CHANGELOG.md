@@ -1,3 +1,103 @@
+## Unreleased
+
+- Normalize WFS Update/Delete `typeNames` before validating feature IDs and property references, retaining namespace validation and rejecting conflicting type attributes.
+- Require Go 1.26.9 and update `golang.org/x/net` to v0.60.0 to include the October 2026 HTTP and template security fixes.
+
+- Cache ordinary viewing in writable runtimes; bypass ordinary tile caching with `X-Tegola-Editor-Active: true`. Isolate cache generations after successful or uncertain commits and across restarts, including concurrent renders and metatile maintenance.
+- Allow authenticated explicit tile-cache status and regeneration in writable feature/WFS runtimes with HTTP `no-store`.
+
+- Align WFS nullable geometry input with DescribeFeatureType: explicit `xsi:nil` in Insert, Update and Replace writes SQL NULL only for nullable geometry, preserving omitted-update geometry and rejecting malformed nil values.
+
+- Support explicit `xsi:nil` scalar NULL values in WFS Insert, Update and Replace, enforcing storage nullability and rejecting nil elements with content. Omitted Update `Value` remains unsupported; empty string values retain their existing meaning. See [WFS write limits](docs/wfs-scope-limitations.md).
+
+- Add transactional raw MOS geometry/bounds maintenance for admitted MySQL/InnoDB and GeoPackage-provider SQLite tables, plus immutable custom `etmerc` horizontal transforms with explicit three/seven-parameter datum shifts. MySQL 5.5 can opt into metadata-based table identity with documented external-DDL limitations; fresh transaction-recorder schemas use explicit Unicode-safe text storage. See [MOS write contracts](docs/geometry-formats.md#mos-writes-with-separate-bounds-columns) and [separate runtime evidence](docs/provider-matrix.md#mos-bounds-and-custom-crs-validation). PostGIS bounds writes and custom vertical CRS remain outside this extension.
+
+- Resolve FES literals against Queryables, validate conditional mutations against the selected output CRS/format, and preserve WFS commit status/correlation headers without exposing private receipts. Deadlock failures cannot report a later successful commit. See the [provider evidence](docs/provider-matrix.md) for native and injected-fault boundaries.
+
+- Tighten protocol and write admission: reject production writes in the stock CLI without an authenticator, preserve storage nullability and validate RFC3339 inputs, normalize write operation names in OpenAPI, admit create only with generated keys, prepare MySQL service schema before write publication, and retain transaction correlation IDs. WFS resolves advertised qualified names, preserves negotiated versions and mounted public URLs, and no longer advertises unsupported XML BBOX filters. See [write contracts](docs/wfs-scope-limitations.md) and [provider evidence](docs/provider-matrix.md) for tested profiles.
+- Verify raw MOS mutations on MySQL 8.4.11 and the GeoPackage provider's SQLite BLOB profile, including six geometry families, holes, quantization, annotated-source preservation and CRS-aware readback. Add separate bounds-backed MOS read-only checks and a GeoPackage-provider HTTP MOS roundtrip. Derived bbox-column writes, MariaDB/HANA MOS writers and untested precision/CRS profiles are not implied by these results.
+
+- Add opt-in WFS read/transaction adapters and a draft-derived Feature API write profile for admitted PostGIS, MySQL/MariaDB and GeoPackage layers. Writes use schema validation, transactional revisions and conditional requests. LockFeature remains unavailable; writable runtimes invalidate router-local tile cache generations after commits. No full WFS/Part 4 conformance or unrestricted production acceptance is claimed. See [write scope and operating limits](docs/wfs-scope-limitations.md).
+- Add a source-feature attribute editor with mutation-schema forms, conditional JSON Patch, local undo/redo and preserved conflict drafts. Existing geometry is retained; unsafe numeric editing and unknown write outcomes stop further writes. Geometry drawing and lossless large-number editing require external clients.
+
+- Fix OGC Features handling for GeoPackage Queryables, polar bbox predicates and limit errors; preserve exact integer/REAL filter comparisons and reject non-finite scalar values.
+
+- Accept MySQL identifier aliases with or without `AS` in direct startup geometry samples, avoiding unnecessary derived-table materialization. Preserve the three-valid-MOS early stop and the 16-row inspection window.
+
+## v0.21.0-fork.2 — 2026-10-02
+
+Source tag: `db4e8ee73a3ddfe3b3c8e054c59e833b697dce85`.
+
+- Include the implemented OGC Features service, Queryables/CQL2, CRS and Jivan migration guides.
+- Integrate MOS metadata probes and per-layer/MySQL latency diagnostics with the OGC provider contracts.
+- Build Windows binaries with CGO/GeoPackage, the embedded viewer and the exact release tag.
+
+The detailed fork changes below retain their original scope. See
+[Feature API release notes](docs/release/feature-api.md) for acceptance boundaries.
+
+Fork-specific changes on top of upstream master (post-v0.21.0, 2024-12-19). Fork releases follow the version scheme `v0.21.0-fork.N`; the first fork release is `v0.21.0-fork.1`.
+
+Features
+
+* Add opt-in OGC API Features publication through the existing router and standard providers, with JSON/HTML, bbox/datetime, link-driven paging, Queryables, the documented CQL2 text subset and supported public CRS. Runtime capability declarations and scoped conformance evidence do not imply certification. See [Feature API release notes](docs/release/feature-api.md).
+* Provide a Jivan replacement migration guide, compatibility dispositions and source provenance. The optional Lambda adapter shares the HTTP router across buffered REST v1, HTTP v2, Function URL v2 and ALB multi-value events. Public release and deployed AWS acceptance remain separate actions.
+* Add per-layer tile timing and MySQL query-phase/pool-contention diagnostics. Slow operations and deadlines are logged at WARN, fast successes at DEBUG; render deadlines and pool ownership remain unchanged. See [latency diagnostics](docs/development.md#tile-latency-diagnostics).
+* Align tile HTTP cache headers for HEAD and GET requests; clean `curl -I` probes now report the same freshness policy as browser tile downloads.
+* Add opt-in `webserver.tile_http_max_age` for successful anonymous query-free tile responses, consistently across HIT/MISS/shared rendering. Preserve encoding variation and maintenance `no-store`; exclude errors and parameterized requests. Default zero preserves previous behavior.
+* Unified CRS contract for all standard providers (`mysql`, `gpkg`, `postgis`, `hana`): `srid` and `crs_defn` (full PROJ.4 definition) at provider and layer level, explicit configuration wins over source auto-detection. Tile bounds (`!BBOX!`) are reprojected into the layer CRS so filter, data and MVT encoding always agree on one CRS.
+* Built-in EPSG registry (`basic/epsg`) and synthetic internal SRIDs (>= 340000001) for custom PROJ.4 definitions and MOS system-info projections.
+* Shared geometry formats for all standard providers: `wkb`, `wkt` and the packed `mos` payload, with `mos_precision` / `mos_units` configuration and system-info auto-configuration (`MapplGIS LayerInfo`).
+* GPKG provider reworked: native GeoPackage binary, WKB/WKT/MOS geometry formats, `gpkg_contents.srs_id` detection, RTree `!BBOX!` filtering for table layers and in-memory filtering (with optional bounds columns) for raw tables without GeoPackage metadata.
+* MySQL / MariaDB provider with `auto` / `mysql` / `mariadb` geometry formats.
+* HANA MVT provider (`mvt_hana`) alongside `mvt_postgis`.
+* Memory and multilevel tile caches.
+* Tile endpoint modes `?tile=status|update|getupdated` and cache invalidation via `?dirty`.
+* Providers can be excluded from the binary at build time with the `noMysqlProvider`, `noGpkgProvider`, `noPostgisProvider` and `noHanaProvider` build flags (e.g. `go build -tags 'noMysqlProvider'`); `tegola version` reports the active set.
+* Async metatile regeneration. The `?tile=update` and `?tile=getupdated` cache-maintenance endpoints no longer regenerate the full 8x8 metatile (up to 64 tile renders and cache writes) on the request path. `?tile=update` now returns `202 Accepted` and schedules the regeneration on a bounded background worker pool (previously `204` after regenerating everything synchronously); `?tile=getupdated` returns the requested tile after a single render and schedules the same background regeneration. Regeneration is single-flight per metatile — concurrent requests join the regeneration already in flight instead of starting another one — and background failures are logged at WARN and retried on the next request instead of being cached. Graceful shutdown cancels and drains in-flight regenerations before the cache is torn down. No configuration changes.
+
+Breaking changes
+
+* MySQL provider: the `proj4` config key was removed in favour of `srid` / `crs_defn`.
+* PostGIS provider: `tablename` and `sql` are strictly mutually exclusive (startup error).
+* PostGIS provider: `pool_*` connection-pool keys were introduced/renamed; review your `[[providers]]` blocks.
+* **Redis cache: URI-only configuration.** The `redis` cache connection is now configured exclusively by the `uri` key (e.g. `uri = "redis://:secret@127.0.0.1:6379/3"`; schemes `redis://`, `rediss://`, `unix://`; DB via path or `?db=`, tuning via query params such as `?pool_size=2&dial_timeout=3s`). The legacy `network`, `address`, `password`, `db` and `ssl` keys are no longer accepted: configs that set them — or that lack a valid `uri` — now fail at startup with an error showing the exact before→after migration. Pool size and dial timeout fall back to go-redis defaults (10×GOMAXPROCS / 5s) instead of the previous 2 / 3s.
+* `provider/postgis`, `provider/hana`: an MVT query naming a layer that is not registered with the provider now fails with a clear request error (`ErrLayerNotFound`, before any SQL) instead of logging a warning and continuing with a zero-valued layer (upstream behaviour). Custom SQL whose SELECT list omits the bounds columns still registers with a WARN only — that bounds-contract gate is unchanged.
+* `provider/gpkg`: raw-table GeoPackage layers whose geometry column has no `rtree_<table>_<column>` shadow table now register with a WARN and a fallback tile-query plan (plain-bbox on the table's bounds columns, or full-table-scan + in-memory exact filtering when there are none) instead of failing registration. The plan is chosen once at registration via a `sqlite_master` probe; tile requests keep exactly one SQL round trip. Add the index with `SELECT CreateRTreeIndex(<table>,<geom>)` to restore the RTree plan.
+
+Maintenance
+
+* Go module dependencies upgraded (`go.mod` / `vendor` refresh): `redis/go-redis` v9.22.0, `SAP/go-hdb` v1.18.11, `gdey/tbltest` bumped to its final upstream revision, and the unused `arolek/p` dependency dropped.
+* MVT protobuf code generation migrated from gogo to `google.golang.org/protobuf` (`protoc-gen-go` v1.36.12); the wire format is unchanged and the fork no longer depends on `github.com/golang/protobuf`.
+* Built-in viewer: `maplibre-gl` upgraded to v5, the deprecated `babel-eslint` replaced with `@babel/eslint-parser`, and npm install scripts denied by default (`ui/.npmrc` supply-chain hardening).
+* Logging consolidation on `log/slog` — all tegola logging now flows through a single stdlib `log/slog` backend. The `internal/log` facade keeps its API but is reimplemented on a `slog` TextHandler (output format changed from JSON to greppable single-line text with `level=WARN`/`level=ERROR`), with a new `Logger() *slog.Logger` accessor and nil-writer-safe `NewLoggerTo`. Ad-hoc `log.Printf`/`fmt.Print` diagnostics across cache, basic, maths, container, draw, `cmd/tegola` and server were routed through the facade: verbose breadcrumbs/timings at DEBUG (hidden at default level), anomalies and pre-crash diagnostics at WARN. No new dependencies; message texts preserved verbatim.
+* SQL token substitution (`!BBOX!` et al.) is now SQL-context-aware across all providers (`gpkg`, `mysql`, `postgis`, `hana`) via a shared internal scanner (`internal/sqltoken`): tokens inside string literals, quoted identifiers, comments, and PostgreSQL dollar-quoted strings are left verbatim instead of being substituted or uppercased. Token detection follows the same rule — a `!BBOX!` mention in a comment or literal no longer satisfies custom-SQL requirements nor triggers the raw-format token rejection. Rendering, parameter replacement, validation and probes now select backend-specific lexical rules: PostgreSQL arrays and hash operators remain executable, while PostgreSQL escape strings, SQLite backslashes and MySQL comment syntax are handled separately. Legacy helper APIs retain their previous behavior; provider README files document supported SQL modes.
+* Consolidate provider test setup into a shared `provider/test/fixture` harness for SQL-row fixtures, database/schema lifecycle, configuration assembly, and explicit tile bounds. Migrate GPKG, HANA, MySQL, and PostGIS tests, remove duplicate setup implementations, and define a request-aware MVT mock callback while preserving canned responses. Add harness unit tests and usage documentation. Test infrastructure only; production behavior is unchanged.
+* Restore the standalone geom fork's dependency checksums and protobuf-compatible Go minimum; enforce read-only nested-module checks in CI. Document and smoke-test checkout-based downstream consumption, guard the local-replacement inventory, and verify independently vendored consumers build offline. The later module migration below completes remote-only consumption with published fork dependencies.
+
+Module migration
+
+* The Go module is now `github.com/alexeydott/tegola`, with direct dependencies on published `github.com/alexeydott/geom v0.1.1` and `github.com/alexeydott/proj v0.3.1`. Local dependency replacements are removed. Go consumers must update imports, including public geom types; server configuration and HTTP endpoints retain their existing contracts. See `third_party/README.md` for migration and remote-consumer verification.
+
+Bugs
+
+* Serve layer URLs from a seeded whole-map MVT on layer-cache misses, avoiding redundant provider queries and geometry rendering. Preserve individual-layer cache precedence and source TTL. File-cache startup now resolves and logs the absolute cache root.
+* Automatic MOS detection accepts a completed short SQL result with one valid geometry, even when other rows are discarded. Automatically detected MOS layers skip undecodable rows during class inference and tile rendering, preserving valid features.
+* Add optional MOS custom-SQL layer `bbox_table` to qualify bounds predicates in joins across all SQL providers without changing result column names or introducing derived tables.
+* Avoid materializing a startup sample for explicit MOS metadata checks in all SQL providers. MySQL uses a direct `LIMIT 0` for supported SELECT forms, preventing registration timeouts with expensive views on MySQL 5.5. Geometry-class and automatic-format sampling transfer only geometry cells: proven simple identifier projections use a direct bounded SELECT, while complex forms retain a conservative derived fallback that may materialize. Streamed registration samples are checked against a fixed 64 MiB geometry-cell cap before decoding; custom-SQL sampling retrieves only the cap plus one byte to detect oversize values.
+* Explicit MOS custom SQL now checks metadata without sampling or unpacking geometries for format detection. With an explicit geometry type, startup performs no format/class decoding. Automatic MOS detection stops after three valid geometries within its 16-row search window.
+* Reject synthetic SRID hash collisions without rebinding existing layers or cached transformations; explicit registrations cannot overwrite an ID owned by another `crs_defn`. Cover registration order and stored layer IDs with regression tests.
+* In-process simplification is enabled by default below its configured maximum zoom again. `ZEpislon()` now converts the tolerance from MVT coordinate units into WebMercator meters before simplification. The default is 10 units in the 4096-unit MVT extent, not 10 screen pixels. Layer/global opt-outs remain available. Polygons with holes and multi-component MultiPolygons now simplify when bounded validation confirms simple rings, unchanged winding/containment and disjoint filled interiors. Unsafe or inconclusive candidates preserve the original geometry, including existing boundary contacts.
+* All four SQL providers now share CRS-aware pixel-width, pixel-height and scale-denominator calculations. PostGIS, MySQL and GeoPackage use source-CRS units rather than assuming WebMercator; custom tile pixel dimensions are respected. Geographic CRSs now use the source ellipsoid's local parallel-arc factor `N(phi) * cos(phi) * pi / 180` at the transformed tile center instead of the WGS84-radius spherical approximation, including geographic `crs_defn` with `+towgs84`. The horizontal denominator retains the OGC 0.00028 m pixel; geographic pixel dimensions remain in degrees. Non-WebMercator SQL thresholds may need adjustment.
+* Fix geographic datum transformations in the Go `proj` fork: `longlat` and its aliases now apply the existing three-/seven-parameter `datumToWGS84` / `datumFromWGS84` math for datums in the fork's table and ellipsoid definitions with `+towgs84`, including custom ellipsoid parameters and synthetic `crs_defn` SRIDs. WGS84 identity remains supported. The two-dimensional API assumes zero input height in each direction. Unsupported grids, prime meridians, units and axes remain explicit registration errors; see the CRS contract for details.
+* Tile status reports queued background metatile regeneration as `updating: true`, as well as work that has already started.
+* Correct the MySQL point test fixture to standard 21-byte WKB and assert the decoded coordinates.
+* Fix PostGIS registration probes for native geometry `!BBOX!` operands, compact zoom comparisons and trailing SQL line comments; skip NULL geometry samples during type discovery. Deferred MySQL queries with scale tokens require a resolved or explicitly configured source CRS instead of using provisional units.
+
+* Custom SQL structural validation no longer requires the bounds columns in the SELECT result: they are validated only when they are part of the SQL result (their actual names are persisted for the bounds predicate), and a layer whose SELECT list omits them is registered with a warning under the resolved names (`layer > provider > MINX/MAXX/MINY/MAXY`) — the `!BBOX!` predicate resolves the bounds columns in the query's own scope. A missing `!BBOX!`/`!BOX!` token or a missing configured geometry column remain startup errors. Applies to all providers (`mysql`, `postgis`, `hana`, `gpkg`).
+* MySQL provider: the connection DSN is now built from `mysqlDriver.NewConfig()`, preserving the go-sql-driver authentication defaults. Previously a bare config struct literal disabled `allowNativePasswords`, so accounts using `mysql_native_password` failed to connect with "this user requires mysql native password authentication".
+* MySQL provider: `BIGINT UNSIGNED` (`uint64`) and `FLOAT` (`float32`) column values arriving from the driver's binary protocol hit the tag type switch's error fallback, so the affected tags were silently dropped from the tile while an `unexpected type for mysql column data` error was logged per row. Both types are now encoded into the MVT (`uint64` via the native `uint_value`, `float32` widened through its shortest decimal form so the tag matches the text protocol's value).
+* Fixed line simplification producing self-intersecting geometries (needles/flipped spikes) on non-`mvt_postgis` providers. The Douglas-Peucker simplifier now uses true segment distances and topology validation (with a conservative fallback to the unsimplified input), ring normalization no longer drops spike vertices, and simplification no longer pre-truncates coordinates to integers. Simplified MVT tile bytes will change for `gpkg`, `mysql`, `hana`, `postgis` without server-side simplification, and generic MVT encoding; `mvt_postgis` is unaffected.
+* HANA: compute pixel-width/height SQL tokens in the resolved layer CRS and scale denominators with CRS-aware unit conversion and the OGC 0.28 mm pixel. Support projected meters, feet/custom linear units, and geographic degrees converted using the source ellipsoid and center latitude; reject unsupported CRS/unit data explicitly. Preserve default WebMercator SQL values and context-safe substitution. Non-WebMercator SQL scale thresholds may need adjustment.
 ## 0.17.0 (2023-07-27)
 
 Features
@@ -16,7 +116,7 @@ Maintenance
 Bugs
 
 * [Updated built in viewer to resolve some security issues -- #914 ](https://github.com/go-spatial/tegola/pull/916) (@iwpnd)
-* [Prometheus will not panic now if one has both MVT and Postgres Providers -- Fix for #886]( https://github.com/go-spatial/tegola/pull/915) (@iwpnd)
+* [Prometheus will not panic now if one has both MVT and Postgres Providers -- Fix for #886](https://github.com/go-spatial/tegola/pull/915) (@iwpnd)
 
 ## 0.16.0 (2022-12-01)
 

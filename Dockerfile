@@ -1,6 +1,9 @@
 # To build, run in root of tegola source tree:
 #
-#	$ git clone git@github.com:go-spatial/tegola.git or git clone https://github.com/go-spatial/tegola.git
+# Fork note: clone this fork (alexeydott/tegola), not upstream go-spatial/tegola.
+# The gpkg provider requires CGO (sqlite3), so the build stage installs build-base.
+#
+#	$ git clone git@github.com:alexeydott/tegola.git or git clone https://github.com/alexeydott/tegola.git
 #	$ cd tegola
 #	$ docker build -t tegola .
 #
@@ -25,11 +28,16 @@
 #  $ cp my-config-file docker-config/config.toml
 #  $ cp my-db.gpkg docker-config/
 #  $ docker run -v /path/to/docker-config:/opt/tegola_config -p 8080 tegola serve
+#
+# The container runs as the non-root "tegola" user and /opt is owned by root.
+# A writable directory is provided at /opt/cache (owned by tegola) for file
+# caches; log files written to the working directory will fail unless the
+# directory is mounted from the host with appropriate permissions.
 
 # Intermediary container for building
-FROM golang:1.26.7-alpine3.23 AS build
+FROM golang:1.26.9-alpine3.23 AS build
 
-ARG BUILDPKG="github.com/go-spatial/tegola/internal/build"
+ARG BUILDPKG="github.com/alexeydott/tegola/internal/build"
 ARG VER="Version Not Set"
 ARG BRANCH="not set"
 ARG REVISION="not set"
@@ -45,26 +53,42 @@ RUN apk update \
 	&& apk add build-base
 
 # Set up source for compilation
-RUN mkdir -p /go/src/github.com/go-spatial/tegola
-COPY . /go/src/github.com/go-spatial/tegola
+RUN mkdir -p /go/src/github.com/alexeydott/tegola
+COPY . /go/src/github.com/alexeydott/tegola
 
-RUN env
-
-# Build binary
-RUN cd /go/src/github.com/go-spatial/tegola/cmd/tegola \
+# Debug image stage: builds with compiler optimizations disabled.
+# Prefer the default (production) target unless you need to debug the binary.
+FROM build AS debug
+RUN cd /go/src/github.com/alexeydott/tegola/cmd/tegola \
 	&& go build -v  \
 	-ldflags "-w -X '${BUILD_PKG}.Version=${VERSION}' -X '${BUILD_PKG}.GitRevision=${GIT_REVISION}' -X '${BUILD_PKG}.GitBranch=${GIT_BRANCH}'" \
 	-gcflags "-N -l" \
 	-o /opt/tegola \
 	&& chmod a+x /opt/tegola
 
-# Create minimal deployment image, just alpine & the binary
-FROM alpine:3.18
+# Release stage: builds the production binary with optimizations enabled.
+# Each stage builds its own /opt/tegola so the final image copies the
+# production binary (the debug stage keeps the -gcflags build).
+FROM build AS release
+RUN cd /go/src/github.com/alexeydott/tegola/cmd/tegola \
+	&& go build -v  \
+	-ldflags "-w -X '${BUILD_PKG}.Version=${VERSION}' -X '${BUILD_PKG}.GitRevision=${GIT_REVISION}' -X '${BUILD_PKG}.GitBranch=${GIT_BRANCH}'" \
+	-o /opt/tegola \
+	&& chmod a+x /opt/tegola
+
+# Create minimal deployment image, just alpine & the binary.
+# Runtime alpine version matches the build stage (musl compatibility for CGO/sqlite).
+FROM alpine:3.23
 
 RUN apk update \
 	&& apk add ca-certificates \
-	&& rm -rf /var/cache/apk/*
+	&& rm -rf /var/cache/apk/* \
+	&& addgroup -S tegola \
+	&& adduser -S -G tegola tegola \
+	&& mkdir -p /opt/cache \
+	&& chown tegola:tegola /opt/cache
 
-COPY --from=build /opt/tegola /opt/
+COPY --from=release /opt/tegola /opt/
 WORKDIR /opt
+USER tegola
 ENTRYPOINT ["/opt/tegola"]

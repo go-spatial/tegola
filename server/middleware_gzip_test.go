@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-spatial/tegola/cache/memory"
-	"github.com/go-spatial/tegola/server"
+	"github.com/alexeydott/tegola/cache/memory"
+	"github.com/alexeydott/tegola/server"
 )
 
 func TestMiddlewareGzipHandler(t *testing.T) {
@@ -18,8 +18,6 @@ func TestMiddlewareGzipHandler(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			t.Parallel()
-
 			// our tests don't use the URIPrefix but our server is a singleton
 			// so we set it to the default for this test
 			server.URIPrefix = "/"
@@ -132,5 +130,85 @@ func TestMiddlewareGzipHandler(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
+	}
+}
+
+func TestMiddlewareGzipHandlerTileStatusRemainsCompatible(t *testing.T) {
+	handler := server.GZipHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"cached":true}`))
+	}))
+
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/maps/test-map/water/12/1/2?tile=status",
+		nil,
+	)
+	request.Header.Set("Accept-Encoding", "gzip")
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if got := recorder.Header().Get("Content-Encoding"); got != "gzip" {
+		t.Fatalf("expected gzip Content-Encoding, got %q", got)
+	}
+}
+
+func TestMiddlewareGzipHandlerDoesNotEncodeErrorsOrEmptyResponses(t *testing.T) {
+	tests := []struct {
+		name       string
+		handler    http.Handler
+		statusCode int
+		body       string
+	}{
+		{
+			name: "bad request",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "bad request", http.StatusBadRequest)
+			}),
+			statusCode: http.StatusBadRequest,
+			body:       "bad request\n",
+		},
+		{
+			name: "no content",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Length", "0")
+				w.WriteHeader(http.StatusNoContent)
+			}),
+			statusCode: http.StatusNoContent,
+		},
+		{
+			name: "reset content",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Length", "0")
+				w.WriteHeader(http.StatusResetContent)
+			}),
+			statusCode: http.StatusResetContent,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/test", nil)
+			request.Header.Set("Accept-Encoding", "gzip")
+			recorder := httptest.NewRecorder()
+
+			server.GZipHandler(tc.handler).ServeHTTP(recorder, request)
+
+			if recorder.Code != tc.statusCode {
+				t.Fatalf("expected status %d, got %d", tc.statusCode, recorder.Code)
+			}
+			if got := recorder.Header().Get("Content-Encoding"); got != "" {
+				t.Fatalf("expected no Content-Encoding, got %q", got)
+			}
+			if got := recorder.Body.String(); got != tc.body {
+				t.Fatalf("expected body %q, got %q", tc.body, got)
+			}
+			if (tc.statusCode == http.StatusNoContent || tc.statusCode == http.StatusResetContent) &&
+				recorder.Header().Get("Content-Length") != "" {
+				t.Fatalf("expected no Content-Length for status %d, got %q",
+					tc.statusCode, recorder.Header().Get("Content-Length"))
+			}
+		})
 	}
 }

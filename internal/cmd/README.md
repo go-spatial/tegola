@@ -1,4 +1,7 @@
 # cmd
+
+This is a Tegola-internal package; the example belongs inside the
+`github.com/alexeydott/tegola` module and is not a public module import.
 Go library to encapsulate the signal handling pattern for termination signal so that I can properly clean up.
 
 ```go
@@ -8,7 +11,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gdey/cmd"
+	"github.com/alexeydott/tegola/internal/cmd"
 )
 
 func cleanup(s string) {

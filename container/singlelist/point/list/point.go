@@ -3,8 +3,8 @@ package list
 import (
 	"fmt"
 
-	"github.com/go-spatial/tegola/container/singlelist"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/container/singlelist"
+	"github.com/alexeydott/tegola/maths"
 )
 
 type Elementer interface {

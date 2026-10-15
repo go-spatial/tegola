@@ -6,13 +6,14 @@ package lambda
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil" //nolint: staticcheck
 	"log"
 	"net/http"
 	"runtime"
+	"sync"
 )
 
 const (
@@ -22,32 +23,49 @@ const (
 	headerCognitoIdentity    = "Lambda-Runtime-Cognito-Identity"
 	headerClientContext      = "Lambda-Runtime-Client-Context"
 	headerInvokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
+	headerTenantID           = "Lambda-Runtime-Aws-Tenant-Id"
+	headerXRayErrorCause     = "Lambda-Runtime-Function-Xray-Error-Cause"
 	trailerLambdaErrorType   = "Lambda-Runtime-Function-Error-Type"
 	trailerLambdaErrorBody   = "Lambda-Runtime-Function-Error-Body"
 	contentTypeJSON          = "application/json"
 	contentTypeBytes         = "application/octet-stream"
 	apiVersion               = "2018-06-01"
+	xrayErrorCauseMaxSize    = 1024 * 1024
 )
 
 type runtimeAPIClient struct {
 	baseURL    string
 	userAgent  string
 	httpClient *http.Client
-	buffer     *bytes.Buffer
+	pool       *sync.Pool
+}
+
+// newAPITransport returns an HTTP transport that never proxies, so calls to the
+// link-local Runtime/Extensions API bypass any customer-configured proxy.
+func newAPITransport() *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	return transport
 }
 
 func newRuntimeAPIClient(address string) *runtimeAPIClient {
 	client := &http.Client{
-		Timeout: 0, // connections to the runtime API are never expected to time out
+		Timeout:   0, // connections to the runtime API are never expected to time out
+		Transport: newAPITransport(),
 	}
 	endpoint := "http://" + address + "/" + apiVersion + "/runtime/invocation/"
 	userAgent := "aws-lambda-go/" + runtime.Version()
-	return &runtimeAPIClient{endpoint, userAgent, client, bytes.NewBuffer(nil)}
+	pool := &sync.Pool{
+		New: func() interface{} {
+			return bytes.NewBuffer(nil)
+		},
+	}
+	return &runtimeAPIClient{endpoint, userAgent, client, pool}
 }
 
 type invoke struct {
 	id      string
-	payload []byte
+	payload *bytes.Buffer
 	headers http.Header
 	client  *runtimeAPIClient
 }
@@ -56,8 +74,11 @@ type invoke struct {
 // Notes:
 //   - An invoke is not complete until next() is called again!
 func (i *invoke) success(body io.Reader, contentType string) error {
+	defer i.client.pool.Put(i.payload)
+	defer i.payload.Reset()
+
 	url := i.client.baseURL + i.id + "/response"
-	return i.client.post(url, body, contentType)
+	return i.client.post(url, body, contentType, nil)
 }
 
 // failure sends the payload to the Runtime API. This marks the function's invoke as a failure.
@@ -65,16 +86,19 @@ func (i *invoke) success(body io.Reader, contentType string) error {
 //   - The execution of the function process continues, and is billed, until next() is called again!
 //   - A Lambda Function continues to be re-used for future invokes even after a failure.
 //     If the error is fatal (panic, unrecoverable state), exit the process immediately after calling failure()
-func (i *invoke) failure(body io.Reader, contentType string) error {
+func (i *invoke) failure(body io.Reader, contentType string, causeForXRay []byte) error {
+	defer i.client.pool.Put(i.payload)
+	defer i.payload.Reset()
+
 	url := i.client.baseURL + i.id + "/error"
-	return i.client.post(url, body, contentType)
+	return i.client.post(url, body, contentType, causeForXRay)
 }
 
 // next connects to the Runtime API and waits for a new invoke Request to be available.
 // Note: After a call to Done() or Error() has been made, a call to next() will complete the in-flight invoke.
-func (c *runtimeAPIClient) next() (*invoke, error) {
+func (c *runtimeAPIClient) next(ctx context.Context) (*invoke, error) {
 	url := c.baseURL + "next"
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct GET request to %s: %v", url, err)
 	}
@@ -94,21 +118,23 @@ func (c *runtimeAPIClient) next() (*invoke, error) {
 		return nil, fmt.Errorf("failed to GET %s: got unexpected status code: %d", url, resp.StatusCode)
 	}
 
-	c.buffer.Reset()
-	_, err = c.buffer.ReadFrom(resp.Body)
+	payload := c.pool.Get().(*bytes.Buffer)
+	_, err = payload.ReadFrom(resp.Body)
 	if err != nil {
+		payload.Reset()
+		c.pool.Put(payload)
 		return nil, fmt.Errorf("failed to read the invoke payload: %v", err)
 	}
 
 	return &invoke{
 		id:      resp.Header.Get(headerAWSRequestID),
-		payload: c.buffer.Bytes(),
+		payload: payload,
 		headers: resp.Header,
 		client:  c,
 	}, nil
 }
 
-func (c *runtimeAPIClient) post(url string, body io.Reader, contentType string) error {
+func (c *runtimeAPIClient) post(url string, body io.Reader, contentType string, xrayErrorCause []byte) error {
 	b := newErrorCapturingReader(body)
 	req, err := http.NewRequest(http.MethodPost, url, b)
 	if err != nil {
@@ -117,6 +143,10 @@ func (c *runtimeAPIClient) post(url string, body io.Reader, contentType string) 
 	req.Trailer = b.Trailer
 	req.Header.Set("User-Agent", c.userAgent)
 	req.Header.Set("Content-Type", contentType)
+
+	if xrayErrorCause != nil && len(xrayErrorCause) < xrayErrorCauseMaxSize {
+		req.Header.Set(headerXRayErrorCause, string(xrayErrorCause))
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -131,7 +161,7 @@ func (c *runtimeAPIClient) post(url string, body io.Reader, contentType string) 
 		return fmt.Errorf("failed to POST to %s: got unexpected status code: %d", url, resp.StatusCode)
 	}
 
-	_, err = io.Copy(ioutil.Discard, resp.Body)
+	_, err = io.Copy(io.Discard, resp.Body)
 	if err != nil {
 		return fmt.Errorf("something went wrong reading the POST response from %s: %v", url, err)
 	}

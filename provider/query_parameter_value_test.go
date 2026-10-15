@@ -117,6 +117,21 @@ func TestReplaceParams(t *testing.T) {
 			expectedSql:  "$1 $1 $1 $2$2$2 $1 $1 $1",
 			expectedArgs: []interface{}{1, 2},
 		},
+		"protected contexts": {
+			params: Params{
+				"!PARAM!": {
+					Token: "!PARAM!",
+					SQL:   "?",
+					Value: 1,
+				},
+			},
+			// SQL-context-aware substitution (UPSTREAM 2.6): the token
+			// inside the string literal and the comment is left verbatim;
+			// only the code-context occurrence binds a parameter.
+			sql:          "SELECT '!PARAM!' FROM t WHERE p = !PARAM! -- !PARAM!",
+			expectedSql:  "SELECT '!PARAM!' FROM t WHERE p = $1 -- !PARAM!",
+			expectedArgs: []interface{}{1},
+		},
 		"unknown token": {
 			params: Params{
 				"!PARAM!": {

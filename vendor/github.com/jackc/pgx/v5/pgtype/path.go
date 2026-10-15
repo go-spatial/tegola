@@ -2,7 +2,6 @@ package pgtype
 
 import (
 	"database/sql/driver"
-	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -43,8 +42,7 @@ func (path *Path) Scan(src any) error {
 		return nil
 	}
 
-	switch src := src.(type) {
-	case string:
+	if src, ok := src.(string); ok {
 		return scanPlanTextAnyToPathScanner{}.Scan([]byte(src), path)
 	}
 
@@ -158,13 +156,11 @@ func (encodePlanPathCodecText) Encode(value any, buf []byte) (newBuf []byte, err
 func (PathCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan {
 	switch format {
 	case BinaryFormatCode:
-		switch target.(type) {
-		case PathScanner:
+		if _, ok := target.(PathScanner); ok {
 			return scanPlanBinaryPathToPathScanner{}
 		}
 	case TextFormatCode:
-		switch target.(type) {
-		case PathScanner:
+		if _, ok := target.(PathScanner); ok {
 			return scanPlanTextAnyToPathScanner{}
 		}
 	}
@@ -175,32 +171,30 @@ func (PathCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan
 type scanPlanBinaryPathToPathScanner struct{}
 
 func (scanPlanBinaryPathToPathScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(PathScanner)
+	scanner := dst.(PathScanner)
 
 	if src == nil {
 		return scanner.ScanPath(Path{})
 	}
 
-	if len(src) < 5 {
-		return fmt.Errorf("invalid length for Path: %v", len(src))
-	}
+	r := pgio.NewReader(src)
 
-	closed := src[0] == 1
-	pointCount := int(binary.BigEndian.Uint32(src[1:]))
-
-	rp := 5
-
-	if 5+pointCount*16 != len(src) {
-		return fmt.Errorf("invalid length for Path with %d points: %v", pointCount, len(src))
+	closed := r.Byte() == 1
+	// Each point is two float64s.
+	pointCount := r.Count(16)
+	if err := r.Err(); err != nil {
+		return fmt.Errorf("invalid length for Path: %w", err)
 	}
 
 	points := make([]Vec2, pointCount)
 	for i := range points {
-		x := binary.BigEndian.Uint64(src[rp:])
-		rp += 8
-		y := binary.BigEndian.Uint64(src[rp:])
-		rp += 8
+		x := r.Uint64()
+		y := r.Uint64()
 		points[i] = Vec2{math.Float64frombits(x), math.Float64frombits(y)}
+	}
+
+	if err := r.Finish(); err != nil {
+		return fmt.Errorf("invalid length for Path with %d points: %w", pointCount, err)
 	}
 
 	return scanner.ScanPath(Path{
@@ -213,7 +207,7 @@ func (scanPlanBinaryPathToPathScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToPathScanner struct{}
 
 func (scanPlanTextAnyToPathScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(PathScanner)
+	scanner := dst.(PathScanner)
 
 	if src == nil {
 		return scanner.ScanPath(Path{})
@@ -226,29 +220,39 @@ func (scanPlanTextAnyToPathScanner) Scan(src []byte, dst any) error {
 	closed := src[0] == '('
 	points := make([]Vec2, 0)
 
-	str := string(src[2:])
+	// Expected format: ((x1,y1),...,(xn,yn)) or [(x1,y1),...,(xn,yn)]
+	str := string(src[1 : len(src)-1])
 
 	for {
-		end := strings.IndexByte(str, ',')
-		x, err := strconv.ParseFloat(str[:end], 64)
+		if len(str) == 0 || str[0] != '(' {
+			return fmt.Errorf("invalid format for Path")
+		}
+		body, rest, found := strings.Cut(str[1:], ")")
+		if !found {
+			return fmt.Errorf("invalid format for Path")
+		}
+
+		sx, sy, found := strings.Cut(body, ",")
+		if !found {
+			return fmt.Errorf("invalid format for Path")
+		}
+		x, err := strconv.ParseFloat(sx, 64)
 		if err != nil {
 			return err
 		}
-
-		str = str[end+1:]
-		end = strings.IndexByte(str, ')')
-
-		y, err := strconv.ParseFloat(str[:end], 64)
+		y, err := strconv.ParseFloat(sy, 64)
 		if err != nil {
 			return err
 		}
 
 		points = append(points, Vec2{x, y})
 
-		if end+3 < len(str) {
-			str = str[end+3:]
-		} else {
+		if rest == "" {
 			break
+		}
+		str, found = strings.CutPrefix(rest, ",")
+		if !found {
+			return fmt.Errorf("invalid format for Path")
 		}
 	}
 

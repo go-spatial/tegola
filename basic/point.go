@@ -3,8 +3,8 @@ package basic
 import (
 	"fmt"
 
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/maths"
 )
 
 // Point describes a simple 2d point
@@ -16,9 +16,9 @@ func (Point) basicType() {}
 // AsPt returns the equivalent maths.Pt
 func (p *Point) AsPt() maths.Pt {
 	if p == nil {
-		return maths.Pt{0, 0}
+		return maths.Pt{X: 0, Y: 0}
 	}
-	return maths.Pt{p[0], p[1]}
+	return maths.Pt{X: p[0], Y: p[1]}
 }
 
 // X is the x coordinate

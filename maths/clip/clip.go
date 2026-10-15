@@ -3,12 +3,12 @@ package clip
 import (
 	"sort"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/lines"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/geom/cmp"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/basic"
+	"github.com/alexeydott/tegola/maths"
+	"github.com/alexeydott/tegola/maths/lines"
 )
 
 type byxy [][2]float64

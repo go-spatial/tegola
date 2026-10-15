@@ -1,16 +1,15 @@
 package driver
 
 import (
-	"fmt"
+	"slices"
 	"sync"
 	"time"
-
-	"golang.org/x/exp/slices"
 )
 
 const (
 	counterBytesRead = iota
 	counterBytesWritten
+	counterSessionConnects
 	numCounter
 )
 
@@ -41,11 +40,10 @@ const (
 )
 
 type histogram struct {
-	count          uint64
-	sum            float64
-	upperBounds    []float64
-	boundCounts    []uint64
-	underflowCount uint64 // in case of negative duration (will add to zero bucket)
+	count       uint64
+	sum         float64
+	upperBounds []float64
+	boundCounts []uint64
 }
 
 func newHistogram(upperBounds []float64) *histogram {
@@ -64,10 +62,9 @@ func (h *histogram) stats() *StatsHistogram {
 	return rv
 }
 
-func (h *histogram) add(v float64) { // time in nanoseconds
+func (h *histogram) add(v float64) {
 	h.count++
-	if v < 0 {
-		h.underflowCount++
+	if v < 0 { // negative duration (e.g. clock adjustment): clamp into the zero bucket
 		v = 0
 	}
 	h.sum += v
@@ -78,71 +75,104 @@ func (h *histogram) add(v float64) { // time in nanoseconds
 	}
 }
 
-type counterMsg struct {
-	v   uint64
-	idx int
+type msgKind uint8
+
+const (
+	msgCounter msgKind = iota
+	msgGauge
+	msgTime
+	msgSQLTime
+	msgTimeCounter
+)
+
+// metricMsg is the single message type sent to the metrics collector channel.
+type metricMsg struct {
+	kind msgKind
+	idx  int    // metric index: counter, gauge, time, or sqlTime
+	idx2 int    // counter index for msgTimeCounter
+	v    int64  // gauge value for msgGauge
+	c    uint64 // counter value for msgCounter and msgTimeCounter
+	d    time.Duration
 }
 
-type gaugeMsg struct {
-	v   int64
-	idx int
-}
-
-type timeMsg struct {
-	d   time.Duration
-	idx int
-}
-
-type sqlTimeMsg struct {
-	d   time.Duration
-	idx int
-}
+const numMetricCollectorCh = 100
 
 type metrics struct {
-	parent *metrics
+	mu     sync.RWMutex
+	connMu sync.Mutex // guards n and collector start/stop transitions
+	n      int
+	wg     *sync.WaitGroup
+	msgCh  chan metricMsg
+
+	parentMetrics *metrics
+
+	timeUnit string
+	divider  float64
 
 	counters []uint64
 	gauges   []int64
 	times    []*histogram
 	sqlTimes []*histogram
-
-	wg    *sync.WaitGroup
-	chMsg chan any
-
-	closed atomicBool
 }
 
-const (
-	numCh = 100000
-)
-
-func newMetrics(parent *metrics, timeUpperBounds []float64) *metrics {
-	rv := &metrics{
-		parent:   parent,
-		counters: make([]uint64, numCounter),
-		gauges:   make([]int64, numGauge),
-		times:    make([]*histogram, numTime),
-		sqlTimes: make([]*histogram, numSQLTime),
-
-		wg:    new(sync.WaitGroup),
-		chMsg: make(chan any, numCh),
+func newMetrics(parentMetrics *metrics, timeUnit string, timeUpperBounds []float64) *metrics {
+	d, ok := timeUnitMap[timeUnit]
+	if !ok {
+		panic("invalid unit")
 	}
-	for i := 0; i < int(numTime); i++ {
+	rv := &metrics{
+		wg:            new(sync.WaitGroup),
+		parentMetrics: parentMetrics,
+		timeUnit:      timeUnit,
+		divider:       float64(d),
+		counters:      make([]uint64, numCounter),
+		gauges:        make([]int64, numGauge),
+		times:         make([]*histogram, numTime),
+		sqlTimes:      make([]*histogram, numSQLTime),
+	}
+	for i := range int(numTime) {
 		rv.times[i] = newHistogram(timeUpperBounds)
 	}
-	for i := 0; i < int(numSQLTime); i++ {
+	for i := range int(numSQLTime) {
 		rv.sqlTimes[i] = newHistogram(timeUpperBounds)
-	}
-	rv.wg.Add(1)
-	if parent == nil {
-		go rv.collect(rv.wg, rv.chMsg, rv.handleMsg)
-	} else {
-		go rv.collect(rv.wg, rv.chMsg, rv.handleParentMsg)
 	}
 	return rv
 }
 
-func (m *metrics) buildStats() *Stats {
+func (m *metrics) incrConn() {
+	m.connMu.Lock()
+	defer m.connMu.Unlock()
+	m.n++
+	if m.n > 1 {
+		return
+	}
+	m.msgCh = make(chan metricMsg, numMetricCollectorCh)
+	m.wg.Go(func() {
+		// collect
+		for msg := range m.msgCh {
+			m.handleMsg(msg)
+		}
+	})
+}
+
+func (m *metrics) decrConn() {
+	m.connMu.Lock()
+	defer m.connMu.Unlock()
+	m.n--
+	if m.n > 0 {
+		return
+	}
+	if m.n < 0 {
+		panic("unpaired decrConn")
+	}
+	close(m.msgCh)
+	m.wg.Wait()
+}
+
+func (m *metrics) stats() *Stats {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	sqlTimes := make(map[string]*StatsHistogram, len(m.sqlTimes))
 	for i, sqlTime := range m.sqlTimes {
 		sqlTimes[statsCfg.SQLTimeTexts[i]] = sqlTime.stats()
@@ -153,6 +183,8 @@ func (m *metrics) buildStats() *Stats {
 		OpenStatements:   int(m.gauges[gaugeStmt]),
 		ReadBytes:        m.counters[counterBytesRead],
 		WrittenBytes:     m.counters[counterBytesWritten],
+		SessionConnects:  m.counters[counterSessionConnects],
+		TimeUnit:         m.timeUnit,
 		ReadTime:         m.times[timeRead].stats(),
 		WriteTime:        m.times[timeWrite].stats(),
 		AuthTime:         m.times[timeAuth].stats(),
@@ -160,64 +192,61 @@ func (m *metrics) buildStats() *Stats {
 	}
 }
 
-func milliseconds(d time.Duration) float64 { return float64(d.Nanoseconds()) / 1e6 }
-
-func (m *metrics) handleMsg(msg any) {
-	switch msg := msg.(type) {
-	case counterMsg:
-		m.counters[msg.idx] += msg.v
-	case gaugeMsg:
+func (m *metrics) handleMsg(msg metricMsg) {
+	m.mu.Lock()
+	switch msg.kind {
+	case msgCounter:
+		m.counters[msg.idx] += msg.c
+	case msgGauge:
 		m.gauges[msg.idx] += msg.v
-	case timeMsg:
-		m.times[msg.idx].add(milliseconds(msg.d))
-	case sqlTimeMsg:
-		m.sqlTimes[msg.idx].add(milliseconds(msg.d))
-	case chan *Stats:
-		msg <- m.buildStats()
+	case msgTime:
+		m.times[msg.idx].add(float64(msg.d.Nanoseconds()) / m.divider)
+	case msgSQLTime:
+		m.sqlTimes[msg.idx].add(float64(msg.d.Nanoseconds()) / m.divider)
+	case msgTimeCounter:
+		m.times[msg.idx].add(float64(msg.d.Nanoseconds()) / m.divider)
+		m.counters[msg.idx2] += msg.c
 	default:
-		panic(fmt.Sprintf("invalid metric message type %T", msg))
+		panic("invalid metric message kind")
+	}
+	m.mu.Unlock()
+
+	if m.parentMetrics != nil {
+		m.parentMetrics.handleMsg(msg)
 	}
 }
 
-func (m *metrics) handleParentMsg(msg any) {
-	switch msg := msg.(type) {
-	case counterMsg:
-		m.parent.chMsg <- msg
-		m.counters[msg.idx] += msg.v
-	case gaugeMsg:
-		m.parent.chMsg <- msg
-		m.gauges[msg.idx] += msg.v
-	case timeMsg:
-		m.parent.chMsg <- msg
-		m.times[msg.idx].add(milliseconds(msg.d))
-	case sqlTimeMsg:
-		m.parent.chMsg <- msg
-		m.sqlTimes[msg.idx].add(milliseconds(msg.d))
-	case chan *Stats:
-		msg <- m.buildStats()
-	default:
-		panic(fmt.Sprintf("invalid metric message type %T", msg))
-	}
+// addCounter sends a counter message to the metrics collector channel.
+func (m *metrics) addCounter(idx int, v uint64) {
+	m.msgCh <- metricMsg{kind: msgCounter, idx: idx, c: v}
 }
 
-func (m *metrics) collect(wg *sync.WaitGroup, chMsg <-chan any, msgHandler func(msg any)) {
-	for msg := range chMsg {
-		msgHandler(msg)
-	}
-	wg.Done()
+// addGauge sends a gauge message to the metrics collector channel.
+func (m *metrics) addGauge(idx int, v int64) {
+	m.msgCh <- metricMsg{kind: msgGauge, idx: idx, v: v}
 }
 
-func (m *metrics) stats() *Stats {
-	if m.closed.Load() { // if closed return stas directly as we do not have write conflicts anymore
-		return m.stats()
-	}
-	chStats := make(chan *Stats)
-	m.chMsg <- chStats
-	return <-chStats
+// addTime sends a time message to the metrics collector channel.
+func (m *metrics) addTime(idx int, d time.Duration) {
+	m.msgCh <- metricMsg{kind: msgTime, idx: idx, d: d}
 }
 
-func (m *metrics) close() {
-	m.closed.Store(true)
-	close(m.chMsg)
-	m.wg.Wait()
+// addTimeValue sends the time elapsed since start to the metrics collector channel.
+func (m *metrics) addTimeValue(idx int, start time.Time) {
+	m.addTime(idx, time.Since(start))
+}
+
+// addSQLTime sends an SQL statement time message to the metrics collector channel.
+func (m *metrics) addSQLTime(idx int, d time.Duration) {
+	m.msgCh <- metricMsg{kind: msgSQLTime, idx: idx, d: d}
+}
+
+// addSQLTimeValue sends the time elapsed since start to the metrics collector channel.
+func (m *metrics) addSQLTimeValue(idx int, start time.Time) {
+	m.addSQLTime(idx, time.Since(start))
+}
+
+// addTimeCounter sends a combined time and counter message to the metrics collector channel.
+func (m *metrics) addTimeCounter(idx int, d time.Duration, cidx int, v uint64) {
+	m.msgCh <- metricMsg{kind: msgTimeCounter, idx: idx, d: d, idx2: cidx, c: v}
 }

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-spatial/tegola/internal/log"
+	"github.com/alexeydott/tegola/internal/log"
 )
 
 func TestStackTraceHandler(t *testing.T) {

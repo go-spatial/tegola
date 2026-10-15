@@ -8,9 +8,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/log"
 )
 
 var ErrMissingBasepath = errors.New("filecache: missing required param 'basepath'")
@@ -61,6 +62,13 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		return nil, ErrMissingBasepath
 	}
 
+	// Resolve once so subsequent working-directory changes cannot redirect I/O.
+	fc.Basepath, err = filepath.Abs(fc.Basepath)
+	if err != nil {
+		return nil, err
+	}
+	log.Infof("file cache: basepath=%s max_zoom=%d ttl=%s", fc.Basepath, fc.MaxZoom, fc.Expiration)
+
 	// make our basepath if it does not exist
 	if err = os.MkdirAll(fc.Basepath, os.ModePerm); err != nil {
 		return nil, err
@@ -109,8 +117,12 @@ func (fc *Cache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) 
 		}
 
 		if isExpired(s.ModTime(), fc.Expiration) {
-			pErr := fc.Purge(ctx, key)
-			if pErr != nil {
+			// Close before removing the expired file so purge also works on
+			// platforms that do not allow deleting an open file.
+			if err := f.Close(); err != nil {
+				return nil, false, err
+			}
+			if err := fc.Purge(ctx, key); err != nil {
 				return nil, false, err
 			}
 			return nil, false, nil
@@ -141,39 +153,65 @@ func (fc *Cache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 		return err
 	}
 
-	// the tmpPath uses the destPath with a simple "-tmp" suffix. we're going to do
-	// a Rename at the end of this method and according to the os.Rename() docs:
-	// "If newpath already exists and is not a directory, Rename replaces it.
-	// OS-specific restrictions may apply when oldpath and newpath are in different directories"
 	destPath := filepath.Join(fc.Basepath, key.String())
-	tmpPath := destPath + "-tmp"
 
 	// the key can have a directory syntax so we need to makeAll
 	if err = os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
 		return err
 	}
 
-	// create the file
-	f, err := os.Create(tmpPath)
+	// write to a uniquely named temp file in the destination directory so
+	// concurrent writes of the same key cannot corrupt each other. we're going
+	// to do a Rename at the end of this method and according to the
+	// os.Rename() docs: "If newpath already exists and is not a directory,
+	// Rename replaces it. OS-specific restrictions may apply when oldpath and
+	// newpath are in different directories"
+	f, err := os.CreateTemp(filepath.Dir(destPath), filepath.Base(destPath)+"-tmp-*")
 	if err != nil {
 		return err
 	}
+	tmpPath := f.Name()
 
 	// copy the contents
 	_, err = f.Write(val)
 	if err != nil {
 		// close the file, can't use 'defer f.Close()'' otherwise rename wont happen
-		f.Close() //nolint:errcheck
+		f.Close()          //nolint:errcheck
+		os.Remove(tmpPath) //nolint:errcheck // don't leave the temp file behind
 		return err
 	}
 
 	// close the file, can't use 'defer f.Close()'' otherwise rename wont happen
 	if err = f.Close(); err != nil {
+		os.Remove(tmpPath) //nolint:errcheck // don't leave the temp file behind
 		return err
 	}
 
-	// move the temp file to the destination
-	return os.Rename(tmpPath, destPath)
+	// move the temp file to the destination. on windows concurrent renames
+	// onto the same destination can fail transiently ("Access is denied")
+	// while a competing rename of the same destination completes, so retry
+	// briefly before giving up
+	if err = renameWithRetry(tmpPath, destPath); err != nil {
+		os.Remove(tmpPath) //nolint:errcheck // don't leave the temp file behind
+		return err
+	}
+
+	return nil
+}
+
+// renameWithRetry renames oldPath to newPath, retrying briefly when the
+// destination is momentarily busy (windows can report "Access is denied" while
+// a concurrent rename onto the same destination is still completing, and while
+// scanners briefly hold the freshly replaced file).
+func renameWithRetry(oldPath, newPath string) error {
+	var err error
+	for i := 0; i < 10; i++ {
+		if err = os.Rename(oldPath, newPath); err == nil {
+			return nil
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	return err
 }
 
 func (fc *Cache) Purge(ctx context.Context, key *cache.Key) error {
@@ -188,6 +226,30 @@ func (fc *Cache) Purge(ctx context.Context, key *cache.Key) error {
 		return err
 	}
 
-	// remove the locker key on purge
-	return os.Remove(path)
+	// remove the file. a concurrent purge may have removed it already, which
+	// is not an error
+	if err := removeIfPresent(path); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// removeIfPresent deletes path and reports success when the file is gone
+// afterwards. Concurrent deletes of one file can fail transiently on windows
+// ("Access is denied" while a competing delete is still completing), so the
+// removal is retried briefly before giving up.
+func removeIfPresent(path string) error {
+	var err error
+	for i := 0; i < 10; i++ {
+		if err = os.Remove(path); err == nil || os.IsNotExist(err) {
+			return nil
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	// last resort: the file may have disappeared while the final removal failed
+	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+		return nil
+	}
+	return err
 }

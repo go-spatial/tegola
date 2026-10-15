@@ -252,7 +252,7 @@ func (scanPlanBinaryBoolToBool) Scan(src []byte, dst any) error {
 		return fmt.Errorf("invalid length for bool: %v", len(src))
 	}
 
-	p, ok := (dst).(*bool)
+	p, ok := dst.(*bool)
 	if !ok {
 		return ErrScanTargetTypeChanged
 	}
@@ -273,7 +273,7 @@ func (scanPlanTextAnyToBool) Scan(src []byte, dst any) error {
 		return fmt.Errorf("cannot scan empty string into %T", dst)
 	}
 
-	p, ok := (dst).(*bool)
+	p, ok := dst.(*bool)
 	if !ok {
 		return ErrScanTargetTypeChanged
 	}
@@ -291,7 +291,7 @@ func (scanPlanTextAnyToBool) Scan(src []byte, dst any) error {
 type scanPlanBinaryBoolToBoolScanner struct{}
 
 func (scanPlanBinaryBoolToBoolScanner) Scan(src []byte, dst any) error {
-	s, ok := (dst).(BoolScanner)
+	s, ok := dst.(BoolScanner)
 	if !ok {
 		return ErrScanTargetTypeChanged
 	}
@@ -310,7 +310,7 @@ func (scanPlanBinaryBoolToBoolScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToBoolScanner struct{}
 
 func (scanPlanTextAnyToBoolScanner) Scan(src []byte, dst any) error {
-	s, ok := (dst).(BoolScanner)
+	s, ok := dst.(BoolScanner)
 	if !ok {
 		return ErrScanTargetTypeChanged
 	}
@@ -336,9 +336,9 @@ func planTextToBool(src []byte) (bool, error) {
 	s := string(bytes.ToLower(bytes.TrimSpace(src)))
 
 	switch {
-	case strings.HasPrefix("true", s), strings.HasPrefix("yes", s), s == "on", s == "1":
+	case strings.HasPrefix("true", s), strings.HasPrefix("yes", s), s == "on", s == "1": //nolint:gocritic // s is intentionally the prefix argument so partial inputs (t, tr, tru) also match.
 		return true, nil
-	case strings.HasPrefix("false", s), strings.HasPrefix("no", s), strings.HasPrefix("off", s), s == "0":
+	case strings.HasPrefix("false", s), strings.HasPrefix("no", s), strings.HasPrefix("off", s), s == "0": //nolint:gocritic // s is intentionally the prefix argument so partial inputs (f, fa, fal) also match.
 		return false, nil
 	default:
 		return false, fmt.Errorf("unknown boolean string representation %q", src)

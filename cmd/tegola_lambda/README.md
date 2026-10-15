@@ -1,61 +1,83 @@
-# tegola_lambda
+# Tegola on AWS Lambda
 
-Run tegola on AWS lambda. This implementation uses the native Go AWS Lambda rutime. There are a couple limitations to using lambda to run tegola:
+`cmd/tegola_lambda` initializes configuration, providers, pools, maps and the HTTP
+router once per execution environment. Warm invocations reuse them; separate
+execution environments have independent state. `server/lambda` adapts buffered
+AWS events to that router, using the vendored algnhsa implementation internally.
 
-- No connection pooling: The database connection will be rebuilt on every lambda request.
-- No built in viewer: Lambda + API Gateway have limitations which restrict the configuration from being easily setup to support the built in viewer and return vector tiles.
+## Supported entry-point configuration
 
-The following steps assume you have a working tegola configuration. 
+The stock Lambda binary loads `config.toml`, or the location in `TEGOLA_CONFIG`.
+It binds map tiles, configured cache backends, generic response headers, public
+hostname/URI prefix and explicitly published read-only Feature API collections.
+Viewer availability depends on embedded assets and gateway routing.
 
-## Creating a new lambda function
+It does **not** wire WFS handlers, feature-write configuration/authentication,
+`tile_http_max_age` or tile-maintenance configuration from the TOML into the
+router. Do not assume a configuration accepted by `tegola serve` enables these
+features in the Lambda executable. Embedders can assemble a different router,
+but must implement and verify that composition explicitly. In particular,
+process-local writable cache generations are not distributed invalidation across
+Lambda execution environments.
 
-### From the AWS console:
+## Buffered event modes
 
-- Navigate to lambda and click "Create function". We're going to "Author from scratch".
-  - Name: name your function whatever you like.
-  - Runtime: At the bottom of the drop down select "Provide your own bootstrap on Amazon Linux 2".
-  - Architecture: Select your desired architecture. There's a tegola lambda version for both `x86_64` and `arm64` available.
-  - Role: Depends on your environment. For the sake of this walk through we will "Create a new role from template"
-  - Role Name: Up to you. `tegola` is a good role name. 
-  - Policy Templates: Select "Basic Edge Lambda Permissions".
-- Click "Create function".
+| Event | Adapter support |
+| --- | --- |
+| API Gateway REST proxy v1 | Supported |
+| API Gateway HTTP API v2 | Supported |
+| Function URL v2 | Supported |
+| ALB | Requires target-group multi-value headers |
 
-## Preparing the function for upload
+HEAD suppresses the body while preserving response headers. MVT payloads use
+binary/base64 transport; textual representations must be valid UTF-8. Streaming
+responses and ALB single-value mode are unsupported.
 
-Lambda expects an archive with the function to be uploaded. In tegola's case we will be creating an archive of the binary `bootstrap` and a `config.toml` file:
+The adapter defaults cap event envelopes at 6 MiB, decoded request bodies at
+1 MiB, response bodies at 4 MiB and headers at 64 KiB. Serialized responses are
+also capped: 1 MiB for ALB and 6 MiB for other supported events. These are Tegola's
+transport bounds, not a general statement of AWS account quotas.
 
-```bash
+Configured `webserver.hostname` supplies the complete public URL and mapping
+path. Otherwise origin/stage handling comes from the validated event profile;
+forwarded headers are not an arbitrary origin override. See the
+[Lambda transport decision](../../docs/architecture/decisions/ADR-0014-lambda-router-adapter.md).
+
+## Build and package
+
+From the repository root in a POSIX shell:
+
+```sh
+CGO_ENABLED=0 GOARCH=arm64 GOOS=linux go build -mod=vendor \
+  -tags 'lambda.norpc noViewer' -o bootstrap ./cmd/tegola_lambda
 zip deployment.zip bootstrap config.toml
 ```
 
-*Note: tegola will check for a config file named `config.toml` by default. This can be changed by setting the environment variable `TEGOLA_CONFIG`*
+Use `GOARCH=amd64` for x86-64. This build excludes the viewer and GeoPackage
+because CGO is disabled. If those are required, build embedded assets and a
+compatible CGO environment deliberately; see [development](../../docs/development.md).
+Inject release version/revision metadata when packaging a release.
 
-Back in the AWS console for the function that was created earlier, locate the section "Code" and click "Upload from" and choose ".zip file". Find and upload the `deployment.zip` archive you just created.
+Deploy the archive through the supported AWS runtime/infrastructure process,
+configure database/cache access and gateway binary transport, then test real
+responses at the public endpoint. Keep credentials out of the archive where
+possible and use the deployment's secret mechanism. Configuration changes take
+effect in newly initialized execution environments.
 
-## Configuring the Lambda function
+## Verification
 
-- Under "Basic Settings" 
-  - Memory: Adjust to your preference. Depending on the config.toml file you may need more or less memory for the function. 
-  - Timeout: Set to max time (5 minutes).
-
-## Deployment
-
-AWS Supports several ways to trigger lambda functions (i.e. API Gateway, ALB, Function URL). `tegola_lambda` uses the [algnhsa](github.com/akrylysov/algnhsa) package as the AWS lambda shim. Various [deployment configs are documented in the README](https://github.com/akrylysov/algnhsa#deployment) for `algnhsa`.
-
-### Setting up API Gateway
-
-When using API Gateway there are a few key details that need to be configured during setup:
-
-* Under "Content Encoding" check the box to enable and set the value to 0. This is important as tegola will return tiles in gzip encoded. Without this checked the content encoding will be improperly handled. 
-* Under "Binary Media Types" click "Add Binary Media Type".
-* Input `*/*` as the value. This is necessary as tegola returns protocol buffers, which are a binary format. Without this configuration API gateway will return the vector tile payloads as base64 encoded strings.
-
-## Building from source
-
-Building `tegola_lambda` works the same way as building normal tegola with the exception that it must be built for linux. Navigate to the repository root then `cmd/tegola_lambda` and execute the following command to create an arm64 binary:
-
-```console
-GOARCH=arm64 GOOS=linux go build -tags lambda.norpc -o bootstrap main.go
+```sh
+go test -mod=vendor ./server/lambda
 ```
 
-A binary named `bootstrap` will be created.
+Local adapter tests compare buffered events and actual router responses,
+including JSON/HTML discovery, links, errors, HEAD, MVT and transport limits.
+They do not establish a deployed AWS integration. Verify public URLs, stage
+mapping, binary payloads, headers and database connectivity in the actual
+installation before cutover.
+
+## See Also
+
+- [Feature API release scope](../../docs/release/feature-api.md)
+- [Configuration](../../docs/configuration.md)
+- [Write operating limits](../../docs/wfs-scope-limitations.md)

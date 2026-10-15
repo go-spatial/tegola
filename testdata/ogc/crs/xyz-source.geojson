@@ -1,0 +1,9 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {"type":"Feature","id":10,"geometry":{"type":"Point","coordinates":[15,30,23]},"properties":{"name":"asymmetric-height"}},
+  {"type":"Feature","id":20,"geometry":{"type":"Point","coordinates":[16,31,24]},"properties":{"name":"outside-height"}},
+  {"type":"Feature","id":30,"geometry":{"type":"LineString","coordinates":[[14,30,23],[16,30,23]]},"properties":{"name":"constant-height-boundary"}},
+  {"type":"Feature","id":40,"geometry":null,"properties":{"name":"absence"}}
+ ]
+}

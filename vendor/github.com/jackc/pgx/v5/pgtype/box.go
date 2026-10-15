@@ -2,7 +2,6 @@ package pgtype
 
 import (
 	"database/sql/driver"
-	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -42,8 +41,7 @@ func (dst *Box) Scan(src any) error {
 		return nil
 	}
 
-	switch src := src.(type) {
-	case string:
+	if src, ok := src.(string); ok {
 		return scanPlanTextAnyToBoxScanner{}.Scan([]byte(src), dst)
 	}
 
@@ -131,13 +129,11 @@ func (encodePlanBoxCodecText) Encode(value any, buf []byte) (newBuf []byte, err 
 func (BoxCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan {
 	switch format {
 	case BinaryFormatCode:
-		switch target.(type) {
-		case BoxScanner:
+		if _, ok := target.(BoxScanner); ok {
 			return scanPlanBinaryBoxToBoxScanner{}
 		}
 	case TextFormatCode:
-		switch target.(type) {
-		case BoxScanner:
+		if _, ok := target.(BoxScanner); ok {
 			return scanPlanTextAnyToBoxScanner{}
 		}
 	}
@@ -148,20 +144,22 @@ func (BoxCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan 
 type scanPlanBinaryBoxToBoxScanner struct{}
 
 func (scanPlanBinaryBoxToBoxScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(BoxScanner)
+	scanner := dst.(BoxScanner)
 
 	if src == nil {
 		return scanner.ScanBox(Box{})
 	}
 
-	if len(src) != 32 {
-		return fmt.Errorf("invalid length for Box: %v", len(src))
-	}
+	r := pgio.NewReader(src)
 
-	x1 := binary.BigEndian.Uint64(src)
-	y1 := binary.BigEndian.Uint64(src[8:])
-	x2 := binary.BigEndian.Uint64(src[16:])
-	y2 := binary.BigEndian.Uint64(src[24:])
+	x1 := r.Uint64()
+	y1 := r.Uint64()
+	x2 := r.Uint64()
+	y2 := r.Uint64()
+
+	if err := r.Finish(); err != nil {
+		return fmt.Errorf("Box: %w", err)
+	}
 
 	return scanner.ScanBox(Box{
 		P: [2]Vec2{
@@ -175,7 +173,7 @@ func (scanPlanBinaryBoxToBoxScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToBoxScanner struct{}
 
 func (scanPlanTextAnyToBoxScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(BoxScanner)
+	scanner := dst.(BoxScanner)
 
 	if src == nil {
 		return scanner.ScanBox(Box{})
@@ -185,35 +183,34 @@ func (scanPlanTextAnyToBoxScanner) Scan(src []byte, dst any) error {
 		return fmt.Errorf("invalid length for Box: %v", len(src))
 	}
 
-	str := string(src[1:])
+	// Expected format: (x1,y1),(x2,y2)
+	sp1, sp2, found := strings.Cut(string(src[1:len(src)-1]), "),(")
+	if !found {
+		return fmt.Errorf("invalid format for Box")
+	}
 
-	var end int
-	end = strings.IndexByte(str, ',')
+	sx1, sy1, found := strings.Cut(sp1, ",")
+	if !found {
+		return fmt.Errorf("invalid format for Box")
+	}
+	sx2, sy2, found := strings.Cut(sp2, ",")
+	if !found {
+		return fmt.Errorf("invalid format for Box")
+	}
 
-	x1, err := strconv.ParseFloat(str[:end], 64)
+	x1, err := strconv.ParseFloat(sx1, 64)
 	if err != nil {
 		return err
 	}
-
-	str = str[end+1:]
-	end = strings.IndexByte(str, ')')
-
-	y1, err := strconv.ParseFloat(str[:end], 64)
+	y1, err := strconv.ParseFloat(sy1, 64)
 	if err != nil {
 		return err
 	}
-
-	str = str[end+3:]
-	end = strings.IndexByte(str, ',')
-
-	x2, err := strconv.ParseFloat(str[:end], 64)
+	x2, err := strconv.ParseFloat(sx2, 64)
 	if err != nil {
 		return err
 	}
-
-	str = str[end+1 : len(str)-1]
-
-	y2, err := strconv.ParseFloat(str, 64)
+	y2, err := strconv.ParseFloat(sy2, 64)
 	if err != nil {
 		return err
 	}

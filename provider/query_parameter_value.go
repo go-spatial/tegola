@@ -3,6 +3,8 @@ package provider
 import (
 	"fmt"
 	"strings"
+
+	"github.com/alexeydott/tegola/internal/sqltoken"
 )
 
 // Query parameter holds normalized parameter data ready to be inserted in the
@@ -24,8 +26,26 @@ type QueryParameterValue struct {
 type Params map[string]QueryParameterValue
 
 // ReplaceParams substitutes configured query parameter tokens for their values
-// within the provided SQL string
+// within the provided SQL string. Only tokens in SQL code context are
+// substituted: token-looking text inside string literals, quoted identifiers,
+// or comments is left verbatim.
 func (params Params) ReplaceParams(sql string, args *[]interface{}) string {
+	return params.ReplaceParamsWithDialect(sql, args, SQLDialectLegacy)
+}
+
+// SQLDialect selects the lexical rules used for parameter substitution.
+type SQLDialect = sqltoken.Dialect
+
+const (
+	SQLDialectLegacy     = sqltoken.Legacy
+	SQLDialectPostgreSQL = sqltoken.PostgreSQL
+	SQLDialectMySQL      = sqltoken.MySQL
+	SQLDialectSQLite     = sqltoken.SQLite
+	SQLDialectHANA       = sqltoken.HANA
+)
+
+// ReplaceParamsWithDialect substitutes executable parameters under backend SQL rules.
+func (params Params) ReplaceParamsWithDialect(sql string, args *[]interface{}, dialect SQLDialect) string {
 	if params == nil {
 		return sql
 	}
@@ -35,15 +55,15 @@ func (params Params) ReplaceParams(sql string, args *[]interface{}) string {
 		sb    strings.Builder
 	)
 
-	for _, token := range ParameterTokenRegexp.FindAllString(sql, -1) {
-		resultSQL, ok := cache[token]
+	for _, tok := range dialect.CodeTokens(sql) {
+		resultSQL, ok := cache[tok.Text]
 		if ok {
 			// Already have it cached, replace the token and move on.
-			sql = strings.ReplaceAll(sql, token, resultSQL)
+			sql = dialect.ReplaceToken(sql, tok.Text, resultSQL)
 			continue
 		}
 
-		param, ok := params[token]
+		param, ok := params[tok.Text]
 		if !ok {
 			// Unknown token, ignoring
 			continue
@@ -68,8 +88,8 @@ func (params Params) ReplaceParams(sql string, args *[]interface{}) string {
 		}
 
 		resultSQL = sb.String()
-		cache[token] = resultSQL
-		sql = strings.ReplaceAll(sql, token, resultSQL)
+		cache[tok.Text] = resultSQL
+		sql = dialect.ReplaceToken(sql, tok.Text, resultSQL)
 	}
 
 	return sql

@@ -6,7 +6,7 @@ package server
 import (
 	"github.com/dimfeld/httptreemux"
 
-	"github.com/go-spatial/tegola/observability"
+	"github.com/alexeydott/tegola/observability"
 )
 
 // setupViewer in this file is used for removing the viewer routes when the

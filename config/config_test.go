@@ -5,17 +5,18 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 
-	"github.com/go-spatial/tegola/config"
-	"github.com/go-spatial/tegola/internal/env"
-	"github.com/go-spatial/tegola/mapbox/tilejson"
-	"github.com/go-spatial/tegola/provider"
-	_ "github.com/go-spatial/tegola/provider/debug"
-	_ "github.com/go-spatial/tegola/provider/postgis"
-	_ "github.com/go-spatial/tegola/provider/test"
+	"github.com/alexeydott/tegola/config"
+	"github.com/alexeydott/tegola/internal/env"
+	"github.com/alexeydott/tegola/mapbox/tilejson"
+	"github.com/alexeydott/tegola/provider"
+	_ "github.com/alexeydott/tegola/provider/debug"
+	_ "github.com/alexeydott/tegola/provider/postgis"
+	_ "github.com/alexeydott/tegola/provider/test"
 )
 
 const (
@@ -73,8 +74,10 @@ func TestParse(t *testing.T) {
 					t.Fatalf("expected err %s, got nil", tc.expectedErr)
 				}
 
-				// compare error messages
-				if tc.expectedErr.Error() != err.Error() {
+				// toml v1 wraps UnmarshalText errors with position info
+				// ("toml: line N (last key ...): ...") and ParseError does
+				// not unwrap, so match on the underlying message
+				if !strings.Contains(err.Error(), tc.expectedErr.Error()) {
 					t.Fatalf("invalid error. expected %v, got %v", tc.expectedErr, err)
 				}
 
@@ -108,6 +111,19 @@ func TestParse(t *testing.T) {
 	}
 
 	tests := map[string]tcase{
+		"webserver tile operations section": {
+			configPath: "testdata/webserver_tile_operations.toml",
+			expected: config.Config{
+				Webserver: config.Webserver{
+					TileOperations: config.TileOperationsConfig{
+						Enabled:       true,
+						Token:         "s3cret",
+						RatePerMinute: 120,
+						MaxConcurrent: 8,
+					},
+				},
+			},
+		},
 		"happy path": {
 			configPath: "testdata/happy_path.toml",
 			expected: config.Config{

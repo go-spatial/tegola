@@ -7,7 +7,7 @@ azblob cache is an abstraction on top of Azure Blob Storage which implements the
 type="azblob"
 container_url="https://your-account.blob.core.windows.net/container-name"
 az_account_name="your-account-name"
-az_shared_key="your-shared-key
+az_shared_key="your-shared-key"
 ```
 
 ## Properties

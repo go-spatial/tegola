@@ -3,13 +3,15 @@ package basic
 import (
 	"fmt"
 
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/maths"
 )
 
 // Line is a basic line type which is made up of two or more points that don't
 // intersect.
-// TODO: We don't really check to make sure the points don't intersect.
+// NOTE: the constructors do not validate self-intersection; the simplification
+// path (maths/simplify) is intersection aware and validated by the correctness
+// corpus in line_simplify_corpus_test.go (UPSTREAM.md debt 3.6, closed).
 type Line []Point
 
 // Just to make basic collection only usable with basic types.
@@ -37,7 +39,7 @@ func (l Line) AsGeomLineString() (ln [][2]float64) {
 // This assumes the linestring is a connected linestring.
 func (l Line) Contains(pt Point) bool {
 	pt0 := l[len(l)-1]
-	ptln := maths.Line{pt.AsPt(), maths.Pt{pt.X() + 1, pt.Y()}}
+	ptln := maths.Line{pt.AsPt(), maths.Pt{X: pt.X() + 1, Y: pt.Y()}}
 	count := 0
 	for _, pt1 := range l {
 		ln := maths.Line{pt0.AsPt(), pt1.AsPt()}

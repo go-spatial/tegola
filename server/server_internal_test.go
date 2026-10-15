@@ -192,6 +192,49 @@ func TestScheme(t *testing.T) {
 			proxyProtocol: "",
 			expected:      "https",
 		},
+		// P6-34: hostile forwarded proto values must never reach the tile URL
+		// templates; they fall back to the request's own scheme.
+		"javascript scheme x-forwarded-proto": {
+			request: http.Request{
+				Header: map[string][]string{
+					"X-Forwarded-Proto": {
+						"javascript:",
+					},
+				},
+			},
+			expected: "http",
+		},
+		"protocol-relative x-forwarded-proto": {
+			request: http.Request{
+				Header: map[string][]string{
+					"X-Forwarded-Proto": {
+						"//evil",
+					},
+				},
+			},
+			expected: "http",
+		},
+		"mixed case x-forwarded-proto": {
+			request: http.Request{
+				Header: map[string][]string{
+					"X-Forwarded-Proto": {
+						"HTTPS",
+					},
+				},
+			},
+			expected: "https",
+		},
+		"hostile x-forwarded-proto falls back to request scheme": {
+			request: http.Request{
+				TLS: &tls.ConnectionState{},
+				Header: map[string][]string{
+					"X-Forwarded-Proto": {
+						"javascript:",
+					},
+				},
+			},
+			expected: "https",
+		},
 	}
 
 	for name, tc := range tests {

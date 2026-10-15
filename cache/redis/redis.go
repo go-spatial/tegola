@@ -2,132 +2,99 @@ package redis
 
 import (
 	"context"
-	"crypto/tls"
+	"errors"
 	"fmt"
-	"net"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/log"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/dict"
 )
 
 const CacheType = "redis"
 
 const (
-	ConfigKeyNetwork  = "network"
-	ConfigKeyAddress  = "address"
-	ConfigKeyPassword = "password"
-	ConfigKeyDB       = "db"
-	ConfigKeyMaxZoom  = "max_zoom"
-	ConfigKeyTTL      = "ttl"
-	ConfigKeySSL      = "ssl"
-	ConfigKeyURI      = "uri"
+	ConfigKeyURI     = "uri"
+	ConfigKeyMaxZoom = "max_zoom"
+	ConfigKeyTTL     = "ttl"
 )
+
+// legacyConfigKeys are the connection configuration keys that ConfigKeyURI
+// replaced. A config that still sets any of them is rejected at startup with a
+// migration hint (see ErrUnsupportedConfigKeys).
+var legacyConfigKeys = []string{"network", "address", "password", "db", "ssl"}
 
 var (
 	// default values
-	defaultNetwork  = "tcp"
-	defaultAddress  = "127.0.0.1:6379"
-	defaultPassword = ""
-	defaultURI      = ""
-	defaultDB       = 0
-	defaultMaxZoom  = uint(tegola.MaxZ)
-	defaultTTL      = 0
-	defaultSSL      = false
+	defaultMaxZoom = uint(tegola.MaxZ)
+	defaultTTL     = 0
 )
 
 func init() {
-	cache.Register(CacheType, New)
+	_ = cache.Register(CacheType, New)
 }
 
-// TODO @iwpnd: deprecate connection with Addr
-// CreateOptions creates redis.Options from an implicit or explicit c
-func CreateOptions(c dict.Dicter) (opts *redis.Options, err error) {
-	uri, err := c.String(ConfigKeyURI, &defaultURI)
-	if err != nil {
-		return nil, err
+// CreateOptions creates redis.Options from the cache config. All connection
+// settings are read from the 'uri' key and parsed with redis.ParseURL
+// (schemes redis://, rediss:// and unix://). Configs that still set one of the
+// legacy connection keys, or that carry no parseable uri, fail here so that
+// tegola refuses to start instead of silently dialing defaults.
+func CreateOptions(c dict.Dicter) (*redis.Options, error) {
+	if keys := legacyConfigKeysSet(c); len(keys) > 0 {
+		return nil, &ErrUnsupportedConfigKeys{Keys: keys}
 	}
 
-	if uri != "" {
-		opts, err := redis.ParseURL(uri)
-		if err != nil {
-			return nil, err
+	uri, err := c.String(ConfigKeyURI, nil)
+	if err != nil {
+		// a non-string uri value is a type error on ConfigKeyURI, anything
+		// else (e.g. a missing key) means there is no uri to connect to
+		var requiredErr dict.ErrKeyRequired
+		if errors.As(err, &requiredErr) {
+			return nil, &ErrURIMissing{}
 		}
-
-		return opts, nil
-	}
-
-	log.Warn("connecting to redis using 'Addr' is deprecated. use 'uri' instead.")
-
-	network, err := c.String(ConfigKeyNetwork, &defaultNetwork)
-	if err != nil {
 		return nil, err
 	}
 
-	addr, err := c.String(ConfigKeyAddress, &defaultAddress)
+	if strings.TrimSpace(uri) == "" {
+		return nil, &ErrURIMissing{}
+	}
+
+	opts, err := redis.ParseURL(uri)
 	if err != nil {
-		return nil, err
+		// url.Parse errors echo the raw URL, which may contain credentials;
+		// unwrap to the cause so the startup error stays safe to log
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
+		return nil, &ErrInvalidURI{Err: err}
 	}
 
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, err
+	return opts, nil
+}
+
+// legacyConfigKeysSet returns the removed legacy connection keys that are
+// still set in the config, in legacyConfigKeys order.
+func legacyConfigKeysSet(c dict.Dicter) (keys []string) {
+	for _, key := range legacyConfigKeys {
+		if _, ok := c.Interface(key); ok {
+			keys = append(keys, key)
+		}
 	}
 
-	if host == "" {
-		return nil, &ErrHostMissing{msg: fmt.Sprintf("no host provided in '%s'", addr)}
-	}
-
-	password, err := c.String(ConfigKeyPassword, &defaultPassword)
-	if err != nil {
-		return nil, err
-	}
-
-	db, err := c.Int(ConfigKeyDB, &defaultDB)
-	if err != nil {
-		return nil, err
-	}
-
-	o := &redis.Options{
-		Network:     network,
-		Addr:        addr,
-		Password:    password,
-		DB:          db,
-		PoolSize:    2,
-		DialTimeout: 3 * time.Second,
-	}
-
-	ssl, err := c.Bool(ConfigKeySSL, &defaultSSL)
-	if err != nil {
-		return nil, err
-	}
-
-	if ssl {
-		o.TLSConfig = &tls.Config{ServerName: host}
-	}
-
-	return o, nil
+	return keys
 }
 
 func New(c dict.Dicter) (rcache cache.Interface, err error) {
-	ctx := context.Background()
+	// validate the whole config before dialing so configuration mistakes fail
+	// at startup with a config error rather than a connection error
 	opts, err := CreateOptions(c)
 	if err != nil {
 		return nil, err
-	}
-
-	client := redis.NewClient(opts)
-
-	pong, err := client.Ping(ctx).Result()
-	if err != nil {
-		return nil, err
-	}
-	if pong != "PONG" {
-		return nil, fmt.Errorf("redis did not respond with 'PONG', '%s'", pong)
 	}
 
 	// the c map's underlying value is int
@@ -139,6 +106,17 @@ func New(c dict.Dicter) (rcache cache.Interface, err error) {
 	ttl, err := c.Int(ConfigKeyTTL, &defaultTTL)
 	if err != nil {
 		return nil, err
+	}
+
+	ctx := context.Background()
+	client := redis.NewClient(opts)
+
+	pong, err := client.Ping(ctx).Result()
+	if err != nil {
+		return nil, err
+	}
+	if pong != "PONG" {
+		return nil, fmt.Errorf("redis did not respond with 'PONG', '%s'", pong)
 	}
 
 	return &RedisCache{

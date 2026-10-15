@@ -2,165 +2,264 @@ package protocol
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/SAP/go-hdb/driver/internal/protocol/auth"
 	"github.com/SAP/go-hdb/driver/internal/protocol/encoding"
-	"github.com/SAP/go-hdb/driver/internal/protocol/x509"
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
+	"github.com/SAP/go-hdb/driver/internal/trace"
 )
 
-// AuthPasswordSetter is implemented by authentication methods supporting password updates.
-type AuthPasswordSetter interface {
-	SetPassword(string)
-}
-
-// AuthTokenSetter is implemented by authentication methods supporting token updates.
-type AuthTokenSetter interface {
-	SetToken(string)
-}
-
-// AuthCertKeySetter is implemented by authentication methods supporting certificate and key updates.
-type AuthCertKeySetter interface {
-	SetCertKey(certKey *x509.CertKey)
-}
-
-// AuthCookieGetter is implemented by authentication methods supporting cookies to reconnect.
-type AuthCookieGetter interface {
-	Cookie() (logonname string, cookie []byte)
-}
-
-type authMethods map[string]auth.Method // key equals authentication method type.
-
-func (m authMethods) order() []auth.Method {
-	methods := maps.Values(m)
-	slices.SortFunc(methods, func(a, b auth.Method) bool { return a.Order() < b.Order() })
-	return methods
-}
-
-// Auth holds the client authentication methods dependant on the driver.Connector attributes.
-type Auth struct {
+// AuthHnd holds the client authentication methods dependent on the driver.Connector attributes and handles the authentication hdb protocol.
+type AuthHnd struct {
 	logonname string
-	methods   authMethods
-	method    auth.Method // selected method
+	methods   auth.Methods
+	selected  auth.Method // selected method
 }
 
-// NewAuth creates a new Auth instance.
-func NewAuth(logonname string) *Auth { return &Auth{logonname: logonname, methods: authMethods{}} }
+// NewAuthHnd creates a new AuthHnd instance.
+func NewAuthHnd(logonname string) *AuthHnd {
+	return &AuthHnd{logonname: logonname, methods: auth.Methods{}}
+}
 
-func (a *Auth) String() string { return fmt.Sprintf("logonname %s", a.logonname) }
+func (a *AuthHnd) String() string { return "logonname " + a.logonname }
 
 // AddSessionCookie adds session cookie authentication method.
-func (a *Auth) AddSessionCookie(cookie []byte, logonname, clientID string) {
+func (a *AuthHnd) AddSessionCookie(cookie []byte, logonname, clientID string) {
 	a.methods[auth.MtSessionCookie] = auth.NewSessionCookie(cookie, logonname, clientID)
 }
 
 // AddBasic adds basic authentication methods.
-func (a *Auth) AddBasic(username, password string) {
+func (a *AuthHnd) AddBasic(username, password string) {
 	a.methods[auth.MtSCRAMPBKDF2SHA256] = auth.NewSCRAMPBKDF2SHA256(username, password)
 	a.methods[auth.MtSCRAMSHA256] = auth.NewSCRAMSHA256(username, password)
 }
 
 // AddJWT adds JWT authentication method.
-func (a *Auth) AddJWT(token string) { a.methods[auth.MtJWT] = auth.NewJWT(token) }
+func (a *AuthHnd) AddJWT(token string) { a.methods[auth.MtJWT] = auth.NewJWT(token) }
 
 // AddX509 adds X509 authentication method.
-func (a *Auth) AddX509(certKey *x509.CertKey) { a.methods[auth.MtX509] = auth.NewX509(certKey) }
+func (a *AuthHnd) AddX509(certKey *auth.CertKey) { a.methods[auth.MtX509] = auth.NewX509(certKey) }
 
-// Method returns the selected authentication method.
-func (a *Auth) Method() auth.Method { return a.method }
+/*
+AddLDAP adds LDAP authentication method.
 
-func (a *Auth) setMethod(mt string) error {
+The LDAP method does not authenticate the server: the server-provided RSA
+public key is trusted as is. LDAP authentication should therefore only be used
+over a TLS transport (see SessionTLS/SetTLS).
+*/
+func (a *AuthHnd) AddLDAP(username, password string) {
+	a.methods[auth.MtLDAP] = auth.NewLDAP(username, password)
+}
+
+// Selected returns the selected authentication method.
+func (a *AuthHnd) Selected() auth.Method { return a.selected }
+
+func (a *AuthHnd) setMethod(mt string) error {
 	var ok bool
-	if a.method, ok = a.methods[mt]; !ok {
+	if a.selected, ok = a.methods[mt]; !ok {
 		return fmt.Errorf("invalid method type: %s", mt)
 	}
 	return nil
 }
 
-// InitRequest returns the init request part.
-func (a *Auth) InitRequest() (*AuthInitRequest, error) {
-	prms := &auth.Prms{}
-	prms.AddCESU8String(a.logonname)
-	for _, m := range a.methods.order() {
-		if err := m.PrepareInitReq(prms); err != nil {
-			return nil, err
-		}
-	}
-	return &AuthInitRequest{prms: prms}, nil
+// InitRequest returns the init request part holding the logonname and the
+// offered authentication methods.
+func (a *AuthHnd) InitRequest() (*AuthInitRequest, error) {
+	return &AuthInitRequest{logonname: a.logonname, methods: a.methods.Order()}, nil
 }
 
 // InitReply returns the init reply part.
-func (a *Auth) InitReply() (*AuthInitReply, error) { return &AuthInitReply{auth: a}, nil }
+func (a *AuthHnd) InitReply() (*AuthInitReply, error) { return &AuthInitReply{authHnd: a}, nil }
 
-// FinalRequest returns the final request part.
-func (a *Auth) FinalRequest() (*AuthFinalRequest, error) {
-	prms := &auth.Prms{}
-	if err := a.method.PrepareFinalReq(prms); err != nil {
-		return nil, err
-	}
-	return &AuthFinalRequest{prms}, nil
+// FinalRequest returns the final request part holding the selected method.
+func (a *AuthHnd) FinalRequest() (*AuthFinalRequest, error) {
+	return &AuthFinalRequest{method: a.selected}, nil
 }
 
 // FinalReply returns the final reply part.
-func (a *Auth) FinalReply() (*AuthFinalReply, error) { return &AuthFinalReply{method: a.method}, nil }
+func (a *AuthHnd) FinalReply() (*AuthFinalReply, error) {
+	return &AuthFinalReply{Method: a.selected}, nil
+}
 
-// AuthInitRequest represents an authentication initial request.
+// AuthInitRequest represents an authentication initial request. The generic
+// part holds the logonname and the offered authentication methods, each of
+// which holds its own detail parameters. Encode marshals the struct into the
+// wire parameter list, decode unmarshals the wire parameter list into the
+// struct.
 type AuthInitRequest struct {
-	prms *auth.Prms
+	logonname string
+	methods   []auth.Method // wire-interpreted offer methods, set on decode
 }
 
-func (r *AuthInitRequest) String() string { return r.prms.String() }
-func (r *AuthInitRequest) size() int      { return r.prms.Size() }
-func (r *AuthInitRequest) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	panic("not implemented yet")
+// encode encodes the request by iterating the offered methods: the method
+// name, then the method's own detail parameters.
+func (r *AuthInitRequest) encode(enc *encoding.Encoder) error {
+	prms := new(auth.Prms)
+	prms.AddCESU8String(r.logonname)
+	for _, m := range r.methods {
+		prms.AddString(m.Typ()) // generic part: method name
+		if err := m.EncodeInitReq(prms); err != nil {
+			return err
+		}
+	}
+	return prms.Encode(enc)
 }
-func (r *AuthInitRequest) encode(enc *encoding.Encoder) error { return r.prms.Encode(enc) }
+
+func (r *AuthInitRequest) decode(dec *encoding.Decoder, _ *PartHeader, attrs *ReaderAttrs) error {
+	numPrm := int(dec.Int16())
+	if numPrm < 1 {
+		return fmt.Errorf("invalid number of parameters %d - expected at least 1", numPrm)
+	}
+	if (numPrm-1)%2 != 0 {
+		return fmt.Errorf("invalid number of parameters %d - expected pairs of method name and detail", numPrm)
+	}
+	_, logonname, err := dec.CESU8LIString()
+	if err != nil {
+		return err
+	}
+	r.logonname = logonname
+
+	methods := make([]auth.Method, 0, numPrm/2)
+	for i := 1; i+1 < numPrm; i += 2 {
+		_, mt := dec.LIString()
+		m, ok := auth.NewMethod(mt)
+		if !ok {
+			return fmt.Errorf("unknown authentication method %s", mt)
+		}
+		if err := m.DecodeInitReq(dec); err != nil {
+			return err
+		}
+		methods = append(methods, m)
+	}
+	r.methods = methods
+	return nil
+}
+
+func (r *AuthInitRequest) String() string {
+	var b strings.Builder
+	if r.logonname != "" {
+		fmt.Fprintf(&b, "logonname %s", trace.Cut(r.logonname))
+	}
+	if r.methods == nil {
+		if b.Len() != 0 {
+			b.WriteString("; ")
+		}
+		b.WriteString("method segments not decodable")
+		return b.String()
+	}
+	for _, m := range r.methods {
+		if b.Len() != 0 {
+			b.WriteString("; ")
+		}
+		b.WriteString(m.String())
+	}
+	return b.String()
+}
+
+// Logonname returns the logonname, empty string if not present.
+func (r *AuthInitRequest) Logonname() string { return r.logonname }
 
 // AuthInitReply represents an authentication initial reply.
 type AuthInitReply struct {
-	auth *Auth
+	authHnd *AuthHnd    // client side, may be nil on the sniffer side
+	Method  auth.Method // wire-interpreted selected method, set on decode without authHnd
 }
 
-func (r *AuthInitReply) String() string { return r.auth.String() }
-func (r *AuthInitReply) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	d := auth.NewDecoder(dec)
-
-	if err := d.NumPrm(2); err != nil {
+func (r *AuthInitReply) String() string {
+	if r.Method != nil {
+		return r.Method.String()
+	}
+	if r.authHnd == nil {
+		return "method not decodable"
+	}
+	if r.authHnd.Selected() != nil {
+		return r.authHnd.Selected().String()
+	}
+	return r.authHnd.String()
+}
+func (r *AuthInitReply) decode(dec *encoding.Decoder, _ *PartHeader, _ *ReaderAttrs) error {
+	if err := auth.DecodeAndCheckNumPrm(dec, 2); err != nil {
 		return err
 	}
-	mt := d.String()
-
-	if err := r.auth.setMethod(mt); err != nil {
+	if r.authHnd != nil {
+		mt := dec.AuthString()
+		if err := r.authHnd.setMethod(mt); err != nil {
+			return err
+		}
+		return r.authHnd.selected.DecodeInitReply(dec)
+	}
+	m, err := auth.InitRepMethod(dec)
+	if err != nil {
 		return err
 	}
-	if err := r.auth.method.InitRepDecode(d); err != nil {
+	if err := m.DecodeInitReply(dec); err != nil {
 		return err
 	}
-	return dec.Error()
+	r.Method = m
+	return nil
 }
 
-// AuthFinalRequest represents an authentication final request.
+// AuthFinalRequest represents an authentication final request. The generic
+// part holds the selected method with its detail parameters. Encode
+// marshals the struct into the wire parameter list, decode unmarshals the
+// wire parameter list into the struct.
 type AuthFinalRequest struct {
-	prms *auth.Prms
+	method auth.Method // the selected method: the client's prepared, the sniffer's wire-interpreted
 }
 
-func (r *AuthFinalRequest) String() string { return r.prms.String() }
-func (r *AuthFinalRequest) size() int      { return r.prms.Size() }
-func (r *AuthFinalRequest) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	panic("not implemented yet")
+func (r *AuthFinalRequest) encode(enc *encoding.Encoder) error {
+	prms := new(auth.Prms)
+	prms.AddCESU8String(r.method.AuthLoginName())
+	prms.AddString(r.method.Typ())
+	if err := r.method.EncodeFinalReq(prms); err != nil {
+		return err
+	}
+	return prms.Encode(enc)
 }
-func (r *AuthFinalRequest) encode(enc *encoding.Encoder) error { return r.prms.Encode(enc) }
+
+func (r *AuthFinalRequest) String() string {
+	if r.method == nil {
+		return "method not decodable"
+	}
+	return r.method.String()
+}
+
+func (r *AuthFinalRequest) decode(dec *encoding.Decoder, _ *PartHeader, attrs *ReaderAttrs) error {
+	numPrm := int(dec.Int16())
+	if numPrm < 3 {
+		return fmt.Errorf("invalid number of parameters %d - expected at least 3", numPrm)
+	}
+	_, logonname, err := dec.CESU8LIString()
+	if err != nil {
+		return err
+	}
+	_, mt := dec.LIString()
+	m, ok := auth.NewMethod(mt)
+	if !ok {
+		return fmt.Errorf("unknown authentication method %s", mt)
+	}
+	if err := m.DecodeFinalReq(dec, logonname); err != nil {
+		return err
+	}
+	r.method = m
+	return nil
+}
 
 // AuthFinalReply represents an authentication final reply.
 type AuthFinalReply struct {
-	method auth.Method
+	Method auth.Method // the selected method: the client's prepared, the sniffer's wire-interpreted
 }
 
-func (r *AuthFinalReply) String() string { return r.method.String() }
-func (r *AuthFinalReply) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	if err := r.method.FinalRepDecode(auth.NewDecoder(dec)); err != nil {
-		return err
+func (r *AuthFinalReply) String() string {
+	if r.Method == nil {
+		return "method not decodable"
 	}
-	return dec.Error()
+	return r.Method.String()
+}
+func (r *AuthFinalReply) decode(dec *encoding.Decoder, _ *PartHeader, attrs *ReaderAttrs) error {
+	if r.Method == nil {
+		return nil
+	}
+
+	return r.Method.DecodeFinalReply(dec)
 }

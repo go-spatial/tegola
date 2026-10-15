@@ -6,11 +6,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/config"
-	"github.com/go-spatial/tegola/mapbox/tilejson"
-	"github.com/go-spatial/tegola/provider"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola/atlas"
+	"github.com/alexeydott/tegola/config"
+	"github.com/alexeydott/tegola/mapbox/tilejson"
+	"github.com/alexeydott/tegola/provider"
 )
 
 func webMercatorMapFromConfigMap(cfg provider.Map) (newMap atlas.Map) {
@@ -91,6 +91,16 @@ func atlasLayerFromConfigLayer(cfg *provider.MapLayer, mapName string, layerProv
 	if cfg.MaxZoom != nil {
 		layer.MaxZoom = uint(*cfg.MaxZoom)
 	}
+	// reject declared inverted zoom ranges (part13 P6-29). nil means unset;
+	// config.Validate fills the defaults and is the full authority there.
+	if cfg.MinZoom != nil && cfg.MaxZoom != nil && *cfg.MinZoom > *cfg.MaxZoom {
+		return layer, config.ErrInvalidLayerZoomRange{
+			MapName:       mapName,
+			ProviderLayer: providerLayer,
+			MinZoom:       uint(*cfg.MinZoom),
+			MaxZoom:       uint(*cfg.MaxZoom),
+		}
+	}
 	return layer, nil
 }
 
@@ -126,8 +136,16 @@ func selectProvider(name string, mapName string, newMap *atlas.Map, providers ma
 func Maps(a *atlas.Atlas, maps []provider.Map, providers map[string]provider.TilerUnion) error {
 	var layerer provider.Layerer
 
+	// map names must be unique (part13 P6-29)
+	seen := map[string]struct{}{}
+
 	// iterate our maps
 	for _, m := range maps {
+		if _, ok := seen[string(m.Name)]; ok {
+			return config.ErrMapNameDuplicate{MapName: string(m.Name)}
+		}
+		seen[string(m.Name)] = struct{}{}
+
 		newMap := webMercatorMapFromConfigMap(m)
 
 		// iterate our layers

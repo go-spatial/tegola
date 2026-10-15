@@ -1,0 +1,225 @@
+# Test project: all providers (gpkg, postgis, mysql) in one tegola instance.
+# Sources:
+#   - unified.gpkg  (DWG->GPKG, MSK-50 zones 1/2, Krassovsky tmerc + towgs84, srs_id 100000/100001)
+#   - PostGIS postgis_sample @<postgis-host> (osm_32634_* UTM 34N, msk50_* custom SRIDs)
+#   - MySQL example database @<mysql-host> (EGKO, MOS format, etmerc Bessel)
+tile_buffer = 64
+
+[webserver]
+port = ":8085"
+
+[cache]
+type = "memory"
+[cache.memory]
+max_zoom = 22
+
+[[maps]]
+name = "all-providers"
+attribution = "tegola multi-provider test"
+center = [20.5, 54.7, 10.0]
+
+# --- unified.gpkg: MSK-50 zone 1 (Klin) ---
+[[maps.layers]]
+name = "dpt_z1"
+provider_layer = "gpkg_dpt.z1"
+min_zoom = 10
+max_zoom = 22
+
+# --- unified.gpkg: MSK-50 zone 2 (Solnechnogorsk) ---
+[[maps.layers]]
+name = "dpt_z2"
+provider_layer = "gpkg_dpt.z2"
+min_zoom = 10
+max_zoom = 22
+
+# --- PostGIS: OSM Kaliningrad, UTM 34N (EPSG:32634) ---
+[[maps.layers]]
+name = "osm_lines"
+provider_layer = "pg_kaliningrad.osm_lines"
+min_zoom = 8
+max_zoom = 22
+
+[[maps.layers]]
+name = "osm_points"
+provider_layer = "pg_kaliningrad.osm_points"
+min_zoom = 8
+max_zoom = 22
+
+# --- PostGIS: MSK-50 custom SRID tables ---
+[[maps.layers]]
+name = "msk50_z1_lines"
+provider_layer = "pg_sample.msk50_z1_lines"
+min_zoom = 10
+max_zoom = 22
+
+[[maps.layers]]
+name = "msk50_z2_lines"
+provider_layer = "pg_sample.msk50_z2_lines"
+min_zoom = 10
+max_zoom = 22
+
+# --- GPKG: OSM Kaliningrad, UTM 34N (same PBF as pg_kaliningrad) ---
+[[maps.layers]]
+name = "osm_gpkg_lines"
+provider_layer = "gpkg_kaliningrad.osm_lines"
+min_zoom = 8
+max_zoom = 22
+
+[[maps.layers]]
+name = "osm_gpkg_points"
+provider_layer = "gpkg_kaliningrad.osm_points"
+min_zoom = 8
+max_zoom = 22
+
+# --- MySQL: EGKO (MOS geometry format, etmerc) ---
+[[maps.layers]]
+name = "roads_mgt"
+provider_layer = "mysql_example.roads_mgt"
+min_zoom = 10
+max_zoom = 22
+
+[[maps.layers]]
+name = "buildings"
+provider_layer = "mysql_example.buildings"
+min_zoom = 14
+max_zoom = 22
+
+[[maps.layers]]
+name = "water"
+provider_layer = "mysql_example.water"
+min_zoom = 11
+max_zoom = 22
+
+# ===================== providers =====================
+
+[[providers]]
+name = "gpkg_dpt"
+type = "gpkg"
+filepath = "<path-to-local-unified-gpkg>"
+# MSK-50 zone 1 (Klin): tmerc -> etmerc per vendored proj limitation
+crs_defn = "+proj=etmerc +lat_0=0 +lon_0=35.48333333333 +k=1 +x_0=1250000 +y_0=-5712900.566 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.79,-0.22 +units=m +no_defs"
+
+[[providers.layers]]
+name = "z1"
+tablename = "f00001"
+id_fieldname = "fid"
+fields = ["src_file", "cad_layer", "dxf_type"]
+
+[[providers.layers]]
+name = "z2"
+tablename = "f00007"
+id_fieldname = "fid"
+fields = ["src_file", "cad_layer", "dxf_type"]
+# zone 2 override (Solnechnogorsk)
+crs_defn = "+proj=etmerc +lat_0=0 +lon_0=38.48333333333 +k=1 +x_0=2250000 +y_0=-5712900.566 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.79,-0.22 +units=m +no_defs"
+
+[[providers]]
+name = "pg_kaliningrad"
+type = "postgis"
+uri = "postgres://postgres:1234@<postgis-host>:5432/postgis_sample?sslmode=disable"
+srid = 32634
+
+[[providers.layers]]
+name = "osm_lines"
+tablename = "osm_32634_lines"
+geometry_fieldname = "geom"
+id_fieldname = "ogc_fid"
+fields = ["osm_id", "name", "highway", "waterway", "railway"]
+
+[[providers.layers]]
+name = "osm_points"
+tablename = "osm_32634_points"
+geometry_fieldname = "geom"
+id_fieldname = "ogc_fid"
+fields = ["osm_id", "name", "place"]
+
+[[providers]]
+name = "pg_sample"
+type = "postgis"
+uri = "postgres://postgres:1234@<postgis-host>:5432/postgis_sample?sslmode=disable"
+# MSK-50 zone 1: numeric srid 100000 exists in spatial_ref_sys but the proj
+# conversion registry needs an explicit crs_defn; must match the database's proj4text
+crs_defn = "+proj=etmerc +lat_0=0 +lon_0=35.48333333333 +k=1 +x_0=1250000 +y_0=-5712900.566 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.79,-0.22 +units=m +no_defs"
+
+[[providers.layers]]
+name = "msk50_z1_lines"
+tablename = "msk50_z1_lines"
+geometry_fieldname = "geom"
+id_fieldname = "fid"
+fields = ["muid", "src_file", "cad_layer"]
+
+[[providers.layers]]
+name = "msk50_z2_lines"
+tablename = "msk50_z2_lines"
+geometry_fieldname = "geom"
+id_fieldname = "fid"
+fields = ["muid", "src_file", "cad_layer"]
+# zone 2 (Solnechnogorsk)
+crs_defn = "+proj=etmerc +lat_0=0 +lon_0=38.48333333333 +k=1 +x_0=2250000 +y_0=-5712900.566 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.79,-0.22 +units=m +no_defs"
+
+[[providers]]
+name = "gpkg_kaliningrad"
+type = "gpkg"
+filepath = "<path-to-local-gpkg>"
+srid = 32634
+
+[[providers.layers]]
+name = "osm_lines"
+tablename = "lines"
+id_fieldname = "fid"
+fields = ["osm_id", "name", "highway", "waterway", "railway"]
+
+[[providers.layers]]
+name = "osm_points"
+tablename = "points"
+id_fieldname = "fid"
+fields = ["osm_id", "name", "place"]
+
+[[providers]]
+name = "mysql_example"
+type = "mysql"
+host = "<mysql-host>"
+port = 3306
+database = "<database>"
+user = "<user>"
+password = "<password>"
+crs_defn = "+proj=etmerc +ellps=bessel +towgs84=41,-107.6,-93,0,0,0,0 +x_0=0 +y_0=0 +lon_0=37.5 +k_0=1 +lat_0=55.6666666667 +units=m +no_defs"
+geometry_format = "mos"
+mos_precision = 0
+mos_units = "mm"
+
+[[providers.layers]]
+name = "roads_mgt"
+sql = """
+SELECT t.MUID AS MUID, t.LINE AS LINE, t.ObjectType AS ObjectType,
+       t.ObjectStyle AS ObjectStyle
+FROM roads_mgt AS t
+WHERE t.OKEY > 1 AND t.ObjectType IS NOT NULL AND !BBOX!
+"""
+id_fieldname = "MUID"
+geometry_fieldname = "LINE"
+fields = ["ObjectType", "ObjectStyle"]
+
+[[providers.layers]]
+name = "buildings"
+sql = """
+SELECT t.MUID AS MUID, t.LINE AS LINE, t.ObjectType AS ObjectType,
+       t.ObjectStyle AS ObjectStyle
+FROM buildings AS t
+WHERE t.OKEY > 1 AND t.ObjectType IS NOT NULL AND COALESCE(t.sign_deleted, 0) <> 1 AND !BBOX!
+"""
+id_fieldname = "MUID"
+geometry_fieldname = "LINE"
+fields = ["ObjectType", "ObjectStyle"]
+
+[[providers.layers]]
+name = "water"
+sql = """
+SELECT t.MUID AS MUID, t.LINE AS LINE, t.ObjectType AS ObjectType,
+       t.ObjectStyle AS ObjectStyle
+FROM water AS t
+WHERE t.OKEY > 1 AND t.ObjectType IS NOT NULL AND !BBOX!
+"""
+id_fieldname = "MUID"
+geometry_fieldname = "LINE"
+fields = ["ObjectType", "ObjectStyle"]

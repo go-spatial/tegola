@@ -6,8 +6,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/alexeydott/tegola/maths"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/maths"
 )
 
 func TestBuilder(t *testing.T) {
@@ -25,7 +25,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 0}, {1, 0}, {0, 1}},
+				Points: []maths.Pt{{X: 0, Y: 0}, {X: 1, Y: 0}, {X: 0, Y: 1}},
 			},
 		},
 		testcase{
@@ -35,7 +35,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 0}, {1, 0}, {1, 1}},
+				Points: []maths.Pt{{X: 0, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 1}},
 			},
 		},
 		testcase{
@@ -46,7 +46,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 0}, {1, 0}, {1, 1}, {0, 1}},
+				Points: []maths.Pt{{X: 0, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 1}},
 			},
 		},
 		testcase{
@@ -57,7 +57,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 0}, {1, 1}, {1, 2}, {0, 1}},
+				Points: []maths.Pt{{X: 0, Y: 0}, {X: 1, Y: 1}, {X: 1, Y: 2}, {X: 0, Y: 1}},
 			},
 		},
 		testcase{
@@ -68,7 +68,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 1}, {1, 0}, {1, 1}, {0, 2}},
+				Points: []maths.Pt{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 2}},
 			},
 		},
 		testcase{
@@ -79,7 +79,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 0}, {1, 1}, {0, 2}, {0, 1}},
+				Points: []maths.Pt{{X: 0, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 2}, {X: 0, Y: 1}},
 			},
 		},
 		testcase{
@@ -90,7 +90,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 1}, {1, 0}, {1, 1}, {1, 2}},
+				Points: []maths.Pt{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 1, Y: 2}},
 			},
 		},
 		testcase{
@@ -102,7 +102,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 0}, {1, 1}, {1, 2}, {0, 2}, {0, 1}},
+				Points: []maths.Pt{{X: 0, Y: 0}, {X: 1, Y: 1}, {X: 1, Y: 2}, {X: 0, Y: 2}, {X: 0, Y: 1}},
 			},
 		},
 		testcase{
@@ -114,7 +114,7 @@ func TestBuilder(t *testing.T) {
 			},
 			ring: Ring{
 				Label:  maths.Inside,
-				Points: []maths.Pt{{0, 1}, {1, 0}, {1, 1}, {1, 2}, {0, 2}},
+				Points: []maths.Pt{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 1, Y: 2}, {X: 0, Y: 2}},
 			},
 		},
 	)
@@ -130,10 +130,10 @@ func TestBuilder(t *testing.T) {
 			// We are going to ignore the new bool for now, as we are only
 			// testing if it can produce one ring.
 			for _, y := range test.ipoints[i][0] {
-				pts1 = append(pts1, maths.Pt{xs[0], y})
+				pts1 = append(pts1, maths.Pt{X: xs[0], Y: y})
 			}
 			for _, y := range test.ipoints[i][1] {
-				pts2 = append(pts2, maths.Pt{xs[1], y})
+				pts2 = append(pts2, maths.Pt{X: xs[1], Y: y})
 			}
 			b.AddPts(test.ring.Label, pts1, pts2)
 		}

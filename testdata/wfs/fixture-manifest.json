@@ -1,0 +1,225 @@
+{
+  "sites": {
+    "count": 3,
+    "features": [
+      {
+        "id": 1,
+        "properties": {
+          "fixture_key": "sites-1",
+          "tenant_id": 1,
+          "name": "  Станция А  ",
+          "note": "",
+          "amount_text": "9007199254740993.125",
+          "counter": 0,
+          "server_tag": "immutable-seed"
+        },
+        "geometry": {
+          "coordinates": [
+            37.6,
+            55.7
+          ],
+          "type": "Point",
+          "geometries": null
+        }
+      },
+      {
+        "id": 2,
+        "properties": {
+          "fixture_key": "sites-2",
+          "tenant_id": 2,
+          "name": "Чужой объект",
+          "note": null,
+          "amount_text": "0.000000001",
+          "counter": 1,
+          "server_tag": "immutable-seed"
+        },
+        "geometry": {
+          "coordinates": [
+            37.61,
+            55.71
+          ],
+          "type": "Point",
+          "geometries": null
+        }
+      },
+      {
+        "id": 3,
+        "properties": {
+          "fixture_key": "sites-3",
+          "tenant_id": 1,
+          "name": "Контрольный объект",
+          "note": "не менять",
+          "amount_text": "-12.50",
+          "counter": 2,
+          "server_tag": "immutable-seed"
+        },
+        "geometry": {
+          "coordinates": [
+            37.62,
+            55.72
+          ],
+          "type": "Point",
+          "geometries": null
+        }
+      }
+    ]
+  },
+  "areas": {
+    "count": 1,
+    "features": [
+      {
+        "id": 1,
+        "properties": {
+          "fixture_key": "areas-1",
+          "tenant_id": 1,
+          "name": "Полигон с отверстием",
+          "note": null,
+          "amount_text": "96",
+          "counter": 0,
+          "server_tag": "immutable-seed"
+        },
+        "geometry": {
+          "coordinates": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                10.0,
+                0.0
+              ],
+              [
+                10.0,
+                10.0
+              ],
+              [
+                0.0,
+                10.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                2.0,
+                2.0
+              ],
+              [
+                2.0,
+                4.0
+              ],
+              [
+                4.0,
+                4.0
+              ],
+              [
+                4.0,
+                2.0
+              ],
+              [
+                2.0,
+                2.0
+              ]
+            ]
+          ],
+          "type": "Polygon",
+          "geometries": null
+        }
+      }
+    ]
+  },
+  "routes": {
+    "count": 1,
+    "features": [
+      {
+        "id": 1,
+        "properties": {
+          "fixture_key": "routes-1",
+          "tenant_id": 1,
+          "name": "Две части",
+          "note": "контроль",
+          "amount_text": "1",
+          "counter": 0,
+          "server_tag": "immutable-seed"
+        },
+        "geometry": {
+          "coordinates": [
+            [
+              [
+                1.0,
+                2.0
+              ],
+              [
+                3.0,
+                4.0
+              ]
+            ],
+            [
+              [
+                5.0,
+                6.0
+              ],
+              [
+                7.0,
+                8.0
+              ],
+              [
+                9.0,
+                10.0
+              ]
+            ]
+          ],
+          "type": "MultiLineString",
+          "geometries": null
+        }
+      }
+    ]
+  },
+  "sites_xyz": {
+    "count": 1,
+    "features": [
+      {
+        "id": 1,
+        "properties": {
+          "fixture_key": "sites_xyz-1",
+          "tenant_id": 1,
+          "name": "Высота",
+          "note": "не отбрасывать",
+          "amount_text": "1",
+          "counter": 0,
+          "server_tag": "immutable-seed"
+        },
+        "geometry": {
+          "coordinates": [
+            37.6,
+            55.7,
+            123.45
+          ],
+          "type": "Point",
+          "geometries": null
+        }
+      }
+    ]
+  },
+  "verification": {
+    "counts": {
+      "sites": 3,
+      "areas": 1,
+      "routes": 1,
+      "sites_xyz": 1,
+      "review_children": 2
+    },
+    "integrity_check": "ok",
+    "foreign_key_check": [],
+    "rtree_counts_match": true,
+    "fiona": "1.10.1",
+    "gdal": "3.9.2",
+    "area_planar_coordinate_units": 96,
+    "area_formula": "10*10 - 2*2",
+    "scope": "FIXTURE_VALIDATION_NOT_TEGOLA_EXECUTION"
+  },
+  "file_sha256": "44d7441991a4640e849236046fabe7396001b1ac24071d34ae8ee16acbe20b40"
+}

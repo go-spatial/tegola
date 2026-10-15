@@ -20,7 +20,7 @@ type Options struct {
 	BinaryContentTypes   []string
 	binaryContentTypeMap map[string]bool
 
-	// Use API Gateway V1 PathParameters["proxy"] when constructing the request url.
+	// Use API Gateway PathParameters["proxy"] when constructing the request url.
 	// Strips the base path mapping when using a custom domain with API Gateway.
 	UseProxyPath bool
 

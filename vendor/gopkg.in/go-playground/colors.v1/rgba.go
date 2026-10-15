@@ -2,6 +2,7 @@ package colors
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"regexp"
 	"strconv"
@@ -70,6 +71,16 @@ func RGBA(r, g, b uint8, a float64) (*RGBAColor, error) {
 	}
 
 	return &RGBAColor{R: r, G: g, B: b, A: a}, nil
+}
+
+func FromStdColor(c color.Color) *RGBAColor {
+	r, g, b, a := c.RGBA()
+	return &RGBAColor{
+		R: uint8(r >> 8),
+		G: uint8(g >> 8),
+		B: uint8(b >> 8),
+		A: float64(a>>8) / 0xff,
+	}
 }
 
 // String returns the string representation on the RGBAColor

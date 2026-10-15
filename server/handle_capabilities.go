@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/go-spatial/geom"
+	"github.com/alexeydott/geom"
 
-	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/internal/log"
+	"github.com/alexeydott/tegola/atlas"
+	"github.com/alexeydott/tegola/internal/log"
 )
 
 type Capabilities struct {

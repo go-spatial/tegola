@@ -2,10 +2,10 @@ package subject
 
 import (
 	"errors"
-	"log"
 
-	"github.com/go-spatial/tegola/container/singlelist/point/list"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/container/singlelist/point/list"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths"
 )
 
 // ErrInvalidCoordsNumber is the error produced when the number of coordinates provided is not even or large enough to from a linestring.
@@ -55,7 +55,7 @@ func (s *Subject) FirstPair() *Pair {
 
 func (s *Subject) GetPair(idx int) *Pair {
 	p := s.FirstPair()
-	log.Println(p)
+	log.Debugf("%v", p)
 	for i := 0; i < idx; i++ {
 		p = p.Next()
 		if p == nil {
@@ -68,7 +68,7 @@ func (s *Subject) GetPair(idx int) *Pair {
 // Contains will test to see if the point if fully contained by the subject. If the point is on the broader it is not considered as contained.
 func (s *Subject) Contains(pt maths.Pt) bool {
 
-	line := maths.Line{pt, maths.Pt{pt.X - 1, pt.Y}}
+	line := maths.Line{pt, maths.Pt{X: pt.X - 1, Y: pt.Y}}
 	count := 0
 	var lpt maths.Pt
 	var haveLpt bool
@@ -94,7 +94,7 @@ func (s *Subject) Contains(pt maths.Pt) bool {
 		}
 	}
 
-	log.Println("Contains Count:", count)
+	log.Debugf("Contains Count: %v", count)
 
 	// If it's odd then it's inside of the polygon, otherwise it's outside of the polygon.
 	return count%2 != 0

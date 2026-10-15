@@ -22,6 +22,7 @@ var (
 	defaultMaxConnLifetime   = time.Hour
 	defaultMaxConnIdleTime   = time.Minute * 30
 	defaultHealthCheckPeriod = time.Minute
+	defaultPingTimeout       = time.Duration(0)
 )
 
 type connResource struct {
@@ -76,11 +77,9 @@ func (cr *connResource) getPoolRows(c *Conn, r pgx.Rows) *poolRows {
 
 // Pool allows for connection reuse.
 type Pool struct {
-	// 64 bit fields accessed with atomics must be at beginning of struct to guarantee alignment for certain 32-bit
-	// architectures. See BUGS section of https://pkg.go.dev/sync/atomic and https://github.com/jackc/pgx/issues/1288.
-	newConnsCount        int64
-	lifetimeDestroyCount int64
-	idleDestroyCount     int64
+	newConnsCount        atomic.Int64
+	lifetimeDestroyCount atomic.Int64
+	idleDestroyCount     atomic.Int64
 
 	p                     *puddle.Pool[*connResource]
 	config                *Config
@@ -272,7 +271,7 @@ func NewWithConfig(ctx context.Context, config *Config) (*Pool, error) {
 	p.p, err = puddle.NewPool(
 		&puddle.Config[*connResource]{
 			Constructor: func(ctx context.Context) (*connResource, error) {
-				atomic.AddInt64(&p.newConnsCount, 1)
+				p.newConnsCount.Add(1)
 				connConfig := p.config.ConnConfig.Copy()
 
 				// Connection will continue in background even if Acquire is canceled. Ensure that a connect won't hang forever.
@@ -344,20 +343,22 @@ func NewWithConfig(ctx context.Context, config *Config) (*Pool, error) {
 // ParseConfig builds a Config from connString. It parses connString with the same behavior as [pgx.ParseConfig] with the
 // addition of the following variables:
 //
-//   - pool_max_conns: integer greater than 0 (default 4)
+//   - pool_max_conns: integer greater than 0 (default is the greater of 4 or runtime.NumCPU())
 //   - pool_min_conns: integer 0 or greater (default 0)
+//   - pool_min_idle_conns: integer 0 or greater (default 0)
 //   - pool_max_conn_lifetime: duration string (default 1 hour)
 //   - pool_max_conn_idle_time: duration string (default 30 minutes)
 //   - pool_health_check_period: duration string (default 1 minute)
 //   - pool_max_conn_lifetime_jitter: duration string (default 0)
+//   - pool_ping_timeout: duration string (default 0, meaning no timeout)
 //
 // See Config for definitions of these arguments.
 //
 //	# Example Keyword/Value
-//	user=jack password=secret host=pg.example.com port=5432 dbname=mydb sslmode=verify-ca pool_max_conns=10 pool_max_conn_lifetime=1h30m
+//	user=jack password=secret host=pg.example.com port=5432 dbname=mydb sslmode=verify-full pool_max_conns=10 pool_max_conn_lifetime=1h30m
 //
 //	# Example URL
-//	postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca&pool_max_conns=10&pool_max_conn_lifetime=1h30m
+//	postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-full&pool_max_conns=10&pool_max_conn_lifetime=1h30m
 func ParseConfig(connString string) (*Config, error) {
 	connConfig, err := pgx.ParseConfig(connString)
 	if err != nil {
@@ -450,6 +451,17 @@ func ParseConfig(connString string) (*Config, error) {
 		config.MaxConnLifetimeJitter = d
 	}
 
+	if s, ok := config.ConnConfig.Config.RuntimeParams["pool_ping_timeout"]; ok {
+		delete(connConfig.Config.RuntimeParams, "pool_ping_timeout")
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return nil, pgconn.NewParseConfigError(connString, "cannot parse pool_ping_timeout", err)
+		}
+		config.PingTimeout = d
+	} else {
+		config.PingTimeout = defaultPingTimeout
+	}
+
 	return config, nil
 }
 
@@ -463,6 +475,9 @@ func (p *Pool) Close() {
 }
 
 func (p *Pool) isExpired(res *puddle.Resource[*connResource]) bool {
+	if p.maxConnLifetime <= 0 {
+		return false
+	}
 	return time.Now().After(res.Value().maxAgeTime)
 }
 
@@ -532,20 +547,21 @@ func (p *Pool) checkConnsHealth() bool {
 	totalConns := p.Stat().TotalConns()
 	resources := p.p.AcquireAllIdle()
 	for _, res := range resources {
+		switch {
 		// We're okay going under minConns if the lifetime is up
-		if p.isExpired(res) && totalConns >= p.minConns {
-			atomic.AddInt64(&p.lifetimeDestroyCount, 1)
+		case p.isExpired(res) && totalConns >= p.minConns:
+			p.lifetimeDestroyCount.Add(1)
 			res.Destroy()
 			destroyed = true
 			// Since Destroy is async we manually decrement totalConns.
 			totalConns--
-		} else if res.IdleDuration() > p.maxConnIdleTime && totalConns > p.minConns {
-			atomic.AddInt64(&p.idleDestroyCount, 1)
+		case res.IdleDuration() > p.maxConnIdleTime && totalConns > p.minConns:
+			p.idleDestroyCount.Add(1)
 			res.Destroy()
 			destroyed = true
 			// Since Destroy is async we manually decrement totalConns.
 			totalConns--
-		} else {
+		default:
 			res.ReleaseUnused()
 		}
 	}
@@ -618,6 +634,15 @@ func (p *Pool) Acquire(ctx context.Context) (c *Conn, err error) {
 		}
 
 		cr := res.Value()
+
+		// Destroy expired connections before doing any further work (such as
+		// pinging) on them. This enforces MaxConnLifetime at acquire time so that
+		// a connection that expired while idle on a busy pool is not handed out.
+		if p.isExpired(res) {
+			p.lifetimeDestroyCount.Add(1)
+			res.Destroy()
+			continue
+		}
 
 		shouldPingParams := ShouldPingParams{Conn: cr.conn, IdleDuration: res.IdleDuration()}
 		if p.shouldPing(ctx, shouldPingParams) {
@@ -706,9 +731,9 @@ func (p *Pool) Config() *Config { return p.config.Copy() }
 func (p *Pool) Stat() *Stat {
 	return &Stat{
 		s:                    p.p.Stat(),
-		newConnsCount:        atomic.LoadInt64(&p.newConnsCount),
-		lifetimeDestroyCount: atomic.LoadInt64(&p.lifetimeDestroyCount),
-		idleDestroyCount:     atomic.LoadInt64(&p.idleDestroyCount),
+		newConnsCount:        p.newConnsCount.Load(),
+		lifetimeDestroyCount: p.lifetimeDestroyCount.Load(),
+		idleDestroyCount:     p.idleDestroyCount.Load(),
 	}
 }
 

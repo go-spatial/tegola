@@ -1,4 +1,4 @@
-#SVGo: A Go library for SVG generation#
+# SVGo: A Go library for SVG generation #
 
 The library generates SVG as defined by the Scalable Vector Graphics 1.1 Specification (<http://www.w3.org/TR/SVG11/>). 
 Output goes to the specified io.Writer.
@@ -20,6 +20,9 @@ Output goes to the specified io.Writer.
 ### Transforms ###
  
  translate, rotate, scale, skewX, skewY
+
+ ### Animation ###
+ animate, animateMotion, animateTranslate, animateRotate, animateScale, animateSkewX, animateSkewY
  
 ### Filter Effects 
  
@@ -138,6 +141,9 @@ A video describing how to use the package can be seen on YouTube at <http://www.
 * svg.go:		Library
 * newsvg:		Coding template command
 * svgdef:	Creates a SVG representation of the API
+* animate:  Animation demo
+* am: Animate motion demo
+* amt: Animate transformation demo
 * android:	The Android logo
 * bubtrail: Bubble trails
 * bulletgraph:	Bullet Graphs (via Stephen Few)
@@ -162,6 +168,7 @@ A video describing how to use the package can be seen on YouTube at <http://www.
 * richter:	Gerhard Richter's 256 colors
 * rl:			Random lines (port of a Processing demo)
 * skewabc:		Skew ABC
+* span:		Text span
 * stockproduct:	Visualize product and stock prices
 * svgopher:	SVGo Mascot
 * svgplay: SVGo sketching server
@@ -250,6 +257,13 @@ is used to specify inputs and results for filter effects
  Otherwise, treat variadic arguments as the text of the script (marked up as CDATA).
  if no data is specified, simply close the script element.
   <http://www.w3.org/TR/SVG/script.html>
+  
+  	Style(scriptype string, data ...string)
+ Style defines a script with a specified type, (for example "text/css").
+ if the first variadic argument is a link, use only the link reference.
+ Otherwise, treat variadic arguments as the text of the script (marked up as CDATA).
+ if no data is specified, simply close the style element.
+  <https://www.w3.org/TR/SVG/styling.html#StyleElement>
   
 	Group(s ...string)
   begin a group, with arbitrary attributes
@@ -469,8 +483,19 @@ is used to specify inputs and results for filter effects
  ![Image](http://farm5.static.flickr.com/4058/5188556346_e5ce3dcbc2_m.jpg)
 
 	Text(x int, y int, t string, s ...string)
-  Place the specified text, t at x,y according to the style specified in s.
+  Place the specified text, t at x,y according to the optional style specified in s.
   <http://www.w3.org/TR/SVG11/text.html#TextElement>
+
+	Textspan(x int, y int, t string, s ...string)
+Place specified text, t at x,y according to the optional style specified in s.
+<https://www.w3.org/TR/SVG11/text.html#TSpanElement>
+Use this method with Span(...). End with TextEnd()
+
+	Span(t string, s ...string)
+Create a text span t, using optional style s
+
+	TextEnd()
+End a text span
   
 	Textlines(x, y int, s []string, size, spacing int, fill, align string)
  Places lines of text in s, starting at x,y, at the specified size, fill, and alignment, and spacing.
@@ -509,6 +534,44 @@ is used to specify inputs and results for filter effects
   <http://www.w3.org/TR/SVG11/pservers.html#RadialGradients>
   
   ![RadialGradient](http://farm2.static.flickr.com/1302/5187954065_7ddba7b819.jpg)
+
+### Animation ###
+
+	Animate(link, attr string, from, to int, duration float64, repeat int, s ...string)
+Animate animates the item referenced by the link, using the specified attribute
+The animation starts at coordinate from, terminates at to, and repeats as specified.
+Addtional attributes may be added as needed.
+<https://www.w3.org/TR/SVG11/animate.html#AnimateElement>
+
+	AnimateMotion(link, path string, duration float64, repeat int, s ...string) 
+AnimateMotion animates the referenced object ```link``` along the specified ```path```
+<https://www.w3.org/TR/SVG11/animate.html#AnimateMotionElement>
+
+	
+	AnimateTranslate(link string, fx, fy, tx, ty int, duration float64, repeat int, s ...string)
+AnimateTranslate animates the translation transformation (link refers to the object to animate, fx, fy are from coordinates, tx, ty are the to coordinates)
+<https://www.w3.org/TR/SVG11/animate.html#AnimateTransformElement>
+	
+	AnimateRotate(link string, fs, fc, fe, ts, tc, te int, duration float64, repeat int, s ...string)
+AnimateRotate animates the rotation transformation (link refers to the object to animate, f[s,c,e] are the from start, center, and end angles, t[s,c,e] are the 
+start, center, and end angles)
+<https://www.w3.org/TR/SVG11/animate.html#AnimateTransformElement>
+
+	
+	AnimateScale(link string, from, to, duration float64, repeat int, s ...string)
+AnimateScale animates the scale transformation (link refers to the object to animate, from and to specify the scaling factor)
+<https://www.w3.org/TR/SVG11/animate.html#AnimateTransformElement>
+
+	
+	AnimateSkewX(link string, from, to, duration float64, repeat int, s ...string)
+AnimateSkewX animates the skewX transformation ((link refers to the object to animate, from and to specify the skew angle)
+<https://www.w3.org/TR/SVG11/animate.html#AnimateTransformElement>
+
+	
+	AnimateSkewY(link string, from, to, duration float64, repeat int, s ...string)
+AnimateSkewY animates the skewY transformation (link refers to the object to animate, and from and to specify the skew angle)
+<https://www.w3.org/TR/SVG11/animate.html#AnimateTransformElement>
+
   
 ### Filter Effects ###
 
@@ -553,7 +616,7 @@ Standard reference: <http://www.w3.org/TR/SVG11/filters.html#feCompositeElement>
 
  	FeConvolveMatrix(fs Filterspec, matrix [9]int, s ...string)
 FeConvolveMatrix specifies a feConvolveMatrix filter primitive
-Standard referencd: <http://www.w3.org/TR/SVG11/filters.html#feConvolveMatrixElement>
+Standard reference: <http://www.w3.org/TR/SVG11/filters.html#feConvolveMatrixElement>
 
 
 	 FeDiffuseLighting(fs Filterspec, scale, constant float64, s ...string) 

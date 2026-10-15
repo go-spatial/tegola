@@ -4,8 +4,8 @@ import (
 	"log"
 	"testing"
 
+	"github.com/alexeydott/tegola/maths"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/maths"
 )
 
 func _TestConstuctPolygon(t *testing.T) {

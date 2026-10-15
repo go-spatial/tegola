@@ -1,21 +1,18 @@
-In order to run the benchmarks one needs to do the following:
+# Geometry validation
 
-Build the test file:
+Run this package's tests from the repository root:
 
-```
-go test -c
-```
-
-Run the test file to generate the profile.
-```
-./validate.test -test-run=none -test.bench=MakeMulti -test.cpuprofile cpu.out
+```sh
+go test -mod=vendor ./maths/validate
 ```
 
-To run the pprof tool:
-```
-go tool pprof validate.test cpu.out
+The make-valid performance benchmarks live in `maths/makevalid`, not in this
+package. For a CPU profile, run from the repository root:
+
+```sh
+go test -mod=vendor ./maths/makevalid -run '^$' -bench '^BenchmarkMakeValid5PolyA$' -cpuprofile cpu.out
+go tool pprof cpu.out
 ```
 
-In the pprof tool run web list makeValid
-to get the profile of the `makeValid` function.
-
+See [the make-valid algorithm](../makevalid/README.md). Profiling writes local
+artifacts; do not add them to source commits.

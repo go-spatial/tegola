@@ -1,0 +1,254 @@
+{
+  "provenance": "Unmodified pinned official ETS1.9 class/method inventory; no fixture-derived predicates",
+  "suite_commit": "e7c8a96deff936f7ae9c4cbbafb900ce65371d2c",
+  "methods": [
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.apidefinition.ApiDefinition",
+      "name": "apiDefinitionValidation"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.apidefinition.ApiDefinition",
+      "name": "openapiDocumentRetrieval"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Feature",
+      "name": "featureOperation"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Feature",
+      "name": "validateFeatureResponse"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeatureCollection",
+      "name": "validateFeatureCollectionMetadataOperation"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeatureCollection",
+      "name": "validateFeatureCollectionMetadataResponse"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeatureCollections",
+      "name": "validateFeatureCollectionsMetadataOperation"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeatureCollections",
+      "name": "validateFeatureCollectionsMetadataOperationResponse_Content"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeatureCollections",
+      "name": "validateFeatureCollectionsMetadataOperationResponse_CrsProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeatureCollections",
+      "name": "validateFeatureCollectionsMetadataOperationResponse_Items"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeatureCollections",
+      "name": "validateFeatureCollectionsMetadataOperationResponse_Links"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Features",
+      "name": "validateFeaturesOperation"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Features",
+      "name": "validateFeaturesResponse_FeaturesProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Features",
+      "name": "validateFeaturesResponse_GeometryInCRS84"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Features",
+      "name": "validateFeaturesResponse_Links"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Features",
+      "name": "validateFeaturesResponse_NumberMatched"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Features",
+      "name": "validateFeaturesResponse_NumberReturned"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Features",
+      "name": "validateFeaturesResponse_TimeStamp"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.Features",
+      "name": "validateFeaturesResponse_TypeProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesBBox",
+      "name": "boundingBoxParameterDefinition"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesErrorConditions",
+      "name": "validateFeaturesOperation_QueryParamInvalid"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesErrorConditions",
+      "name": "validateFeaturesOperation_QueryParamUnknown"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "limitParameterDefinition"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesResponse_NumberReturned"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesWithLimitOperation"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesWithLimitResponse"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesWithLimitResponse_FeaturesProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesWithLimitResponse_GeometryInCRS84"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesWithLimitResponse_Links"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesWithLimitResponse_NumberMatched"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesWithLimitResponse_TimeStamp"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesLimit",
+      "name": "validateFeaturesWithLimitResponse_TypeProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.collections.FeaturesTime",
+      "name": "timeParameterDefinition"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.conformance.Conformance",
+      "name": "validateConformanceOperationAndResponse"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.general.GeneralHttp",
+      "name": "http"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.landingpage.LandingPage",
+      "name": "landingPageRetrieval"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.core.landingpage.LandingPage",
+      "name": "landingPageValidation"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.CrsRequirementClassPrecondition",
+      "name": "verifyConformanceClass"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collection.DiscoveryCollectionCrsUri",
+      "name": "verifyCollectionCrsIdentifierOfCrsProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collection.DiscoveryCollectionCrsUri",
+      "name": "verifyCollectionCrsIdentifierOfStorageCrsProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collection.DiscoveryCollectionDefaultCrs",
+      "name": "verifyCollectionCrsIdentifierOfCrsProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collection.DiscoveryCollectionStorageCrs",
+      "name": "verifyCollectionCrsIdentifierOfCrsProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collections.DiscoveryCollectionsCrsUri",
+      "name": "verifyCollectionsCollectionCrsIdentifierOfCrsProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collections.DiscoveryCollectionsCrsUri",
+      "name": "verifyCollectionsCollectionCrsIdentifierOfStorageCrs"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collections.DiscoveryCollectionsCrsUri",
+      "name": "verifyCollectionsCrsIdentifierOfCrsProperty"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collections.DiscoveryCollectionsCrsUri",
+      "name": "verifyCollectionsCrsIdentifierOfStorageCrs"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collections.DiscoveryCollectionsDefaultCrs",
+      "name": "verifyCollectionsPathCollectionCrsPropertyContainsDefaultCrs"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.discovery.collections.DiscoveryCollectionsStorageCrs",
+      "name": "verifyCollectionsPathCollectionCrsPropertyContainsStorageCrs"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.bboxcrs.BBoxCrsParameter",
+      "name": "verifyBboxCrsParameter"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.bboxcrs.BBoxCrsParameter",
+      "name": "verifyBboxCrsParameterWithDefaultCrs"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.bboxcrs.BBoxCrsParameterDefault",
+      "name": "verifyBboxCrsParameterDefault"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.bboxcrs.BBoxCrsParameterInvalid",
+      "name": "verifyBboxCrsParameterInvalid"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.feature.FeatureCrsParameter",
+      "name": "verifyFeatureCrsParameter"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.feature.FeatureCrsParameterDefault",
+      "name": "verifyFeatureCrsParameterDefault"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.feature.FeatureCrsParameterInvalid",
+      "name": "verifyFeatureCrsParameterInvalid"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.feature.FeatureCrsParameterTransform",
+      "name": "verifyFeatureCrsParameterTransformWithCrsParameter"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.feature.FeatureCrsParameterTransform",
+      "name": "verifyFeatureCrsParameterTransformWithoutCrsParameter"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.features.FeaturesCrsParameter",
+      "name": "verifyFeaturesCrsParameter"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.features.FeaturesCrsParameterDefault",
+      "name": "verifyFeaturesCrsParameterDefault"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.features.FeaturesCrsParameterInvalid",
+      "name": "verifyFeaturesCrsParameterInvalid"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.features.FeaturesCrsParameterTransform",
+      "name": "verifyFeaturesCrsParameterTransformWithCrsParameter"
+    },
+    {
+      "class": "org.opengis.cite.ogcapifeatures10.conformance.crs.query.crs.features.FeaturesCrsParameterTransform",
+      "name": "verifyFeaturesCrsParameterTransformWithoutCrsParameter"
+    }
+  ]
+}

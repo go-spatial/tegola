@@ -1,0 +1,15 @@
+{
+  "method": "Frozen independent scalar WGS84 Mercator closed form; UTM33 central-meridian meridional-arc series through e6. No Tegola/proj encoder, decoder, CRS resolver or transformation called.",
+  "tolerance_degrees": 0.000001,
+  "tolerance_metres": 0.15,
+  "tolerance_reason": "Bound chosen before runtime; degrees ~0.11m, UTM truncated-series residual smaller than 0.15m. Axis order and Z require exact coordinate placement, not a tolerance exemption.",
+  "asymmetric_point": {
+    "CRS84": [15, 30],
+    "EPSG4326": [30, 15],
+    "EPSG3857": [1669792.3618991037, 3503549.843504374],
+    "EPSG32633": [500000, 3318785.352608442],
+    "CRS84h": [15, 30, 23],
+    "EPSG4979": [30, 15, 23]
+  },
+  "bbox_membership_policy": "Each fixture request supplies literal bbox in that CRS frame; verify exact returned geometry membership in that rectangle before paging. No equality of feature ID lists across different projected rectangles. Absent geometry matches bbox under Core absence semantics."
+}

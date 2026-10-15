@@ -11,12 +11,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola/atlas"
+	"github.com/alexeydott/tegola/mapbox/tilejson"
+	"github.com/alexeydott/tegola/provider/test"
+	"github.com/alexeydott/tegola/server"
 	"github.com/dimfeld/httptreemux"
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/mapbox/tilejson"
-	"github.com/go-spatial/tegola/provider/test"
-	"github.com/go-spatial/tegola/server"
 )
 
 // layerFielderProvider is a mock provider that implements LayerFielder for testing TileJSON v3.0.0
@@ -281,7 +281,7 @@ func TestHandleMapCapabilities(t *testing.T) {
 				},
 			},
 		},
-		// https://github.com/go-spatial/tegola/issues/994
+		// https://github.com/alexeydott/tegola/issues/994
 		"hostname with scheme": {
 			handler: server.HandleCapabilities{},
 			hostName: &url.URL{

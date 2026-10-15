@@ -47,7 +47,7 @@ func (mt MessageType) ClientInfoSupported() bool {
 		mtConnect is only supported since 2.00.042
 		As server version is only available after connect we do not use it
 		to support especially version 1.00.122 until maintenance
-		will end in sommer 2021
+		will end in summer 2021
 
 		return mt == mtConnect || mt == mtPrepare || mt == mtExecuteDirect || mt == mtExecute
 	*/

@@ -9,6 +9,5 @@ func HeadersHandler(next http.Handler) http.Handler {
 		setHeaders(w)
 		// move on
 		next.ServeHTTP(w, r)
-		return
 	})
 }

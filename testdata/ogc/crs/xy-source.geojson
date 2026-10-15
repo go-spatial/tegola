@@ -1,0 +1,10 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {"type":"Feature","id":10,"geometry":{"type":"Point","coordinates":[15,30]},"properties":{"name":"asymmetric"}},
+  {"type":"Feature","id":20,"geometry":{"type":"Point","coordinates":[16,31]},"properties":{"name":"outside-small-query"}},
+  {"type":"Feature","id":30,"geometry":{"type":"LineString","coordinates":[[14,30],[16,30]]},"properties":{"name":"crossing-boundary"}},
+  {"type":"Feature","id":40,"geometry":null,"properties":{"name":"absence"}},
+  {"type":"Feature","id":50,"geometry":{"type":"Polygon","coordinates":[[[14,29],[16,29],[16,31],[14,31],[14,29]],[[14.8,29.8],[14.8,30.2],[15.2,30.2],[15.2,29.8],[14.8,29.8]]]},"properties":{"name":"query-in-hole"}}
+ ]
+}

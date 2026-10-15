@@ -4,9 +4,9 @@ import (
 	"context"
 	"sort"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/points"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola/maths"
+	"github.com/alexeydott/tegola/maths/points"
 )
 
 func allCoordForPts(idx int, pts ...[2]float64) []float64 {
@@ -68,7 +68,14 @@ func splitPoints(ctx context.Context, segments []maths.Line) (pts [][]maths.Pt, 
 
 		pt := ptfn().Round() // left most point.
 		if !sline.InBetween(pt) || !dline.InBetween(pt) {
-			return true
+			// Rounding to the integer grid can push the point outside a
+			// zero-width segment (a vertical or horizontal line), which
+			// would silently drop a real intersection. Retry with the
+			// unrounded point before giving up.
+			pt = ptfn()
+			if !sline.InBetween(pt) || !dline.InBetween(pt) {
+				return true
+			}
 		}
 		pts[src] = append(pts[src], pt)
 		pts[dest] = append(pts[dest], pt)

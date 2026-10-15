@@ -3,15 +3,16 @@ package cache
 import (
 	"context"
 	"fmt"
-	"log"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths"
 )
 
 // Interface defines a cache back end
@@ -47,7 +48,7 @@ func ParseKey(str string) (*Key, error) {
 			keyPartsCount: len(keyParts),
 		}
 
-		log.Println(err.Error())
+		log.Warn(err.Error())
 		return nil, err
 	}
 
@@ -65,6 +66,24 @@ func ParseKey(str string) (*Key, error) {
 		zxy = keyParts
 	}
 
+	// map/layer names parsed from key strings are a trust boundary (P5-17):
+	// empty, "." and ".." components would escape the cache root or silently
+	// collapse when Key.String joins the key into a cache path. Programmatic
+	// keys keep Key.String's synthetic empty-name behavior (load-bearing for
+	// tests and multilevel cache); only names actually parsed here are checked.
+	switch len(keyParts) {
+	case 5:
+		if err = validateKeyName(str, "map", key.MapName); err == nil {
+			err = validateKeyName(str, "layer", key.LayerName)
+		}
+	case 4:
+		err = validateKeyName(str, "map", key.MapName)
+	}
+	if err != nil {
+		log.Warnf("cache: invalid file key: %s", err.Error())
+		return nil, err
+	}
+
 	// parse our URL vals into integers
 	var placeholder uint64
 	placeholder, err = strconv.ParseUint(zxy[0], 10, 32)
@@ -75,7 +94,7 @@ func ParseKey(str string) (*Key, error) {
 			val:  zxy[0],
 		}
 
-		log.Printf("cache: invalid file key: %s", err.Error())
+		log.Warnf("cache: invalid file key: %s", err.Error())
 		return nil, err
 	}
 
@@ -90,7 +109,7 @@ func ParseKey(str string) (*Key, error) {
 			val:  zxy[1],
 		}
 
-		log.Printf("cache: invalid file key: %s", err.Error())
+		log.Warnf("cache: invalid file key: %s", err.Error())
 		return nil, err
 	}
 
@@ -106,12 +125,22 @@ func ParseKey(str string) (*Key, error) {
 			val:  zxy[2],
 		}
 
-		log.Printf("cache: invalid file key: %s", err.Error())
+		log.Warnf("cache: invalid file key: %s", err.Error())
 		return nil, err
 	}
 	key.Y = uint(placeholder)
 
 	return &key, nil
+}
+
+// validateKeyName rejects map/layer name components that are empty or path
+// elements ("." / ".."): joining such a name into a cache path would escape
+// the cache root or silently collapse (P5-17).
+func validateKeyName(path, kind, val string) error {
+	if val == "" || val == "." || val == ".." {
+		return ErrInvalidKeyName{path: path, key: kind, val: val}
+	}
+	return nil
 }
 
 type Key struct {
@@ -123,7 +152,11 @@ type Key struct {
 }
 
 func (k Key) String() string {
-	return filepath.Join(
+	// cache keys are object/path keys shared across backends and hosts:
+	// join with forward slashes regardless of the OS separator (P6-33).
+	// empty MapName/LayerName collapse away, which is load-bearing for
+	// synthetic (map-less) keys (P5-17).
+	return path.Join(
 		k.MapName,
 		k.LayerName,
 		strconv.FormatUint(uint64(k.Z), 10),

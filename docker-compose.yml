@@ -1,13 +1,13 @@
 # this file is used to bootstrap services to run tegola tests against
 services:
   redis:
-    image: redis:6.2.6
+    image: redis:7.4
     container_name: redis
     ports:
-    - 6379:6379
+    - 127.0.0.1:6379:6379
 
   postgis:
-    image: postgis/postgis:12-3.0-alpine
+    image: postgis/postgis:16-3.5-alpine
     container_name: postgis
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
@@ -19,10 +19,10 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     ports:
-    - 5432:5432
+    - 127.0.0.1:5432:5432
 
   migration:
-    image: postgis/postgis:12-3.0-alpine
+    image: postgis/postgis:16-3.5-alpine
     container_name: migration
     depends_on:
       postgis:
@@ -33,6 +33,29 @@ services:
     volumes:
     - ./testdata:/testdata
     command: ["/bin/bash", "-c", "testdata/postgis/migration.sh"]
+
+  mysql:
+    image: mysql:8.4
+    container_name: mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      # Disposable CI fixtures provision isolated databases and restricted users.
+      MYSQL_ROOT_HOST: "%"
+      # credentials match the live construction test in provider/mysql
+      # (mysql_internal_test.go), which connects with database=test,
+      # user=u, password=p.
+      MYSQL_DATABASE: test
+      MYSQL_USER: u
+      MYSQL_PASSWORD: p
+    volumes:
+    - ./testdata/mysql/ci-grants.sql:/docker-entrypoint-initdb.d/ci-grants.sql:ro
+    ports:
+    - 127.0.0.1:3306:3306
 
   # NOTE: useful for debugging
   # does not run by default, only when you run with:
@@ -45,6 +68,6 @@ services:
       PGADMIN_DEFAULT_EMAIL: "admin@tegola.io"
       PGADMIN_DEFAULT_PASSWORD: "admin"
     ports:
-    - "5555:80"
+    - "127.0.0.1:5555:80"
     profiles:
     - pgadmin

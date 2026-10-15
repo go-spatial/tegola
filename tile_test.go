@@ -1,10 +1,11 @@
 package tegola_test
 
 import (
+	"math"
 	"testing"
 
+	"github.com/alexeydott/tegola"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola"
 )
 
 func TestTileNum2Deg(t *testing.T) {
@@ -107,4 +108,19 @@ func TestTileToFromPixel(t *testing.T) {
 		[2]float64{0, 0},
 		[2]float64{4000, 4000},
 	).Run(fn)
+}
+
+func TestZEpislonUsesMeterTolerance(t *testing.T) {
+	for _, z := range []uint{0, 2, 10, 20} {
+		tile := tegola.NewTile(z, 0, 0)
+		want := 10 * 40075016.6855785 / (4096 * math.Exp2(float64(z)))
+		if got := tile.ZEpislon(); math.Abs(got-want) > want*1e-12 {
+			t.Errorf("z%d tolerance = %v, want %v meters", z, got, want)
+		}
+	}
+	for _, tile := range []tegola.Tile{{Z: tegola.MaxZ, Tolerance: 10, Extent: 4096}, {Z: 2, Tolerance: 0, Extent: 4096}, {Z: 2, Tolerance: 10, Extent: 0}} {
+		if got := tile.ZEpislon(); got != 0 {
+			t.Errorf("disabled/invalid tolerance = %v", got)
+		}
+	}
 }

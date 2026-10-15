@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/tegola/dict"
 )
 
 type MVTTiler interface {

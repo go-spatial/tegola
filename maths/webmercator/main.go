@@ -54,7 +54,7 @@ func con(phi float64) float64 {
 	return math.Pow(((1.0 - v) / (1.0 + v)), Com)
 }
 
-//LonToX converts from a Longitude to a X coordinate in WebMercator.
+// LonToX converts from a Longitude to a X coordinate in WebMercator.
 func LonToX(lon float64) float64 {
 	return RMajor * DegToRad(lon)
 }

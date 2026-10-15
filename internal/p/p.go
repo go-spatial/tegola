@@ -1,4 +1,4 @@
-//	pacakge p takes in values and returns a pointer to the value
+// pacakge p takes in values and returns a pointer to the value
 package p
 
 import "time"

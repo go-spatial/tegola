@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/geom/slippy"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/maths"
 )
 
 type Format struct {

@@ -3,7 +3,7 @@ package postgis
 import (
 	"strings"
 
-	"github.com/go-spatial/tegola/observability"
+	"github.com/alexeydott/tegola/observability"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 )

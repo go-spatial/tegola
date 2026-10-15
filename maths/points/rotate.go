@@ -1,7 +1,7 @@
 package points
 
 import (
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/maths"
 )
 
 func RotatePos(pts []maths.Pt, pos int) {

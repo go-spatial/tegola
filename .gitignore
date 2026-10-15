@@ -19,6 +19,22 @@ yarn-debug.log*
 yarn-error.log*
 
 # Editor directories and files
+.agents/
+.ai-factory/
+.claude/
+.codex/
+.github/skills/
+.opencode/
+.qwen/
+.mcp.json
+.ai-factory.json
+.agentready.yml
+opencode.json
+skills-lock.json
+AGENTS.md
+CLAUDE.md
+RULES.md
+
 .idea
 .vscode
 *.suo
@@ -27,3 +43,36 @@ yarn-error.log*
 *.sln
 *.sw?
 cmd/tegola_lambda/tegola_lambda
+
+# local build/test artifacts
+releases
+testdata/natural_earth
+tegola.exe
+tmp_probe/
+tt*.pbf
+*.pbf
+server*.log
+server.err.log
+server.out.log
+test-mysql.toml
+tegola.config.toml
+# Runtime artifacts of the file cache and other cache backends. Go sources in
+# the cache/ package tree must NOT be ignored. Git cannot re-include files
+# inside a fully ignored directory, so `cache/*` closes the directory level
+# and the negations below re-open only the Go packages (root *.go + backend
+# package dirs). Runtime tiles land at cache/<map>/<layer>/<z>/<x>/<y> with
+# arbitrary names/depths and stay ignored at any shape. When adding a new
+# cache backend package, add a matching !cache/<pkg>/ line below.
+cache/*
+!cache/*.go
+!cache/azblob/
+!cache/file/
+!cache/gcs/
+!cache/memory/
+!cache/multilevel/
+!cache/redis/
+!cache/s3/
+# regenerated runtime tiles of cache/file tests (tracked fixture stays tracked)
+cache/file/testfiles/tegola-cache/
+kaliningrad_oblast_32634.gpkg
+testdata/multi-provider-test/serve.log

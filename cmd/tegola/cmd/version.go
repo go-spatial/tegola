@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/alexeydott/tegola/internal/build"
 	"github.com/go-spatial/cobra"
-	"github.com/go-spatial/tegola/internal/build"
 	"strings"
 )
 

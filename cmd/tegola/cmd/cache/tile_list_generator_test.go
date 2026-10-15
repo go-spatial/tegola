@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-spatial/geom/slippy"
+	"github.com/alexeydott/geom/slippy"
 )
 
 func TestGenerateTilesForTileList(t *testing.T) {
@@ -31,7 +31,7 @@ func TestGenerateTilesForTileList(t *testing.T) {
 		name := tc.tileFilename
 		if name == "" {
 			h := sha1.New()
-			io.WriteString(h, tc.tileList)
+			_, _ = io.WriteString(h, tc.tileList)
 			name = fmt.Sprintf("internal string %x", h.Sum(nil))
 
 		}
@@ -42,7 +42,7 @@ func TestGenerateTilesForTileList(t *testing.T) {
 				if err != nil {
 					panic(fmt.Sprintf("unable to open testfile: %v", tc.tileFilename))
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				in = f
 			} else {
 				in = strings.NewReader(tc.tileList)

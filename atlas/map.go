@@ -8,23 +8,24 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/go-spatial/tegola/observability"
+	"github.com/alexeydott/tegola/observability"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding/mvt"
-	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/maths/simplify"
-	"github.com/go-spatial/tegola/maths/validate"
-	"github.com/go-spatial/tegola/provider"
-	"github.com/go-spatial/tegola/provider/debug"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/geom/encoding/mvt"
+	"github.com/alexeydott/geom/slippy"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/basic"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/convert"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths/simplify"
+	"github.com/alexeydott/tegola/maths/validate"
+	"github.com/alexeydott/tegola/provider"
+	"github.com/alexeydott/tegola/provider/debug"
 )
 
 // NewWebMercatorMap creates a new map with the necessary default values
@@ -162,15 +163,13 @@ func (m Map) FilterLayersByZoom(zoom slippy.Zoom) Map {
 func (m Map) FilterLayersByName(names ...string) Map {
 	var layers []Layer
 
-	nameStr := strings.Join(names, ",")
 	for i := range m.Layers {
-		// if we have a name set, use it for the lookup
-		if m.Layers[i].Name != "" && nameStr == m.Layers[i].Name {
-			layers = append(layers, m.Layers[i])
-			continue
-		} else if m.Layers[i].ProviderLayerName != "" && strings.Contains(nameStr, m.Layers[i].ProviderLayerName) { // default to using the ProviderLayerName for the lookup
-			layers = append(layers, m.Layers[i])
-			continue
+		for _, name := range names {
+			if (m.Layers[i].Name != "" && name == m.Layers[i].Name) ||
+				(m.Layers[i].ProviderLayerName != "" && name == m.Layers[i].ProviderLayerName) {
+				layers = append(layers, m.Layers[i])
+				break
+			}
 		}
 	}
 
@@ -194,6 +193,103 @@ func (m Map) encodeMVTProviderTile(ctx context.Context, tile slippy.Tile, params
 	return m.mvtProvider.MVTForLayers(ctx, ptile, params, layers)
 }
 
+// flattenGeometryCollections recursively expands geom.Collection values into
+// their leaf (non-collection) member geometries. The MVT/vector tile format
+// has no "collection" feature type - only Point/LineString/Polygon (and Multi
+// variants) can be encoded as a single feature - so a GEOMETRYCOLLECTION row
+// must become multiple MVT features rather than one. Non-collection input is
+// returned as a single-element slice unchanged.
+func flattenGeometryCollections(geo geom.Geometry) []geom.Geometry {
+	coll, ok := geo.(geom.Collection)
+	if !ok {
+		return []geom.Geometry{geo}
+	}
+
+	geometries := coll.Geometries()
+	out := make([]geom.Geometry, 0, len(geometries))
+	for _, sub := range geometries {
+		out = append(out, flattenGeometryCollections(sub)...)
+	}
+	return out
+}
+
+// encodeMVTFeature runs a single (non-collection) geometry through the
+// simplify/clip/prepare/clean pipeline and, if it survives, adds it as a new
+// feature on mvtLayer using f's ID and Tags.
+func (m Map) encodeMVTFeature(ctx context.Context, l Layer, tile slippy.Tile, ptile provider.Tile, mvtLayer *mvt.Layer, f *provider.Feature, geo geom.Geometry) error {
+	// TODO: remove this geom conversion step once the simplify function uses geom types
+	tegolaGeo, err := convert.ToTegola(geo)
+	if err != nil {
+		return err
+	}
+
+	// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
+	tegolaTile := tegola.TileFromSlippyTile(tile)
+
+	sg := tegolaGeo
+	// multiple ways to turn off simplification. check the atlas init() function
+	// for how the second two conditions are set
+	if !l.DontSimplify && simplifyGeometries && tile.Z < slippy.Zoom(simplificationMaxZoom) {
+		sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
+	}
+
+	// check if we need to clip and if we do build the clip region (tile extent)
+	var clipRegion *geom.Extent
+	if !l.DontClip {
+		// CleanGeometry is expecting to operate in pixel coordinates so the clipRegion
+		// will need to be in this same coordinate system. this will change when the new
+		// make valid routing is implemented
+		pbb, err := tegolaTile.PixelBufferedBounds()
+		if err != nil {
+			return fmt.Errorf("err calculating tile pixel buffer bounds: %w", err)
+		}
+
+		clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
+	}
+
+	// TODO: remove this geom conversion step once the simplify function uses geom types
+	geo, err = convert.ToGeom(sg)
+	if err != nil {
+		return err
+	}
+
+	// TODO(arolek): currently the validate.CleanGeometry method does not operate
+	// well on geometries that are not scaled to tile coordinate space. this will change
+	// with the adoption of the new make valid routine. once implemented, the clipRegion
+	// calculation will need to be in the same coordinate space as the geometry the
+	// make valid function will be operating on.
+	ext, _ := ptile.Extent()
+	geo = mvt.PrepareGeo(geo, ext, float64(mvt.DefaultExtent))
+
+	// TODO: remove this geom conversion step once the validate function uses geom types
+	sg, err = convert.ToTegola(geo)
+	if err != nil {
+		return err
+	}
+
+	if !l.DontClean {
+		tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
+		if err != nil {
+			return fmt.Errorf("err making geometry valid: %w", err)
+		}
+	} else {
+		tegolaGeo = sg
+	}
+
+	geo, err = convert.ToGeom(tegolaGeo)
+	if err != nil {
+		return fmt.Errorf("error converting cleaned geometry for MVT: %w", err)
+	}
+
+	mvtLayer.AddFeatures(mvt.Feature{
+		ID:       &f.ID,
+		Tags:     f.Tags,
+		Geometry: geo,
+	})
+
+	return nil
+}
+
 // encodeMVTTile will encode the given tile into mvt format
 // TODO (arolek): support for max zoom
 func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provider.Params) ([]byte, error) {
@@ -204,6 +300,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 
 	// layer stack
 	mvtLayers := make([]*mvt.Layer, len(m.Layers))
+	layerErrors := make([]error, len(m.Layers))
 
 	// set our WaitGroup count
 	wg.Add(len(m.Layers))
@@ -218,12 +315,35 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 
 			// on completion let the wait group know
 			defer wg.Done()
+			started := time.Now()
+			var renderErr error
+			var featuresReceived uint64
+			defer func() {
+				logLayerTiming(m.Name, l, tile, time.Since(started), featuresReceived, renderErr)
+			}()
+
+			// This goroutine runs outside of the net/http request goroutine, so
+			// net/http's per-connection panic recovery does not apply here: an
+			// unrecovered panic (e.g. from a malformed/degenerate geometry deep
+			// in the provider, reprojection, or clip/simplify pipeline) would
+			// otherwise crash the entire server process, taking down every other
+			// in-flight tile request along with it. Recover and log instead so a
+			// single bad feature only fails its own layer/tile.
+			defer func() {
+				if r := recover(); r != nil {
+					layerErrors[i] = fmt.Errorf("panic while fetching layer %v for tile (%v): %v", l.MVTName(), tile, r)
+					renderErr = layerErrors[i]
+					log.Errorf("%v", layerErrors[i])
+				}
+			}()
 
 			ptile := provider.NewTile(tile.Z, tile.X, tile.Y,
 				uint(m.TileBuffer), uint(m.SRID))
 
 			// fetch layer from data provider
 			err := l.Provider.TileFeatures(ctx, l.ProviderLayerName, ptile, params, func(f *provider.Feature) error {
+				// Count callbacks received, including subsequently skipped geometry.
+				featuresReceived++
 				// skip row if geometry collection empty.
 				g, ok := f.Geometry.(geom.Collection)
 				if ok && len(g.Geometries()) == 0 {
@@ -242,10 +362,8 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 					geo = g
 				}
 
-				// TODO: remove this geom conversion step once the simplify function uses geom types
-				tegolaGeo, err := convert.ToTegola(geo)
-				if err != nil {
-					return err
+				if f.Tags == nil {
+					f.Tags = make(map[string]interface{})
 				}
 
 				// add default tags, but don't overwrite a tag that already exists
@@ -255,72 +373,23 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 					}
 				}
 
-				// TODO (arolek): change out the tile type for VTile. tegola.Tile will be deprecated
-				tegolaTile := tegola.TileFromSlippyTile(tile)
-
-				sg := tegolaGeo
-				// multiple ways to turn off simplification. check the atlas init() function
-				// for how the second two conditions are set
-				if !l.DontSimplify && simplifyGeometries && tile.Z < slippy.Zoom(simplificationMaxZoom) {
-					sg = simplify.SimplifyGeometry(tegolaGeo, tegolaTile.ZEpislon())
-				}
-
-				// check if we need to clip and if we do build the clip region (tile extent)
-				var clipRegion *geom.Extent
-				if !l.DontClip {
-					// CleanGeometry is expecting to operate in pixel coordinates so the clipRegion
-					// will need to be in this same coordinate system. this will change when the new
-					// make valid routing is implemented
-					pbb, err := tegolaTile.PixelBufferedBounds()
-					if err != nil {
-						return fmt.Errorf("err calculating tile pixel buffer bounds: %w", err)
+				// MVT (and the vector tile spec) has no "geometry collection" feature type -
+				// only Point/LineString/Polygon (and their Multi variants) can be encoded as a
+				// single feature. GEOMETRYCOLLECTION rows (common in GPKGs converted from CAD
+				// formats such as DWG) must therefore be split into one MVT feature per member
+				// geometry, all sharing the same id/tags, rather than carried through the
+				// pipeline as a single geom.Collection - which downstream helpers such as
+				// mvt.PrepareGeo do not support and would otherwise cause the whole tile fetch
+				// to fail.
+				for _, subGeo := range flattenGeometryCollections(geo) {
+					if err := m.encodeMVTFeature(ctx, l, tile, ptile, &mvtLayer, f, subGeo); err != nil {
+						return err
 					}
-
-					clipRegion = geom.NewExtent([2]float64{pbb[0], pbb[1]}, [2]float64{pbb[2], pbb[3]})
 				}
-
-				// TODO: remove this geom conversion step once the simplify function uses geom types
-				geo, err = convert.ToGeom(sg)
-				if err != nil {
-					return err
-				}
-
-				// TODO(arolek): currently the validate.CleanGeometry method does not operate
-				// well on geometries that are not scaled to tile coordinate space. this will change
-				// with the adoption of the new make valid routine. once implemented, the clipRegion
-				// calculation will need to be in the same coordinate space as the geometry the
-				// make valid function will be operating on.
-				ext, _ := ptile.Extent()
-				geo = mvt.PrepareGeo(geo, ext, float64(mvt.DefaultExtent))
-
-				// TODO: remove this geom conversion step once the validate function uses geom types
-				sg, err = convert.ToTegola(geo)
-				if err != nil {
-					return err
-				}
-
-				if !l.DontClean {
-					tegolaGeo, err = validate.CleanGeometry(ctx, sg, clipRegion)
-					if err != nil {
-						return fmt.Errorf("err making geometry valid: %w", err)
-					}
-				} else {
-					tegolaGeo = sg
-				}
-
-				geo, err = convert.ToGeom(tegolaGeo)
-				if err != nil {
-					return nil
-				}
-
-				mvtLayer.AddFeatures(mvt.Feature{
-					ID:       &f.ID,
-					Tags:     f.Tags,
-					Geometry: geo,
-				})
 
 				return nil
 			})
+			renderErr = err
 			if err != nil {
 				switch {
 				case errors.Is(err, context.Canceled):
@@ -335,8 +404,7 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 					// Do nothing, context was canceled
 
 				default:
-					// TODO (arolek): should we return an error to the response or just log the error?
-					// we can't just write to the response as the WaitGroup is going to write to the response as well
+					layerErrors[i] = err
 					log.Errorf("err fetching tile (%v) features: %v", tile, err)
 				}
 				return
@@ -355,6 +423,15 @@ func (m Map) encodeMVTTile(ctx context.Context, tile slippy.Tile, params provide
 	// as the WaitGroup was not notified of the cancel
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
+	}
+	var layerErr error
+	for _, err := range layerErrors {
+		if err != nil {
+			layerErr = errors.Join(layerErr, err)
+		}
+	}
+	if layerErr != nil {
+		return nil, layerErr
 	}
 
 	// add layers to our tile

@@ -599,7 +599,7 @@ func (w *netipAddrWrapper) ScanNetipPrefix(v netip.Prefix) error {
 }
 
 func (w netipAddrWrapper) NetipPrefixValue() (netip.Prefix, error) {
-	addr := (netip.Addr)(w)
+	addr := netip.Addr(w)
 	if !addr.IsValid() {
 		return netip.Prefix{}, nil
 	}
@@ -822,7 +822,7 @@ func (a *anyMultiDimSliceArray) Index(i int) any {
 	for j := len(a.dims) - 1; j >= 0; j-- {
 		dimLen := int(a.dims[j].Length)
 		indexes[j] = i % dimLen
-		i = i / dimLen
+		i /= dimLen
 	}
 
 	v := a.slice

@@ -3,7 +3,7 @@ package points
 import (
 	"sort"
 
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/maths"
 )
 
 // SortAndUnique sorts the points using the X first then Y ordering

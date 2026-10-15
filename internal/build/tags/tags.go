@@ -8,7 +8,6 @@
 // The program, will iterate through the source directory figuring out which
 // tags are used, and for a subset of those tags generate a few files that will
 // make use of those tags to fill in a Tags array.
-//
 package main
 
 import (
@@ -44,7 +43,7 @@ func ToSnakeCase(str string) string {
 var (
 	fset         = token.NewFileSet()
 	TagVar       = flag.String("var", "Tags", "The name of the variable to append tags to.")
-	PackageName  = flag.String("package", "github.com/go-spatial/tegola/internal/build", "The package the name to build the file for.")
+	PackageName  = flag.String("package", "github.com/alexeydott/tegola/internal/build", "The package the name to build the file for.")
 	KeepOldFiles = flag.Bool("keepFiles", false, "Don't remove the old `generate.go` files.")
 	RunCommand   = flag.String("runCommand", "", "The text for the command used to generate files; will default to name of command with args")
 	SrcDir       = flag.String("source", "", "This is the source directory, if not given assume the first argument to be the source, or '.'")
@@ -70,12 +69,12 @@ func getPackages(dir string) (pkgs []string, err error) {
 		pkgs = append(pkgs, scanner.Text())
 	}
 	if err = list.Wait(); err != nil {
-		return pkgs, fmt.Errorf("failed on close: %w",err)
+		return pkgs, fmt.Errorf("failed on close: %w", err)
 	}
 
 	// wait for the list.Run to finish
 	if err = scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scanner error: %w",err)
+		return nil, fmt.Errorf("scanner error: %w", err)
 	}
 	return pkgs, nil
 }
@@ -151,7 +150,7 @@ NextPackagePath:
 		}
 	}
 	tags := make([]string, 0, len(tagsMap))
-	for tag, _ := range tagsMap {
+	for tag := range tagsMap {
 		tags = append(tags, tag)
 	}
 	sort.Strings(tags)

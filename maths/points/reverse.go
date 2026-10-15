@@ -1,6 +1,6 @@
 package points
 
-import "github.com/go-spatial/tegola/maths"
+import "github.com/alexeydott/tegola/maths"
 
 func Reverse(a []maths.Pt) []maths.Pt {
 	l := len(a) - 1

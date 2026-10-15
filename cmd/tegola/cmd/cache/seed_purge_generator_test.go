@@ -7,8 +7,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/proj"
+	"github.com/alexeydott/geom/slippy"
+	"github.com/alexeydott/proj"
 )
 
 type sTiles []slippy.Tile
@@ -130,7 +130,7 @@ func TestGenerateTilesForBounds(t *testing.T) {
 			},
 		},
 		"min_zoom=1 max_zoom=1 bounds=5.9,45.8,10.5,47.8 WSG84": {
-			// see: https://github.com/go-spatial/tegola/issues/880#issuecomment-2556563251
+			// see: https://github.com/alexeydott/tegola/issues/880#issuecomment-2556563251
 			zooms:  []uint{10},
 			bounds: [4]float64{5.9, 45.8, 10.5, 47.8},
 			grid:   slippy.NewGrid(proj.EPSG4326, 0),

@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/go-spatial/tegola/internal/env"
+	"github.com/alexeydott/tegola/internal/env"
 	"github.com/go-test/deep"
 )
 
@@ -59,6 +59,16 @@ func TestURLUnmarshalTOML(t *testing.T) {
 		},
 		"nil": {
 			in:       nil,
+			expected: env.URL{},
+		},
+		// An empty hostname means "use the request host" (upstream behavior):
+		// it decodes to a zero URL without error instead of a fatal config error.
+		"empty hostname": {
+			in:       "",
+			expected: env.URL{},
+		},
+		"whitespace hostname": {
+			in:       "   ",
 			expected: env.URL{},
 		},
 	}

@@ -5,9 +5,9 @@ import (
 	"log"
 	"testing"
 
+	"github.com/alexeydott/tegola/basic"
+	"github.com/alexeydott/tegola/maths"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/maths"
 )
 
 func TestSegmentLinesContains(t *testing.T) {
@@ -21,8 +21,8 @@ func TestSegmentLinesContains(t *testing.T) {
 		desc  string
 	}
 
-	cpt := func(x, y float64) tstPt { return tstPt{maths.Pt{x, y}, true} }
-	ucpt := func(x, y float64) tstPt { return tstPt{maths.Pt{x, y}, false} }
+	cpt := func(x, y float64) tstPt { return tstPt{maths.Pt{X: x, Y: y}, true} }
+	ucpt := func(x, y float64) tstPt { return tstPt{maths.Pt{X: x, Y: y}, false} }
 
 	doesContain := func(pt tstPt) string {
 		if pt.contained {
@@ -33,7 +33,7 @@ func TestSegmentLinesContains(t *testing.T) {
 	lines := func(xys ...float64) (lns []maths.Line) {
 		lxi, lyi := len(xys)-2, len(xys)-1
 		for xi, yi := 0, 1; yi < len(xys); lxi, lyi, xi, yi = xi, yi, xi+2, yi+2 {
-			lns = append(lns, maths.Line{maths.Pt{xys[lxi], xys[lyi]}, maths.Pt{xys[xi], xys[yi]}})
+			lns = append(lns, maths.Line{maths.Pt{X: xys[lxi], Y: xys[lyi]}, maths.Pt{X: xys[xi], Y: xys[yi]}})
 		}
 		return lns
 	}

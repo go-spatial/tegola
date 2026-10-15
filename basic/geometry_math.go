@@ -6,9 +6,11 @@ import (
 
 	"errors"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/maths/webmercator"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/proj"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths/webmercator"
 )
 
 // ApplyToPoints applys the given function to each point in the geometry and any sub geometries, return a new transformed geometry.
@@ -115,6 +117,19 @@ func ApplyToPoints(geometry geom.Geometry, f func(coords ...float64) ([]float64,
 			mpoly[i] = polyv
 		}
 		return mpoly, nil
+
+	case geom.Collection:
+		coll := make(geom.Collection, len(geo))
+
+		for i, g := range geo {
+			// getting a geometry interface back
+			gi, err := ApplyToPoints(g, f)
+			if err != nil {
+				return nil, fmt.Errorf("got error converting geometry(%v) of collection: %v", i, err)
+			}
+			coll[i] = gi
+		}
+		return coll, nil
 	}
 }
 
@@ -129,16 +144,12 @@ func CloneGeometry(geometry geom.Geometry) (geom.Geometry, error) {
 
 	case geom.MultiPoint:
 		pts := make(geom.MultiPoint, len(geo))
-		for i, pt := range geo {
-			pts[i] = pt
-		}
+		copy(pts, geo)
 		return pts, nil
 
 	case geom.LineString:
 		line := make(geom.LineString, len(geo))
-		for i, pt := range geo {
-			line[i] = pt
-		}
+		copy(line, geo)
 		return line, nil
 
 	case geom.MultiLineString:
@@ -197,14 +208,45 @@ func CloneGeometry(geometry geom.Geometry) (geom.Geometry, error) {
 			mpoly[i] = polyv
 		}
 		return mpoly, nil
+
+	case geom.Collection:
+		coll := make(geom.Collection, len(geo))
+		for i, g := range geo {
+			// getting a geometry interface back
+			gi, err := CloneGeometry(g)
+			if err != nil {
+				return nil, fmt.Errorf("got error cloning geometry(%v) of collection: %v", i, err)
+			}
+			coll[i] = gi
+		}
+		return coll, nil
 	}
+}
+
+// projToWebMercator converts points encoded in an arbitrary projected SRID
+// known to github.com/alexeydott/proj (e.g. EPSG:3395 World Mercator,
+// EPSG:4087, or any SRID registered via RegisterProj4SRID) to Web Mercator
+// (3857) by routing through WGS84 lon/lat. SRIDs handled by dedicated
+// switches in ToWebMercator / FromWebMercator (3857, 4326) never reach here,
+// so there is no routing cycle.
+func projToWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
+	if !proj.IsKnownConversionSRID(proj.EPSGCode(SRID)) {
+		return nil, fmt.Errorf("don't know how to convert from %v to %v (unknown or unregistered SRID; use the provider's srid or crs_defn config option to register one).", tegola.WebMercator, SRID)
+	}
+	return ApplyToPoints(geometry, func(coords ...float64) ([]float64, error) {
+		xy, err := proj.Inverse(proj.EPSGCode(SRID), []float64{coords[0], coords[1]})
+		if err != nil {
+			return nil, err
+		}
+		return webmercator.PToXY(xy[0], xy[1])
+	})
 }
 
 // ToWebMercator takes a SRID and a geometry encode using that srid, and returns a geometry encoded as a WebMercator.
 func ToWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	switch SRID {
 	default:
-		return nil, fmt.Errorf("don't know how to convert from %v to %v.", tegola.WebMercator, SRID)
+		return projToWebMercator(SRID, geometry)
 	case tegola.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
@@ -217,11 +259,27 @@ func ToWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	}
 }
 
+// projFromWebMercator converts points encoded in Web Mercator (3857) to an
+// arbitrary projected SRID known to github.com/alexeydott/proj by routing
+// through WGS84 lon/lat. See projToWebMercator for details.
+func projFromWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
+	if !proj.IsKnownConversionSRID(proj.EPSGCode(SRID)) {
+		return nil, fmt.Errorf("don't know how to convert from %v to %v (unknown or unregistered SRID; use the provider's srid or crs_defn config option to register one).", SRID, tegola.WebMercator)
+	}
+	return ApplyToPoints(geometry, func(coords ...float64) ([]float64, error) {
+		ll, err := webmercator.PToLonLat(coords[0], coords[1])
+		if err != nil {
+			return nil, err
+		}
+		return proj.Convert(proj.EPSGCode(SRID), []float64{ll[0], ll[1]})
+	})
+}
+
 // FromWebMercator takes a geometry encoded with WebMercator, and returns a Geometry encodes to the given srid.
 func FromWebMercator(SRID uint64, geometry geom.Geometry) (geom.Geometry, error) {
 	switch SRID {
 	default:
-		return nil, fmt.Errorf("don't know how to convert from %v to %v.", SRID, tegola.WebMercator)
+		return projFromWebMercator(SRID, geometry)
 	case tegola.WebMercator:
 		// Instead of just returning the geometry, we are cloning it so that the user of the API can rely
 		// on the result to alway be a copy. Instead of being a reference in the on instance that it's already
@@ -336,10 +394,10 @@ func MapAsGeometry(m map[string]interface{}) (geo Geometry, err error) {
 	case "linestring":
 		return interfaceAsLine(m["value"])
 	case "polygon":
-		fmt.Println("Working on Polygon:")
+		log.Debug("Working on Polygon:")
 		return interfaceAsPolygon(m["value"])
 	case "multipolygon":
-		fmt.Println("Working on MPolygon:")
+		log.Debug("Working on MPolygon:")
 		var mp MultiPolygon
 		err := forEachMapInSlice(m["value"], func(_ string, v interface{}) error {
 			p, err := interfaceAsPolygon(v)

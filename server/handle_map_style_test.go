@@ -7,8 +7,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/go-spatial/tegola/mapbox/style"
-	"github.com/go-spatial/tegola/server"
+	"github.com/alexeydott/tegola/atlas"
+	"github.com/alexeydott/tegola/mapbox/style"
+	"github.com/alexeydott/tegola/server"
 	"github.com/go-test/deep"
 )
 
@@ -164,6 +165,57 @@ func TestHandleMapStyle(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
+	}
+}
+
+func TestHandleMapStylePolygonLayer(t *testing.T) {
+	server.HostName = &url.URL{
+		Host: serverHostName,
+	}
+	server.URIPrefix = "/"
+
+	// the style handler looks maps up in the package level atlas, so
+	// register the polygon test map there under a unique name.
+	polyMapName := "polygon-style-test-map"
+	polyMap := atlas.NewWebMercatorMap(polyMapName)
+	polyMap.Attribution = testMapAttribution
+	polyMap.Center = testMapCenter
+	polyMap.Layers = append(polyMap.Layers, testLayer4)
+	atlas.AddMap(polyMap)
+
+	resp, _, err := doRequest(t, nil, http.MethodGet, path.Join("/maps", polyMapName, "style.json"), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if resp.Code != http.StatusOK {
+		t.Fatalf("handler returned wrong status code: got (%d) expected (%d)", resp.Code, http.StatusOK)
+	}
+
+	var output style.Root
+	if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+		t.Fatalf("unable to unmarshal JSON response body: %s", err)
+	}
+
+	expected := style.Root{
+		Name:    polyMapName,
+		Version: style.Version,
+		Center:  [2]float64{testMapCenter[0], testMapCenter[1]},
+		Zoom:    testMapCenter[2],
+		Sources: map[string]style.Source{
+			polyMapName: {
+				Type: style.SourceTypeVector,
+				URL: (&url.URL{
+					Scheme: "http",
+					Host:   serverHostName,
+					Path:   path.Join(server.URIPrefix, "capabilities", polyMapName+".json"),
+				}).String(),
+			},
+		},
+		Layers: polygonLayerStyleLayers(testLayer4.MVTName(), polyMapName),
+	}
+
+	if diff := deep.Equal(output, expected); diff != nil {
+		t.Fatalf("output does not match expected. diff %s", diff)
 	}
 }
 

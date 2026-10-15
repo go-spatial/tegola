@@ -1,8 +1,8 @@
 package toml
 
 import (
-	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -12,35 +12,29 @@ import (
 )
 
 type parser struct {
-	mapping map[string]interface{}
-	types   map[string]tomlType
-	lx      *lexer
+	lx         *lexer
+	context    Key      // Full key for the current hash in scope.
+	currentKey string   // Base key name for everything except hashes.
+	pos        Position // Current position in the TOML file.
 
-	ordered    []Key           // List of keys in the order that they appear in the TOML data.
-	context    Key             // Full key for the current hash in scope.
-	currentKey string          // Base key name for everything except hashes.
-	approxLine int             // Rough approximation of line number
-	implicits  map[string]bool // Record implied keys (e.g. 'key.group.names').
+	ordered []Key // List of keys in the order that they appear in the TOML data.
+
+	keyInfo   map[string]keyInfo  // Map keyname → info about the TOML key.
+	mapping   map[string]any      // Map keyname → key value.
+	implicits map[string]struct{} // Record implicit keys (e.g. "key.group.names").
 }
 
-// ParseError is used when a file can't be parsed: for example invalid integer
-// literals, duplicate keys, etc.
-type ParseError struct {
-	Message string
-	Line    int
-	LastKey string
-}
-
-func (pe ParseError) Error() string {
-	return fmt.Sprintf("Near line %d (last key parsed '%s'): %s",
-		pe.Line, pe.LastKey, pe.Message)
+type keyInfo struct {
+	pos      Position
+	tomlType tomlType
 }
 
 func parse(data string) (p *parser, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			var ok bool
-			if err, ok = r.(ParseError); ok {
+			if pErr, ok := r.(ParseError); ok {
+				pErr.input = data
+				err = pErr
 				return
 			}
 			panic(r)
@@ -48,9 +42,12 @@ func parse(data string) (p *parser, err error) {
 	}()
 
 	// Read over BOM; do this here as the lexer calls utf8.DecodeRuneInString()
-	// which mangles stuff.
-	if strings.HasPrefix(data, "\xff\xfe") || strings.HasPrefix(data, "\xfe\xff") {
+	// which mangles stuff. UTF-16 BOM isn't strictly valid, but some tools add
+	// it anyway.
+	if strings.HasPrefix(data, "\xff\xfe") || strings.HasPrefix(data, "\xfe\xff") { // UTF-16
 		data = data[2:]
+	} else if strings.HasPrefix(data, "\xef\xbb\xbf") { // UTF-8
+		data = data[3:]
 	}
 
 	// Examine first few bytes for NULL bytes; this probably means it's a UTF-16
@@ -60,16 +57,21 @@ func parse(data string) (p *parser, err error) {
 	if len(data) < 6 {
 		ex = len(data)
 	}
-	if strings.ContainsRune(data[:ex], 0) {
-		return nil, errors.New("files cannot contain NULL bytes; probably using UTF-16; TOML files must be UTF-8")
+	if i := strings.IndexRune(data[:ex], 0); i > -1 {
+		return nil, ParseError{
+			Message:  "files cannot contain NULL bytes; probably using UTF-16; TOML files must be UTF-8",
+			Position: Position{Line: 1, Col: 1, Start: i, Len: 1},
+			Line:     1,
+			input:    data,
+		}
 	}
 
 	p = &parser{
-		mapping:   make(map[string]interface{}),
-		types:     make(map[string]tomlType),
+		keyInfo:   make(map[string]keyInfo),
+		mapping:   make(map[string]any),
 		lx:        lex(data),
 		ordered:   make([]Key, 0),
-		implicits: make(map[string]bool),
+		implicits: make(map[string]struct{}),
 	}
 	for {
 		item := p.next()
@@ -82,25 +84,60 @@ func parse(data string) (p *parser, err error) {
 	return p, nil
 }
 
-func (p *parser) panicf(format string, v ...interface{}) {
-	msg := fmt.Sprintf(format, v...)
+func (p *parser) panicErr(it item, err error) {
 	panic(ParseError{
-		Message: msg,
-		Line:    p.approxLine,
-		LastKey: p.current(),
+		Message:  err.Error(),
+		err:      err,
+		Position: it.pos.withCol(p.lx.input),
+		Line:     it.pos.Len,
+		LastKey:  p.current(),
+	})
+}
+
+func (p *parser) panicItemf(it item, format string, v ...any) {
+	panic(ParseError{
+		Message:  fmt.Sprintf(format, v...),
+		Position: it.pos.withCol(p.lx.input),
+		Line:     it.pos.Len,
+		LastKey:  p.current(),
+	})
+}
+
+func (p *parser) panicf(format string, v ...any) {
+	panic(ParseError{
+		Message:  fmt.Sprintf(format, v...),
+		Position: p.pos.withCol(p.lx.input),
+		Line:     p.pos.Line,
+		LastKey:  p.current(),
 	})
 }
 
 func (p *parser) next() item {
 	it := p.lx.nextItem()
-	//fmt.Printf("ITEM %-18s line %-3d │ %q\n", it.typ, it.line, it.val)
+	//fmt.Printf("ITEM %-18s line %-3d │ %q\n", it.typ, it.pos.Line, it.val)
 	if it.typ == itemError {
-		p.panicf("%s", it.val)
+		if it.err != nil {
+			panic(ParseError{
+				Message:  it.err.Error(),
+				err:      it.err,
+				Position: it.pos.withCol(p.lx.input),
+				Line:     it.pos.Line,
+				LastKey:  p.current(),
+			})
+		}
+
+		p.panicItemf(it, "%s", it.val)
 	}
 	return it
 }
 
-func (p *parser) bug(format string, v ...interface{}) {
+func (p *parser) nextPos() item {
+	it := p.next()
+	p.pos = it.pos
+	return it
+}
+
+func (p *parser) bug(format string, v ...any) {
 	panic(fmt.Sprintf("BUG: "+format+"\n\n", v...))
 }
 
@@ -119,11 +156,9 @@ func (p *parser) assertEqual(expected, got itemType) {
 func (p *parser) topLevel(item item) {
 	switch item.typ {
 	case itemCommentStart: // # ..
-		p.approxLine = item.line
 		p.expect(itemText)
 	case itemTableStart: // [ .. ]
-		name := p.next()
-		p.approxLine = name.line
+		name := p.nextPos()
 
 		var key Key
 		for ; name.typ != itemTableEnd && name.typ != itemEOF; name = p.next() {
@@ -132,11 +167,10 @@ func (p *parser) topLevel(item item) {
 		p.assertEqual(itemTableEnd, name.typ)
 
 		p.addContext(key, false)
-		p.setType("", tomlHash)
+		p.setType("", tomlHash, item.pos)
 		p.ordered = append(p.ordered, key)
 	case itemArrayTableStart: // [[ .. ]]
-		name := p.next()
-		p.approxLine = name.line
+		name := p.nextPos()
 
 		var key Key
 		for ; name.typ != itemArrayTableEnd && name.typ != itemEOF; name = p.next() {
@@ -145,13 +179,12 @@ func (p *parser) topLevel(item item) {
 		p.assertEqual(itemArrayTableEnd, name.typ)
 
 		p.addContext(key, true)
-		p.setType("", tomlArrayHash)
+		p.setType("", tomlArrayHash, item.pos)
 		p.ordered = append(p.ordered, key)
 	case itemKeyStart: // key = ..
 		outerContext := p.context
 		/// Read all the key parts (e.g. 'a' and 'b' in 'a.b')
-		k := p.next()
-		p.approxLine = k.line
+		k := p.nextPos()
 		var key Key
 		for ; k.typ != itemKeyEnd && k.typ != itemEOF; k = p.next() {
 			key = append(key, p.keyString(k))
@@ -159,19 +192,21 @@ func (p *parser) topLevel(item item) {
 		p.assertEqual(itemKeyEnd, k.typ)
 
 		/// The current key is the last part.
-		p.currentKey = key[len(key)-1]
+		p.currentKey = key.last()
 
 		/// All the other parts (if any) are the context; need to set each part
 		/// as implicit.
-		context := key[:len(key)-1]
+		context := key.parent()
 		for i := range context {
 			p.addImplicitContext(append(p.context, context[i:i+1]...))
 		}
+		p.ordered = append(p.ordered, p.context.add(p.currentKey))
 
 		/// Set value.
-		val, typ := p.value(p.next(), false)
-		p.set(p.currentKey, val, typ)
-		p.ordered = append(p.ordered, p.context.add(p.currentKey))
+		vItem := p.next()
+		val, typ := p.value(vItem, false)
+		p.setValue(p.currentKey, val)
+		p.setType(p.currentKey, typ, vItem.pos)
 
 		/// Remove the context we added (preserving any context from [tbl] lines).
 		p.context = outerContext
@@ -186,7 +221,7 @@ func (p *parser) keyString(it item) string {
 	switch it.typ {
 	case itemText:
 		return it.val
-	case itemString, itemMultilineString,
+	case itemString, itemStringEsc, itemMultilineString,
 		itemRawString, itemRawMultilineString:
 		s, _ := p.value(it, false)
 		return s.(string)
@@ -203,12 +238,14 @@ var datetimeRepl = strings.NewReplacer(
 
 // value translates an expected value from the lexer into a Go value wrapped
 // as an empty interface.
-func (p *parser) value(it item, parentIsArray bool) (interface{}, tomlType) {
+func (p *parser) value(it item, parentIsArray bool) (any, tomlType) {
 	switch it.typ {
 	case itemString:
-		return p.replaceEscapes(it.val), p.typeOfPrimitive(it)
+		return it.val, p.typeOfPrimitive(it)
+	case itemStringEsc:
+		return p.replaceEscapes(it, it.val), p.typeOfPrimitive(it)
 	case itemMultilineString:
-		return p.replaceEscapes(stripFirstNewline(stripEscapedNewlines(it.val))), p.typeOfPrimitive(it)
+		return p.replaceEscapes(it, p.stripEscapedNewlines(stripFirstNewline(it.val))), p.typeOfPrimitive(it)
 	case itemRawString:
 		return it.val, p.typeOfPrimitive(it)
 	case itemRawMultilineString:
@@ -238,12 +275,12 @@ func (p *parser) value(it item, parentIsArray bool) (interface{}, tomlType) {
 	panic("unreachable")
 }
 
-func (p *parser) valueInteger(it item) (interface{}, tomlType) {
+func (p *parser) valueInteger(it item) (any, tomlType) {
 	if !numUnderscoresOK(it.val) {
-		p.panicf("Invalid integer %q: underscores must be surrounded by digits", it.val)
+		p.panicItemf(it, "Invalid integer %q: underscores must be surrounded by digits", it.val)
 	}
 	if numHasLeadingZero(it.val) {
-		p.panicf("Invalid integer %q: cannot have leading zeroes", it.val)
+		p.panicItemf(it, "Invalid integer %q: cannot have leading zeroes", it.val)
 	}
 
 	num, err := strconv.ParseInt(it.val, 0, 64)
@@ -254,7 +291,7 @@ func (p *parser) valueInteger(it item) (interface{}, tomlType) {
 		// So mark the former as a bug but the latter as a legitimate user
 		// error.
 		if e, ok := err.(*strconv.NumError); ok && e.Err == strconv.ErrRange {
-			p.panicf("Integer '%s' is out of the range of 64-bit signed integers.", it.val)
+			p.panicErr(it, errParseRange{i: it.val, size: "int64"})
 		} else {
 			p.bug("Expected integer value, but got '%s'.", it.val)
 		}
@@ -262,7 +299,7 @@ func (p *parser) valueInteger(it item) (interface{}, tomlType) {
 	return num, p.typeOfPrimitive(it)
 }
 
-func (p *parser) valueFloat(it item) (interface{}, tomlType) {
+func (p *parser) valueFloat(it item) (any, tomlType) {
 	parts := strings.FieldsFunc(it.val, func(r rune) bool {
 		switch r {
 		case '.', 'e', 'E':
@@ -272,30 +309,35 @@ func (p *parser) valueFloat(it item) (interface{}, tomlType) {
 	})
 	for _, part := range parts {
 		if !numUnderscoresOK(part) {
-			p.panicf("Invalid float %q: underscores must be surrounded by digits", it.val)
+			p.panicItemf(it, "Invalid float %q: underscores must be surrounded by digits", it.val)
 		}
 	}
 	if len(parts) > 0 && numHasLeadingZero(parts[0]) {
-		p.panicf("Invalid float %q: cannot have leading zeroes", it.val)
+		p.panicItemf(it, "Invalid float %q: cannot have leading zeroes", it.val)
 	}
 	if !numPeriodsOK(it.val) {
 		// As a special case, numbers like '123.' or '1.e2',
 		// which are valid as far as Go/strconv are concerned,
 		// must be rejected because TOML says that a fractional
 		// part consists of '.' followed by 1+ digits.
-		p.panicf("Invalid float %q: '.' must be followed by one or more digits", it.val)
+		p.panicItemf(it, "Invalid float %q: '.' must be followed by one or more digits", it.val)
 	}
 	val := strings.Replace(it.val, "_", "", -1)
-	if val == "+nan" || val == "-nan" { // Go doesn't support this, but TOML spec does.
+	signbit := false
+	if val == "+nan" || val == "-nan" {
+		signbit = val == "-nan"
 		val = "nan"
 	}
 	num, err := strconv.ParseFloat(val, 64)
 	if err != nil {
 		if e, ok := err.(*strconv.NumError); ok && e.Err == strconv.ErrRange {
-			p.panicf("Float '%s' is out of the range of 64-bit IEEE-754 floating-point numbers.", it.val)
+			p.panicErr(it, errParseRange{i: it.val, size: "float64"})
 		} else {
-			p.panicf("Invalid float value: %q", it.val)
+			p.panicItemf(it, "Invalid float value: %q", it.val)
 		}
+	}
+	if signbit {
+		num = math.Copysign(num, -1)
 	}
 	return num, p.typeOfPrimitive(it)
 }
@@ -308,9 +350,12 @@ var dtTypes = []struct {
 	{"2006-01-02T15:04:05.999999999", internal.LocalDatetime},
 	{"2006-01-02", internal.LocalDate},
 	{"15:04:05.999999999", internal.LocalTime},
+	{"2006-01-02T15:04Z07:00", time.Local},
+	{"2006-01-02T15:04", internal.LocalDatetime},
+	{"15:04", internal.LocalTime},
 }
 
-func (p *parser) valueDatetime(it item) (interface{}, tomlType) {
+func (p *parser) valueDatetime(it item) (any, tomlType) {
 	it.val = datetimeRepl.Replace(it.val)
 	var (
 		t   time.Time
@@ -320,23 +365,44 @@ func (p *parser) valueDatetime(it item) (interface{}, tomlType) {
 	for _, dt := range dtTypes {
 		t, err = time.ParseInLocation(dt.fmt, it.val, dt.zone)
 		if err == nil {
+			if missingLeadingZero(it.val, dt.fmt) {
+				p.panicErr(it, errParseDate{it.val})
+			}
 			ok = true
 			break
 		}
 	}
 	if !ok {
-		p.panicf("Invalid TOML Datetime: %q.", it.val)
+		p.panicErr(it, errParseDate{it.val})
 	}
 	return t, p.typeOfPrimitive(it)
 }
 
-func (p *parser) valueArray(it item) (interface{}, tomlType) {
-	p.setType(p.currentKey, tomlArray)
+// Go's time.Parse() will accept numbers without a leading zero; there isn't any
+// way to require it. https://github.com/golang/go/issues/29911
+//
+// Depend on the fact that the separators (- and :) should always be at the same
+// location.
+func missingLeadingZero(d, l string) bool {
+	for i, c := range []byte(l) {
+		if c == '.' || c == 'Z' {
+			return false
+		}
+		if (c < '0' || c > '9') && d[i] != c {
+			return true
+		}
+	}
+	return false
+}
 
-	// p.setType(p.currentKey, typ)
+func (p *parser) valueArray(it item) (any, tomlType) {
+	p.setType(p.currentKey, tomlArray, it.pos)
+
 	var (
-		array []interface{}
-		types []tomlType
+		// Initialize to a non-nil slice to make it consistent with how S = []
+		// decodes into a non-nil slice inside something like struct { S
+		// []string }. See #338
+		array = make([]any, 0, 2)
 	)
 	for it = p.next(); it.typ != itemArrayEnd; it = p.next() {
 		if it.typ == itemCommentStart {
@@ -346,14 +412,20 @@ func (p *parser) valueArray(it item) (interface{}, tomlType) {
 
 		val, typ := p.value(it, true)
 		array = append(array, val)
-		types = append(types, typ)
+
+		// XXX: type isn't used here, we need it to record the accurate type
+		// information.
+		//
+		// Not entirely sure how to best store this; could use "key[0]",
+		// "key[1]" notation, or maybe store it on the Array type?
+		_ = typ
 	}
 	return array, tomlArray
 }
 
-func (p *parser) valueInlineTable(it item, parentIsArray bool) (interface{}, tomlType) {
+func (p *parser) valueInlineTable(it item, parentIsArray bool) (any, tomlType) {
 	var (
-		hash         = make(map[string]interface{})
+		topHash      = make(map[string]any)
 		outerContext = p.context
 		outerKey     = p.currentKey
 	)
@@ -373,8 +445,7 @@ func (p *parser) valueInlineTable(it item, parentIsArray bool) (interface{}, tom
 		}
 
 		/// Read all key parts.
-		k := p.next()
-		p.approxLine = k.line
+		k := p.nextPos()
 		var key Key
 		for ; k.typ != itemKeyEnd && k.typ != itemEOF; k = p.next() {
 			key = append(key, p.keyString(k))
@@ -382,19 +453,33 @@ func (p *parser) valueInlineTable(it item, parentIsArray bool) (interface{}, tom
 		p.assertEqual(itemKeyEnd, k.typ)
 
 		/// The current key is the last part.
-		p.currentKey = key[len(key)-1]
+		p.currentKey = key.last()
 
 		/// All the other parts (if any) are the context; need to set each part
 		/// as implicit.
-		context := key[:len(key)-1]
+		context := key.parent()
 		for i := range context {
 			p.addImplicitContext(append(p.context, context[i:i+1]...))
 		}
+		p.ordered = append(p.ordered, p.context.add(p.currentKey))
 
 		/// Set the value.
 		val, typ := p.value(p.next(), false)
-		p.set(p.currentKey, val, typ)
-		p.ordered = append(p.ordered, p.context.add(p.currentKey))
+		p.setValue(p.currentKey, val)
+		p.setType(p.currentKey, typ, it.pos)
+
+		hash := topHash
+		for _, c := range context {
+			h, ok := hash[c]
+			if !ok {
+				h = make(map[string]any)
+				hash[c] = h
+			}
+			hash, ok = h.(map[string]any)
+			if !ok {
+				p.panicf("%q is not a table", p.context)
+			}
+		}
 		hash[p.currentKey] = val
 
 		/// Restore context.
@@ -402,13 +487,13 @@ func (p *parser) valueInlineTable(it item, parentIsArray bool) (interface{}, tom
 	}
 	p.context = outerContext
 	p.currentKey = outerKey
-	return hash, tomlHash
+	return topHash, tomlHash
 }
 
 // numHasLeadingZero checks if this number has leading zeroes, allowing for '0',
 // +/- signs, and base prefixes.
 func numHasLeadingZero(s string) bool {
-	if len(s) > 1 && s[0] == '0' && isDigit(rune(s[1])) { // >1 to allow "0" and isDigit to allow 0x
+	if len(s) > 1 && s[0] == '0' && !(s[1] == 'b' || s[1] == 'o' || s[1] == 'x') { // Allow 0b, 0o, 0x
 		return true
 	}
 	if len(s) > 2 && (s[0] == '-' || s[0] == '+') && s[1] == '0' {
@@ -432,9 +517,9 @@ func numUnderscoresOK(s string) bool {
 			}
 		}
 
-		// isHexadecimal is a superset of all the permissable characters
-		// surrounding an underscore.
-		accept = isHexadecimal(r)
+		// isHex is a superset of all the permissible characters surrounding an
+		// underscore.
+		accept = isHex(r)
 	}
 	return accept
 }
@@ -457,21 +542,19 @@ func numPeriodsOK(s string) bool {
 // Establishing the context also makes sure that the key isn't a duplicate, and
 // will create implicit hashes automatically.
 func (p *parser) addContext(key Key, array bool) {
-	var ok bool
-
-	// Always start at the top level and drill down for our context.
+	/// Always start at the top level and drill down for our context.
 	hashContext := p.mapping
-	keyContext := make(Key, 0)
+	keyContext := make(Key, 0, len(key)-1)
 
-	// We only need implicit hashes for key[0:-1]
-	for _, k := range key[0 : len(key)-1] {
-		_, ok = hashContext[k]
+	/// We only need implicit hashes for the parents.
+	for _, k := range key.parent() {
+		_, ok := hashContext[k]
 		keyContext = append(keyContext, k)
 
 		// No key? Make an implicit hash and move on.
 		if !ok {
 			p.addImplicit(keyContext)
-			hashContext[k] = make(map[string]interface{})
+			hashContext[k] = make(map[string]any)
 		}
 
 		// If the hash context is actually an array of tables, then set
@@ -480,9 +563,9 @@ func (p *parser) addContext(key Key, array bool) {
 		// Otherwise, it better be a table, since this MUST be a key group (by
 		// virtue of it not being the last element in a key).
 		switch t := hashContext[k].(type) {
-		case []map[string]interface{}:
+		case []map[string]any:
 			hashContext = t[len(t)-1]
-		case map[string]interface{}:
+		case map[string]any:
 			hashContext = t
 		default:
 			p.panicf("Key '%s' was already created as a hash.", keyContext)
@@ -493,39 +576,33 @@ func (p *parser) addContext(key Key, array bool) {
 	if array {
 		// If this is the first element for this array, then allocate a new
 		// list of tables for it.
-		k := key[len(key)-1]
+		k := key.last()
 		if _, ok := hashContext[k]; !ok {
-			hashContext[k] = make([]map[string]interface{}, 0, 4)
+			hashContext[k] = make([]map[string]any, 0, 4)
 		}
 
 		// Add a new table. But make sure the key hasn't already been used
 		// for something else.
-		if hash, ok := hashContext[k].([]map[string]interface{}); ok {
-			hashContext[k] = append(hash, make(map[string]interface{}))
+		if hash, ok := hashContext[k].([]map[string]any); ok {
+			hashContext[k] = append(hash, make(map[string]any))
 		} else {
-			p.panicf("Key '%s' was already created and cannot be used as an array.", keyContext)
+			p.panicf("Key '%s' was already created and cannot be used as an array.", key)
 		}
 	} else {
-		p.setValue(key[len(key)-1], make(map[string]interface{}))
+		p.setValue(key.last(), make(map[string]any))
 	}
-	p.context = append(p.context, key[len(key)-1])
-}
-
-// set calls setValue and setType.
-func (p *parser) set(key string, val interface{}, typ tomlType) {
-	p.setValue(p.currentKey, val)
-	p.setType(p.currentKey, typ)
+	p.context = append(p.context, key.last())
 }
 
 // setValue sets the given key to the given value in the current context.
 // It will make sure that the key hasn't already been defined, account for
 // implicit key groups.
-func (p *parser) setValue(key string, value interface{}) {
+func (p *parser) setValue(key string, value any) {
 	var (
-		tmpHash    interface{}
+		tmpHash    any
 		ok         bool
 		hash       = p.mapping
-		keyContext Key
+		keyContext = make(Key, 0, len(p.context)+1)
 	)
 	for _, k := range p.context {
 		keyContext = append(keyContext, k)
@@ -533,11 +610,11 @@ func (p *parser) setValue(key string, value interface{}) {
 			p.bug("Context for key '%s' has not been established.", keyContext)
 		}
 		switch t := tmpHash.(type) {
-		case []map[string]interface{}:
+		case []map[string]any:
 			// The context is a table of hashes. Pick the most recent table
 			// defined as the current hash.
 			hash = t[len(t)-1]
-		case map[string]interface{}:
+		case map[string]any:
 			hash = t
 		default:
 			p.panicf("Key '%s' has already been defined.", keyContext)
@@ -556,6 +633,11 @@ func (p *parser) setValue(key string, value interface{}) {
 		// Note that since it has already been defined (as a hash), we don't
 		// want to overwrite it. So our business is done.
 		if p.isArray(keyContext) {
+			if !p.isImplicit(keyContext) {
+				if _, ok := hash[key]; ok {
+					p.panicf("Key '%s' has already been defined.", keyContext)
+				}
+			}
 			p.removeImplicit(keyContext)
 			hash[key] = value
 			return
@@ -564,41 +646,41 @@ func (p *parser) setValue(key string, value interface{}) {
 			p.removeImplicit(keyContext)
 			return
 		}
-
-		// Otherwise, we have a concrete key trying to override a previous
-		// key, which is *always* wrong.
+		// Otherwise, we have a concrete key trying to override a previous key,
+		// which is *always* wrong.
 		p.panicf("Key '%s' has already been defined.", keyContext)
 	}
 
 	hash[key] = value
 }
 
-// setType sets the type of a particular value at a given key.
-// It should be called immediately AFTER setValue.
+// setType sets the type of a particular value at a given key. It should be
+// called immediately AFTER setValue.
 //
 // Note that if `key` is empty, then the type given will be applied to the
 // current context (which is either a table or an array of tables).
-func (p *parser) setType(key string, typ tomlType) {
+func (p *parser) setType(key string, typ tomlType, pos Position) {
 	keyContext := make(Key, 0, len(p.context)+1)
-	for _, k := range p.context {
-		keyContext = append(keyContext, k)
-	}
+	keyContext = append(keyContext, p.context...)
 	if len(key) > 0 { // allow type setting for hashes
 		keyContext = append(keyContext, key)
 	}
-	p.types[keyContext.String()] = typ
+	// Special case to make empty keys ("" = 1) work.
+	// Without it it will set "" rather than `""`.
+	// TODO: why is this needed? And why is this only needed here?
+	if len(keyContext) == 0 {
+		keyContext = Key{""}
+	}
+	p.keyInfo[keyContext.String()] = keyInfo{tomlType: typ, pos: pos}
 }
 
 // Implicit keys need to be created when tables are implied in "a.b.c.d = 1" and
 // "[a.b.c]" (the "a", "b", and "c" hashes are never created explicitly).
-func (p *parser) addImplicit(key Key)     { p.implicits[key.String()] = true }
-func (p *parser) removeImplicit(key Key)  { p.implicits[key.String()] = false }
-func (p *parser) isImplicit(key Key) bool { return p.implicits[key.String()] }
-func (p *parser) isArray(key Key) bool    { return p.types[key.String()] == tomlArray }
-func (p *parser) addImplicitContext(key Key) {
-	p.addImplicit(key)
-	p.addContext(key, false)
-}
+func (p *parser) addImplicit(key Key)        { p.implicits[key.String()] = struct{}{} }
+func (p *parser) removeImplicit(key Key)     { delete(p.implicits, key.String()) }
+func (p *parser) isImplicit(key Key) bool    { _, ok := p.implicits[key.String()]; return ok }
+func (p *parser) isArray(key Key) bool       { return p.keyInfo[key.String()].tomlType == tomlArray }
+func (p *parser) addImplicitContext(key Key) { p.addImplicit(key); p.addContext(key, false) }
 
 // current returns the full key name of the current context.
 func (p *parser) current() string {
@@ -621,119 +703,133 @@ func stripFirstNewline(s string) string {
 	return s
 }
 
-// Remove newlines inside triple-quoted strings if a line ends with "\".
-func stripEscapedNewlines(s string) string {
-	split := strings.Split(s, "\n")
-	if len(split) < 1 {
-		return s
-	}
+// stripEscapedNewlines removes whitespace after line-ending backslashes in
+// multiline strings.
+//
+// A line-ending backslash is an unescaped \ followed only by whitespace until
+// the next newline. After a line-ending backslash, all whitespace is removed
+// until the next non-whitespace character.
+func (p *parser) stripEscapedNewlines(s string) string {
+	var (
+		b strings.Builder
+		i int
+	)
+	b.Grow(len(s))
+	for {
+		ix := strings.Index(s[i:], `\`)
+		if ix < 0 {
+			b.WriteString(s)
+			return b.String()
+		}
+		i += ix
 
-	escNL := false // Keep track of the last non-blank line was escaped.
-	for i, line := range split {
-		line = strings.TrimRight(line, " \t\r")
-
-		if len(line) == 0 || line[len(line)-1] != '\\' {
-			split[i] = strings.TrimRight(split[i], "\r")
-			if !escNL && i != len(split)-1 {
-				split[i] += "\n"
+		if len(s) > i+1 && s[i+1] == '\\' {
+			// Escaped backslash.
+			i += 2
+			continue
+		}
+		// Scan until the next non-whitespace.
+		j := i + 1
+	whitespaceLoop:
+		for ; j < len(s); j++ {
+			switch s[j] {
+			case ' ', '\t', '\r', '\n':
+			default:
+				break whitespaceLoop
 			}
+		}
+		if j == i+1 {
+			// Not a whitespace escape.
+			i++
 			continue
 		}
-
-		escBS := true
-		for j := len(line) - 1; j >= 0 && line[j] == '\\'; j-- {
-			escBS = !escBS
-		}
-		if escNL {
-			line = strings.TrimLeft(line, " \t\r")
-		}
-		escNL = !escBS
-
-		if escBS {
-			split[i] += "\n"
+		if !strings.Contains(s[i:j], "\n") {
+			// This is not a line-ending backslash. (It's a bad escape sequence,
+			// but we can let replaceEscapes catch it.)
+			i++
 			continue
 		}
-
-		split[i] = line[:len(line)-1] // Remove \
-		if len(split)-1 > i {
-			split[i+1] = strings.TrimLeft(split[i+1], " \t\r")
-		}
+		b.WriteString(s[:i])
+		s = s[j:]
+		i = 0
 	}
-	return strings.Join(split, "")
 }
 
-func (p *parser) replaceEscapes(str string) string {
-	var replaced []rune
-	s := []byte(str)
-	r := 0
-	for r < len(s) {
-		if s[r] != '\\' {
-			c, size := utf8.DecodeRune(s[r:])
-			r += size
-			replaced = append(replaced, c)
+func (p *parser) replaceEscapes(it item, str string) string {
+	var (
+		b    strings.Builder
+		skip = 0
+	)
+	b.Grow(len(str))
+	for i, c := range str {
+		if skip > 0 {
+			skip--
 			continue
 		}
-		r += 1
-		if r >= len(s) {
+		if c != '\\' {
+			b.WriteRune(c)
+			continue
+		}
+
+		if i >= len(str) {
 			p.bug("Escape sequence at end of string.")
 			return ""
 		}
-		switch s[r] {
+		switch str[i+1] {
 		default:
-			p.bug("Expected valid escape code after \\, but got %q.", s[r])
-			return ""
+			p.bug("Expected valid escape code after \\, but got %q.", str[i+1])
 		case ' ', '\t':
-			p.panicf("invalid escape: '\\%c'", s[r])
-			return ""
+			p.panicItemf(it, "invalid escape: '\\%c'", str[i+1])
 		case 'b':
-			replaced = append(replaced, rune(0x0008))
-			r += 1
+			b.WriteByte(0x08)
+			skip = 1
 		case 't':
-			replaced = append(replaced, rune(0x0009))
-			r += 1
+			b.WriteByte(0x09)
+			skip = 1
 		case 'n':
-			replaced = append(replaced, rune(0x000A))
-			r += 1
+			b.WriteByte(0x0a)
+			skip = 1
 		case 'f':
-			replaced = append(replaced, rune(0x000C))
-			r += 1
+			b.WriteByte(0x0c)
+			skip = 1
 		case 'r':
-			replaced = append(replaced, rune(0x000D))
-			r += 1
+			b.WriteByte(0x0d)
+			skip = 1
+		case 'e':
+			b.WriteByte(0x1b)
+			skip = 1
 		case '"':
-			replaced = append(replaced, rune(0x0022))
-			r += 1
+			b.WriteByte(0x22)
+			skip = 1
 		case '\\':
-			replaced = append(replaced, rune(0x005C))
-			r += 1
+			b.WriteByte(0x5c)
+			skip = 1
+		// The lexer guarantees the correct number of characters are present;
+		// don't need to check here.
+		case 'x':
+			escaped := p.asciiEscapeToUnicode(it, str[i+2:i+4])
+			b.WriteRune(escaped)
+			skip = 3
 		case 'u':
-			// At this point, we know we have a Unicode escape of the form
-			// `uXXXX` at [r, r+5). (Because the lexer guarantees this
-			// for us.)
-			escaped := p.asciiEscapeToUnicode(s[r+1 : r+5])
-			replaced = append(replaced, escaped)
-			r += 5
+			escaped := p.asciiEscapeToUnicode(it, str[i+2:i+6])
+			b.WriteRune(escaped)
+			skip = 5
 		case 'U':
-			// At this point, we know we have a Unicode escape of the form
-			// `uXXXX` at [r, r+9). (Because the lexer guarantees this
-			// for us.)
-			escaped := p.asciiEscapeToUnicode(s[r+1 : r+9])
-			replaced = append(replaced, escaped)
-			r += 9
+			escaped := p.asciiEscapeToUnicode(it, str[i+2:i+10])
+			b.WriteRune(escaped)
+			skip = 9
 		}
 	}
-	return string(replaced)
+	return b.String()
 }
 
-func (p *parser) asciiEscapeToUnicode(bs []byte) rune {
-	s := string(bs)
+func (p *parser) asciiEscapeToUnicode(it item, s string) rune {
 	hex, err := strconv.ParseUint(strings.ToLower(s), 16, 32)
 	if err != nil {
-		p.bug("Could not parse '%s' as a hexadecimal number, but the "+
-			"lexer claims it's OK: %s", s, err)
+		p.bug("Could not parse '%s' as a hexadecimal number, but the lexer claims it's OK: %s", s, err)
 	}
 	if !utf8.ValidRune(rune(hex)) {
-		p.panicf("Escaped character '\\u%s' is not valid UTF-8.", s)
+		p.panicItemf(it, "Escaped character '\\u%s' is not valid UTF-8.", s)
 	}
 	return rune(hex)
 }

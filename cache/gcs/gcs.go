@@ -1,15 +1,16 @@
 package gcs
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
-	"path/filepath"
+	"path"
 
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/log"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/log"
 
 	"cloud.google.com/go/storage"
 )
@@ -33,7 +34,7 @@ const (
 var testData = []byte{0x1f, 0x8b, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x2a, 0xce, 0xcc, 0x49, 0x2c, 0x6, 0x4, 0x0, 0x0, 0xff, 0xff, 0xaf, 0x9d, 0x59, 0xca, 0x5, 0x0, 0x0, 0x0}
 
 func init() {
-	cache.Register(CacheType, New)
+	_ = cache.Register(CacheType, New)
 }
 
 func New(config dict.Dicter) (cache.Interface, error) {
@@ -76,41 +77,55 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		Y:         0,
 	}
 
-	// write gzip encoded test file
-	if err := gcsCache.Set(ctx, &key, testData); err != nil {
-		e := cache.ErrSettingToCache{
-			CacheType: CacheType,
-			Err:       err,
-		}
-
-		return nil, e
-	}
-
-	// read the test file
-	_, hit, err := gcsCache.Get(ctx, &key)
-	if err != nil {
-		e := cache.ErrGettingFromCache{
-			CacheType: CacheType,
-			Err:       err,
-		}
-
-		return nil, e
-	}
-	if !hit {
-		// return an error?
-	}
-
-	// purge the test file
-	if err := gcsCache.Purge(ctx, &key); err != nil {
-		e := cache.ErrPurgingCache{
-			CacheType: CacheType,
-			Err:       err,
-		}
-
-		return nil, e
+	if err := selfTestCache(ctx, &gcsCache, &key, testData); err != nil {
+		return nil, err
 	}
 
 	return &gcsCache, nil
+}
+
+// selfTestCache confirms the cache is usable end to end: the test value must be
+// written, read back as an actual cache hit with identical bytes, and purged.
+// It runs once when the cache is created.
+func selfTestCache(ctx context.Context, c cache.Interface, key *cache.Key, data []byte) error {
+	// write gzip encoded test file
+	if err := c.Set(ctx, key, data); err != nil {
+		return cache.ErrSettingToCache{
+			CacheType: CacheType,
+			Err:       err,
+		}
+	}
+
+	// read the test file
+	got, hit, err := c.Get(ctx, key)
+	if err != nil {
+		return cache.ErrGettingFromCache{
+			CacheType: CacheType,
+			Err:       err,
+		}
+	}
+	if !hit {
+		return cache.ErrGettingFromCache{
+			CacheType: CacheType,
+			Err:       errors.New("cache self-test read did not hit"),
+		}
+	}
+	if !bytes.Equal(got, data) {
+		return cache.ErrGettingFromCache{
+			CacheType: CacheType,
+			Err:       errors.New("cache self-test read returned different data"),
+		}
+	}
+
+	// purge the test file
+	if err := c.Purge(ctx, key); err != nil {
+		return cache.ErrPurgingCache{
+			CacheType: CacheType,
+			Err:       err,
+		}
+	}
+
+	return nil
 }
 
 type GCSCache struct {
@@ -132,17 +147,58 @@ type GCSCache struct {
 
 	// bucket holds a reference to the bucket handle.
 	Bucket *storage.BucketHandle
+
+	// newReader opens the object identified by key and returns a reader over its
+	// contents. When nil, readers are opened from Bucket. It exists as a field so
+	// tests can substitute a fake backend (to exercise cache misses and transient
+	// backend failures) without a live GCS connection.
+	newReader func(ctx context.Context, key string) (io.ReadCloser, error)
+
+	// deleteObject removes the object identified by key. When nil, objects are
+	// deleted via Bucket. It exists as a field so tests can exercise the purge
+	// paths (missing object, backend failure) without a live GCS connection.
+	deleteObject func(ctx context.Context, key string) error
+}
+
+// openReader opens the object named k and returns a reader over its contents. A
+// missing object is reported as storage.ErrObjectNotExist (mapped to a clean
+// cache miss by Get); any other error is a backend failure and is surfaced to
+// callers rather than being swallowed as a miss.
+func (gcsCache *GCSCache) openReader(ctx context.Context, k string) (io.ReadCloser, error) {
+	if gcsCache.newReader != nil {
+		return gcsCache.newReader(ctx, k)
+	}
+	return gcsCache.Bucket.Object(k).NewReader(ctx)
+}
+
+// removeObject deletes the object named k. Deleting an object that does not
+// exist reports storage.ErrObjectNotExist (the client maps both HTTP 404 and
+// gRPC NotFound onto it); any other error is a backend failure and is surfaced
+// to callers.
+func (gcsCache *GCSCache) removeObject(ctx context.Context, k string) error {
+	if gcsCache.deleteObject != nil {
+		return gcsCache.deleteObject(ctx, k)
+	}
+	return gcsCache.Bucket.Object(k).Delete(ctx)
 }
 
 func (gcsCache *GCSCache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) {
-	k := filepath.Join(gcsCache.Basepath, key.String())
-	obj := gcsCache.Bucket.Object(k)
+	// object keys always use forward slashes regardless of the OS
+	// separator (P6-33)
+	k := path.Join(gcsCache.Basepath, key.String())
 
-	r, err := obj.NewReader(ctx)
-	if err != nil {
+	r, err := gcsCache.openReader(ctx, k)
+	switch {
+	case errors.Is(err, storage.ErrObjectNotExist):
+		// the object is not in the bucket: a clean cache miss.
 		return nil, false, nil
+	case err != nil:
+		// a backend/read failure is not a miss: surface the error so callers can
+		// distinguish "nothing cached" from "cache backend unavailable".
+		// (ported from upstream go-spatial/tegola#938)
+		return nil, false, err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	val, err := io.ReadAll(r)
 	if err != nil {
@@ -155,7 +211,9 @@ func (gcsCache *GCSCache) Get(ctx context.Context, key *cache.Key) ([]byte, bool
 }
 
 func (gcsCache *GCSCache) Set(ctx context.Context, key *cache.Key, val []byte) error {
-	k := filepath.Join(gcsCache.Basepath, key.String())
+	// object keys always use forward slashes regardless of the OS
+	// separator (P6-33)
+	k := path.Join(gcsCache.Basepath, key.String())
 	obj := gcsCache.Bucket.Object(k)
 
 	// check for maxzoom
@@ -177,11 +235,16 @@ func (gcsCache *GCSCache) Set(ctx context.Context, key *cache.Key, val []byte) e
 }
 
 func (gcsCache *GCSCache) Purge(ctx context.Context, key *cache.Key) error {
-	k := filepath.Join(gcsCache.Basepath, key.String())
-	obj := gcsCache.Bucket.Object(k)
+	// object keys always use forward slashes regardless of the OS
+	// separator (P6-33)
+	k := path.Join(gcsCache.Basepath, key.String())
 
-	if err := obj.Delete(ctx); err != nil {
-		return err
+	if err := gcsCache.removeObject(ctx, k); err != nil {
+		// purging an object that is already gone is a no-op success so Purge
+		// stays idempotent (P5-13)
+		if !errors.Is(err, storage.ErrObjectNotExist) {
+			return err
+		}
 	}
 
 	log.Infof("PURGE %s\n", k)

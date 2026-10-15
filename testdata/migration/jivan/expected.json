@@ -1,0 +1,25 @@
+{
+  "scope": "Literal owned migrated fixture; not a legacy deployed-response oracle",
+  "baseline": "c9fba2bb5188ba43c27539740195085e92f0ad7d",
+  "collections": ["xy", "xyz", "untimed"],
+  "all_xy_ids": [10,20,30,40,50,60],
+  "all_xyz_ids": [10,20,40],
+  "filter_n_equals_1": [10],
+  "filter_s_equals_Alpha": [10],
+  "datetime_epoch": [10,30,40,50,60],
+  "bbox_15_30_point": [10,30,40,50,60],
+  "first_page": [10,20],
+  "second_page": [30,40],
+  "xy_geometries": {
+    "10": {"type":"Point","coordinates":[15,30]},
+    "20": {"type":"Point","coordinates":[16,31]},
+    "30": {"type":"LineString","coordinates":[[14,30],[16,30]]},
+    "40": null,
+    "50": {"type":"Polygon","coordinates":[[[14,29],[16,29],[16,31],[14,31],[14,29]]]},
+    "60": {"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[15,30]},{"type":"LineString","coordinates":[[15,30],[16,31]]}]}
+  },
+  "item_10": {"type":"Feature","id":10,"geometry":{"type":"Point","coordinates":[15,30]},"properties":{"n":1,"s":"Alpha","b":true}},
+  "xyz_item_10": {"type":"Feature","id":10,"geometry":{"type":"Point","coordinates":[15,30,23]},"properties":{"n":1,"s":"height","b":true}},
+  "null_item_40": {"type":"Feature","id":40,"geometry":null,"properties":{"n":null,"s":null,"b":null}},
+  "invalid_old_parameters": ["time=1970-01-01T00%3A00%3A00Z","page=1","name=Alpha","f=application%2Fjson"]
+}

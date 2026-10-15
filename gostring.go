@@ -56,7 +56,6 @@ func lineDecorator(l LineString, withType bool, indent int, ptsPerLine int, comm
 	}
 	if len(byteString) > 0 {
 		bytestr = append(bytestr, []rune(fmt.Sprintf(pointLineFormat, indentString, string(byteString), lastI+1, len(pts)-1))...)
-		byteString = byteString[:0] // truncate string.
 	}
 
 	return fmt.Sprintf(lineFormat, indentString, typeName, len(pts), comment, string(bytestr), indentString)

@@ -3,15 +3,14 @@ package test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/provider"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/provider"
 
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/tegola/dict"
 )
 
 const Name = "test"
@@ -23,8 +22,8 @@ var (
 )
 
 func init() {
-	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
-	provider.MVTRegister(provider.TypeMvt.Prefix()+Name, NewMVTTileProvider, Cleanup)
+	_ = provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
+	_ = provider.MVTRegister(provider.TypeMvt.Prefix()+Name, NewMVTTileProvider, Cleanup)
 }
 
 // NewTileProvider setups a test provider. there are not currently any config params supported
@@ -47,11 +46,7 @@ func NewMVTTileProvider(config dict.Dicter, maps []provider.Map) (provider.MVTTi
 		if err != nil {
 			return nil, fmt.Errorf("failed to get test_file key: %w", err)
 		}
-		file, err := os.Open(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open test_file: %w", err)
-		}
-		mvtTile, err = ioutil.ReadAll(file)
+		mvtTile, err = os.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read test_file: %w", err)
 		}
@@ -72,6 +67,9 @@ func Cleanup() {
 // TileProvider mocks out a tile provider
 type TileProvider struct {
 	MVTTile []byte
+	// MVTForLayersFunc overrides the canned response and receives the request
+	// unchanged, allowing tests to assert inputs or inject errors.
+	MVTForLayersFunc func(context.Context, provider.Tile, provider.Params, []provider.Layer) ([]byte, error)
 }
 
 // Layers returns the configured layers, there is always only one "test-layer"
@@ -102,11 +100,16 @@ func (tp *TileProvider) TileFeatures(ctx context.Context, layer string, t provid
 	return fn(&debugTileOutline)
 }
 
-// MVTForLayers mocks out MVTForLayers by just returning the MVTTile bytes, this will never error
-func (tp *TileProvider) MVTForLayers(ctx context.Context, _ provider.Tile, _ provider.Params, _ []provider.Layer) ([]byte, error) {
-	// TODO(gdey): fill this out.
+// MVTForLayers delegates to MVTForLayersFunc when set. Otherwise it returns
+// MVTTile verbatim, without filtering or renaming its encoded layers. The
+// canned mode (including a nil receiver) preserves the legacy no-error
+// behavior; callbacks own cancellation and error handling.
+func (tp *TileProvider) MVTForLayers(ctx context.Context, tile provider.Tile, params provider.Params, layers []provider.Layer) ([]byte, error) {
 	if tp == nil {
 		return nil, nil
+	}
+	if tp.MVTForLayersFunc != nil {
+		return tp.MVTForLayersFunc(ctx, tile, params, layers)
 	}
 	return tp.MVTTile, nil
 }

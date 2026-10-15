@@ -1,6 +1,6 @@
 package emptycollection
 
-import "github.com/go-spatial/geom"
+import "github.com/alexeydott/geom"
 
 type layer struct {
 	name     string

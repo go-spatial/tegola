@@ -2,11 +2,11 @@ package list
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/go-spatial/tegola/container/singlelist"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/container/singlelist"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths"
 )
 
 type List struct {
@@ -66,12 +66,12 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 
 	defer func() {
 		if r && element.Next() == nil {
-			log.Println("nil!")
-			log.Printf("\tstart: %v[%[1]p] %v[%[2]p]", start, start.Next())
-			log.Printf("\t   pt: %v[%[1]p] %v[%[2]p]", element, element.Next())
-			log.Printf("\t  end: %v[%[1]p] %v[%[2]p]", end, end.Next())
+			log.Warn("nil!")
+			log.Warnf("\tstart: %v[%[1]p] %v[%[2]p]", start, start.Next())
+			log.Warnf("\t   pt: %v[%[1]p] %v[%[2]p]", element, element.Next())
+			log.Warnf("\t  end: %v[%[1]p] %v[%[2]p]", end, end.Next())
 			//log.Printf("\t mark: %v[%[1]p] %v[%[2]p]", mark, mark.Next())
-			log.Printf("\t mark: %v[%[1]p] ]", mark)
+			log.Warnf("\t mark: %v[%[1]p] ]", mark)
 			panic("Stop!")
 		}
 	}()

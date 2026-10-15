@@ -4,11 +4,11 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 
 	svg "github.com/ajstarks/svgo"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths"
 )
 
 const DefaultSpacing = 10
@@ -58,15 +58,15 @@ func drawGrid(canvas *Canvas, mm *MinMax, n int, label bool, id, style, pointsty
 }
 
 func (canvas *Canvas) Comment(s string) *Canvas {
-	fmt.Fprint(canvas.Writer, "<!-- \n")
+	_, _ = fmt.Fprint(canvas.Writer, "<!-- \n")
 	xml.Escape(canvas.Writer, []byte(s))
-	fmt.Fprint(canvas.Writer, "\n -->")
+	_, _ = fmt.Fprint(canvas.Writer, "\n -->")
 	return canvas
 }
 func (canvas *Canvas) Commentf(format string, a ...interface{}) *Canvas {
-	fmt.Fprint(canvas.Writer, "<!-- \n")
+	_, _ = fmt.Fprint(canvas.Writer, "<!-- \n")
 	xml.Escape(canvas.Writer, []byte(fmt.Sprintf(format, a...)))
-	fmt.Fprint(canvas.Writer, "\n -->")
+	_, _ = fmt.Fprint(canvas.Writer, "\n -->")
 	return canvas
 }
 
@@ -87,7 +87,6 @@ func (canvas *Canvas) DrawRegion(withGrid bool) {
 }
 
 func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, pointStyle string, drawPoints bool) int {
-	var points []maths.Pt
 	canvas.Group(`id="`+id+`"`, `style="opacity:1"`)
 	canvas.Gid("polygon_path")
 	path := ""
@@ -106,7 +105,6 @@ func (canvas *Canvas) DrawPolygon(p tegola.Polygon, id string, style string, poi
 			continue
 		}
 		for i, pt := range pts[:idx] {
-			points = append(points, maths.Pt{X: pt.X(), Y: pt.Y()})
 			if i == 0 {
 				path += "M "
 			} else {
@@ -171,7 +169,7 @@ func (canvas *Canvas) DrawLine(l tegola.LineString, id string, style string, poi
 }
 
 func (canvas *Canvas) DrawMathSegments(ls []maths.Line, s ...string) {
-	log.Printf("Drawing lines(%v) ", len(ls))
+	log.Debugf("Drawing lines(%v) ", len(ls))
 	for _, line := range ls {
 		canvas.Line(
 			int(line[0].X),
@@ -183,7 +181,7 @@ func (canvas *Canvas) DrawMathSegments(ls []maths.Line, s ...string) {
 	}
 }
 func (canvas *Canvas) DrawMathPoints(pts []maths.Pt, s ...string) {
-	log.Printf("Drawing Points (%v)", len(pts))
+	log.Debugf("Drawing Points (%v)", len(pts))
 	prefix := "M"
 	var path string
 	for i := range pts {

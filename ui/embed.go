@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-spatial/tegola/internal/log"
+	"github.com/alexeydott/tegola/internal/log"
 )
 
 // Embed UI dist Folder recursively

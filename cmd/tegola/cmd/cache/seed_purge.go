@@ -5,19 +5,26 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/geom/slippy"
+	"github.com/alexeydott/proj"
+	"github.com/alexeydott/tegola/atlas"
+	"github.com/alexeydott/tegola/internal/build"
+	gdcmd "github.com/alexeydott/tegola/internal/cmd"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/observability"
+	"github.com/alexeydott/tegola/provider"
 	"github.com/go-spatial/cobra"
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/proj"
-	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/internal/build"
-	gdcmd "github.com/go-spatial/tegola/internal/cmd"
-	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/observability"
-	"github.com/go-spatial/tegola/provider"
 )
+
+// metricBoundLimit is the canonical Web Mercator world extent in meters:
+// half the earth circumference at the equator (20037508.342789244). It is
+// used to validate bounds for the supported metric source SRIDs (EPSG:3857,
+// EPSG:3395 and EPSG:4087).
+const metricBoundLimit = 20037508.342789244
 
 const defaultUsage = `Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
@@ -163,7 +170,86 @@ func AvailableSrcConversions() []proj.EPSGCode {
 	}
 }
 
+// validateConcurrency ensures the requested worker count is usable: 0 would
+// leave the seeder with no workers (it hangs) and negative values panic
+// (part13 P6-24).
+func validateConcurrency(n int) error {
+	if n < 1 {
+		return fmt.Errorf("invalid concurrency value (%d). concurrency must be at least 1", n)
+	}
+	return nil
+}
+
+// parseValidateBounds parses a "minx,miny,maxx,maxy" bounds string and
+// validates it against the declared source SRID (part13 P6-26). Bounds are
+// no longer unconditionally interpreted as lon/lat:
+//
+//   - EPSG:4326 bounds are degrees: longitude -180..180 and latitude
+//     -90..90 (the widest valid values; note the default --bounds uses the
+//     Web Mercator cut-off latitude +/-85.0511).
+//   - The supported metric SRIDs (EPSG:3857, EPSG:3395, EPSG:4087) are
+//     validated against the canonical Web Mercator world extent
+//     +/-20037508.342789244 meters on both axes.
+//
+// For every SRID min <= max must hold on both axes.
+func parseValidateBounds(srid int, bounds string) (b [4]float64, err error) {
+	boundsParts := strings.Split(strings.TrimSpace(bounds), ",")
+	if len(boundsParts) != 4 {
+		return b, fmt.Errorf("invalid value for bounds (%v). expecting minx, miny, maxx, maxy", bounds)
+	}
+
+	xName, yName := "x", "y"
+	xMin, xMax := -metricBoundLimit, metricBoundLimit
+	yMin, yMax := -metricBoundLimit, metricBoundLimit
+	if proj.EPSGCode(srid) == proj.WGS84 {
+		xName, yName = "lng", "lat"
+		xMin, xMax = -180, 180
+		yMin, yMax = -90, 90
+	}
+
+	// parseBoundsValue parses and range-checks one axis value.
+	parseBoundsValue := func(idx int, name string, lo, hi float64) error {
+		v, err := strconv.ParseFloat(strings.TrimSpace(boundsParts[idx]), 64)
+		if err != nil {
+			return fmt.Errorf("invalid %s value(%v) for bounds (%v)", name, boundsParts[idx], bounds)
+		}
+		if v < lo || v > hi {
+			return fmt.Errorf("invalid %s value(%v) for bounds (%v). for srid %d %s must be within %v..%v", name, boundsParts[idx], bounds, srid, name, lo, hi)
+		}
+		b[idx] = v
+		return nil
+	}
+
+	if err = parseBoundsValue(0, xName, xMin, xMax); err != nil {
+		return b, err
+	}
+	if err = parseBoundsValue(1, yName, yMin, yMax); err != nil {
+		return b, err
+	}
+	if err = parseBoundsValue(2, xName, xMin, xMax); err != nil {
+		return b, err
+	}
+	if err = parseBoundsValue(3, yName, yMin, yMax); err != nil {
+		return b, err
+	}
+
+	// reject inverted bounds (min > max) on either axis
+	if b[0] > b[2] {
+		return b, fmt.Errorf("invalid bounds (%v). %s min (%v) is greater than %s max (%v)", bounds, xName, b[0], xName, b[2])
+	}
+	if b[1] > b[3] {
+		return b, fmt.Errorf("invalid bounds (%v). %s min (%v) is greater than %s max (%v)", bounds, yName, b[1], yName, b[3])
+	}
+
+	return b, nil
+}
+
 func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
+	// validate the concurrency flag
+	if err = validateConcurrency(cacheConcurrency); err != nil {
+		return err
+	}
+
 	// validate the cache-bounds-srid
 	if !IsKnownSrcConversionSRID(proj.EPSGCode(cacheBoundsSRID)) {
 		var str strings.Builder
@@ -174,26 +260,12 @@ func seedPurgeCmdValidate(cmd *cobra.Command, args []string) (err error) {
 		return errors.New(str.String())
 	}
 
-	// validate and set bounds flag
-	boundsParts := strings.Split(strings.TrimSpace(cacheBounds), ",")
-	if len(boundsParts) != 4 {
-		return fmt.Errorf("invalid value for bounds (%v). expecting minx, miny, maxx, maxy", cacheBounds)
+	// validate and set bounds flag according to the declared SRID (part13 P6-26)
+	b, err := parseValidateBounds(cacheBoundsSRID, cacheBounds)
+	if err != nil {
+		return err
 	}
-
-	var ok bool
-
-	if seedPurgeBounds[0], ok = IsValidLngString(boundsParts[0]); !ok {
-		return fmt.Errorf("invalid lng value(%v) for bounds (%v)", boundsParts[0], cacheBounds)
-	}
-	if seedPurgeBounds[1], ok = IsValidLatString(boundsParts[1]); !ok {
-		return fmt.Errorf("invalid lat value(%v) for bounds (%v)", boundsParts[1], cacheBounds)
-	}
-	if seedPurgeBounds[2], ok = IsValidLngString(boundsParts[2]); !ok {
-		return fmt.Errorf("invalid lng value(%v) for bounds (%v)", boundsParts[2], cacheBounds)
-	}
-	if seedPurgeBounds[3], ok = IsValidLatString(boundsParts[3]); !ok {
-		return fmt.Errorf("invalid lat value(%v) for bounds (%v)", boundsParts[3], cacheBounds)
-	}
+	seedPurgeBounds = b
 
 	// get the zoom ranges
 	if err = minMaxZoomValidate(cmd, args); err != nil {
@@ -223,7 +295,7 @@ func seedPurgeCommand(_ *cobra.Command, _ []string) (err error) {
 
 	grid := slippy.NewGrid(proj.EPSGCode(cacheBoundsSRID), 0)
 
-	log.Info("zoom list: ", zooms)
+	log.Infof("zoom list: %v", zooms)
 	tileChannel := generateTilesForBounds(ctx, seedPurgeBounds, zooms, grid)
 
 	return doWork(ctx, tileChannel, seedPurgeMaps, cacheConcurrency, seedPurgeWorker)

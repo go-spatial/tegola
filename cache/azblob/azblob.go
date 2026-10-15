@@ -7,13 +7,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"path/filepath"
+	"path"
+	"strings"
 
 	"github.com/Azure/azure-storage-blob-go/2017-07-29/azblob"
 
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/dict"
 )
 
 const CacheType = "azblob"
@@ -41,7 +42,7 @@ const (
 const testMsg = "\x41\x74\x6c\x61\x73\x20\x54\x65\x6c\x61\x6d\x6f\x6e"
 
 func init() {
-	cache.Register(CacheType, New)
+	_ = cache.Register(CacheType, New)
 }
 
 func New(config dict.Dicter) (cache.Interface, error) {
@@ -103,6 +104,9 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	// container
 	uStr, err := config.String(ConfigKeyContainerUrl, nil)
 	if err != nil {
+		return nil, err
+	}
+	if err = validateContainerURL(uStr); err != nil {
 		return nil, err
 	}
 	u, err := url.Parse(uStr)
@@ -252,14 +256,47 @@ func (azb *Cache) Purge(ctx context.Context, key *cache.Key) error {
 			azblob.BlobAccessConditions{})
 
 	if err != nil {
+		// a blob that is already gone is successfully purged
+		resErr, ok := err.(azblob.ResponseError)
+		if ok && resErr.Response().StatusCode == http.StatusNotFound {
+			return nil
+		}
+
 		return err
 	}
 
 	return nil
 }
 
-func (azb *Cache) makeBlob(key *cache.Key) azblob.BlobURL {
-	k := filepath.Join(azb.Basepath, key.String())
+// validateContainerURL checks that the configured container URL is an absolute
+// http(s) URL with a host and a container path before it is used. The path must
+// identify a container (one or more segments); query parameters are allowed
+// since SAS tokens are commonly embedded in the URL.
+func validateContainerURL(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("%s is invalid: %w", ConfigKeyContainerUrl, err)
+	}
+	if !u.IsAbs() || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("%s must be an absolute http(s) URL, got %q", ConfigKeyContainerUrl, rawURL)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("%s must contain a host, got %q", ConfigKeyContainerUrl, rawURL)
+	}
+	p := strings.Trim(u.Path, "/")
+	if p == "" {
+		return fmt.Errorf("%s must contain the container path, got %q", ConfigKeyContainerUrl, rawURL)
+	}
+	return nil
+}
 
-	return azb.Container.NewBlobURL(k)
+// blobKey composes the Azure blob key for a cache key. Blob keys always use
+// forward slashes regardless of the OS separator, so path.Join is used
+// instead of filepath.Join (same defect class as audit P6-33 for s3/gcs).
+func (azb *Cache) blobKey(key *cache.Key) string {
+	return path.Join(azb.Basepath, key.String())
+}
+
+func (azb *Cache) makeBlob(key *cache.Key) azblob.BlobURL {
+	return azb.Container.NewBlobURL(azb.blobKey(key))
 }

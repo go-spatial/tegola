@@ -3,9 +3,11 @@ package postgis
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/tegola/dict"
 )
 
 func TestConnPlanerConnModeEnv(t *testing.T) {
@@ -110,14 +112,14 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 		},
 		"no env overwrites and uri provided": {
 			mode:           connModeURI,
-			config:         dict.Dict(map[string]any{"uri": "postgres://user:password@host:1337/dbname"}),
+			config:         dict.Dict(map[string]any{"uri": "postgres://user:secret@host:1337/dbname"}),
 			envTriggerKeys: connModeEnvTriggers,
 			expectedPlan: connPlan{
 				Mode:           connModeURI,
 				EnvTriggerKeys: connModeEnvTriggers,
 
 				URIProvided: true,
-				URIString:   "postgres://user:password@host:1337/dbname",
+				URIString:   "postgres://user:secret@host:1337/dbname",
 
 				SSLMode:     DefaultSSLMode,
 				SSLKey:      DefaultSSLKey,
@@ -130,7 +132,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 		"no env overwrites and uri provided and runtime params from config": {
 			mode: connModeURI,
 			config: dict.Dict(map[string]any{
-				"uri":                           "postgres://user:password@host:1337/dbname",
+				"uri":                           "postgres://user:secret@host:1337/dbname",
 				"application_name":              "ratatata",
 				"default_transaction_read_only": "true",
 			}),
@@ -140,7 +142,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 				EnvTriggerKeys: connModeEnvTriggers,
 
 				URIProvided: true,
-				URIString:   "postgres://user:password@host:1337/dbname",
+				URIString:   "postgres://user:secret@host:1337/dbname",
 
 				SSLMode:     DefaultSSLMode,
 				SSLKey:      DefaultSSLKey,
@@ -156,7 +158,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 		"no env overwrites and uri provided and runtime params from config with omission": {
 			mode: connModeURI,
 			config: dict.Dict(map[string]any{
-				"uri":                           "postgres://user:password@host:1337/dbname",
+				"uri":                           "postgres://user:secret@host:1337/dbname",
 				"application_name":              "ratatata",
 				"default_transaction_read_only": "OFF",
 				"pool_min_conns":                "1",
@@ -167,7 +169,7 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 				EnvTriggerKeys: connModeEnvTriggers,
 
 				URIProvided: true,
-				URIString:   "postgres://user:password@host:1337/dbname",
+				URIString:   "postgres://user:secret@host:1337/dbname",
 
 				SSLMode:     DefaultSSLMode,
 				SSLKey:      DefaultSSLKey,
@@ -176,14 +178,20 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 
 				RuntimeParams: map[string]string{
 					"application_name": "ratatata",
-					"pool_min_conns":   "1",
+				},
+				Pool: PoolSettings{
+					MinConns: 1,
 				},
 			},
 		},
-		"no env overwrites and uri provided and ssl mode overwrite from query": {
+		"pool settings from config are not runtime params": {
 			mode: connModeURI,
 			config: dict.Dict(map[string]any{
-				"uri": "postgres://user:password@host:1337/dbname?sslmode=disable",
+				"uri":                 "postgres://user:secret@host:1337/dbname",
+				"pool_max_conns":      "10",
+				"pool_min_idle_conns": "2",
+				// deprecated spelling without the separating underscore
+				"pool_max_conn_idletime": "5m",
 			}),
 			envTriggerKeys: connModeEnvTriggers,
 			expectedPlan: connPlan{
@@ -191,7 +199,126 @@ func TestConnPlanerConnModeEnv(t *testing.T) {
 				EnvTriggerKeys: connModeEnvTriggers,
 
 				URIProvided: true,
-				URIString:   "postgres://user:password@host:1337/dbname?sslmode=disable",
+				URIString:   "postgres://user:secret@host:1337/dbname",
+
+				SSLMode:     DefaultSSLMode,
+				SSLKey:      DefaultSSLKey,
+				SSLCert:     DefaultSSLCert,
+				SSLRootCert: "",
+
+				RuntimeParams: resolveRunTimeParams(dict.Dict{}, defaultRuntimeParamRules()),
+				Pool: PoolSettings{
+					MaxConns:        10,
+					MinIdleConns:    2,
+					MaxConnIdleTime: 5 * time.Minute,
+				},
+			},
+		},
+		"pool count keys as TOML integers": {
+			mode: connModeURI,
+			config: dict.Dict(map[string]any{
+				"uri":                 "postgres://user:secret@host:1337/dbname",
+				"pool_max_conns":      10,
+				"pool_min_conns":      1,
+				"pool_min_idle_conns": 2,
+			}),
+			envTriggerKeys: connModeEnvTriggers,
+			expectedPlan: connPlan{
+				Mode:           connModeURI,
+				EnvTriggerKeys: connModeEnvTriggers,
+
+				URIProvided: true,
+				URIString:   "postgres://user:secret@host:1337/dbname",
+
+				SSLMode:     DefaultSSLMode,
+				SSLKey:      DefaultSSLKey,
+				SSLCert:     DefaultSSLCert,
+				SSLRootCert: "",
+
+				RuntimeParams: resolveRunTimeParams(dict.Dict{}, defaultRuntimeParamRules()),
+				Pool: PoolSettings{
+					MaxConns:     10,
+					MinConns:     1,
+					MinIdleConns: 2,
+				},
+			},
+		},
+		"pool count keys as strings stay backwards compatible": {
+			mode: connModeURI,
+			config: dict.Dict(map[string]any{
+				"uri":            "postgres://user:secret@host:1337/dbname",
+				"pool_max_conns": "10",
+			}),
+			envTriggerKeys: connModeEnvTriggers,
+			expectedPlan: connPlan{
+				Mode:           connModeURI,
+				EnvTriggerKeys: connModeEnvTriggers,
+
+				URIProvided: true,
+				URIString:   "postgres://user:secret@host:1337/dbname",
+
+				SSLMode:     DefaultSSLMode,
+				SSLKey:      DefaultSSLKey,
+				SSLCert:     DefaultSSLCert,
+				SSLRootCert: "",
+
+				RuntimeParams: resolveRunTimeParams(dict.Dict{}, defaultRuntimeParamRules()),
+				Pool: PoolSettings{
+					MaxConns: 10,
+				},
+			},
+		},
+		"canonical pool idle time key wins over deprecated alias": {
+			mode: connModeURI,
+			config: dict.Dict(map[string]any{
+				"uri":                     "postgres://user:secret@host:1337/dbname",
+				"pool_max_conn_idle_time": "7m",
+			}),
+			envTriggerKeys: connModeEnvTriggers,
+			expectedPlan: connPlan{
+				Mode:           connModeURI,
+				EnvTriggerKeys: connModeEnvTriggers,
+
+				URIProvided: true,
+				URIString:   "postgres://user:secret@host:1337/dbname",
+
+				SSLMode:     DefaultSSLMode,
+				SSLKey:      DefaultSSLKey,
+				SSLCert:     DefaultSSLCert,
+				SSLRootCert: "",
+
+				RuntimeParams: resolveRunTimeParams(dict.Dict{}, defaultRuntimeParamRules()),
+				Pool: PoolSettings{
+					MaxConnIdleTime: 7 * time.Minute,
+				},
+			},
+		},
+		"invalid pool duration errors": {
+			mode: connModeURI,
+			config: dict.Dict(map[string]any{
+				"uri":                    "postgres://user:secret@host:1337/dbname",
+				"pool_max_conn_lifetime": "soon",
+			}),
+			envTriggerKeys: connModeEnvTriggers,
+			expectErrFn: func(t *testing.T, err error) {
+				t.Helper()
+				if err == nil || !strings.Contains(err.Error(), "pool_max_conn_lifetime") {
+					t.Fatalf("expected pool_max_conn_lifetime parse error, got %v", err)
+				}
+			},
+		},
+		"no env overwrites and uri provided and ssl mode overwrite from query": {
+			mode: connModeURI,
+			config: dict.Dict(map[string]any{
+				"uri": "postgres://user:secret@host:1337/dbname?sslmode=disable",
+			}),
+			envTriggerKeys: connModeEnvTriggers,
+			expectedPlan: connPlan{
+				Mode:           connModeURI,
+				EnvTriggerKeys: connModeEnvTriggers,
+
+				URIProvided: true,
+				URIString:   "postgres://user:secret@host:1337/dbname?sslmode=disable",
 
 				SSLMode:     SSLModeDisable,
 				SSLKey:      DefaultSSLKey,

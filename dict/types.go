@@ -37,15 +37,21 @@ func (err ErrKeyRequired) Error() string {
 	return fmt.Sprintf("config: required Key %q not found", string(err))
 }
 
-// ErrKeyType is used to communicate the value requested cannot be converted/coerced/manipulated
-// according to the method call.
-// TODO: rename to ErrType
-type ErrKeyType struct {
+// ErrType is used to communicate the value requested cannot be converted/coerced/manipulated
+// according to the method call. It is not specific to keys (it carries the
+// offending value and its expected type), hence the name.
+type ErrType struct {
 	Key   string
 	Value interface{}
 	T     reflect.Type
 }
 
-func (err ErrKeyType) Error() string {
+func (err ErrType) Error() string {
 	return fmt.Sprintf("config: value mapped to %q is %T not %s", err.Key, err.Value, err.T.String())
 }
+
+// ErrKeyType is a deprecated alias for ErrType retained so existing call sites
+// continue to compile while the canonical name is ErrType.
+//
+// Deprecated: use ErrType.
+type ErrKeyType = ErrType

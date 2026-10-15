@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/go-spatial/geom/slippy"
+	"github.com/alexeydott/geom/slippy"
 )
 
 func TestGenerateTilesForTileName(t *testing.T) {

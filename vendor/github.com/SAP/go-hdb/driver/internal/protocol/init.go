@@ -6,18 +6,23 @@ import (
 	"github.com/SAP/go-hdb/driver/internal/protocol/encoding"
 )
 
-type endianess int8
+type endianness int8
 
 const (
-	bigEndian    endianess = 0
-	littleEndian endianess = 1
+	bigEndian    endianness = 0
+	littleEndian endianness = 1
 )
 
 const (
 	initRequestFillerSize = 4
 )
 
-var initRequestFiller uint32 = 0xffffffff
+// const (not var) required: s390x cross-compilation fails with MOVWBR illegal combination
+// when binary.LittleEndian.AppendUint32 is applied to a package-level variable address.
+// test:
+// var initRequestFiller uint32 = 0xffffffff
+// GOOS=linux GOARCH=s390x go test -v.
+const initRequestFiller uint32 = 0xffffffff
 
 type version struct {
 	major int8
@@ -28,11 +33,13 @@ func (v version) String() string {
 	return fmt.Sprintf("%d.%d", v.major, v.minor)
 }
 
+const initRequestSize = 14
+
 type initRequest struct {
 	product    version
 	protocol   version
 	numOptions int8
-	endianess  endianess
+	endianness endianness
 }
 
 func (r *initRequest) String() string {
@@ -40,22 +47,22 @@ func (r *initRequest) String() string {
 	default:
 		return fmt.Sprintf("productVersion %s protocolVersion %s", r.product, r.protocol)
 	case 1:
-		return fmt.Sprintf("productVersion %s protocolVersion %s endianess %s", r.product, r.protocol, r.endianess)
+		return fmt.Sprintf("productVersion %s protocolVersion %s endianness %s", r.product, r.protocol, r.endianness)
 	}
 }
 
 func (r *initRequest) decode(dec *encoding.Decoder) error {
-	dec.Skip(initRequestFillerSize) //filler
+	dec.Skip(initRequestFillerSize) // filler
 	r.product.major = dec.Int8()
 	r.product.minor = dec.Int16()
 	r.protocol.major = dec.Int8()
 	r.protocol.minor = dec.Int16()
-	dec.Skip(1) //reserved filler
+	dec.Skip(1) // reserved filler
 	r.numOptions = dec.Int8()
 
 	switch r.numOptions {
 	default:
-		panic(fmt.Sprintf("invalid number of options %d", r.numOptions))
+		panic("invalid number of options")
 
 	case 0:
 		dec.Skip(2)
@@ -63,11 +70,11 @@ func (r *initRequest) decode(dec *encoding.Decoder) error {
 	case 1:
 		cnt := dec.Int8()
 		if cnt != 1 {
-			panic(fmt.Sprintf("invalid number of options %d - 1 expected", cnt))
+			panic("invalid number of options - 1 expected")
 		}
-		r.endianess = endianess(dec.Int8())
+		r.endianness = endianness(dec.Int8())
 	}
-	return dec.Error()
+	return nil
 }
 
 func (r *initRequest) encode(enc *encoding.Encoder) error {
@@ -79,7 +86,7 @@ func (r *initRequest) encode(enc *encoding.Encoder) error {
 
 	switch r.numOptions {
 	default:
-		panic(fmt.Sprintf("invalid number of options %d", r.numOptions))
+		panic("invalid number of options")
 
 	case 0:
 		enc.Zeroes(4)
@@ -89,10 +96,12 @@ func (r *initRequest) encode(enc *encoding.Encoder) error {
 		enc.Zeroes(1)
 		enc.Int8(r.numOptions)
 		enc.Int8(int8(littleEndian))
-		enc.Int8(int8(r.endianess))
+		enc.Int8(int8(r.endianness))
 	}
 	return nil
 }
+
+const initReplySize = 8
 
 type initReply struct {
 	product  version
@@ -108,6 +117,6 @@ func (r *initReply) decode(dec *encoding.Decoder) error {
 	r.product.minor = dec.Int16()
 	r.protocol.major = dec.Int8()
 	r.protocol.minor = dec.Int16()
-	dec.Skip(2) //commitInitReplySize
-	return dec.Error()
+	dec.Skip(2) // commitInitReplySize
+	return nil
 }

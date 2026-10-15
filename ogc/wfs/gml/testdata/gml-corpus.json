@@ -1,0 +1,339 @@
+[
+  {
+    "id": "G01_point",
+    "xml": "<gml:Point xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:pos>37.6 55.7</gml:pos></gml:Point>",
+    "want": [
+      37.6,
+      55.7
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G02_line_posList",
+    "xml": "<gml:LineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:posList>1 2 3 4</gml:posList></gml:LineString>",
+    "want": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ]
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G03_polygon_hole",
+    "xml": "<gml:Polygon xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:exterior><gml:LinearRing><gml:posList>0 0 10 0 10 10 0 10 0 0</gml:posList></gml:LinearRing></gml:exterior><gml:interior><gml:LinearRing><gml:posList>2 2 2 4 4 4 4 2 2 2</gml:posList></gml:LinearRing></gml:interior></gml:Polygon>",
+    "want": [
+      [
+        [
+          0,
+          0
+        ],
+        [
+          10,
+          0
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          0,
+          10
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ]
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G04_multiline_members",
+    "xml": "<gml:MultiLineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:lineStringMember><gml:LineString><gml:posList>1 2 3 4</gml:posList></gml:LineString></gml:lineStringMember><gml:lineStringMember><gml:LineString><gml:posList>5 6 7 8</gml:posList></gml:LineString></gml:lineStringMember></gml:MultiLineString>",
+    "want": [
+      [
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      [
+        [
+          5,
+          6
+        ],
+        [
+          7,
+          8
+        ]
+      ]
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G05_multipolygon_members",
+    "xml": "<gml:MultiPolygon xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:polygonMember><gml:Polygon><gml:exterior><gml:LinearRing><gml:posList>0 0 10 0 10 10 0 10 0 0</gml:posList></gml:LinearRing></gml:exterior><gml:interior><gml:LinearRing><gml:posList>2 2 2 4 4 4 4 2 2 2</gml:posList></gml:LinearRing></gml:interior></gml:Polygon></gml:polygonMember><gml:polygonMember><gml:Polygon><gml:exterior><gml:LinearRing><gml:posList>20 0 22 0 22 2 20 2 20 0</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></gml:polygonMember></gml:MultiPolygon>",
+    "want": [
+      [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            10,
+            10
+          ],
+          [
+            0,
+            10
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            20,
+            0
+          ],
+          [
+            22,
+            0
+          ],
+          [
+            22,
+            2
+          ],
+          [
+            20,
+            2
+          ],
+          [
+            20,
+            0
+          ]
+        ]
+      ]
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G06_line_repeated_pos",
+    "xml": "<gml:LineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:pos>1 2</gml:pos><gml:pos>3 4</gml:pos></gml:LineString>",
+    "want": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ]
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G07_ring_repeated_pos",
+    "xml": "<gml:Polygon xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:exterior><gml:LinearRing><gml:pos>0 0</gml:pos><gml:pos>10 0</gml:pos><gml:pos>10 10</gml:pos><gml:pos>0 10</gml:pos><gml:pos>0 0</gml:pos></gml:LinearRing></gml:exterior></gml:Polygon>",
+    "want": [
+      [
+        [
+          0,
+          0
+        ],
+        [
+          10,
+          0
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          0,
+          10
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G08_multisurface_surfaceMember",
+    "xml": "<gml:MultiSurface xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:surfaceMember><gml:Polygon><gml:exterior><gml:LinearRing><gml:posList>0 0 10 0 10 10 0 10 0 0</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></gml:surfaceMember></gml:MultiSurface>",
+    "want": [
+      [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            10,
+            10
+          ],
+          [
+            0,
+            10
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      ]
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G09_inherited_XYZ",
+    "xml": "<gml:LineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" srsDimension=\"3\"><gml:posList>1 2 3 4 5 6</gml:posList></gml:LineString>",
+    "want": null,
+    "error": true,
+    "swap": false
+  },
+  {
+    "id": "G10_local_XYZ",
+    "xml": "<gml:LineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:posList srsDimension=\"3\">1 2 3 4 5 6</gml:posList></gml:LineString>",
+    "want": null,
+    "error": true,
+    "swap": false
+  },
+  {
+    "id": "G11_odd_ordinates",
+    "xml": "<gml:LineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:posList>1 2 3 4 5</gml:posList></gml:LineString>",
+    "want": null,
+    "error": true,
+    "swap": false
+  },
+  {
+    "id": "G12_nonfinite",
+    "xml": "<gml:Point xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:pos>NaN 5</gml:pos></gml:Point>",
+    "want": null,
+    "error": true,
+    "swap": false
+  },
+  {
+    "id": "G13_unclosed_ring",
+    "xml": "<gml:Polygon xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:exterior><gml:LinearRing><gml:posList>0 0 10 0 10 10 0 10</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon>",
+    "want": null,
+    "error": true,
+    "swap": false
+  },
+  {
+    "id": "G14_trailing_broken_xml",
+    "xml": "<gml:Point xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:pos>1 2</gml:pos></gml:Point><",
+    "want": null,
+    "error": true,
+    "swap": false
+  },
+  {
+    "id": "G15_empty_line_member",
+    "xml": "<gml:MultiLineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:lineStringMember><gml:LineString/></gml:lineStringMember><gml:lineStringMember><gml:LineString><gml:posList>1 2 3 4</gml:posList></gml:LineString></gml:lineStringMember></gml:MultiLineString>",
+    "want": null,
+    "error": true,
+    "swap": false
+  },
+  {
+    "id": "G16_coordinates_311",
+    "xml": "<gml:LineString xmlns:gml=\"http://www.opengis.net/gml\" ><gml:coordinates>1,2 3,4</gml:coordinates></gml:LineString>",
+    "want": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ]
+    ],
+    "error": false,
+    "swap": false
+  },
+  {
+    "id": "G17_swap",
+    "xml": "<gml:Point xmlns:gml=\"http://www.opengis.net/gml/3.2\" ><gml:pos>37.6 55.7</gml:pos></gml:Point>",
+    "want": [
+      55.7,
+      37.6
+    ],
+    "error": false,
+    "swap": true
+  }
+]

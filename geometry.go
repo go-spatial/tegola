@@ -81,12 +81,12 @@ func GeometryAsMap(g Geometry) map[string]interface{} {
 	js := make(map[string]interface{})
 	var vals []map[string]interface{}
 	switch geo := g.(type) {
-	case Point:
-		js["type"] = "point"
-		js["value"] = []float64{geo.X(), geo.Y()}
 	case Point3:
 		js["type"] = "point3"
 		js["value"] = []float64{geo.X(), geo.Y(), geo.Z()}
+	case Point:
+		js["type"] = "point"
+		js["value"] = []float64{geo.X(), geo.Y()}
 	case MultiPoint:
 		js["type"] = "multipoint"
 		for _, p := range geo.Points() {

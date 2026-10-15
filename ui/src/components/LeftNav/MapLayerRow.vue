@@ -33,14 +33,38 @@ export default {
     }
   },
   methods: {
-    // toggleLayerVisibility will toggle a layers visibility between on and off
+    // toggleLayerVisibility will toggle a layers visibility between on and
+    // off. A layer entry can be backed by multiple style layers (e.g. a
+    // fill layer with a sibling "-line" layer rendering polylines from the
+    // same source layer), so all of them are switched together.
     toggleLayerVisibility(layerName) {
-      var visibility = map.getLayoutProperty(layerName, "visibility");
-      if (visibility === "visible") {
-        map.setLayoutProperty(layerName, "visibility", "none");
+      var styleLayerNames = map
+        .getStyle()
+        .layers.filter(function(layer) {
+          return layer["source-layer"] === layerName;
+        })
+        .map(function(layer) {
+          return layer.id;
+        });
+      if (styleLayerNames.length === 0 && map.getLayer(layerName)) {
+        styleLayerNames = [layerName];
+      }
+      var visibility = styleLayerNames.some(function(name) {
+        return map.getLayoutProperty(name, "visibility") === "visible";
+      });
+      if (visibility) {
+        styleLayerNames.forEach(function(name) {
+          if (map.getLayer(name)) {
+            map.setLayoutProperty(name, "visibility", "none");
+          }
+        });
         this.visibility = "hidden";
       } else {
-        map.setLayoutProperty(layerName, "visibility", "visible");
+        styleLayerNames.forEach(function(name) {
+          if (map.getLayer(name)) {
+            map.setLayoutProperty(name, "visibility", "visible");
+          }
+        });
         this.visibility = "visible";
       }
     },
@@ -52,6 +76,19 @@ export default {
       let paintPropName;
 
       let layer = map.getLayer(layerName);
+      let styleLayerName = layerName;
+      if (!layer) {
+        let styleLayers = map.getStyle().layers.filter(function(styleLayer) {
+          return styleLayer["source-layer"] === layerName;
+        });
+        layer = styleLayers[0];
+        if (layer) {
+          styleLayerName = layer.id;
+        }
+      }
+      if (!layer) {
+        return "#000";
+      }
       switch (layer.type) {
         case "fill":
           paintPropName = "fill-outline-color";
@@ -70,7 +107,7 @@ export default {
         return "#000";
       }
 
-      return map.getPaintProperty(layerName, paintPropName);
+      return map.getPaintProperty(styleLayerName, paintPropName);
     }
   }
 };

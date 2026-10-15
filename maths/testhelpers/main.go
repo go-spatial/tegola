@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/maths"
 )
 
 var validXY *regexp.Regexp
@@ -42,7 +42,6 @@ func LoadLines(r io.Reader) (lines []maths.Line) {
 			if k == -1 {
 				// should never happen.
 				panic(fmt.Sprintln("Did not find `:` in [", str, "] part of:", txt))
-				continue
 			}
 
 			n, err := strconv.ParseFloat(strings.TrimSpace(str[k+1:]), 64)
@@ -91,7 +90,7 @@ func LoadLinesFromFile(filename string) []maths.Line {
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	return LoadLines(file)
 
 }

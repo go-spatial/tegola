@@ -1,9 +1,9 @@
 package register
 
 import (
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/p"
-	"github.com/go-spatial/tegola/observability"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/p"
+	"github.com/alexeydott/tegola/observability"
 )
 
 func Observer(config dict.Dicter) (observability.Interface, error) {

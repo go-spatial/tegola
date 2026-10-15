@@ -5,6 +5,12 @@
     <ViewerHeader v-if="capabilities" :capabilities="capabilities" />
 
     <LeftNav v-if="capabilities" :capabilities="capabilities" />
+
+    <button v-if="capabilities" class="edit-toggle" @click="editMode = !editMode">
+      {{ editMode ? 'View Map' : 'Edit Features' }}
+    </button>
+
+    <EditorPanel v-show="editMode" />
   </div>
 </template>
 
@@ -13,6 +19,7 @@ import ViewerHeader from "./components/ViewerHeader.vue";
 import "maplibre-gl/dist/maplibre-gl.css";
 import LeftNav from "./components/LeftNav/LeftNav.vue";
 import Viewer from "./components/Viewer.vue";
+import EditorPanel from "./components/EditorPanel.vue";
 import { store, mutations } from "./globals/store";
 import axios from "axios";
 
@@ -28,10 +35,11 @@ export default {
   components: {
     ViewerHeader,
     LeftNav,
-    Viewer
+    Viewer,
+    EditorPanel
   },
   data: function () {
-    return {};
+    return { editMode: false };
   },
   computed: {
     activeMap() {
@@ -90,6 +98,7 @@ export default {
 </script>
 
 <style>
+.edit-toggle { position: absolute; top: 12px; right: 16px; z-index: 3; }
 body,
 html {
   font-family: Helvetica, Arial, sans-serif;

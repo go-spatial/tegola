@@ -1,3 +1,4 @@
+//go:build !noRedisCache
 // +build !noRedisCache
 
 package atlas
@@ -8,5 +9,5 @@ package atlas
 //
 // go build -tags 'noRedisCache'
 import (
-	_ "github.com/go-spatial/tegola/cache/redis"
+	_ "github.com/alexeydott/tegola/cache/redis"
 )

@@ -7,22 +7,63 @@ import (
 	"github.com/SAP/go-hdb/driver/internal/protocol/encoding"
 )
 
-// Message header (size: 32 bytes)
-type messageHeader struct {
-	sessionID     int64
-	packetCount   int32
-	varPartLength uint32
-	varPartSize   uint32
-	noOfSegm      int16
+const messageHeaderSize = 32
+
+// packetOptions represents the message header packet option bit flags.
+type packetOptions int8
+
+const (
+	// the bit-0 flag below is taken from the SAP HANA client (hdbcli,
+	// Layout.hpp, PacketOption_followUpPacket); the public spec does not
+	// document it, and the C++ source comments it as unused.
+	poFollowUpPacket packetOptions = 0x01
+
+	// isCompressed — bit 1; per the protocol spec, set when the packet's
+	// varpart is LZ4-compressed; when set, the message header and
+	// the first segment header are uncompressed and the
+	// remainder of the packet is compressed.
+	poIsCompressed packetOptions = 0x02
+)
+
+var (
+	poList     = [...]packetOptions{poFollowUpPacket, poIsCompressed}
+	poListText = [...]string{"followUpPacket", "isCompressed"}
+)
+
+func (k packetOptions) String() string {
+	var s []string
+
+	for i, opt := range poList {
+		if (k & opt) != 0 {
+			s = append(s, poListText[i])
+		}
+	}
+	return fmt.Sprintf("%v", s)
 }
 
+// Message header (size: 32 bytes).
+type messageHeader struct {
+	sessionID                int64
+	packetCount              int32
+	varPartLength            uint32
+	varPartSize              uint32
+	noOfSegm                 int16
+	packetOptions            packetOptions
+	compressionVarPartLength uint32
+}
+
+// isCompressed reports whether the varpart on the wire is LZ4-compressed.
+func (k packetOptions) isCompressed() bool { return (k & poIsCompressed) == poIsCompressed }
+
 func (h *messageHeader) String() string {
-	return fmt.Sprintf("session id %d packetCount %d varPartLength %d, varPartSize %d noOfSegm %d",
+	return fmt.Sprintf("session id %d packetCount %d varPartLength %d, varPartSize %d noOfSegm %d packetOptions %s compressionVarPartLength %d",
 		h.sessionID,
 		h.packetCount,
 		h.varPartLength,
 		h.varPartSize,
-		h.noOfSegm)
+		h.noOfSegm,
+		h.packetOptions,
+		h.compressionVarPartLength)
 }
 
 func (h *messageHeader) encode(enc *encoding.Encoder) error {
@@ -31,18 +72,23 @@ func (h *messageHeader) encode(enc *encoding.Encoder) error {
 	enc.Uint32(h.varPartLength)
 	enc.Uint32(h.varPartSize)
 	enc.Int16(h.noOfSegm)
-	enc.Zeroes(10) // size: 32 bytes
+	enc.Int8(int8(h.packetOptions))
+	enc.Zeroes(1) // filler
+	enc.Uint32(h.compressionVarPartLength)
+	enc.Zeroes(4) // size: 32 bytes
 	return nil
 }
 
-func (h *messageHeader) decode(dec *encoding.Decoder) error {
+func (h *messageHeader) decode(dec *encoding.Decoder) {
 	h.sessionID = dec.Int64()
 	h.packetCount = dec.Int32()
 	h.varPartLength = dec.Uint32()
 	h.varPartSize = dec.Uint32()
 	h.noOfSegm = dec.Int16()
-	dec.Skip(10) // size: 32 bytes
-	return dec.Error()
+	h.packetOptions = packetOptions(dec.Int8())
+	dec.Skip(1)
+	h.compressionVarPartLength = dec.Uint32()
+	dec.Skip(4) // size: 32 bytes
 }
 
 const (
@@ -65,30 +111,27 @@ const (
 	coSelfetchOff            commandOptions = 0x01
 	coScrollableCursorOn     commandOptions = 0x02
 	coNoResultsetCloseNeeded commandOptions = 0x04
-	coHoldCursorOverCommtit  commandOptions = 0x08
+	coHoldCursorOverCommit   commandOptions = 0x08
 	coExecuteLocally         commandOptions = 0x10
 )
 
-var commandOptionsText = map[commandOptions]string{
-	coSelfetchOff:            "selfetchOff",
-	coScrollableCursorOn:     "scrollabeCursorOn",
-	coNoResultsetCloseNeeded: "noResltsetCloseNeeded",
-	coHoldCursorOverCommtit:  "holdCursorOverCommit",
-	coExecuteLocally:         "executLocally",
-}
+var (
+	coList     = []commandOptions{coNil, coSelfetchOff, coScrollableCursorOn, coNoResultsetCloseNeeded, coHoldCursorOverCommit, coExecuteLocally}
+	coListText = []string{"", "selfetchOff", "scrollableCursorOn", "noResultsetCloseNeeded", "holdCursorOverCommit", "executeLocally"}
+)
 
 func (k commandOptions) String() string {
-	t := make([]string, 0, len(commandOptionsText))
+	var s []string
 
-	for option, text := range commandOptionsText {
+	for i, option := range coList {
 		if (k & option) != 0 {
-			t = append(t, text)
+			s = append(s, coListText[i])
 		}
 	}
-	return fmt.Sprintf("%v", t)
+	return fmt.Sprintf("%v", s)
 }
 
-// segment header
+// segment header.
 type segmentHeader struct {
 	segmentLength  int32
 	segmentOfs     int32
@@ -103,8 +146,7 @@ type segmentHeader struct {
 
 func (h *segmentHeader) String() string {
 	switch h.segmentKind {
-
-	default: //error
+	default: // error
 		return fmt.Sprintf(
 			"segmentLength %d segmentOfs %d noOfParts %d, segmentNo %d segmentKind %s",
 			h.segmentLength,
@@ -138,7 +180,7 @@ func (h *segmentHeader) String() string {
 	}
 }
 
-// request
+// request.
 func (h *segmentHeader) encode(enc *encoding.Encoder) error {
 	enc.Int32(h.segmentLength)
 	enc.Int32(h.segmentOfs)
@@ -147,26 +189,25 @@ func (h *segmentHeader) encode(enc *encoding.Encoder) error {
 	enc.Int8(int8(h.segmentKind))
 
 	switch h.segmentKind {
-
-	default: //error
-		enc.Zeroes(11) //segmentHeaderLength
+	default: // error
+		enc.Zeroes(11) // segmentHeaderLength
 
 	case skRequest:
 		enc.Int8(int8(h.messageType))
 		enc.Bool(h.commit)
 		enc.Int8(int8(h.commandOptions))
-		enc.Zeroes(8) //segmentHeaderSize
+		enc.Zeroes(8) // segmentHeaderSize
 
 	case skReply:
-		enc.Zeroes(1) //reserved
+		enc.Zeroes(1) // reserved
 		enc.Int16(int16(h.functionCode))
-		enc.Zeroes(8) //segmentHeaderSize
+		enc.Zeroes(8) // segmentHeaderSize
 	}
 	return nil
 }
 
-// reply || error
-func (h *segmentHeader) decode(dec *encoding.Decoder) error {
+// reply || error.
+func (h *segmentHeader) decode(dec *encoding.Decoder) {
 	h.segmentLength = dec.Int32()
 	h.segmentOfs = dec.Int32()
 	h.noOfParts = dec.Int16()
@@ -174,22 +215,20 @@ func (h *segmentHeader) decode(dec *encoding.Decoder) error {
 	h.segmentKind = segmentKind(dec.Int8())
 
 	switch h.segmentKind {
-
-	default: //error
-		dec.Skip(11) //segmentHeaderLength
+	default: // error
+		dec.Skip(11) // segmentHeaderLength
 
 	case skRequest:
 		h.messageType = MessageType(dec.Int8())
 		h.commit = dec.Bool()
 		h.commandOptions = commandOptions(dec.Int8())
-		dec.Skip(8) //segmentHeaderLength
+		dec.Skip(8) // segmentHeaderLength
 
 	case skReply:
-		dec.Skip(1) //reserved
+		dec.Skip(1) // reserved
 		h.functionCode = FunctionCode(dec.Int16())
-		dec.Skip(8) //segmentHeaderLength
+		dec.Skip(8) // segmentHeaderLength
 	}
-	return dec.Error()
 }
 
 const (
@@ -211,23 +250,20 @@ const (
 	paResultsetClosed PartAttributes = 0x10
 )
 
-var partAttributesText = map[PartAttributes]string{
-	paLastPacket:      "lastPacket",
-	paNextPacket:      "nextPacket",
-	paFirstPacket:     "firstPacket",
-	paRowNotFound:     "rowNotFound",
-	paResultsetClosed: "resultsetClosed",
-}
+var (
+	paList     = [...]PartAttributes{paLastPacket, paNextPacket, paFirstPacket, paRowNotFound, paResultsetClosed}
+	paListText = [...]string{"lastPacket", "nextPacket", "firstPacket", "rowNotFound", "resultsetClosed"}
+)
 
 func (k PartAttributes) String() string {
-	t := make([]string, 0, len(partAttributesText))
+	var s []string
 
-	for attr, text := range partAttributesText {
+	for i, attr := range paList {
 		if (k & attr) != 0 {
-			t = append(t, text)
+			s = append(s, paListText[i])
 		}
 	}
-	return fmt.Sprintf("%v", t)
+	return fmt.Sprintf("%v", s)
 }
 
 // ResultsetClosed returns true if the result set is closed, false otherwise.
@@ -238,8 +274,8 @@ func (k PartAttributes) LastPacket() bool { return (k & paLastPacket) == paLastP
 
 // PartHeader represents the part header.
 type PartHeader struct {
-	PartKind         PartKind
-	PartAttributes   PartAttributes
+	partKind         PartKind
+	partAttributes   PartAttributes
 	argumentCount    int16
 	bigArgumentCount int32
 	bufferLength     int32
@@ -248,8 +284,8 @@ type PartHeader struct {
 
 func (h *PartHeader) String() string {
 	return fmt.Sprintf("kind %s partAttributes %s argumentCount %d bigArgumentCount %d bufferLength %d bufferSize %d",
-		h.PartKind,
-		h.PartAttributes,
+		h.partKind,
+		h.partAttributes,
 		h.argumentCount,
 		h.bigArgumentCount,
 		h.bufferLength,
@@ -257,12 +293,18 @@ func (h *PartHeader) String() string {
 	)
 }
 
+// Kind returns the part kind.
+func (h *PartHeader) Kind() PartKind { return h.partKind }
+
+// Attrs returns the part attributes.
+func (h *PartHeader) Attrs() PartAttributes { return h.partAttributes }
+
 func (h *PartHeader) setNumArg(numArg int) error {
 	switch {
 	default:
 		return fmt.Errorf("maximum number of arguments %d exceeded", numArg)
 	case numArg <= math.MaxInt16:
-		h.argumentCount = int16(numArg)
+		h.argumentCount = int16(numArg) //nolint: gosec
 		h.bigArgumentCount = 0
 	case numArg <= math.MaxInt32:
 		h.argumentCount = bigNumArgInd
@@ -278,24 +320,25 @@ func (h *PartHeader) numArg() int {
 	return int(h.argumentCount)
 }
 
+func (h *PartHeader) bufLen() int { return int(h.bufferLength) }
+
 func (h *PartHeader) encode(enc *encoding.Encoder) error {
-	enc.Int8(int8(h.PartKind))
-	enc.Int8(int8(h.PartAttributes))
+	enc.Int8(int8(h.partKind))
+	enc.Int8(int8(h.partAttributes))
 	enc.Int16(h.argumentCount)
 	enc.Int32(h.bigArgumentCount)
 	enc.Int32(h.bufferLength)
 	enc.Int32(h.bufferSize)
-	//no filler
+	// no filler
 	return nil
 }
 
-func (h *PartHeader) decode(dec *encoding.Decoder) error {
-	h.PartKind = PartKind(dec.Int8())
-	h.PartAttributes = PartAttributes(dec.Int8())
+func (h *PartHeader) decode(dec *encoding.Decoder) {
+	h.partKind = PartKind(dec.Int8())
+	h.partAttributes = PartAttributes(dec.Int8())
 	h.argumentCount = dec.Int16()
 	h.bigArgumentCount = dec.Int32()
 	h.bufferLength = dec.Int32()
 	h.bufferSize = dec.Int32()
 	// no filler
-	return dec.Error()
 }

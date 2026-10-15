@@ -1,4 +1,4 @@
-// Copyright 2022 The Prometheus Authors
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -45,7 +45,7 @@ func (fs FS) AllThreads(pid int) (Procs, error) {
 
 	names, err := d.Readdirnames(-1)
 	if err != nil {
-		return Procs{}, fmt.Errorf("could not read %q: %w", d.Name(), err)
+		return Procs{}, fmt.Errorf("%w: could not read %q: %w", ErrFileRead, d.Name(), err)
 	}
 
 	t := Procs{}
@@ -54,7 +54,8 @@ func (fs FS) AllThreads(pid int) (Procs, error) {
 		if err != nil {
 			continue
 		}
-		t = append(t, Proc{PID: int(tid), fs: fsi.FS(taskPath)})
+
+		t = append(t, Proc{PID: int(tid), fs: FS{fsi.FS(taskPath), fs.isReal}})
 	}
 
 	return t, nil
@@ -66,13 +67,13 @@ func (fs FS) Thread(pid, tid int) (Proc, error) {
 	if _, err := os.Stat(taskPath); err != nil {
 		return Proc{}, err
 	}
-	return Proc{PID: tid, fs: fsi.FS(taskPath)}, nil
+	return Proc{PID: tid, fs: FS{fsi.FS(taskPath), fs.isReal}}, nil
 }
 
 // Thread returns a process for a given TID of Proc.
 func (proc Proc) Thread(tid int) (Proc, error) {
-	tfs := fsi.FS(proc.path("task"))
-	if _, err := os.Stat(tfs.Path(strconv.Itoa(tid))); err != nil {
+	tfs := FS{fsi.FS(proc.path("task")), proc.fs.isReal}
+	if _, err := os.Stat(tfs.proc.Path(strconv.Itoa(tid))); err != nil {
 		return Proc{}, err
 	}
 	return Proc{PID: tid, fs: tfs}, nil

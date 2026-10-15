@@ -10,6 +10,19 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
+// New returns a new lambda handler for the given http.Handler.
+// It is up to the caller of New to run lamdba.Start(handler) with the returned handler.
+func New(handler http.Handler, opts *Options) lambda.Handler {
+	if handler == nil {
+		handler = http.DefaultServeMux
+	}
+	if opts == nil {
+		opts = defaultOptions
+	}
+	opts.setBinaryContentTypeMap()
+	return lambdaHandler{httpHandler: handler, opts: opts}
+}
+
 var defaultOptions = &Options{}
 
 type lambdaHandler struct {
@@ -47,12 +60,6 @@ func (handler lambdaHandler) handleEvent(ctx context.Context, payload []byte) (l
 
 // ListenAndServe starts the AWS Lambda runtime (aws-lambda-go lambda.Start) with a given handler.
 func ListenAndServe(handler http.Handler, opts *Options) {
-	if handler == nil {
-		handler = http.DefaultServeMux
-	}
-	if opts == nil {
-		opts = defaultOptions
-	}
-	opts.setBinaryContentTypeMap()
-	lambda.StartHandler(lambdaHandler{httpHandler: handler, opts: opts})
+	lambdaHandler := New(handler, opts)
+	lambda.StartHandler(lambdaHandler)
 }

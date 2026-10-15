@@ -9,11 +9,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola/draw/svg"
+	"github.com/alexeydott/tegola/maths"
+	"github.com/alexeydott/tegola/maths/hitmap"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/draw/svg"
-	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/hitmap"
 	"github.com/go-test/deep"
 )
 
@@ -65,15 +65,15 @@ func TestPointPairs(t *testing.T) {
 	tests := tbltest.Cases(
 		testcase{
 			pts: []maths.Pt{
-				{1, 1}, {1, 2}, {1, 3}, {1, 4},
+				{X: 1, Y: 1}, {X: 1, Y: 2}, {X: 1, Y: 3}, {X: 1, Y: 4},
 			},
 			expected: [][2]maths.Pt{
-				{maths.Pt{1, 1}, maths.Pt{1, 2}},
-				{maths.Pt{1, 1}, maths.Pt{1, 3}},
-				{maths.Pt{1, 1}, maths.Pt{1, 4}},
-				{maths.Pt{1, 2}, maths.Pt{1, 3}},
-				{maths.Pt{1, 2}, maths.Pt{1, 4}},
-				{maths.Pt{1, 3}, maths.Pt{1, 4}},
+				{maths.Pt{X: 1, Y: 1}, maths.Pt{X: 1, Y: 2}},
+				{maths.Pt{X: 1, Y: 1}, maths.Pt{X: 1, Y: 3}},
+				{maths.Pt{X: 1, Y: 1}, maths.Pt{X: 1, Y: 4}},
+				{maths.Pt{X: 1, Y: 2}, maths.Pt{X: 1, Y: 3}},
+				{maths.Pt{X: 1, Y: 2}, maths.Pt{X: 1, Y: 4}},
+				{maths.Pt{X: 1, Y: 3}, maths.Pt{X: 1, Y: 4}},
 			},
 		},
 	)
@@ -97,7 +97,7 @@ func _createFile(basedir, filename string) (file *os.File, err error) {
 }
 
 func _drawMakeValidPolygons(w io.Writer, original [][]maths.Line, expectedPolygon, gotPolygon [][][]maths.Pt) {
-	mm := svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer}
+	mm := svg.MinMax{MinX: 0 - TileBuffer, MinY: 0 - TileBuffer, MaxX: 4096 + TileBuffer, MaxY: 4096 + TileBuffer}
 	for i := range original {
 		mm.OfGeometry(original[i])
 	}
@@ -110,7 +110,7 @@ func _drawMakeValidPolygons(w io.Writer, original [][]maths.Line, expectedPolygo
 	mm.ExpandBy(100)
 	canvas := &svg.Canvas{
 		Board:  mm,
-		Region: svg.MinMax{0 - TileBuffer, 0 - TileBuffer, 4096 + TileBuffer, 4096 + TileBuffer},
+		Region: svg.MinMax{MinX: 0 - TileBuffer, MinY: 0 - TileBuffer, MaxX: 4096 + TileBuffer, MaxY: 4096 + TileBuffer},
 	}
 	canvas.Init(w, 1440, 900, false)
 	canvas.Gid("original_lines")
@@ -163,7 +163,7 @@ func drawMakeValidTestCase(basedir string, filename string, original [][]maths.L
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	_drawMakeValidPolygons(file, original, expectedPolygon, gotPolygon)
 	return nil
 }
@@ -175,6 +175,7 @@ func TestMakeValid(t *testing.T) {
 		polygons [][][]maths.Pt
 		err      error
 	}
+
 	ctx := context.Background()
 
 	fn := func(idx int, test tcase) {
@@ -220,21 +221,21 @@ func TestMakeValid(t *testing.T) {
 		tcase{
 			lines: [][]maths.Line{
 				{
-					{maths.Pt{3, 1}, maths.Pt{7, 1}},
-					{maths.Pt{7, 1}, maths.Pt{7, 6}},
-					{maths.Pt{7, 6}, maths.Pt{3, 6}},
-					{maths.Pt{3, 6}, maths.Pt{3, 1}},
+					{maths.Pt{X: 3, Y: 1}, maths.Pt{X: 7, Y: 1}},
+					{maths.Pt{X: 7, Y: 1}, maths.Pt{X: 7, Y: 6}},
+					{maths.Pt{X: 7, Y: 6}, maths.Pt{X: 3, Y: 6}},
+					{maths.Pt{X: 3, Y: 6}, maths.Pt{X: 3, Y: 1}},
 				},
 				{
-					{maths.Pt{4, 4}, maths.Pt{4, 9}},
-					{maths.Pt{4, 9}, maths.Pt{5, 9}},
-					{maths.Pt{5, 9}, maths.Pt{5, 4}},
-					{maths.Pt{5, 4}, maths.Pt{4, 4}},
+					{maths.Pt{X: 4, Y: 4}, maths.Pt{X: 4, Y: 9}},
+					{maths.Pt{X: 4, Y: 9}, maths.Pt{X: 5, Y: 9}},
+					{maths.Pt{X: 5, Y: 9}, maths.Pt{X: 5, Y: 4}},
+					{maths.Pt{X: 5, Y: 4}, maths.Pt{X: 4, Y: 4}},
 				},
 			},
 			polygons: [][][]maths.Pt{
 				{
-					[]maths.Pt{{3, 1}, {7, 1}, {7, 6}, {5, 6}, {5, 4}, {4, 4}, {4, 6}, {3, 6}},
+					[]maths.Pt{{X: 3, Y: 1}, {X: 7, Y: 1}, {X: 7, Y: 6}, {X: 5, Y: 6}, {X: 5, Y: 4}, {X: 4, Y: 4}, {X: 4, Y: 6}, {X: 3, Y: 6}},
 				},
 			},
 		},
@@ -271,65 +272,65 @@ func TestMakeValid(t *testing.T) {
 
 			polygons: [][][]maths.Pt{
 				{
-					[]maths.Pt{{2734, 934}, {2735, 933}, {2739, 930}, {2759, 943}, {2763, 946}, {2759, 945}, {2739, 937}, {2735, 936}},
+					[]maths.Pt{{X: 2734, Y: 934}, {X: 2735, Y: 933}, {X: 2739, Y: 930}, {X: 2759, Y: 943}, {X: 2763, Y: 946}, {X: 2759, Y: 945}, {X: 2739, Y: 937}, {X: 2735, Y: 936}},
 				},
 				{
-					[]maths.Pt{{2759, 913}, {2763, 908}, {2766, 908}, {2770, 911}, {2770, 914}, {2778, 924}, {2781, 926}, {2782, 927}, {2784, 928}, {2785, 928}, {2787, 930}, {2792, 933}, {2800, 919}, {2805, 912}, {2808, 908}, {2809, 907}, {2808, 904}, {2805, 902}, {2808, 895}, {2809, 895}, {2811, 894}, {2818, 910}, {2811, 920}, {2809, 923}, {2808, 925}, {2805, 929}, {2800, 936}, {2792, 948}, {2787, 955}, {2786, 954}, {2785, 954}, {2784, 955}, {2782, 959}, {2781, 958}, {2778, 956}, {2770, 951}, {2766, 948}, {2763, 946}, {2766, 947}, {2770, 949}, {2778, 951}, {2781, 953}, {2782, 953}, {2784, 954}, {2785, 953}, {2781, 949}, {2782, 947}, {2784, 942}, {2786, 938}, {2781, 933}, {2778, 931}, {2766, 919}, {2763, 917}},
+					[]maths.Pt{{X: 2759, Y: 913}, {X: 2763, Y: 908}, {X: 2766, Y: 908}, {X: 2770, Y: 911}, {X: 2770, Y: 914}, {X: 2778, Y: 924}, {X: 2781, Y: 926}, {X: 2782, Y: 927}, {X: 2784, Y: 928}, {X: 2785, Y: 928}, {X: 2787, Y: 930}, {X: 2792, Y: 933}, {X: 2800, Y: 919}, {X: 2805, Y: 912}, {X: 2808, Y: 908}, {X: 2809, Y: 907}, {X: 2808, Y: 904}, {X: 2805, Y: 902}, {X: 2808, Y: 895}, {X: 2809, Y: 895}, {X: 2811, Y: 894}, {X: 2818, Y: 910}, {X: 2811, Y: 920}, {X: 2809, Y: 923}, {X: 2808, Y: 925}, {X: 2805, Y: 929}, {X: 2800, Y: 936}, {X: 2792, Y: 948}, {X: 2787, Y: 955}, {X: 2786, Y: 954}, {X: 2785, Y: 954}, {X: 2784, Y: 955}, {X: 2782, Y: 959}, {X: 2781, Y: 958}, {X: 2778, Y: 956}, {X: 2770, Y: 951}, {X: 2766, Y: 948}, {X: 2763, Y: 946}, {X: 2766, Y: 947}, {X: 2770, Y: 949}, {X: 2778, Y: 951}, {X: 2781, Y: 953}, {X: 2782, Y: 953}, {X: 2784, Y: 954}, {X: 2785, Y: 953}, {X: 2781, Y: 949}, {X: 2782, Y: 947}, {X: 2784, Y: 942}, {X: 2786, Y: 938}, {X: 2781, Y: 933}, {X: 2778, Y: 931}, {X: 2766, Y: 919}, {X: 2763, Y: 917}},
 				},
 				{
-					[]maths.Pt{{2784, 960}, {2785, 958}, {2786, 957}, {2787, 955}, {2792, 957}, {2800, 960}, {2805, 961}, {2808, 963}, {2809, 963}, {2811, 964}, {2818, 966}, {2838, 973}, {2851, 978}, {2838, 994}, {2818, 981}, {2811, 977}, {2809, 976}, {2808, 975}, {2805, 973}, {2800, 970}, {2792, 965}, {2787, 962}, {2786, 961}, {2785, 961}},
+					[]maths.Pt{{X: 2784, Y: 960}, {X: 2785, Y: 958}, {X: 2786, Y: 957}, {X: 2787, Y: 955}, {X: 2792, Y: 957}, {X: 2800, Y: 960}, {X: 2805, Y: 961}, {X: 2808, Y: 963}, {X: 2809, Y: 963}, {X: 2811, Y: 964}, {X: 2818, Y: 966}, {X: 2838, Y: 973}, {X: 2851, Y: 978}, {X: 2838, Y: 994}, {X: 2818, Y: 981}, {X: 2811, Y: 977}, {X: 2809, Y: 976}, {X: 2808, Y: 975}, {X: 2805, Y: 973}, {X: 2800, Y: 970}, {X: 2792, Y: 965}, {X: 2787, Y: 962}, {X: 2786, Y: 961}, {X: 2785, Y: 961}},
 				},
 				{
-					[]maths.Pt{{2851, 978}, {2853, 975}, {2856, 975}, {2857, 977}, {2857, 980}, {2856, 980}, {2853, 979}},
+					[]maths.Pt{{X: 2851, Y: 978}, {X: 2853, Y: 975}, {X: 2856, Y: 975}, {X: 2857, Y: 977}, {X: 2857, Y: 980}, {X: 2856, Y: 980}, {X: 2853, Y: 979}},
 				},
 			},
 		},
 		tcase{
 			lines: [][]maths.Line{{
-				{maths.Pt{50, 66}, maths.Pt{104, 100}},
-				{maths.Pt{104, 100}, maths.Pt{119, 81}},
-				{maths.Pt{119, 81}, maths.Pt{122, 81}},
-				{maths.Pt{122, 81}, maths.Pt{123, 83}},
-				{maths.Pt{123, 83}, maths.Pt{123, 86}},
-				{maths.Pt{123, 86}, maths.Pt{1, 42}},
-				{maths.Pt{1, 42}, maths.Pt{0, 40}},
-				{maths.Pt{0, 40}, maths.Pt{5, 36}},
-				{maths.Pt{5, 36}, maths.Pt{48, 65}},
-				{maths.Pt{48, 65}, maths.Pt{51, 59}},
-				{maths.Pt{51, 59}, maths.Pt{47, 55}},
-				{maths.Pt{47, 55}, maths.Pt{52, 44}},
-				{maths.Pt{52, 44}, maths.Pt{25, 19}},
-				{maths.Pt{25, 19}, maths.Pt{29, 14}},
-				{maths.Pt{29, 14}, maths.Pt{32, 14}},
-				{maths.Pt{32, 14}, maths.Pt{36, 17}},
-				{maths.Pt{36, 17}, maths.Pt{36, 20}},
-				{maths.Pt{36, 20}, maths.Pt{44, 30}},
-				{maths.Pt{44, 30}, maths.Pt{58, 39}},
-				{maths.Pt{58, 39}, maths.Pt{66, 25}},
-				{maths.Pt{66, 25}, maths.Pt{75, 13}},
-				{maths.Pt{75, 13}, maths.Pt{74, 10}},
-				{maths.Pt{74, 10}, maths.Pt{71, 8}},
-				{maths.Pt{71, 8}, maths.Pt{74, 1}},
-				{maths.Pt{74, 1}, maths.Pt{77, 0}},
-				{maths.Pt{77, 0}, maths.Pt{84, 16}},
-				{maths.Pt{84, 16}, maths.Pt{50, 66}},
+				{maths.Pt{X: 50, Y: 66}, maths.Pt{X: 104, Y: 100}},
+				{maths.Pt{X: 104, Y: 100}, maths.Pt{X: 119, Y: 81}},
+				{maths.Pt{X: 119, Y: 81}, maths.Pt{X: 122, Y: 81}},
+				{maths.Pt{X: 122, Y: 81}, maths.Pt{X: 123, Y: 83}},
+				{maths.Pt{X: 123, Y: 83}, maths.Pt{X: 123, Y: 86}},
+				{maths.Pt{X: 123, Y: 86}, maths.Pt{X: 1, Y: 42}},
+				{maths.Pt{X: 1, Y: 42}, maths.Pt{X: 0, Y: 40}},
+				{maths.Pt{X: 0, Y: 40}, maths.Pt{X: 5, Y: 36}},
+				{maths.Pt{X: 5, Y: 36}, maths.Pt{X: 48, Y: 65}},
+				{maths.Pt{X: 48, Y: 65}, maths.Pt{X: 51, Y: 59}},
+				{maths.Pt{X: 51, Y: 59}, maths.Pt{X: 47, Y: 55}},
+				{maths.Pt{X: 47, Y: 55}, maths.Pt{X: 52, Y: 44}},
+				{maths.Pt{X: 52, Y: 44}, maths.Pt{X: 25, Y: 19}},
+				{maths.Pt{X: 25, Y: 19}, maths.Pt{X: 29, Y: 14}},
+				{maths.Pt{X: 29, Y: 14}, maths.Pt{X: 32, Y: 14}},
+				{maths.Pt{X: 32, Y: 14}, maths.Pt{X: 36, Y: 17}},
+				{maths.Pt{X: 36, Y: 17}, maths.Pt{X: 36, Y: 20}},
+				{maths.Pt{X: 36, Y: 20}, maths.Pt{X: 44, Y: 30}},
+				{maths.Pt{X: 44, Y: 30}, maths.Pt{X: 58, Y: 39}},
+				{maths.Pt{X: 58, Y: 39}, maths.Pt{X: 66, Y: 25}},
+				{maths.Pt{X: 66, Y: 25}, maths.Pt{X: 75, Y: 13}},
+				{maths.Pt{X: 75, Y: 13}, maths.Pt{X: 74, Y: 10}},
+				{maths.Pt{X: 74, Y: 10}, maths.Pt{X: 71, Y: 8}},
+				{maths.Pt{X: 71, Y: 8}, maths.Pt{X: 74, Y: 1}},
+				{maths.Pt{X: 74, Y: 1}, maths.Pt{X: 77, Y: 0}},
+				{maths.Pt{X: 77, Y: 0}, maths.Pt{X: 84, Y: 16}},
+				{maths.Pt{X: 84, Y: 16}, maths.Pt{X: 50, Y: 66}},
 			}},
 			polygons: [][][]maths.Pt{
 
 				{
-					[]maths.Pt{{0, 40}, {1, 39}, {5, 36}, {25, 49}, {29, 52}, {25, 51}, {5, 43}, {1, 42}},
+					[]maths.Pt{{X: 0, Y: 40}, {X: 1, Y: 39}, {X: 5, Y: 36}, {X: 25, Y: 49}, {X: 29, Y: 52}, {X: 25, Y: 51}, {X: 5, Y: 43}, {X: 1, Y: 42}},
 				},
 
 				{
-					[]maths.Pt{{25, 19}, {29, 14}, {32, 14}, {36, 17}, {36, 20}, {44, 30}, {47, 32}, {48, 33}, {50, 34}, {51, 34}, {53, 36}, {58, 39}, {66, 25}, {71, 18}, {74, 14}, {75, 13}, {74, 10}, {71, 8}, {74, 1}, {75, 1}, {77, 0}, {84, 16}, {77, 26}, {75, 29}, {74, 31}, {71, 35}, {66, 42}, {58, 54}, {53, 61}, {52, 60}, {51, 60}, {50, 61}, {48, 65}, {47, 64}, {44, 62}, {36, 57}, {32, 54}, {29, 52}, {32, 53}, {36, 55}, {44, 57}, {47, 59}, {48, 59}, {50, 60}, {51, 59}, {47, 55}, {48, 53}, {50, 48}, {52, 44}, {47, 39}, {44, 37}, {32, 25}, {29, 23}},
+					[]maths.Pt{{X: 25, Y: 19}, {X: 29, Y: 14}, {X: 32, Y: 14}, {X: 36, Y: 17}, {X: 36, Y: 20}, {X: 44, Y: 30}, {X: 47, Y: 32}, {X: 48, Y: 33}, {X: 50, Y: 34}, {X: 51, Y: 34}, {X: 53, Y: 36}, {X: 58, Y: 39}, {X: 66, Y: 25}, {X: 71, Y: 18}, {X: 74, Y: 14}, {X: 75, Y: 13}, {X: 74, Y: 10}, {X: 71, Y: 8}, {X: 74, Y: 1}, {X: 75, Y: 1}, {X: 77, Y: 0}, {X: 84, Y: 16}, {X: 77, Y: 26}, {X: 75, Y: 29}, {X: 74, Y: 31}, {X: 71, Y: 35}, {X: 66, Y: 42}, {X: 58, Y: 54}, {X: 53, Y: 61}, {X: 52, Y: 60}, {X: 51, Y: 60}, {X: 50, Y: 61}, {X: 48, Y: 65}, {X: 47, Y: 64}, {X: 44, Y: 62}, {X: 36, Y: 57}, {X: 32, Y: 54}, {X: 29, Y: 52}, {X: 32, Y: 53}, {X: 36, Y: 55}, {X: 44, Y: 57}, {X: 47, Y: 59}, {X: 48, Y: 59}, {X: 50, Y: 60}, {X: 51, Y: 59}, {X: 47, Y: 55}, {X: 48, Y: 53}, {X: 50, Y: 48}, {X: 52, Y: 44}, {X: 47, Y: 39}, {X: 44, Y: 37}, {X: 32, Y: 25}, {X: 29, Y: 23}},
 				},
 
 				{
-					[]maths.Pt{{50, 66}, {51, 64}, {52, 63}, {53, 61}, {58, 63}, {66, 66}, {71, 67}, {74, 69}, {75, 69}, {77, 70}, {84, 72}, {104, 79}, {117, 84}, {104, 100}, {84, 87}, {77, 83}, {75, 82}, {74, 81}, {71, 79}, {66, 76}, {58, 71}, {53, 68}, {52, 67}, {51, 67}},
+					[]maths.Pt{{X: 50, Y: 66}, {X: 51, Y: 64}, {X: 52, Y: 63}, {X: 53, Y: 61}, {X: 58, Y: 63}, {X: 66, Y: 66}, {X: 71, Y: 67}, {X: 74, Y: 69}, {X: 75, Y: 69}, {X: 77, Y: 70}, {X: 84, Y: 72}, {X: 104, Y: 79}, {X: 117, Y: 84}, {X: 104, Y: 100}, {X: 84, Y: 87}, {X: 77, Y: 83}, {X: 75, Y: 82}, {X: 74, Y: 81}, {X: 71, Y: 79}, {X: 66, Y: 76}, {X: 58, Y: 71}, {X: 53, Y: 68}, {X: 52, Y: 67}, {X: 51, Y: 67}},
 				},
 
 				{
-					[]maths.Pt{{117, 84}, {119, 81}, {122, 81}, {123, 83}, {123, 86}, {122, 86}, {119, 85}},
+					[]maths.Pt{{X: 117, Y: 84}, {X: 119, Y: 81}, {X: 122, Y: 81}, {X: 123, Y: 83}, {X: 123, Y: 86}, {X: 122, Y: 86}, {X: 119, Y: 85}},
 				},
 			},
 		},
@@ -381,33 +382,33 @@ func BenchmarkSortUniqueF64_worstCase(b *testing.B) {
 func BenchmarkMakeValid5PolyA(b *testing.B) {
 	lines := [][]maths.Line{
 		{
-			maths.Line{maths.Pt{50, 66}, maths.Pt{104, 100}},
-			maths.Line{maths.Pt{104, 100}, maths.Pt{119, 81}},
-			maths.Line{maths.Pt{119, 81}, maths.Pt{122, 81}},
-			maths.Line{maths.Pt{122, 81}, maths.Pt{123, 83}},
-			maths.Line{maths.Pt{123, 83}, maths.Pt{123, 86}},
-			maths.Line{maths.Pt{123, 86}, maths.Pt{1, 42}},
-			maths.Line{maths.Pt{1, 42}, maths.Pt{0, 40}},
-			maths.Line{maths.Pt{0, 40}, maths.Pt{5, 36}},
-			maths.Line{maths.Pt{5, 36}, maths.Pt{48, 65}},
-			maths.Line{maths.Pt{48, 65}, maths.Pt{51, 59}},
-			maths.Line{maths.Pt{51, 59}, maths.Pt{47, 55}},
-			maths.Line{maths.Pt{47, 55}, maths.Pt{52, 44}},
-			maths.Line{maths.Pt{52, 44}, maths.Pt{25, 19}},
-			maths.Line{maths.Pt{25, 19}, maths.Pt{29, 14}},
-			maths.Line{maths.Pt{29, 14}, maths.Pt{32, 14}},
-			maths.Line{maths.Pt{32, 14}, maths.Pt{36, 17}},
-			maths.Line{maths.Pt{36, 17}, maths.Pt{36, 20}},
-			maths.Line{maths.Pt{36, 20}, maths.Pt{44, 30}},
-			maths.Line{maths.Pt{44, 30}, maths.Pt{58, 39}},
-			maths.Line{maths.Pt{58, 39}, maths.Pt{66, 25}},
-			maths.Line{maths.Pt{66, 25}, maths.Pt{75, 13}},
-			maths.Line{maths.Pt{75, 13}, maths.Pt{74, 10}},
-			maths.Line{maths.Pt{74, 10}, maths.Pt{71, 8}},
-			maths.Line{maths.Pt{71, 8}, maths.Pt{74, 1}},
-			maths.Line{maths.Pt{74, 1}, maths.Pt{77, 0}},
-			maths.Line{maths.Pt{77, 0}, maths.Pt{84, 16}},
-			maths.Line{maths.Pt{84, 16}, maths.Pt{50, 66}},
+			maths.Line{maths.Pt{X: 50, Y: 66}, maths.Pt{X: 104, Y: 100}},
+			maths.Line{maths.Pt{X: 104, Y: 100}, maths.Pt{X: 119, Y: 81}},
+			maths.Line{maths.Pt{X: 119, Y: 81}, maths.Pt{X: 122, Y: 81}},
+			maths.Line{maths.Pt{X: 122, Y: 81}, maths.Pt{X: 123, Y: 83}},
+			maths.Line{maths.Pt{X: 123, Y: 83}, maths.Pt{X: 123, Y: 86}},
+			maths.Line{maths.Pt{X: 123, Y: 86}, maths.Pt{X: 1, Y: 42}},
+			maths.Line{maths.Pt{X: 1, Y: 42}, maths.Pt{X: 0, Y: 40}},
+			maths.Line{maths.Pt{X: 0, Y: 40}, maths.Pt{X: 5, Y: 36}},
+			maths.Line{maths.Pt{X: 5, Y: 36}, maths.Pt{X: 48, Y: 65}},
+			maths.Line{maths.Pt{X: 48, Y: 65}, maths.Pt{X: 51, Y: 59}},
+			maths.Line{maths.Pt{X: 51, Y: 59}, maths.Pt{X: 47, Y: 55}},
+			maths.Line{maths.Pt{X: 47, Y: 55}, maths.Pt{X: 52, Y: 44}},
+			maths.Line{maths.Pt{X: 52, Y: 44}, maths.Pt{X: 25, Y: 19}},
+			maths.Line{maths.Pt{X: 25, Y: 19}, maths.Pt{X: 29, Y: 14}},
+			maths.Line{maths.Pt{X: 29, Y: 14}, maths.Pt{X: 32, Y: 14}},
+			maths.Line{maths.Pt{X: 32, Y: 14}, maths.Pt{X: 36, Y: 17}},
+			maths.Line{maths.Pt{X: 36, Y: 17}, maths.Pt{X: 36, Y: 20}},
+			maths.Line{maths.Pt{X: 36, Y: 20}, maths.Pt{X: 44, Y: 30}},
+			maths.Line{maths.Pt{X: 44, Y: 30}, maths.Pt{X: 58, Y: 39}},
+			maths.Line{maths.Pt{X: 58, Y: 39}, maths.Pt{X: 66, Y: 25}},
+			maths.Line{maths.Pt{X: 66, Y: 25}, maths.Pt{X: 75, Y: 13}},
+			maths.Line{maths.Pt{X: 75, Y: 13}, maths.Pt{X: 74, Y: 10}},
+			maths.Line{maths.Pt{X: 74, Y: 10}, maths.Pt{X: 71, Y: 8}},
+			maths.Line{maths.Pt{X: 71, Y: 8}, maths.Pt{X: 74, Y: 1}},
+			maths.Line{maths.Pt{X: 74, Y: 1}, maths.Pt{X: 77, Y: 0}},
+			maths.Line{maths.Pt{X: 77, Y: 0}, maths.Pt{X: 84, Y: 16}},
+			maths.Line{maths.Pt{X: 84, Y: 16}, maths.Pt{X: 50, Y: 66}},
 		},
 	}
 
@@ -415,7 +416,7 @@ func BenchmarkMakeValid5PolyA(b *testing.B) {
 	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
-		MakeValid(ctx, &hm, extent, lines...)
+		_, _ = MakeValid(ctx, &hm, extent, lines...)
 	}
 }
 func BenchmarkMakeValid5PolyB(b *testing.B) {
@@ -454,7 +455,7 @@ func BenchmarkMakeValid5PolyB(b *testing.B) {
 	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
-		MakeValid(ctx, &hm, extent, lines...)
+		_, _ = MakeValid(ctx, &hm, extent, lines...)
 	}
 }
 

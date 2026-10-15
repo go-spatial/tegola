@@ -254,6 +254,57 @@ func TestBinaryHeader(t *testing.T) {
 			},
 			err: errors.New("invalid magic number"),
 		},
+		// P6-15: the header magic must be validated even when the envelope
+		// indicator says "no envelope"; such a header used to return early
+		// without any validation.
+		"bad magic with envelope none": {
+			bytes: []byte{
+				0x50, 0x47, // Magic number, swapped
+				0x00,                   // Version
+				0x00,                   // Flags -- BigEndian, no envelope
+				0xE6, 0x10, 0x00, 0x00, // srs_id
+			},
+			err: errors.New("invalid magic number"),
+		},
+		// P6-15: the version byte must be validated as well.
+		"bad version": {
+			bytes: []byte{
+				0x47, 0x50, // Magic number
+				0x01,                   // Version
+				0x00,                   // Flags -- BigEndian, no envelope
+				0xE6, 0x10, 0x00, 0x00, // srs_id
+			},
+			err: errors.New("invalid version number: 1"),
+		},
+		// P6-15: reserved flag bits (6 and 7) must be zero.
+		"bad reserved flag bits": {
+			bytes: []byte{
+				0x47, 0x50, // Magic number
+				0x00,                   // Version
+				0x41,                   // Flags -- reserved bit 6 set, LittleEndian, no envelope
+				0xE6, 0x10, 0x00, 0x00, // srs_id
+			},
+			err: errors.New("reserved flag bits set: 0x41"),
+		},
+		// P6-15: a well-formed header with envelope indicator "none" passes
+		// the (now mandatory) magic/version/reserved-bit validation.
+		"envelope none valid": {
+			bytes: []byte{
+				0x47, 0x50, // Magic number
+				0x00,                   // Version
+				0x01,                   // Flags -- LittleEndian, no envelope
+				0xE6, 0x10, 0x00, 0x00, // srs_id
+			},
+			version:      0,
+			flags:        headerFlags(0x01),
+			srsid:        4326,
+			envelopetype: EnvelopeTypeNone,
+			envelope:     nil,
+			size:         8,
+			empty:        false,
+			standard:     true,
+			err:          nil,
+		},
 		"invalid envelope XY given for XYZM": {
 			bytes: []byte{
 				0x47, 0x50, // Magic number

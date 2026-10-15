@@ -1,9 +1,7 @@
 package pgtype
 
 import (
-	"bytes"
 	"database/sql/driver"
-	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
@@ -54,8 +52,7 @@ func (t *TSVector) Scan(src any) error {
 		return nil
 	}
 
-	switch src := src.(type) {
-	case string:
+	if src, ok := src.(string); ok {
 		return scanPlanTextAnyToTSVectorScanner{}.scanString(src, t)
 	}
 
@@ -174,7 +171,7 @@ func (encodePlanTSVectorCodecBinary) Encode(value any, buf []byte) ([]byte, erro
 
 		// Each position is a uint16: weight (2 bits) | position (14 bits)
 		for _, pos := range entry.Positions {
-			packed := tsvectorWeightToBinary(pos.Weight)<<14 | uint16(pos.Position)&0x3FFF
+			packed := tsvectorWeightToBinary(pos.Weight)<<14 | pos.Position&0x3FFF
 			buf = pgio.AppendUint16(buf, packed)
 		}
 	}
@@ -185,24 +182,21 @@ func (encodePlanTSVectorCodecBinary) Encode(value any, buf []byte) ([]byte, erro
 type scanPlanBinaryTSVectorToTSVectorScanner struct{}
 
 func (scanPlanBinaryTSVectorToTSVectorScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(TSVectorScanner)
+	scanner := dst.(TSVectorScanner)
 
 	if src == nil {
 		return scanner.ScanTSVector(TSVector{})
 	}
 
-	rp := 0
+	r := pgio.NewReader(src)
 
-	const (
-		uint16Len = 2
-		uint32Len = 4
-	)
-
-	if len(src[rp:]) < uint32Len {
-		return fmt.Errorf("tsvector incomplete %v", src)
+	// Each lexeme carries at minimum a 1-byte NUL terminator and a 2-byte position count. This
+	// bounds the up-front make() against a malicious server claiming a huge lexeme count in a
+	// small message.
+	entryCount := r.Count(3)
+	if err := r.Err(); err != nil {
+		return fmt.Errorf("tsvector: %w", err)
 	}
-	entryCount := int(int32(binary.BigEndian.Uint32(src[rp:])))
-	rp += uint32Len
 
 	var tsv TSVector
 	if entryCount > 0 {
@@ -210,40 +204,34 @@ func (scanPlanBinaryTSVectorToTSVectorScanner) Scan(src []byte, dst any) error {
 	}
 
 	for i := range entryCount {
-		nullIndex := bytes.IndexByte(src[rp:], 0x00)
-		if nullIndex == -1 {
-			return fmt.Errorf("invalid tsvector binary format: missing null terminator")
+		lexeme := TSVectorLexeme{Word: string(r.CString())}
+
+		numPositions := int(r.Uint16())
+		if err := r.Err(); err != nil {
+			return fmt.Errorf("invalid tsvector binary format: lexeme %d: %w", i, err)
 		}
 
-		lexeme := TSVectorLexeme{Word: string(src[rp : rp+nullIndex])}
-		rp += nullIndex + 1 // skip past null terminator
-
-		// Read position count.
-		if len(src[rp:]) < uint16Len {
-			return fmt.Errorf("invalid tsvector binary format: incomplete position count")
-		}
-
-		numPositions := int(binary.BigEndian.Uint16(src[rp:]))
-		rp += uint16Len
-
-		// Read each packed position: weight (2 bits) | position (14 bits)
-		if len(src[rp:]) < numPositions*uint16Len {
-			return fmt.Errorf("invalid tsvector binary format: incomplete positions")
-		}
-
+		// Each packed position is weight (2 bits) | position (14 bits). numPositions came from a
+		// uint16, so it cannot ask for an unreasonable allocation here.
 		if numPositions > 0 {
 			lexeme.Positions = make([]TSVectorPosition, numPositions)
 			for pos := range numPositions {
-				packed := binary.BigEndian.Uint16(src[rp:])
-				rp += uint16Len
+				packed := r.Uint16()
 				lexeme.Positions[pos] = TSVectorPosition{
 					Position: packed & 0x3FFF,
 					Weight:   tsvectorWeightFromBinary(packed >> 14),
 				}
 			}
+			if err := r.Err(); err != nil {
+				return fmt.Errorf("invalid tsvector binary format: lexeme %d positions: %w", i, err)
+			}
 		}
 
 		tsv.Lexemes[i] = lexeme
+	}
+
+	if err := r.Finish(); err != nil {
+		return fmt.Errorf("tsvector: %w", err)
 	}
 	tsv.Valid = true
 
@@ -294,13 +282,11 @@ func (encodePlanTSVectorCodecText) Encode(value any, buf []byte) ([]byte, error)
 func (TSVectorCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan {
 	switch format {
 	case BinaryFormatCode:
-		switch target.(type) {
-		case TSVectorScanner:
+		if _, ok := target.(TSVectorScanner); ok {
 			return scanPlanBinaryTSVectorToTSVectorScanner{}
 		}
 	case TextFormatCode:
-		switch target.(type) {
-		case TSVectorScanner:
+		if _, ok := target.(TSVectorScanner); ok {
 			return scanPlanTextAnyToTSVectorScanner{}
 		}
 	}
@@ -311,7 +297,7 @@ func (TSVectorCodec) PlanScan(m *Map, oid uint32, format int16, target any) Scan
 type scanPlanTextAnyToTSVectorScanner struct{}
 
 func (s scanPlanTextAnyToTSVectorScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(TSVectorScanner)
+	scanner := dst.(TSVectorScanner)
 
 	if src == nil {
 		return scanner.ScanTSVector(TSVector{})

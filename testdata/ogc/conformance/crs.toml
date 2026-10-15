@@ -1,0 +1,45 @@
+[webserver]
+port = ":19100"
+
+[[providers]]
+name = "fixture"
+type = "gpkg"
+filepath = "${OGC_GPKG}"
+[[providers.layers]]
+name = "xy"
+tablename = "xy"
+id_fieldname = "id"
+geometry_fieldname = "geom"
+geometry_format = "wkt"
+geometry_type = "point"
+srid = 4326
+fields = ["n", "s", "b"]
+temporal_field = "at"
+temporal_storage = "unix_seconds"
+[[providers.layers]]
+name = "xyz"
+tablename = "xyz"
+id_fieldname = "id"
+geometry_fieldname = "geom"
+geometry_format = "wkt"
+geometry_type = "point"
+srid = 4326
+spatial_dimension = "xyz"
+vertical_crs = "http://www.opengis.net/def/crs/OGC/0/CRS84h"
+fields = ["n", "s", "b"]
+temporal_field = "at"
+temporal_storage = "unix_seconds"
+
+[features]
+enabled = true
+basepath = "/features"
+default_limit = 2
+max_limit = 10000
+[[features.collections]]
+id = "xy"
+provider_layer = "fixture.xy"
+title = "Owned conformance fixture"
+[[features.collections]]
+id = "xyz"
+provider_layer = "fixture.xyz"
+title = "Owned height-preserving fixture"

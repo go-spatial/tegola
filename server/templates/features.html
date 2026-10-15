@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 72rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    h1 { line-height: 1.2; }
+    nav ul { padding-left: 1.5rem; }
+    nav li { margin: .4rem 0; }
+    small { margin-left: .5rem; }
+    pre { padding: 1rem; border: 1px solid; border-radius: .3rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <header><h1>{{.Title}}</h1>{{if .Description}}<p>{{.Description}}</p>{{end}}</header>
+  {{if .Links}}<nav aria-label="Resource links"><h2>Links</h2><ul>
+    {{range .Links}}<li><a href="{{.Href}}" rel="{{.Rel}}"{{if .Type}} type="{{.Type}}"{{end}}>{{if .Title}}{{.Title}}{{else}}{{.Rel}}{{end}}</a>{{if .Type}}<small>{{.Type}}</small>{{end}}</li>{{end}}
+  </ul></nav>{{end}}
+  <main><h2>Response data</h2><pre>{{.JSON}}</pre></main>
+</body>
+</html>

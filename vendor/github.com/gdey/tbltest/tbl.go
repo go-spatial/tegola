@@ -191,22 +191,45 @@ func (tc *Test) Run(function TestFunc) int {
 	if len(tc.cases) == 0 {
 		return 0
 	}
-	// Now loop through the testcase and call the test function, check to see if we should stop or keep going.
-	if idxs, ok := tc.runOrder(); ok {
-		return runTests(idxs, fn, tc.cases, twoInParams, hasOutParam)
-	}
-	if tc.InOrder {
-		return runTests(seq(len(tc.cases)), fn, tc.cases, twoInParams, hasOutParam)
-	}
-	return runTests(rand.Perm(len(tc.cases)), fn, tc.cases, twoInParams, hasOutParam)
+	// Now loop through the test cases and call the test function, check to see if we should stop or keep going.
+	return runTests(tc.runOrder(), fn, tc.cases, twoInParams, hasOutParam)
 }
 
-func (tc *Test) runOrder() (idx []int, ok bool) {
+// AddCases takes a list of test cases to use for the table driven tests. It is added to the current list of tests.
+//   The test cases can be any type, as long as they are ALL the tests are of the same type, this included any tests declared
+// in the Cases methods to create the test object.
+func (tc *Test) AddCases(testcases ...TestCase) {
+	for i, tcase := range testcases {
+		val := reflect.ValueOf(tcase)
+		if val.Kind() == reflect.Invalid {
+			panicf("Testcase %v is not a valid test case.", i)
+		}
+		// The first element determines that type of the rest of the elements.
+		if tc.vType == nil {
+			tc.vType = val.Type()
+		} else {
+			if val.Type() != tc.vType {
+				panicf("Testcases should be of type %v, but element %v is of type %v.", tc.vType, i, val.Type())
+			}
+		}
+		tc.cases = append(tc.cases, val)
+	}
+}
+
+func (tc *Test) runOrder() []int {
+
 	if runorder != nil && *runorder != "" {
-		return runOrder(*runorder)
+		if idxs, ok := runOrder(*runorder); ok {
+			return idxs
+		}
 	}
 	if tc.RunOrder != "" {
-		return runOrder(tc.RunOrder)
+		if idxs, ok := runOrder(tc.RunOrder); ok {
+			return idxs
+		}
 	}
-	return idx, false
+	if tc.InOrder {
+		return seq(len(tc.cases))
+	}
+	return rand.Perm(len(tc.cases))
 }

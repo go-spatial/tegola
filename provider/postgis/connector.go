@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/tegola/dict"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

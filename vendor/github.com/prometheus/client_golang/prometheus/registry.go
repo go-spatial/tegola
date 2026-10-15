@@ -21,18 +21,17 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode/utf8"
 
-	"github.com/cespare/xxhash/v2"
-	//nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
-	"github.com/golang/protobuf/proto"
-	"github.com/prometheus/common/expfmt"
-
-	dto "github.com/prometheus/client_model/go"
-
 	"github.com/prometheus/client_golang/prometheus/internal"
+
+	"github.com/cespare/xxhash/v2"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -215,6 +214,19 @@ func (err AlreadyRegisteredError) Error() string {
 // by a Gatherer to report multiple errors during MetricFamily gathering.
 type MultiError []error
 
+// SafeMultiError is a thread-safe wrapper around MultiError using a mutex.
+type SafeMultiError struct {
+	mu   sync.Mutex
+	errs MultiError
+}
+
+// Appends the provided error to the contained MultiError in a thread-safe way.
+func (s *SafeMultiError) Append(err error) {
+	s.mu.Lock()
+	s.errs.Append(err)
+	s.mu.Unlock()
+}
+
 // Error formats the contained errors as a bullet point list, preceded by the
 // total number of errors. Note that this results in a multi-line string.
 func (errs MultiError) Error() string {
@@ -315,16 +327,17 @@ func (r *Registry) Register(c Collector) error {
 			if dimHash != desc.dimHash {
 				return fmt.Errorf("a previously registered descriptor with the same fully-qualified name as %s has different label names or a different help string", desc)
 			}
-		} else {
-			// ...then check the new descriptors already seen.
-			if dimHash, exists := newDimHashesByName[desc.fqName]; exists {
-				if dimHash != desc.dimHash {
-					return fmt.Errorf("descriptors reported by collector have inconsistent label names or help strings for the same fully-qualified name, offender is %s", desc)
-				}
-			} else {
-				newDimHashesByName[desc.fqName] = desc.dimHash
-			}
+			continue
 		}
+
+		// ...then check the new descriptors already seen.
+		if dimHash, exists := newDimHashesByName[desc.fqName]; exists {
+			if dimHash != desc.dimHash {
+				return fmt.Errorf("descriptors reported by collector have inconsistent label names or help strings for the same fully-qualified name, offender is %s", desc)
+			}
+			continue
+		}
+		newDimHashesByName[desc.fqName] = desc.dimHash
 	}
 	// A Collector yielding no Desc at all is considered unchecked.
 	if len(newDescIDs) == 0 {
@@ -408,6 +421,16 @@ func (r *Registry) MustRegister(cs ...Collector) {
 	}
 }
 
+// MustGather implements Gatherer.
+// Wraps around Gather and panics if Gather fails for any reason.
+func (r *Registry) MustGather() []*dto.MetricFamily {
+	mfs, err := r.Gather()
+	if err != nil {
+		panic(err)
+	}
+	return mfs
+}
+
 // Gather implements Gatherer.
 func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 	r.mtx.RLock()
@@ -423,7 +446,7 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 		uncheckedMetricChan = make(chan Metric, capMetricChan)
 		metricHashes        = map[uint64]struct{}{}
 		wg                  sync.WaitGroup
-		errs                MultiError          // The collected errors to return in the end.
+		safeErrs            = &SafeMultiError{} // To collect errors in a threadsafe way
 		registeredDescIDs   map[uint64]struct{} // Only used for pedantic checks
 	)
 
@@ -453,9 +476,9 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 		for {
 			select {
 			case collector := <-checkedCollectors:
-				collector.Collect(checkedMetricChan)
+				safeErrs.Append((safeCollect(collector, checkedMetricChan)))
 			case collector := <-uncheckedCollectors:
-				collector.Collect(uncheckedMetricChan)
+				safeErrs.Append(safeCollect(collector, uncheckedMetricChan))
 			default:
 				return
 			}
@@ -499,7 +522,7 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 				cmc = nil
 				break
 			}
-			errs.Append(processMetric(
+			safeErrs.Append(processMetric(
 				metric, metricFamiliesByName,
 				metricHashes,
 				registeredDescIDs,
@@ -509,7 +532,7 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 				umc = nil
 				break
 			}
-			errs.Append(processMetric(
+			safeErrs.Append(processMetric(
 				metric, metricFamiliesByName,
 				metricHashes,
 				nil,
@@ -526,7 +549,7 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 						cmc = nil
 						break
 					}
-					errs.Append(processMetric(
+					safeErrs.Append(processMetric(
 						metric, metricFamiliesByName,
 						metricHashes,
 						registeredDescIDs,
@@ -536,7 +559,7 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 						umc = nil
 						break
 					}
-					errs.Append(processMetric(
+					safeErrs.Append(processMetric(
 						metric, metricFamiliesByName,
 						metricHashes,
 						nil,
@@ -549,14 +572,15 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 			goroutineBudget--
 			runtime.Gosched()
 		}
-		// Once both checkedMetricChan and uncheckdMetricChan are closed
+		// Once both checkedMetricChan and uncheckedMetricChan are closed
 		// and drained, the contraption above will nil out cmc and umc,
 		// and then we can leave the collect loop here.
 		if cmc == nil && umc == nil {
 			break
 		}
 	}
-	return internal.NormalizeMetricFamilies(metricFamiliesByName), errs.MaybeUnwrap()
+
+	return internal.NormalizeMetricFamilies(metricFamiliesByName), safeErrs.errs.MaybeUnwrap()
 }
 
 // Describe implements Collector.
@@ -569,6 +593,24 @@ func (r *Registry) Describe(ch chan<- *Desc) {
 	for _, c := range r.collectorsByID {
 		c.Describe(ch)
 	}
+}
+
+// Helper wrapper around Collector.Collect.
+// It tries to collect from the channel, recovers on panic and
+// if it has recovered from a panic, then it sends an InvalidMetric into
+// the channel with an InvalidDesc, and an error that includes a stack trace.
+func safeCollect(c Collector, ch chan<- Metric) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			buf := make([]byte, 64<<10) //	64 KB
+			n := runtime.Stack(buf, false)
+			err = fmt.Errorf("prometheus collector panic recovered: type=%T: error=%v\nstack trace=%s", c, r, buf[:n])
+			ch <- NewInvalidMetric(NewInvalidDesc(err), err)
+		}
+	}()
+	c.Collect(ch)
+
+	return err
 }
 
 // Collect implements Collector.
@@ -599,10 +641,12 @@ func WriteToTextfile(filename string, g Gatherer) error {
 
 	mfs, err := g.Gather()
 	if err != nil {
+		tmp.Close()
 		return err
 	}
 	for _, mf := range mfs {
 		if _, err := expfmt.MetricFamilyToText(tmp, mf); err != nil {
+			tmp.Close()
 			return err
 		}
 	}
@@ -685,6 +729,9 @@ func processMetric(
 		metricFamily = &dto.MetricFamily{}
 		metricFamily.Name = proto.String(desc.fqName)
 		metricFamily.Help = proto.String(desc.help)
+		if desc.unit != "" {
+			metricFamily.Unit = proto.String(desc.unit)
+		}
 		// TODO(beorn7): Simplify switch once Desc has type.
 		switch {
 		case dtoMetric.Gauge != nil:
@@ -933,6 +980,10 @@ func checkMetricConsistency(
 		h.WriteString(lp.GetValue())
 		h.Write(separatorByteSlice)
 	}
+	if dtoMetric.TimestampMs != nil {
+		h.WriteString(strconv.FormatInt(*(dtoMetric.TimestampMs), 10))
+		h.Write(separatorByteSlice)
+	}
 	hSum := h.Sum64()
 	if _, exists := metricHashes[hSum]; exists {
 		return fmt.Errorf(
@@ -960,7 +1011,7 @@ func checkDescConsistency(
 	// Is the desc consistent with the content of the metric?
 	lpsFromDesc := make([]*dto.LabelPair, len(desc.constLabelPairs), len(dtoMetric.Label))
 	copy(lpsFromDesc, desc.constLabelPairs)
-	for _, l := range desc.variableLabels {
+	for _, l := range desc.variableLabels.names {
 		lpsFromDesc = append(lpsFromDesc, &dto.LabelPair{
 			Name: proto.String(l),
 		})

@@ -3,12 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/log"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/geom/slippy"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/internal/sqltoken"
 )
 
 // providerType defines the type of providers we have in the system.
@@ -26,7 +26,7 @@ const (
 	TypeMvt
 
 	// TypeAll should be all the types
-	TypeAll = TypeStd & TypeMvt
+	TypeAll = TypeStd | TypeMvt
 )
 
 var webmercatorGrid = slippy.NewGrid(3857, 0)
@@ -118,7 +118,7 @@ type Tile interface {
 }
 
 // ParameterTokenRegexp to validate QueryParameters
-var ParameterTokenRegexp = regexp.MustCompile("![a-zA-Z0-9_-]+!")
+var ParameterTokenRegexp = sqltoken.TokenRegexp
 
 // Tiler is a Layers that allows one to encode features in that layer
 type Tiler interface {
@@ -163,7 +163,7 @@ func (tu TilerUnion) IsTileJSONV3Compatible() (bool, error) {
 		return true, nil
 	}
 	if tu.Mvt != nil {
-		if _, ok := tu.Std.(LayerFielder); !ok {
+		if _, ok := tu.Mvt.(LayerFielder); !ok {
 			return false, ErrNotTileJSONV3Compatible
 		}
 		return true, nil

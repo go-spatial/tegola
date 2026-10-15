@@ -143,8 +143,36 @@ func (d Dict) Float(key string, def *float64) (r float64, err error) {
 		}
 	}
 
-	r, ok = v.(float64)
-	if !ok {
+	// accept the whole Go integer family: TOML maps bare literals like
+	// mos_precision = 2 to int64/int, not float64
+	switch n := v.(type) {
+	case float64:
+		r = n
+	case float32:
+		r = float64(n)
+	case int:
+		r = float64(n)
+	case int8:
+		r = float64(n)
+	case int16:
+		r = float64(n)
+	case int32:
+		r = float64(n)
+	case int64:
+		r = float64(n)
+	case uint:
+		r = float64(n)
+	case uint8:
+		r = float64(n)
+	case uint16:
+		r = float64(n)
+	case uint32:
+		r = float64(n)
+	case uint64:
+		r = float64(n)
+	case uintptr:
+		r = float64(n)
+	default:
 		return r, ErrKeyType{Key: key, Value: v, T: reflect.TypeOf(r)}
 	}
 

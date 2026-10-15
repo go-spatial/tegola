@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,10 +16,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-	"github.com/go-spatial/geom/encoding/mvt"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/geom/encoding/mvt"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/dict"
 )
 
 var (
@@ -60,7 +60,7 @@ const (
 var testData = []byte{0x1f, 0x8b, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x2a, 0xce, 0xcc, 0x49, 0x2c, 0x6, 0x4, 0x0, 0x0, 0xff, 0xff, 0xaf, 0x9d, 0x59, 0xca, 0x5, 0x0, 0x0, 0x0}
 
 func init() {
-	cache.Register(CacheType, New)
+	_ = cache.Register(CacheType, New)
 }
 
 // New instantiates a S3 cache. The config expects the following params:
@@ -248,7 +248,7 @@ func New(config dict.Dicter) (cache.Interface, error) {
 	}
 
 	// read the test file
-	_, hit, err := s3cache.Get(ctx, &key)
+	_, _, err = s3cache.Get(ctx, &key)
 	if err != nil {
 		e := cache.ErrGettingFromCache{
 			CacheType: CacheType,
@@ -256,9 +256,6 @@ func New(config dict.Dicter) (cache.Interface, error) {
 		}
 
 		return nil, e
-	}
-	if !hit {
-		// return an error?
 	}
 
 	// purge the test file
@@ -309,8 +306,9 @@ func (s3c *Cache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 		return nil
 	}
 
-	// add our basepath
-	k := filepath.Join(s3c.Basepath, key.String())
+	// add our basepath; S3 object keys always use forward slashes
+	// regardless of the OS separator (P6-33)
+	k := path.Join(s3c.Basepath, key.String())
 
 	input := s3.PutObjectInput{
 		Body:            aws.ReadSeekCloser(bytes.NewReader(val)),
@@ -326,7 +324,7 @@ func (s3c *Cache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 		input.CacheControl = aws.String(s3c.CacheControl)
 	}
 
-	_, err = s3c.Client.PutObject(&input)
+	_, err = s3c.Client.PutObjectWithContext(ctx, &input)
 	if err != nil {
 		return err
 	}
@@ -337,8 +335,9 @@ func (s3c *Cache) Set(ctx context.Context, key *cache.Key, val []byte) error {
 func (s3c *Cache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error) {
 	var err error
 
-	// add our basepath
-	k := filepath.Join(s3c.Basepath, key.String())
+	// add our basepath; S3 object keys always use forward slashes
+	// regardless of the OS separator (P6-33)
+	k := path.Join(s3c.Basepath, key.String())
 
 	input := s3.GetObjectInput{
 		Bucket: aws.String(s3c.Bucket),
@@ -361,6 +360,7 @@ func (s3c *Cache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error)
 		}
 		return nil, false, err
 	}
+	defer result.Body.Close()
 
 	var buf bytes.Buffer
 	_, err = io.Copy(&buf, result.Body)
@@ -374,8 +374,9 @@ func (s3c *Cache) Get(ctx context.Context, key *cache.Key) ([]byte, bool, error)
 func (s3c *Cache) Purge(ctx context.Context, key *cache.Key) error {
 	var err error
 
-	// add our basepath
-	k := filepath.Join(s3c.Basepath, key.String())
+	// add our basepath; S3 object keys always use forward slashes
+	// regardless of the OS separator (P6-33)
+	k := path.Join(s3c.Basepath, key.String())
 
 	input := s3.DeleteObjectInput{
 		Bucket: aws.String(s3c.Bucket),

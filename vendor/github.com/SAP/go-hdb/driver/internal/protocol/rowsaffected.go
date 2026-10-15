@@ -2,51 +2,58 @@ package protocol
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/SAP/go-hdb/driver/internal/protocol/encoding"
 )
 
-// rows affected
+// rows affected.
 const (
+	raTBD             = -1
 	raSuccessNoInfo   = -2
-	RaExecutionFailed = -3
+	raExecutionFailed = -3
 )
 
 // RowsAffected represents a rows affected part.
-type RowsAffected []int32
+type RowsAffected struct {
+	rows []int32
+}
 
 func (r RowsAffected) String() string {
-	return fmt.Sprintf("%v", []int32(r))
+	return fmt.Sprintf("%v", r.rows)
 }
 
-func (r *RowsAffected) reset(numArg int) {
-	if r == nil || numArg > cap(*r) {
-		*r = make(RowsAffected, numArg)
-	} else {
-		*r = (*r)[:numArg]
+func (r *RowsAffected) decode(dec *encoding.Decoder, header *PartHeader, attrs *ReaderAttrs) error {
+	numArg := header.numArg()
+	r.rows = slices.Grow(r.rows, numArg)[:numArg]
+
+	for i := range numArg {
+		r.rows[i] = dec.Int32()
 	}
+	return nil
 }
 
-func (r *RowsAffected) decode(dec *encoding.Decoder, ph *PartHeader) error {
-	r.reset(ph.numArg())
-
-	for i := 0; i < ph.numArg(); i++ {
-		(*r)[i] = dec.Int32()
-	}
-	return dec.Error()
-}
-
-// Total return the total number of all affected rows.
+// Total returns the total number of all affected rows.
 func (r RowsAffected) Total() int64 {
-	if r == nil {
-		return 0
-	}
-
 	total := int64(0)
-	for _, rows := range r {
-		if rows > 0 {
+	for _, rows := range r.rows {
+		if rows > 0 { // add only positive number / negatives are status / error values (see above)
 			total += int64(rows)
 		}
 	}
 	return total
+}
+
+// SetHDbErrorsStmtNo sets the HDBErrors statement numbers relatively to an offset.
+func (r RowsAffected) SetHDbErrorsStmtNo(errs *HdbErrors, offset int) {
+	if errs == nil {
+		return
+	}
+	j := 0
+	for i, rows := range r.rows {
+		if rows == raExecutionFailed {
+			errs.setStmtNo(j, offset+i)
+			j++
+		}
+	}
 }

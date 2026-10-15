@@ -8,16 +8,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/internal/observer"
-	"github.com/go-spatial/tegola/observability"
+	"github.com/alexeydott/geom/slippy"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/internal/observer"
+	"github.com/alexeydott/tegola/observability"
 )
 
 var (
-	simplifyGeometries    bool
+	simplifyGeometries         = true
 	simplificationMaxZoom uint = 10
 )
 
@@ -125,7 +125,7 @@ func (a *Atlas) SeedMapTile(ctx context.Context, m Map, z, x, y uint) error {
 		return nil
 	}
 
-	ctx = context.WithValue(ctx, observability.ObserveVarMapName, m.Name)
+	ctx = context.WithValue(ctx, observability.ObserveCtxKey(observability.ObserveVarMapName), m.Name)
 	// confirm we have a cache backend
 	if a.cacher == nil {
 		return ErrMissingCache

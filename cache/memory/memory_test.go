@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/cache/memory"
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/cache/memory"
+	"github.com/alexeydott/tegola/dict"
 )
 
 func TestSetGetPurge(t *testing.T) {
@@ -163,5 +163,71 @@ func TestSetOverwrite(t *testing.T) {
 
 	for name, tc := range testcases {
 		t.Run(name, fn(tc))
+	}
+}
+
+func TestConfigurationAndValueIsolation(t *testing.T) {
+	ctx := context.Background()
+	mc, err := memory.New(dict.Dict{memory.ConfigKeyMaxZoom: uint(1)})
+	if err != nil {
+		t.Fatalf("memory.New() error = %v", err)
+	}
+
+	key := cache.Key{Z: 1, X: 1, Y: 1}
+	value := []byte{1, 2, 3}
+	if err := mc.Set(ctx, &key, value); err != nil {
+		t.Fatalf("Set() error = %v", err)
+	}
+	value[0] = 9
+
+	got, hit, err := mc.Get(ctx, &key)
+	if err != nil {
+		t.Fatalf("Get() error = %v", err)
+	}
+	if !hit {
+		t.Fatal("Get() reported a cache miss")
+	}
+	if !reflect.DeepEqual(got, []byte{1, 2, 3}) {
+		t.Fatalf("Get() = %v, want [1 2 3]", got)
+	}
+	got[1] = 8
+
+	got, hit, err = mc.Get(ctx, &key)
+	if err != nil {
+		t.Fatalf("second Get() error = %v", err)
+	}
+	if !hit || !reflect.DeepEqual(got, []byte{1, 2, 3}) {
+		t.Fatalf("second Get() = (%v, %v), want ([1 2 3], true)", got, hit)
+	}
+
+	highZoomKey := cache.Key{Z: 2, X: 1, Y: 1}
+	if err := mc.Set(ctx, &highZoomKey, []byte{4}); err != nil {
+		t.Fatalf("high-zoom Set() error = %v", err)
+	}
+	if _, hit, err := mc.Get(ctx, &highZoomKey); err != nil {
+		t.Fatalf("high-zoom Get() error = %v", err)
+	} else if hit {
+		t.Fatal("high-zoom tile was cached despite max_zoom")
+	}
+}
+
+func TestContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	mc, err := memory.New(dict.Dict{})
+	if err != nil {
+		t.Fatalf("memory.New() error = %v", err)
+	}
+	key := cache.Key{Z: 1, X: 1, Y: 1}
+
+	if err := mc.Set(ctx, &key, []byte{1}); err != context.Canceled {
+		t.Fatalf("Set() error = %v, want %v", err, context.Canceled)
+	}
+	if _, _, err := mc.Get(ctx, &key); err != context.Canceled {
+		t.Fatalf("Get() error = %v, want %v", err, context.Canceled)
+	}
+	if err := mc.Purge(ctx, &key); err != context.Canceled {
+		t.Fatalf("Purge() error = %v, want %v", err, context.Canceled)
 	}
 }

@@ -70,6 +70,8 @@ const (
 	maskEnvelopeType     = 1<<3 | 1<<2 | 1<<1
 	maskEmptyGeometry    = 1 << 4
 	maskGeoPackageBinary = 1 << 5
+	// reserved flag bits (6 and 7) must be zero (P6-15)
+	maskReservedFlags = 1<<7 | 1<<6
 )
 
 type headerFlags byte
@@ -121,6 +123,21 @@ func NewBinaryHeader(data []byte) (*BinaryHeader, error) {
 	bh.magic[1] = data[1]
 	bh.version = data[2]
 	bh.flags = headerFlags(data[3])
+
+	// P6-15: magic, version and the reserved flag bits are validated
+	// immediately, before any envelope parsing. Previously the magic was
+	// only checked after the envelope had been read, and a header with
+	// envelope type "none" returned early without any validation at all.
+	if bh.magic[0] != Magic[0] || bh.magic[1] != Magic[1] {
+		return nil, errors.New("invalid magic number")
+	}
+	if bh.version != 0 {
+		return nil, fmt.Errorf("invalid version number: %d", bh.version)
+	}
+	if bh.flags&maskReservedFlags != 0 {
+		return nil, fmt.Errorf("reserved flag bits set: %s", bh.flags)
+	}
+
 	en := bh.flags.Endian()
 	bh.srsid = int32(en.Uint32(data[4 : 4+4]))
 
@@ -142,9 +159,6 @@ func NewBinaryHeader(data []byte) (*BinaryHeader, error) {
 	for i := 0; i < num; i++ {
 		bits := en.Uint64(bytes[i*8 : (i*8)+8])
 		bh.envelope = append(bh.envelope, math.Float64frombits(bits))
-	}
-	if bh.magic[0] != Magic[0] || bh.magic[1] != Magic[1] {
-		return &bh, errors.New("invalid magic number")
 	}
 	return &bh, nil
 

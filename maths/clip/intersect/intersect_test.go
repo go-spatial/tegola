@@ -3,9 +3,9 @@ package intersect
 import (
 	"testing"
 
-	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/clip/region"
-	"github.com/go-spatial/tegola/maths/clip/subject"
+	"github.com/alexeydott/tegola/maths"
+	"github.com/alexeydott/tegola/maths/clip/region"
+	"github.com/alexeydott/tegola/maths/clip/subject"
 )
 
 func TestNewIntersect(t *testing.T) {
@@ -16,20 +16,20 @@ func TestNewIntersect(t *testing.T) {
 		t.Errorf("Got unexpected error: %v", err)
 		return
 	}
-	rl := region.New(sl.Winding(), maths.Pt{0, 0}, maths.Pt{10, 10})
+	rl := region.New(sl.Winding(), maths.Pt{X: 0, Y: 0}, maths.Pt{X: 10, Y: 10})
 	/*
 		log.Printf("region: %#v\n", rl)
 		log.Printf("subject: %#v\n", sl)
 	*/
 	l := New()
-	inwardPt := NewPt(maths.Pt{0, 5}, true)
+	inwardPt := NewPt(maths.Pt{X: 0, Y: 5}, true)
 	l.PushBack(inwardPt)
 	rl.Axis(0).PushInBetween(inwardPt.AsRegionPoint())
 	if slp := sl.GetPair(2); slp != nil {
 		slp.PushInBetween(inwardPt.AsSubjectPoint())
 	}
 
-	outwardPt := NewPt(maths.Pt{5, 0}, false)
+	outwardPt := NewPt(maths.Pt{X: 5, Y: 0}, false)
 	l.PushBack(outwardPt)
 	rl.Axis(3).PushInBetween(outwardPt.AsRegionPoint())
 	if slp := sl.GetPair(3); slp != nil {
@@ -42,7 +42,7 @@ func TestNewIntersect(t *testing.T) {
 	*/
 	expectedWalk := [][]maths.Pt{
 		{
-			{0, 5}, {5, 5}, {5, 0}, {0, 0},
+			{X: 0, Y: 5}, {X: 5, Y: 5}, {X: 5, Y: 0}, {X: 0, Y: 0},
 		},
 	}
 	current := 0

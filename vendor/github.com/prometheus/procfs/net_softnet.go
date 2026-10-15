@@ -1,4 +1,4 @@
-// Copyright 2019 The Prometheus Authors
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prometheus/procfs/internal/util"
+	"github.com/prometheus/procfs/internal/parsers"
 )
 
 // For the proc file format details,
@@ -57,14 +57,14 @@ var softNetProcFile = "net/softnet_stat"
 
 // NetSoftnetStat reads data from /proc/net/softnet_stat.
 func (fs FS) NetSoftnetStat() ([]SoftnetStat, error) {
-	b, err := util.ReadFileNoStat(fs.proc.Path(softNetProcFile))
+	b, err := parsers.ReadFileNoStat(fs.proc.Path(softNetProcFile))
 	if err != nil {
 		return nil, err
 	}
 
 	entries, err := parseSoftnet(bytes.NewReader(b))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse /proc/net/softnet_stat: %w", err)
+		return nil, fmt.Errorf("%w: /proc/net/softnet_stat: %w", ErrFileParse, err)
 	}
 
 	return entries, nil
@@ -76,13 +76,14 @@ func parseSoftnet(r io.Reader) ([]SoftnetStat, error) {
 	s := bufio.NewScanner(r)
 
 	var stats []SoftnetStat
+	cpuIndex := 0
 	for s.Scan() {
 		columns := strings.Fields(s.Text())
 		width := len(columns)
 		softnetStat := SoftnetStat{}
 
 		if width < minColumns {
-			return nil, fmt.Errorf("%d columns were detected, but at least %d were expected", width, minColumns)
+			return nil, fmt.Errorf("%w: detected %d columns, but expected at least %d", ErrFileParse, width, minColumns)
 		}
 
 		// Linux 2.6.23 https://elixir.bootlin.com/linux/v2.6.23/source/net/core/dev.c#L2347
@@ -127,9 +128,13 @@ func parseSoftnet(r io.Reader) ([]SoftnetStat, error) {
 
 			softnetStat.SoftnetBacklogLen = us[0]
 			softnetStat.Index = us[1]
+		} else {
+			// For older kernels, create the Index based on the scan line number.
+			softnetStat.Index = uint32(cpuIndex)
 		}
 		softnetStat.Width = width
 		stats = append(stats, softnetStat)
+		cpuIndex++
 	}
 
 	return stats, nil

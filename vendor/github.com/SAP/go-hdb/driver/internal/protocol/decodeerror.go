@@ -1,27 +1,47 @@
 package protocol
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // DecodeError represents a decoding error.
 type DecodeError struct {
 	row       int
 	fieldName string
-	s         string // error text
+	err       error
 }
 
+func (e *DecodeError) Unwrap() error { return e.err }
+
 func (e *DecodeError) Error() string {
-	return fmt.Sprintf("decode error: %s row: %d fieldname: %s", e.s, e.row, e.fieldName)
+	return fmt.Sprintf("decode error: %s row: %d fieldname: %s", e.err, e.row, e.fieldName)
 }
 
 // DecodeErrors represents a list of decoding errors.
 type DecodeErrors []*DecodeError
 
-// RowError returns an error if one is assigned to a row, nil otherwise.
-func (errors DecodeErrors) RowError(row int) error {
-	for _, err := range errors {
+func (errs DecodeErrors) rowErrors(row int) error {
+	var rowErrs []error
+	for _, err := range errs {
 		if err.row == row {
-			return err
+			rowErrs = append(rowErrs, err)
 		}
 	}
-	return nil
+	switch len(rowErrs) {
+	case 0:
+		return nil
+	case 1:
+		return rowErrs[0]
+	default:
+		return errors.Join(rowErrs...)
+	}
+}
+
+// RowErrors returns errors if they were assigned to a row, nil otherwise.
+func (errs DecodeErrors) RowErrors(row int) error {
+	if len(errs) == 0 {
+		return nil
+	}
+	return errs.rowErrors(row)
 }

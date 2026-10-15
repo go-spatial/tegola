@@ -3,11 +3,11 @@ package emptycollection
 import (
 	"context"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/provider"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/provider"
 
-	"github.com/go-spatial/tegola/dict"
+	"github.com/alexeydott/tegola/dict"
 )
 
 const Name = "emptycollection"
@@ -15,7 +15,7 @@ const Name = "emptycollection"
 var Count int
 
 func init() {
-	provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
+	_ = provider.Register(provider.TypeStd.Prefix()+Name, NewTileProvider, Cleanup)
 }
 
 // NewProvider setups a test provider. there are not currently any config params supported

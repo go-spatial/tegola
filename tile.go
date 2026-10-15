@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/slippy"
-	"github.com/go-spatial/tegola/maths/webmercator"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/geom/slippy"
+	"github.com/alexeydott/tegola/maths/webmercator"
 )
 
 const (
@@ -209,7 +209,8 @@ func (t *Tile) ZRes() float64 {
 	return 40075016.6855785 / (t.Extent * math.Exp2(float64(t.Z)))
 }
 
-// This is from Leafty
+// ZEpislon returns the simplification tolerance in WebMercator meters.
+// Tolerance is measured in output tile units, before MVT quantization.
 func (t *Tile) ZEpislon() float64 {
 
 	if t.Z == MaxZ {
@@ -219,10 +220,8 @@ func (t *Tile) ZEpislon() float64 {
 	if epi <= 0 {
 		return 0
 	}
-	ext := t.Extent
-
-	denom := (math.Exp2(float64(t.Z)) * ext)
-
-	e := epi / denom
-	return e
+	if t.Extent <= 0 {
+		return 0
+	}
+	return epi * t.ZRes()
 }

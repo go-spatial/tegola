@@ -1,6 +1,6 @@
 package lines
 
-import "github.com/go-spatial/tegola"
+import "github.com/alexeydott/tegola"
 
 func FromTLineString(lnstr tegola.LineString) (ln [][2]float64) {
 	pts := lnstr.Subpoints()

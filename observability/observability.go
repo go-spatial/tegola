@@ -6,10 +6,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	tegolaCache "github.com/go-spatial/tegola/cache"
+	tegolaCache "github.com/alexeydott/tegola/cache"
 
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/log"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/log"
 )
 
 const (
@@ -19,6 +19,10 @@ const (
 	ObserveVarTileY     = ":y"
 	ObserveVarTileZ     = ":z"
 )
+
+// ObserveCtxKey is the typed key used to pass observe variable values through
+// a context; plain string context keys are flagged by staticcheck (SA1029).
+type ObserveCtxKey string
 
 type Collector = prometheus.Collector
 

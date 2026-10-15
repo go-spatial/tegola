@@ -2,11 +2,11 @@ package list
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/go-spatial/tegola/container/list"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/container/list"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths"
 )
 
 type Elementer interface {
@@ -78,11 +78,11 @@ func (l *List) PushInBetween(start, end ElementerPointer, element ElementerPoint
 
 	defer func() {
 		if r && (element.Prev() == nil || element.Next() == nil) {
-			log.Println("nil!")
-			log.Printf("\tstart: %v[%[1]p] %v[%[2]p] %v[%[3]p]", start.Prev(), start, start.Next())
-			log.Printf("\t   pt: %v[%[1]p] %v[%[2]p] %v[%[3]p]", element.Prev(), element, element.Next())
-			log.Printf("\t  end: %v[%[1]p] %v[%[2]p] %v[%[3]p]", end.Prev(), end, end.Next())
-			log.Printf("\t mark: %v[%[1]p] %v[%[2]p] %v[%[3]p]", mark.Prev(), mark, mark.Next())
+			log.Warn("nil!")
+			log.Warnf("\tstart: %v[%[1]p] %v[%[2]p] %v[%[3]p]", start.Prev(), start, start.Next())
+			log.Warnf("\t   pt: %v[%[1]p] %v[%[2]p] %v[%[3]p]", element.Prev(), element, element.Next())
+			log.Warnf("\t  end: %v[%[1]p] %v[%[2]p] %v[%[3]p]", end.Prev(), end, end.Next())
+			log.Warnf("\t mark: %v[%[1]p] %v[%[2]p] %v[%[3]p]", mark.Prev(), mark, mark.Next())
 			panic("Stop!")
 		}
 	}()

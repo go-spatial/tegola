@@ -1,0 +1,8 @@
+# [webserver.tile_operations] gates the privileged tile operation endpoints
+# (?tile=update, ?tile=getupdated, ?tile=dirty). The feature is disabled by
+# default; when enabled it additionally requires the configured token.
+[webserver.tile_operations]
+enabled = true
+token = "s3cret"
+rate_per_minute = 120
+max_concurrent = 8

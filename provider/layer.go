@@ -1,6 +1,6 @@
 package provider
 
-import "github.com/go-spatial/geom"
+import "github.com/alexeydott/geom"
 
 // Layer holds information about a query.
 type Layer struct {

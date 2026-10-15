@@ -3,8 +3,8 @@ package subject
 import (
 	"fmt"
 
-	"github.com/go-spatial/tegola/container/singlelist/point/list"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/container/singlelist/point/list"
+	"github.com/alexeydott/tegola/maths"
 )
 
 type Pair struct {

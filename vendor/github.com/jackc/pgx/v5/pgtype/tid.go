@@ -2,7 +2,6 @@ package pgtype
 
 import (
 	"database/sql/driver"
-	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
@@ -53,8 +52,7 @@ func (dst *TID) Scan(src any) error {
 		return nil
 	}
 
-	switch src := src.(type) {
-	case string:
+	if src, ok := src.(string); ok {
 		return scanPlanTextAnyToTIDScanner{}.Scan([]byte(src), dst)
 	}
 
@@ -142,8 +140,7 @@ func (TIDCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan 
 			return scanPlanBinaryTIDToTextScanner{}
 		}
 	case TextFormatCode:
-		switch target.(type) {
-		case TIDScanner:
+		if _, ok := target.(TIDScanner); ok {
 			return scanPlanTextAnyToTIDScanner{}
 		}
 	}
@@ -154,19 +151,24 @@ func (TIDCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan 
 type scanPlanBinaryTIDToTIDScanner struct{}
 
 func (scanPlanBinaryTIDToTIDScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(TIDScanner)
+	scanner := dst.(TIDScanner)
 
 	if src == nil {
 		return scanner.ScanTID(TID{})
 	}
 
-	if len(src) != 6 {
-		return fmt.Errorf("invalid length for tid: %v", len(src))
+	r := pgio.NewReader(src)
+
+	blockNumber := r.Uint32()
+	offsetNumber := r.Uint16()
+
+	if err := r.Finish(); err != nil {
+		return fmt.Errorf("tid: %w", err)
 	}
 
 	return scanner.ScanTID(TID{
-		BlockNumber:  binary.BigEndian.Uint32(src),
-		OffsetNumber: binary.BigEndian.Uint16(src[4:]),
+		BlockNumber:  blockNumber,
+		OffsetNumber: offsetNumber,
 		Valid:        true,
 	})
 }
@@ -174,18 +176,20 @@ func (scanPlanBinaryTIDToTIDScanner) Scan(src []byte, dst any) error {
 type scanPlanBinaryTIDToTextScanner struct{}
 
 func (scanPlanBinaryTIDToTextScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(TextScanner)
+	scanner := dst.(TextScanner)
 
 	if src == nil {
 		return scanner.ScanText(Text{})
 	}
 
-	if len(src) != 6 {
-		return fmt.Errorf("invalid length for tid: %v", len(src))
-	}
+	r := pgio.NewReader(src)
 
-	blockNumber := binary.BigEndian.Uint32(src)
-	offsetNumber := binary.BigEndian.Uint16(src[4:])
+	blockNumber := r.Uint32()
+	offsetNumber := r.Uint16()
+
+	if err := r.Finish(); err != nil {
+		return fmt.Errorf("tid: %w", err)
+	}
 
 	return scanner.ScanText(Text{
 		String: fmt.Sprintf(`(%d,%d)`, blockNumber, offsetNumber),
@@ -196,7 +200,7 @@ func (scanPlanBinaryTIDToTextScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToTIDScanner struct{}
 
 func (scanPlanTextAnyToTIDScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(TIDScanner)
+	scanner := dst.(TIDScanner)
 
 	if src == nil {
 		return scanner.ScanTID(TID{})

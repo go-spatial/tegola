@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"sort"
@@ -12,11 +11,12 @@ import (
 	"time"
 
 	svg "github.com/ajstarks/svgo"
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/hitmap"
-	"github.com/go-spatial/tegola/maths/points"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola/internal/convert"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/maths"
+	"github.com/alexeydott/tegola/maths/hitmap"
+	"github.com/alexeydott/tegola/maths/points"
 )
 
 var ColLenghtErr = errors.New("Col's need to have length of at least 2")
@@ -160,9 +160,9 @@ func hitpoint(pt1, pt2, pt3 maths.Pt) maths.Pt {
 	tri := maths.Triangle{pt1, pt2, pt3}
 	sort.Sort(&tri)
 	if tri[0].X == tri[1].X {
-		return maths.Pt{tri[0].X + 1, float64(int64((tri[0].Y - tri[1].Y) / 2))}
+		return maths.Pt{X: tri[0].X + 1, Y: float64(int64((tri[0].Y - tri[1].Y) / 2))}
 	}
-	return maths.Pt{tri[1].X - 1, float64(int64((tri[0].Y - tri[1].Y) / 2))}
+	return maths.Pt{X: tri[1].X - 1, Y: float64(int64((tri[0].Y - tri[1].Y) / 2))}
 
 }
 func (rc *RingCol) addPts(hm hitmap.Interface, b *Builder, pts1, pts2 []maths.Pt) {
@@ -202,7 +202,6 @@ func (rc *RingCol) searchY1(y float64, fn func(idx int, ptIdx int, l maths.Label
 		}
 		return
 	}
-	return
 }
 func (rc *RingCol) searchY2(y float64, fn func(idx int, ptIdx int, l maths.Label) bool) {
 	if rc == nil {
@@ -222,7 +221,6 @@ func (rc *RingCol) searchY2(y float64, fn func(idx int, ptIdx int, l maths.Label
 		}
 		return
 	}
-	return
 }
 
 func (rc *RingCol) searchEdge(edge []YEdge, y1, y2 float64, fn func(idx int, ptIdx int, l maths.Label) bool) {
@@ -716,23 +714,23 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 			if elapsed.Minutes() > 10 {
 				//if elapsed.Seconds() > 1 {
 				fn := genWriteoutCols(c1, c2)
-				log.Println("Taking too long, writing file to ", fn)
+				log.Warnf("Taking too long, writing file to  %v", fn)
 
 				panic("Took too long")
 			}
 			if ptcounter[pt] > 5 {
-				log.Println("Col1:", c1.String())
-				log.Println("Col2:", c2.String())
-				log.Println("On ring:", ccoli, cri)
-				log.Println(cols[ccoli].Rings[cri].Points)
+				log.Warnf("Col1: %v", c1.String())
+				log.Warnf("Col2: %v", c2.String())
+				log.Warnf("On ring: %v %v", ccoli, cri)
+				log.Warnf("%v", cols[ccoli].Rings[cri].Points)
 				pi := walkedRings[len(walkedRings)-2]
-				log.Println("Previous ring:", pi[0], pi[1])
-				log.Println(cols[pi[0]].Rings[pi[1]].Points)
-				log.Println("Processing ", p, "(", ringsToProcess[p], ") of the following rings that needed to be processed.:", ringsToProcess)
-				log.Println(cols[ringsToProcess[p][0]].Rings[ringsToProcess[p][1]].Points)
-				log.Println("Walked rings:", walkedRings)
+				log.Warnf("Previous ring: %v %v", pi[0], pi[1])
+				log.Warnf("%v", cols[pi[0]].Rings[pi[1]].Points)
+				log.Warnf("Processing  %v ( %v ) of the following rings that needed to be processed.: %v", p, ringsToProcess[p], ringsToProcess)
+				log.Warnf("%v", cols[ringsToProcess[p][0]].Rings[ringsToProcess[p][1]].Points)
+				log.Warnf("Walked rings: %v", walkedRings)
 				fn := genWriteoutCols(c1, c2)
-				log.Println("Wrote out columns info to:", fn)
+				log.Warnf("Wrote out columns info to: %v", fn)
 				writeOutSVG(fn, cols[:], walkedRings)
 
 				panic("Inif loop?")
@@ -842,7 +840,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 		}
 		if plen < 3 {
 			fn := genWriteoutCols(c1, c2)
-			log.Println("Generated a ring with fewer then 3 points: ", fn, nring)
+			log.Warnf("Generated a ring with fewer then 3 points:  %v %v", fn, nring)
 
 			panic("Generated a ring with fewer then 3 points. ")
 		}
@@ -868,7 +866,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 
 	// Verify that the cols indexes are pointed correctly.
 	for i := range col.Y1s {
-		cpt := maths.Pt{col.X1, col.Y1s[i].Y}
+		cpt := maths.Pt{X: col.X1, Y: col.Y1s[i].Y}
 		for j, d := range col.Y1s[i].Descs {
 			ring := col.Rings[d.Idx]
 			if d.Label != ring.Label {
@@ -887,8 +885,8 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 					}
 				}
 				if !found {
-					log.Println("col", col.String())
-					log.Println("Did not find r when trying to fix up Y1.", i, j)
+					log.Warnf("col %v", col.String())
+					log.Warnf("Did not find r when trying to fix up Y1. %v %v", i, j)
 					panic("Did not find r when trying to fix up Y1.")
 				}
 			}
@@ -897,7 +895,7 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 
 	}
 	for i := range col.Y2s {
-		cpt := maths.Pt{col.X2, col.Y2s[i].Y}
+		cpt := maths.Pt{X: col.X2, Y: col.Y2s[i].Y}
 		for j, d := range col.Y2s[i].Descs {
 			ring := col.Rings[d.Idx]
 			if d.Label != ring.Label {
@@ -915,8 +913,8 @@ func merge2AdjectRC(c1, c2 RingCol) (col RingCol) {
 					}
 				}
 				if !found {
-					log.Println("col", col.String())
-					log.Println("Did not find r when trying to fix up Y2.", i, j)
+					log.Warnf("col %v", col.String())
+					log.Warnf("Did not find r when trying to fix up Y2. %v %v", i, j)
 					panic("Did not find r when trying to fix up Y2.")
 				}
 			}
@@ -945,9 +943,7 @@ func GenerateMultiPolygon(cols []RingCol) (plys [][][]maths.Pt) {
 			wcol := MergeCols(cols[i[0]:i[1]])
 			wply := wcol.MultiPolygon()
 			lock.Lock()
-			for i := range wply {
-				plys = append(plys, wply[i])
-			}
+			plys = append(plys, wply...)
 			lock.Unlock()
 		}
 		wg.Done()
@@ -991,7 +987,7 @@ func writeOutSVG(fn string, cols []RingCol, onlyRings [][2]int) {
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	canvas := svg.New(f)
 	canvas.Startview(786, 1024, int(cols[0].X1)-10, 2000, int(cols[1].X2)+10, 2200)
 	defer canvas.End()

@@ -7,15 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-spatial/tegola/internal/build"
+	"github.com/alexeydott/tegola/internal/build"
 	"github.com/prometheus/client_golang/prometheus/push"
 
-	"github.com/go-spatial/tegola/internal/p"
+	"github.com/alexeydott/tegola/internal/p"
 
-	tegolaCache "github.com/go-spatial/tegola/cache"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/observability"
+	tegolaCache "github.com/alexeydott/tegola/cache"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/observability"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -44,6 +44,7 @@ func init() {
 }
 
 type observer struct {
+	features *featureMetrics
 	// URLPrefix is the server's prefix
 	URLPrefix string
 
@@ -52,7 +53,7 @@ type observer struct {
 	observeVars []string
 
 	httpHandlers map[string]*httpHandler
-	registry     prometheus.Registerer
+	registry     *prometheus.Registry
 
 	publishedBuildInfo sync.Once
 	initCall           sync.Once
@@ -64,7 +65,16 @@ type observer struct {
 func New(config dict.Dicter) (observability.Interface, error) {
 	// We don't have anything for now for the config
 	var obs observer
-	obs.registry = prometheus.DefaultRegisterer
+	// a private registry keeps observer instances independent: constructing
+	// several observers must not collide on collector registration (P6-35)
+	obs.registry = prometheus.NewRegistry()
+	// mirror the collectors the default registry ships with so the metrics
+	// endpoint keeps exposing the go_* and process_* metrics
+	obs.registry.MustRegister(
+		prometheus.NewGoCollector(),
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
+	)
+	obs.features = newFeatureMetrics(obs.registry)
 	obs.httpHandlers = make(map[string]*httpHandler)
 	obs.pushCleanupFuncIdx = -1
 
@@ -87,8 +97,13 @@ func New(config dict.Dicter) (observability.Interface, error) {
 
 func (*observer) Name() string { return Name }
 
-func (observer) Handler(string) http.Handler { return promhttp.Handler() }
-func (obs *observer) Init()                  { obs.initCall.Do(obs.init) }
+func (obs *observer) Handler(string) http.Handler {
+	if obs == nil {
+		return promhttp.Handler()
+	}
+	return promhttp.HandlerFor(obs.registry, promhttp.HandlerOpts{})
+}
+func (obs *observer) Init() { obs.initCall.Do(obs.init) }
 func (obs *observer) init() {
 	obs.PublishBuildInfo()
 	if obs == nil || obs.pushURL == "" {
@@ -97,7 +112,7 @@ func (obs *observer) init() {
 
 	// Start up the push
 	// we need to setup a clean up routine to push the metrics when we are shutting down.
-	pusher := push.New(obs.pushURL, strings.Join(build.Commands, "_")).Gatherer(prometheus.DefaultGatherer)
+	pusher := push.New(obs.pushURL, strings.Join(build.Commands, "_")).Gatherer(obs.registry)
 
 	var (
 		wg            sync.WaitGroup

@@ -1,6 +1,6 @@
 package convert
 
-import "github.com/go-spatial/tegola/maths"
+import "github.com/alexeydott/tegola/maths"
 
 // TODO (gdey): Remove once conversion is over.
 func FromMathPoint(pt ...maths.Pt) (gpts [][2]float64) {

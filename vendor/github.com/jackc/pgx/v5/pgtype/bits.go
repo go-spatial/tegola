@@ -2,7 +2,6 @@ package pgtype
 
 import (
 	"database/sql/driver"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/internal/pgio"
@@ -41,8 +40,7 @@ func (dst *Bits) Scan(src any) error {
 		return nil
 	}
 
-	switch src := src.(type) {
-	case string:
+	if src, ok := src.(string); ok {
 		return scanPlanTextAnyToBitsScanner{}.Scan([]byte(src), dst)
 	}
 
@@ -131,13 +129,11 @@ func (encodePlanBitsCodecText) Encode(value any, buf []byte) (newBuf []byte, err
 func (BitsCodec) PlanScan(m *Map, oid uint32, format int16, target any) ScanPlan {
 	switch format {
 	case BinaryFormatCode:
-		switch target.(type) {
-		case BitsScanner:
+		if _, ok := target.(BitsScanner); ok {
 			return scanPlanBinaryBitsToBitsScanner{}
 		}
 	case TextFormatCode:
-		switch target.(type) {
-		case BitsScanner:
+		if _, ok := target.(BitsScanner); ok {
 			return scanPlanTextAnyToBitsScanner{}
 		}
 	}
@@ -165,20 +161,31 @@ func (c BitsCodec) DecodeValue(m *Map, oid uint32, format int16, src []byte) (an
 type scanPlanBinaryBitsToBitsScanner struct{}
 
 func (scanPlanBinaryBitsToBitsScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(BitsScanner)
+	scanner := dst.(BitsScanner)
 
 	if src == nil {
 		return scanner.ScanBits(Bits{})
 	}
 
-	if len(src) < 4 {
-		return fmt.Errorf("invalid length for bit/varbit: %v", len(src))
+	r := pgio.NewReader(src)
+
+	bitLen := r.Int32()
+	if err := r.Err(); err != nil {
+		return fmt.Errorf("invalid length for bit/varbit: %w", err)
+	}
+	if bitLen < 0 {
+		return fmt.Errorf("invalid length for bit/varbit: bitLen=%d", bitLen)
 	}
 
-	bitLen := int32(binary.BigEndian.Uint32(src))
-	rp := 4
-	buf := make([]byte, len(src[rp:]))
-	copy(buf, src[rp:])
+	// Finish rejects trailing bytes, so together with the read below the data
+	// must be exactly the number of bytes bitLen calls for.
+	data := r.Bytes((int(bitLen) + 7) / 8)
+	if err := r.Finish(); err != nil {
+		return fmt.Errorf("invalid length for bit/varbit: bitLen=%d: %w", bitLen, err)
+	}
+
+	buf := make([]byte, len(data))
+	copy(buf, data)
 
 	return scanner.ScanBits(Bits{Bytes: buf, Len: bitLen, Valid: true})
 }
@@ -186,7 +193,7 @@ func (scanPlanBinaryBitsToBitsScanner) Scan(src []byte, dst any) error {
 type scanPlanTextAnyToBitsScanner struct{}
 
 func (scanPlanTextAnyToBitsScanner) Scan(src []byte, dst any) error {
-	scanner := (dst).(BitsScanner)
+	scanner := dst.(BitsScanner)
 
 	if src == nil {
 		return scanner.ScanBits(Bits{})
@@ -203,7 +210,7 @@ func (scanPlanTextAnyToBitsScanner) Scan(src []byte, dst any) error {
 		if b == '1' {
 			byteIdx := i / 8
 			bitIdx := uint(i % 8)
-			buf[byteIdx] = buf[byteIdx] | (128 >> bitIdx)
+			buf[byteIdx] |= 128 >> bitIdx
 		}
 	}
 

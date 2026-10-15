@@ -3,10 +3,10 @@ package hitmap
 import (
 	"sort"
 
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/internal/convert"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/geom"
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/internal/convert"
+	"github.com/alexeydott/tegola/maths"
 )
 
 type Interface interface {
@@ -204,8 +204,8 @@ func NewSegment(label maths.Label, linestring tegola.LineString) (seg Segment) {
 	j := len(subpts) - 1
 	for i := range subpts {
 		l := maths.Line{
-			maths.Pt{subpts[j].X(), subpts[j].Y()},
-			maths.Pt{subpts[i].X(), subpts[i].Y()},
+			maths.Pt{X: subpts[j].X(), Y: subpts[j].Y()},
+			maths.Pt{X: subpts[i].X(), Y: subpts[i].Y()},
 		}
 		seg.bbox.Add(l[:]...)
 		seg.events.Add(l)

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/ttools"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/ttools"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -57,7 +57,7 @@ func TestConnector(t *testing.T) {
 
 	tcases := map[string]tcase{
 		"connect with uri in connModeURI": {
-			config:           dict.Dict(DefaultConfig),
+			config:           dict.Dict(DefaultEnvConfig),
 			env:              map[string]string{},
 			expectedConnMode: connModeURI,
 		},
@@ -67,7 +67,7 @@ func TestConnector(t *testing.T) {
 				"PGUSER":     "postgres",
 				"PGPASSWORD": "postgres",
 				"PGHOST":     "localhost",
-				"PGPORT":     "5432",
+				"PGPORT":     ttools.GetEnvDefault("PGPORT", "5432"),
 				"PGDATABASE": "tegola",
 				"PGSSLMODE":  "disable",
 			},
@@ -79,7 +79,7 @@ func TestConnector(t *testing.T) {
 			env: map[string]string{
 				"PGUSER":     "postgres",
 				"PGHOST":     "localhost",
-				"PGPORT":     "5432",
+				"PGPORT":     ttools.GetEnvDefault("PGPORT", "5432"),
 				"PGDATABASE": "tegola",
 				"PGSSLMODE":  "disable",
 			},
@@ -110,7 +110,7 @@ func TestConnector(t *testing.T) {
 				"PGUSER":     "postgres",
 				"PGPASSWORD": "postgres",
 				"PGHOST":     "localhost",
-				"PGPORT":     "5432",
+				"PGPORT":     ttools.GetEnvDefault("PGPORT", "5432"),
 				"PGDATABASE": "tegola",
 				"PGSSLMODE":  "prefer", // will force a failing connection
 			},

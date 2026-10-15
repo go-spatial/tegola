@@ -157,7 +157,7 @@ func Signal() os.Signal {
 // can be passed in as well, if no list is passed os.Interrupt, and syscall.SIGTERM is
 // assumed.
 func NewContext(signals ...os.Signal) *contextType {
-	ch := make(chan os.Signal)
+	ch := make(chan os.Signal, 1)
 	if len(signals) == 0 {
 		signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 	} else {

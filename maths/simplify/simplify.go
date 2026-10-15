@@ -1,10 +1,11 @@
 package simplify
 
 import (
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/basic"
-	"github.com/go-spatial/tegola/maths"
-	"github.com/go-spatial/tegola/maths/points"
+	"math"
+
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/basic"
+	"github.com/alexeydott/tegola/maths"
 )
 
 // SimplifyGeometry applies the DouglasPeucker simplification routine to the supplied geometry
@@ -14,21 +15,17 @@ func SimplifyGeometry(g tegola.Geometry, tolerance float64) tegola.Geometry {
 		return simplifyPolygon(gg, tolerance)
 
 	case tegola.MultiPolygon:
-		var newMP basic.MultiPolygon
-
-		for _, p := range gg.Polygons() {
-			sp := simplifyPolygon(p, tolerance)
-			if sp == nil {
-				continue
-			}
-			newMP = append(newMP, sp)
+		polygons := gg.Polygons()
+		original := make(basic.MultiPolygon, len(polygons))
+		candidate := make(basic.MultiPolygon, len(polygons))
+		for i, p := range polygons {
+			original[i] = basic.ClonePolygon(p)
+			candidate[i] = polygonCandidate(p, tolerance)
 		}
-
-		if len(newMP) == 0 {
-			return nil
+		if !preservesPolygonTopology(original, candidate) {
+			return original
 		}
-
-		return newMP
+		return candidate
 
 	case tegola.LineString:
 		return simplifyLineString(gg, tolerance)
@@ -66,68 +63,54 @@ func simplifyLineString(g tegola.LineString, tolerance float64) basic.Line {
 		return nil
 	}
 
-	return basic.NewLineTruncatedFromPt(pts...)
+	// No coordinate truncation here: the MVT encoder quantizes to its output
+	// grid anyway, and pre-truncating shifted simplified vertices off the
+	// input subsequence (debt 3.6 corpus cases line/*-truncation).
+	return basic.NewLineFromPt(pts...)
 }
 
 func simplifyPolygon(g tegola.Polygon, tolerance float64) basic.Polygon {
-	lines := g.Sublines()
-	if len(lines) <= 0 {
-		return nil
+	original := basic.ClonePolygon(g)
+	candidate := polygonCandidate(g, tolerance)
+	if !preservesPolygonTopology(basic.MultiPolygon{original}, basic.MultiPolygon{candidate}) {
+		return original
 	}
+	return candidate
+}
 
-	var poly basic.Polygon
-	sqTolerance := tolerance * tolerance
-	// First lets look the first line, then we will simplify the other lines.
-	for i := range lines {
-		area := maths.AreaOfPolygonLineString(lines[i])
-		l := basic.CloneLine(lines[i])
-
-		if area < sqTolerance {
-			if i == 0 {
-				return basic.ClonePolygon(g)
-			}
-			// don't simplify the internal line
-			poly = append(poly, l)
-			continue
-		}
-
-		pts := l.AsPts()
-		if len(pts) <= 2 {
-			if i == 0 {
-				return nil
-			}
-			continue
-		}
-
-		pts = normalizePoints(pts)
-		// If the last point is the same as the first, remove the first point.
-		if len(pts) <= 4 {
-			if i == 0 {
-				return basic.ClonePolygon(g)
-			}
-			poly = append(poly, l)
-			continue
-		}
-
-		pts = DouglasPeucker(pts, sqTolerance)
-		if len(pts) <= 2 {
-			if i == 0 {
-				return nil
-			}
-			//log.Println("\t Skipping polygon subline.")
-			continue
-		}
-
-		poly = append(poly, basic.NewLineTruncatedFromPt(pts...))
+// Build independent ring candidates; the caller validates their relationships
+// together before accepting any changes to the polygon or multipolygon.
+func polygonCandidate(g tegola.Polygon, tolerance float64) basic.Polygon {
+	poly := basic.ClonePolygon(g)
+	if tolerance <= 0 || math.IsNaN(tolerance) || math.IsInf(tolerance, 0) {
+		return poly
 	}
-
-	if len(poly) == 0 {
-		return nil
+	for i, line := range poly {
+		original := openRing(line.AsPts())
+		if len(original) <= 4 || math.Abs(ringArea(original)) < tolerance*tolerance {
+			continue
+		}
+		pts := normalizePoints(original)
+		if len(pts) > 4 {
+			pts = DouglasPeucker(pts, tolerance)
+		}
+		if !validRing(pts) || ringArea(original)*ringArea(pts) <= 0 {
+			continue
+		}
+		if len(line) > 1 && line[0] == line[len(line)-1] {
+			pts = append(pts, pts[0])
+		}
+		poly[i] = basic.NewLineFromPt(pts...)
 	}
-
 	return poly
 }
 
+// normalizePoints removes redundant vertices from the ring chain pts without
+// changing the geometry: a vertex is dropped only when it lies on the segment
+// between the neighbours kept around it. (The previous rule dropped points
+// collinear with pts[0] and their successor regardless of position, which
+// removed spike apexes that are not between their neighbours and folded the
+// ring edge across the spike.)
 func normalizePoints(pts []maths.Pt) (pnts []maths.Pt) {
 	if pts[0] == pts[len(pts)-1] {
 		pts = pts[1:]
@@ -145,12 +128,23 @@ func normalizePoints(pts []maths.Pt) (pnts []maths.Pt) {
 		if ni >= len(pts) {
 			ni = 0
 		}
-		m1, _, sdef1 := points.SlopeIntercept(pts[lpt], pts[i])
-		m2, _, sdef2 := points.SlopeIntercept(pts[lpt], pts[ni])
-		if m1 != m2 || sdef1 != sdef2 {
-			pnts = append(pnts, pts[i])
+		if collinearBetween(pts[lpt], pts[i], pts[ni]) {
+			continue // drop: the path pts[lpt]-pts[i]-pts[ni] keeps its geometry
 		}
+		pnts = append(pnts, pts[i])
+		lpt = i
 	}
 
 	return pnts
+}
+
+// collinearBetween reports whether b lies on the segment from a to c
+// (endpoints included), so dropping b leaves the path a-c unchanged.
+func collinearBetween(a, b, c maths.Pt) bool {
+	ab := sub2(b, a)
+	bc := sub2(c, b)
+	if !nearZero(cross2(ab, bc), math.Sqrt(dot2(ab, ab)*dot2(bc, bc))) {
+		return false
+	}
+	return dot2(ab, bc) >= 0
 }

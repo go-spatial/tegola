@@ -1,3 +1,4 @@
+//go:build !noGCSCache
 // +build !noGCSCache
 
 package atlas
@@ -8,5 +9,5 @@ package atlas
 //
 // go build -tags 'noGCSCache'
 import (
-	_ "github.com/go-spatial/tegola/cache/gcs"
+	_ "github.com/alexeydott/tegola/cache/gcs"
 )

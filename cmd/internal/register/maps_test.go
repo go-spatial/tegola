@@ -4,12 +4,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/go-spatial/tegola/atlas"
-	"github.com/go-spatial/tegola/cmd/internal/register"
-	"github.com/go-spatial/tegola/dict"
-	"github.com/go-spatial/tegola/internal/env"
-	"github.com/go-spatial/tegola/mapbox/tilejson"
-	"github.com/go-spatial/tegola/provider"
+	"github.com/alexeydott/tegola/atlas"
+	"github.com/alexeydott/tegola/cmd/internal/register"
+	"github.com/alexeydott/tegola/config"
+	"github.com/alexeydott/tegola/dict"
+	"github.com/alexeydott/tegola/internal/env"
+	"github.com/alexeydott/tegola/mapbox/tilejson"
+	"github.com/alexeydott/tegola/provider"
 )
 
 func TestMaps(t *testing.T) {
@@ -20,7 +21,7 @@ func TestMaps(t *testing.T) {
 		expectedErr error
 	}
 
-	fn := func(tc tcase) func(*testing.T) {
+	fn := func(tc *tcase) func(*testing.T) {
 		return func(t *testing.T) {
 			var err error
 
@@ -43,7 +44,7 @@ func TestMaps(t *testing.T) {
 		}
 	}
 
-	tests := map[string]tcase{
+	tests := map[string]*tcase{
 		"provider layer invalid": {
 			maps: []provider.Map{
 				{
@@ -144,6 +145,59 @@ func TestMaps(t *testing.T) {
 				},
 			},
 			expectedErr: provider.ErrNotTileJSONV3Compatible,
+		},
+		"duplicate map names rejected": {
+			maps: []provider.Map{
+				{
+					Name: "foo",
+					Layers: []provider.MapLayer{
+						{
+							ProviderLayer: "test.debug-tile-outline",
+						},
+					},
+				},
+				{
+					Name: "foo",
+					Layers: []provider.MapLayer{
+						{
+							ProviderLayer: "test.debug-tile-outline",
+						},
+					},
+				},
+			},
+			providers: []dict.Dict{
+				{
+					"name": "test",
+					"type": "debug",
+				},
+			},
+			expectedErr: config.ErrMapNameDuplicate{MapName: "foo"},
+		},
+		"layer with inverted zooms rejected": {
+			maps: []provider.Map{
+				{
+					Name: "foo",
+					Layers: []provider.MapLayer{
+						{
+							ProviderLayer: "test.debug-tile-outline",
+							MinZoom:       env.UintPtr(10),
+							MaxZoom:       env.UintPtr(5),
+						},
+					},
+				},
+			},
+			providers: []dict.Dict{
+				{
+					"name": "test",
+					"type": "debug",
+				},
+			},
+			expectedErr: config.ErrInvalidLayerZoomRange{
+				MapName:       "foo",
+				ProviderLayer: "test.debug-tile-outline",
+				MinZoom:       10,
+				MaxZoom:       5,
+			},
 		},
 		"success": {
 			maps: []provider.Map{},

@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/tegola/server"
+	"github.com/alexeydott/tegola/server"
 )
 
 func TestTileURLTemplateString(t *testing.T) {
@@ -202,9 +202,72 @@ func TestTileURLTemplateUnmarshalJSON(t *testing.T) {
 				Got: "https://go-spatial.org/v1/maps/",
 			},
 		},
+		// the maps token is the last path part: there is no map name
+		// after it to read. must error, not panic with an out of range
+		// index (P6-31).
+		"malformed url maps token last": {
+			input: []byte(`"https://go-spatial.org/v1/maps"`),
+			expectedErr: server.ErrMalformedTileTemplateURL{
+				Got: "https://go-spatial.org/v1/maps",
+			},
+		},
+		// the z token is the first path part: there is no preceding map
+		// or layer name to read. must error, not panic with a negative
+		// index (P6-31).
+		"malformed url z token first": {
+			input: []byte(`"{z}/{x}/{y}.pbf"`),
+			expectedErr: server.ErrMalformedTileTemplateURL{
+				Got: "{z}/{x}/{y}.pbf",
+			},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
+	}
+}
+
+// P6-32 regression: MarshalJSON must emit a valid JSON string that
+// round-trips to String() for any template content, including quotes
+// and backslashes. The pre-fix code embedded String() raw between
+// quotes, producing invalid JSON for such templates.
+func TestTileURLTemplateMarshalJSONEscapes(t *testing.T) {
+	tests := map[string]server.TileURLTemplate{
+		"plain": {
+			Scheme:  "https",
+			Host:    "go-spatial.org",
+			MapName: "osm",
+		},
+		"quotes and backslashes": {
+			Scheme:  "https",
+			Host:    "go-spatial.org",
+			MapName: `os"m\ap`,
+		},
+		"query ampersand": {
+			Scheme:  "https",
+			Host:    "go-spatial.org",
+			MapName: "osm",
+			Query: url.Values{
+				"foo": []string{"bar"},
+				"baz": []string{"qux"},
+			},
+		},
+	}
+
+	for name, tmpl := range tests {
+		name, tmpl := name, tmpl
+		t.Run(name, func(t *testing.T) {
+			got, err := json.Marshal(&tmpl)
+			if err != nil {
+				t.Fatalf("unexpected error marshaling template: %s", err)
+			}
+			var decoded string
+			if err := json.Unmarshal(got, &decoded); err != nil {
+				t.Fatalf("MarshalJSON emitted invalid JSON %q: %s", got, err)
+			}
+			if decoded != tmpl.String() {
+				t.Errorf("round trip mismatch: got (%s) want (%s)", decoded, tmpl.String())
+			}
+		})
 	}
 }

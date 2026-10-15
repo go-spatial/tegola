@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alexeydott/geom/slippy"
+	gdcmd "github.com/alexeydott/tegola/internal/cmd"
+	"github.com/alexeydott/tegola/internal/log"
+	"github.com/alexeydott/tegola/provider"
 	"github.com/go-spatial/cobra"
-	"github.com/go-spatial/geom/slippy"
-	gdcmd "github.com/go-spatial/tegola/internal/cmd"
-	"github.com/go-spatial/tegola/internal/log"
-	"github.com/go-spatial/tegola/provider"
 )
 
 var tileNameTile slippy.Tile
@@ -70,7 +70,7 @@ func tileNameCommand(cmd *cobra.Command, args []string) (err error) {
 		}
 	}()
 
-	log.Info("zoom list: ", zooms)
+	log.Infof("zoom list: %v", zooms)
 	tilechannel := generateTilesForTileName(ctx, tileNameTile, explicit, zooms)
 
 	// start up workers

@@ -52,8 +52,11 @@ func replaceEnvVar(in string) (string, error) {
 	return in, nil
 }
 
-//TODO(@ear7h): implement UnmarshalJSON for types
-
+// UnmarshalTOML decodes a TOML value into a Dict. The env wrapper types in this
+// file (Dict, Bool, ...) implement UnmarshalTOML only — they are TOML-only and
+// intentionally provide no UnmarshalJSON. tegola's configuration format is TOML,
+// so JSON decoding of these types is not supported. (Resolves the earlier
+// UnmarshalJSON TODO.)
 func (t *Dict) UnmarshalTOML(v any) error {
 	var d *Dict
 	var err error

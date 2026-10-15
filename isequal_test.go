@@ -3,9 +3,9 @@ package tegola_test
 import (
 	"testing"
 
+	"github.com/alexeydott/tegola"
+	"github.com/alexeydott/tegola/basic"
 	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/basic"
 )
 
 func TestIsPointEqual(t *testing.T) {

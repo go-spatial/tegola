@@ -89,18 +89,18 @@ func IsMultiPolygonEqual(mp1, mp2 MultiPolygon) bool {
 func IsGeometryEqual(g1, g2 Geometry) bool {
 
 	switch geo1 := g1.(type) {
-	case Point:
-		geo2, ok := g2.(Point)
-		if !ok {
-			return false
-		}
-		return IsPointEqual(geo1, geo2)
 	case Point3:
 		geo2, ok := g2.(Point3)
 		if !ok {
 			return false
 		}
 		return IsPoint3Equal(geo1, geo2)
+	case Point:
+		geo2, ok := g2.(Point)
+		if !ok {
+			return false
+		}
+		return IsPointEqual(geo1, geo2)
 	case MultiPoint:
 		geo2, ok := g2.(MultiPoint)
 		if !ok {

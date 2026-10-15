@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0] - 2023-12-29
+### Added
+- `New` function, which returns a new lambda handler for the given http.Handler (@acoover).
+### Changed
+- aws-lambda-go upgraded to v1.43.0
+
 ## [1.0.0] - 2023-03-02
 ### Fixed
 - API Gateway V2: Fixed response header support.

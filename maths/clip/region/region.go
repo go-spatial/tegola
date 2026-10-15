@@ -1,13 +1,12 @@
 package region
 
 import (
-	"github.com/go-spatial/tegola/container/singlelist/point/list"
-	"github.com/go-spatial/tegola/maths"
+	"github.com/alexeydott/tegola/container/singlelist/point/list"
+	"github.com/alexeydott/tegola/maths"
 )
 
 /*
 A region is made up of axises and a winding order. A region can hold other points along it's axises.
-
 */
 type Region struct {
 	list.List

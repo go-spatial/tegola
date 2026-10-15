@@ -221,7 +221,6 @@ func FindIntersectsWithEventQueue(polygonCheck bool, eq []event, segments []Line
 			}
 		}
 	}
-	return
 }
 func FindIntersectsWithEventQueueWithoutIntersectNew(polygonCheck bool, eq []event, segments []Line, fn func(srcIdx, destIdx int) bool) {
 	ns := len(segments)
@@ -277,7 +276,6 @@ func FindIntersectsWithEventQueueWithoutIntersectNew(polygonCheck bool, eq []eve
 			}
 		}
 	}
-	return
 }
 func FindIntersectsWithEventQueueWithoutIntersect(polygonCheck bool, eq []event, segments []Line, fn func(srcIdx, destIdx int) bool) {
 	ns := len(segments)
@@ -338,7 +336,6 @@ func FindIntersectsWithEventQueueWithoutIntersect(polygonCheck bool, eq []event,
 			}
 		}
 	}
-	return
 }
 
 func FindIntersectsWithEventQueueWithoutIntersectNotPolygon(eq []event, segments []Line, fn func(srcIdx, destIdx int) bool) {
@@ -385,7 +382,6 @@ func FindIntersectsWithEventQueueWithoutIntersectNotPolygon(eq []event, segments
 			}
 		}
 	}
-	return
 }
 
 func FindAllIntersectsWithEventQueueWithoutIntersectNotPolygon(eq []event, segments []Line, skipfn func(srcIdx, destIdx int) bool, fn func(srcIdx, destIdx int)) {
@@ -440,7 +436,6 @@ func FindAllIntersectsWithEventQueueWithoutIntersectNotPolygon(eq []event, segme
 			fn(edgeidx, s)
 		}
 	}
-	return
 }
 
 // FindIntersects call the provided function with the indexs of the lines from the segments slice that intersect with each other. If the function returns false, it will stop iteration.
@@ -448,7 +443,6 @@ func FindAllIntersectsWithEventQueueWithoutIntersectNotPolygon(eq []event, segme
 func FindIntersectsWithoutIntersect(segments []Line, fn func(srcIdx, destIdx int) bool) {
 	eq := NewEventQueue(segments)
 	FindIntersectsWithEventQueueWithoutIntersectNotPolygon(eq, segments, fn)
-	return
 }
 
 // FindIntersects call the provided function with the indexs of the lines from the segments slice that intersect with each other. If the function returns false, it will stop iteration.
@@ -462,7 +456,6 @@ func FindIntersects(segments []Line, fn func(srcIdx, destIdx int, ptfn func() Pt
 	*/
 	eq := NewEventQueue(segments)
 	FindIntersectsWithEventQueue(false, eq, segments, fn)
-	return
 }
 
 // FindPolygonIntersects calls the provided function with the indexes of the lines from the segments slice that intersect with each other. If the function returns false, it will stop iteration.
@@ -475,10 +468,9 @@ func FindPolygonIntersects(segments []Line, fn func(srcIdx, destIdx int, ptfn fu
 	}
 	eq := NewEventQueue(segments)
 	FindIntersectsWithEventQueue(true, eq, segments, fn)
-	return
 }
 
-//  =================================== LINE methods ================================================= //
+// =================================== LINE methods ================================================= //
 func (s1 Line) DoesIntersect(s2 Line) bool {
 	return DoesIntersect(s1, s2)
 }

@@ -1,6 +1,6 @@
 package debug
 
-import "github.com/go-spatial/geom"
+import "github.com/alexeydott/geom"
 
 type Layer struct {
 	name     string
