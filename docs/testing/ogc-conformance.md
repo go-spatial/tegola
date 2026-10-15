@@ -7,7 +7,7 @@ appropriate approved executable validator is available.
 
 ## Requirements
 
-- Go 1.26.7, CGO and a C compiler for the owned GeoPackage fixture.
+- Go 1.26.9, CGO and a C compiler for the owned GeoPackage fixture.
 - Python 3.11 or later with its standard library, and Docker.
 - Official immutable image:
   `ogccite/ets-ogcapi-features10@sha256:a1c1345acff1f671a6ca6aefc36a85551c855223973aff3d40c4e75611c7e55e`.

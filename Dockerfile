@@ -35,7 +35,7 @@
 # directory is mounted from the host with appropriate permissions.
 
 # Intermediary container for building
-FROM golang:1.26.7-alpine3.23 AS build
+FROM golang:1.26.9-alpine3.23 AS build
 
 ARG BUILDPKG="github.com/alexeydott/tegola/internal/build"
 ARG VER="Version Not Set"

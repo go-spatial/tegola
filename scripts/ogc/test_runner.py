@@ -125,8 +125,8 @@ class RunnerTests(unittest.TestCase):
         sources = {"source.go": "fixed"}
         receipt = {"schema": 1, "result": "PASS", "sources": sources, "revision": "revision",
                    "binary": str(binary), "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-                   "compiler": "go version go1.26.7 windows/amd64",
-                   "settings": {"GOTOOLCHAIN": "go1.26.7", "GOWORK": "off", "GOFLAGS": "", "CGO_ENABLED": "1"},
+                   "compiler": "go version go1.26.9 windows/amd64",
+                   "settings": {"GOTOOLCHAIN": "go1.26.9", "GOWORK": "off", "GOFLAGS": "", "CGO_ENABLED": "1"},
                    "command": ["go", "build", "-mod=vendor", "-trimpath", "-o", str(binary), "./cmd/tegola"]}
         verify_build(receipt, binary, sources, "revision")
         for key, value in (("revision", "older"), ("sources", {}), ("binary_sha256", "wrong")):

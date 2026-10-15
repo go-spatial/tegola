@@ -1,6 +1,6 @@
 module github.com/alexeydott/tegola
 
-go 1.26.7
+go 1.26.9
 
 require (
 	cloud.google.com/go/storage v1.68.0
@@ -11,6 +11,7 @@ require (
 	github.com/akrylysov/algnhsa v1.1.0
 	github.com/alexeydott/geom v0.1.1
 	github.com/alexeydott/proj v0.3.1
+	github.com/aws/aws-lambda-go v1.55.1
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/dimfeld/httptreemux v5.0.1+incompatible
 	github.com/gdey/tbltest v0.0.0-20180914212833-1865222d591f
@@ -41,7 +42,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.38.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.62.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.62.0 // indirect
-	github.com/aws/aws-lambda-go v1.55.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
@@ -80,7 +80,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
-	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect

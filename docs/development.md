@@ -91,7 +91,7 @@ The requested tile will include a `debug` layer with two features:
 
 ## Building from source
 
-Tegola is written in [Go](https://golang.org/) and requires [Go 1.26.7](https://go.dev/dl/) or higher to compile from source.
+Tegola is written in [Go](https://golang.org/) and requires [Go 1.26.9](https://go.dev/dl/) or higher to compile from source.
 (CI builds with the Go version pinned in `go.mod`.)
 To build tegola from the source, make sure you have Go installed and have cloned the repository.
 Build the embedded viewer first when it is required:

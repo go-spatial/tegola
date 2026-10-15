@@ -23,12 +23,15 @@ func normalizeTransactionQNames(body []byte) ([]byte, error) {
 		case "Update", "Delete":
 			for j := range action.Attrs {
 				attr := &action.Attrs[j]
-				if attr.Name.Local != "typeName" {
+				if attr.Name.Local != "typeName" && attr.Name.Local != "typeNames" {
 					continue
 				}
 				local, err := resolveTypeQName(attr.Value, bindings)
 				if err != nil {
 					return nil, err
+				}
+				if collection != "" && collection != local {
+					return nil, fmt.Errorf("conflicting transaction type names")
 				}
 				attr.Value = local
 				collection = local

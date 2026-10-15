@@ -1,5 +1,8 @@
 ## Unreleased
 
+- Normalize WFS Update/Delete `typeNames` before validating feature IDs and property references, retaining namespace validation and rejecting conflicting type attributes.
+- Require Go 1.26.9 and update `golang.org/x/net` to v0.60.0 to include the October 2026 HTTP and template security fixes.
+
 - Cache ordinary viewing in writable runtimes; bypass ordinary tile caching with `X-Tegola-Editor-Active: true`. Isolate cache generations after successful or uncertain commits and across restarts, including concurrent renders and metatile maintenance.
 - Allow authenticated explicit tile-cache status and regeneration in writable feature/WFS runtimes with HTTP `no-store`.
 

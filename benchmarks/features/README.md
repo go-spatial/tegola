@@ -1,6 +1,6 @@
 # Synthetic feature-query regression runner
 
-Run with Go 1.26.7 and CGO enabled. The runner creates only missing synthetic
+Run with Go 1.26.9 and CGO enabled. The runner creates only missing synthetic
 datasets in the specified directory; existing datasets are queried read-only.
 Use a dedicated benchmark directory. It never requires a user GeoPackage or DB credentials.
 
