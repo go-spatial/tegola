@@ -219,7 +219,7 @@ github.com/felixge/httpsnoop
 # github.com/gdey/tbltest v0.0.0-20170331191646-af8abc47b052
 ## explicit
 github.com/gdey/tbltest
-# github.com/go-jose/go-jose/v4 v4.1.4
+# github.com/go-jose/go-jose/v4 v4.1.6
 ## explicit; go 1.24.0
 github.com/go-jose/go-jose/v4
 github.com/go-jose/go-jose/v4/cipher
